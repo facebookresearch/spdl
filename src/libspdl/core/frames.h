@@ -39,10 +39,6 @@ using ImageFramesPtr = FramesPtr<MediaType::Image>;
 
 using AnyFrames = std::variant<AudioFramesPtr, VideoFramesPtr, ImageFramesPtr>;
 
-#define _IS_AUDIO (media == MediaType::Audio)
-#define _IS_VIDEO (media == MediaType::Video)
-#define _IS_IMAGE (media == MediaType::Image)
-
 ///
 /// Base class that holds media frames decoded with FFmpeg.
 template <MediaType media>
@@ -140,12 +136,12 @@ class Frames {
   ///
   /// Get the sample rate
   int get_sample_rate() const
-    requires _IS_AUDIO;
+    requires(media == MediaType::Audio);
 
   ///
   /// Get the number of audio channels.
   int get_num_channels() const
-    requires _IS_AUDIO;
+    requires(media == MediaType::Audio);
 
   //////////////////////////////////////////////////////////////////////////////
   // Common to Image/Video
@@ -157,17 +153,17 @@ class Frames {
   /// For example, NV12 has 3 channels, YUV, but U and V are interleaved in the
   /// same plane.
   int get_num_planes() const
-    requires(_IS_IMAGE || _IS_VIDEO);
+    requires(media == MediaType::Image || media == MediaType::Video);
 
   ///
   /// Get the width of the image.
   int get_width() const
-    requires(_IS_IMAGE || _IS_VIDEO);
+    requires(media == MediaType::Image || media == MediaType::Video);
 
   ///
   /// Get the height of the image.
   int get_height() const
-    requires(_IS_IMAGE || _IS_VIDEO);
+    requires(media == MediaType::Image || media == MediaType::Video);
 
   //////////////////////////////////////////////////////////////////////////////
   // Video specific
@@ -176,24 +172,20 @@ class Frames {
   ///
   /// Range slice operation, using Python's slice notation.
   VideoFramesPtr slice(int start, int stop, int step) const
-    requires _IS_VIDEO;
+    requires(media == MediaType::Video);
 
   ///
   /// Slice (`__getitem__`) operation.
   VideoFramesPtr slice(const std::vector<int64_t>& index) const
-    requires _IS_VIDEO;
+    requires(media == MediaType::Video);
 
   ///
   /// Slice (`__getitem__`) operation.
   ImageFramesPtr slice(int64_t index) const
-    requires _IS_VIDEO;
+    requires(media == MediaType::Video);
 };
 
 template <MediaType media>
 FramesPtr<media> clone(const Frames<media>& src);
-
-#undef _IS_AUDIO
-#undef _IS_VIDEO
-#undef _IS_IMAGE
 
 } // namespace spdl::core

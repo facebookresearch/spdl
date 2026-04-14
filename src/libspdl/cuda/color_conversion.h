@@ -28,7 +28,7 @@ namespace spdl::cuda {
 /// true).
 /// @return CUDA buffer containing planar RGB data with shape [num_frames, 3,
 /// height, width].
-CUDABufferPtr nv12_to_planar_rgb(
+[[nodiscard]] CUDABufferPtr nv12_to_planar_rgb(
     const CUDABuffer& nv12_batch,
     const CUDAConfig& cfg,
     int matrix_coefficients = 1,
@@ -47,7 +47,7 @@ CUDABufferPtr nv12_to_planar_rgb(
 /// true).
 /// @return CUDA buffer containing planar BGR data with shape [num_frames, 3,
 /// height, width].
-CUDABufferPtr nv12_to_planar_bgr(
+[[nodiscard]] CUDABufferPtr nv12_to_planar_bgr(
     const CUDABuffer& nv12_batch,
     const CUDAConfig& cfg,
     int matrix_coefficients = 1,

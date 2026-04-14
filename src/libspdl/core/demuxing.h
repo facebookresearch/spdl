@@ -100,7 +100,7 @@ using DemuxerPtr = std::unique_ptr<Demuxer>;
 /// @param adaptor Optional source adaptor for custom data sources.
 /// @param dmx_cfg Optional demuxer configuration.
 /// @return Demuxer instance.
-DemuxerPtr make_demuxer(
+[[nodiscard]] DemuxerPtr make_demuxer(
     const std::string& src,
     const SourceAdaptorPtr& adaptor = nullptr,
     const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
@@ -111,7 +111,7 @@ DemuxerPtr make_demuxer(
 /// @param data String view of the media data.
 /// @param dmx_cfg Optional demuxer configuration.
 /// @return Demuxer instance.
-DemuxerPtr make_demuxer(
+[[nodiscard]] DemuxerPtr make_demuxer(
     const std::string_view data,
     const std::optional<DemuxConfig>& dmx_cfg = std::nullopt,
     const std::optional<std::string>& name = std::nullopt);

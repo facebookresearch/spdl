@@ -42,6 +42,11 @@ struct CPUBuffer {
   ///
   /// @return Pointer to the data.
   void* data();
+
+  /// Get pointer to the buffer data (const version).
+  ///
+  /// @return Pointer to the data.
+  void* data() const;
 };
 
 /// Unique pointer to a CPUBuffer.
@@ -59,7 +64,7 @@ using CPUBufferPtr = std::unique_ptr<CPUBuffer>;
 /// @param storage Optional pre-allocated storage. If not provided, allocates
 /// new storage.
 /// @return CPUBuffer instance.
-CPUBufferPtr cpu_buffer(
+[[nodiscard]] CPUBufferPtr cpu_buffer(
     const std::vector<size_t>& shape,
     ElemClass elem_class = ElemClass::UInt,
     size_t depth = sizeof(uint8_t),

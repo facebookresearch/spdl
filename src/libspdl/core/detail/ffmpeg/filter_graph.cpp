@@ -46,22 +46,21 @@ std::vector<std::string> get_filters() {
 // FilterGraphImpl
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
+DEF_DPtr(AVFilterInOut, avfilter_inout_free);
+
 AVFilterGraphPtr make_graph(const std::string& filter_desc) {
   AVFilterGraphPtr graph{CHECK_AVALLOCATE(avfilter_graph_alloc())};
   graph->nb_threads = 1;
 
-  AVFilterInOut* ins = nullptr;
-  AVFilterInOut* outs = nullptr;
+  AVFilterInOutDPtr ins;
+  AVFilterInOutDPtr outs;
 
   CHECK_AVERROR(
-      avfilter_graph_parse2(graph.get(), filter_desc.c_str(), &ins, &outs),
+      avfilter_graph_parse2(graph.get(), filter_desc.c_str(), ins, outs),
       fmt::format("Failed to parse the filter description: {}", filter_desc))
   CHECK_AVERROR(
       avfilter_graph_config(graph.get(), nullptr),
       fmt::format("Failed to configure the filter graph: `{}`", filter_desc))
-
-  avfilter_inout_free(&ins);
-  avfilter_inout_free(&outs);
 
   return graph;
 }
