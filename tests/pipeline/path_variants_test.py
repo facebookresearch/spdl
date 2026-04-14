@@ -383,7 +383,7 @@ class PathVariantsBasicTest(unittest.TestCase):
     def test_path_variants_with_concurrent_pipe(self) -> None:
         """Pipe with concurrency > 1 inside a path."""
         config = PipelineConfig(
-            src=SourceConfig(range(10)),
+            src=SourceConfig(_slow_source(range(10))),
             pipes=[
                 PathVariants(
                     router=lambda x: 0,
