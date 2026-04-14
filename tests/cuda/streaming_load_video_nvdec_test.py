@@ -4,22 +4,24 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-strict
+
 import unittest
 
 import spdl.io
 import spdl.io.utils
 import torch
 
-from ..fixture import FFMPEG_CLI, get_sample
+from ..fixture import FFMPEG_CLI, get_sample, SrcInfo
 
 if not spdl.io.utils.built_with_nvcodec():
     raise unittest.SkipTest("SPDL is not compiled with NVCODEC support")
 
 
-DEFAULT_CUDA = 0
+DEFAULT_CUDA: int = 0
 
 
-def _get_h264_sample():
+def _get_h264_sample() -> SrcInfo:
     cmd = (
         f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i "
         "testsrc,format=yuv420p -frames:v 100 sample.mp4"
