@@ -77,6 +77,6 @@ using FilterGraphPtr = std::unique_ptr<FilterGraph>;
 ///
 /// @param filter_desc FFmpeg filter description string.
 /// @return FilterGraph instance.
-FilterGraphPtr make_filter_graph(const std::string& filter_desc);
+[[nodiscard]] FilterGraphPtr make_filter_graph(const std::string& filter_desc);
 
 } // namespace spdl::core

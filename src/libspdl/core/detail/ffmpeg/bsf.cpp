@@ -36,7 +36,7 @@ void send_packet(AVBSFContext* bsf_ctx, AVPacket* packet) {
       "Failed to send packet to bit stream filter.")
 }
 
-int redeivce_paccket(AVBSFContext* bsf_ctx, AVPacket* packet) {
+int receive_packet(AVBSFContext* bsf_ctx, AVPacket* packet) {
   int ret = av_bsf_receive_packet(bsf_ctx, packet);
   TRACE_EVENT("decoding", "av_bsf_receive_packet");
   if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
@@ -74,7 +74,7 @@ Generator<AVPacketPtr> BSFImpl::filter(AVPacket* packet) {
   int errnum;
   do {
     AVPacketPtr ret{CHECK_AVALLOCATE(av_packet_alloc())};
-    switch ((errnum = redeivce_paccket(bsf_ctx_.get(), ret.get()))) {
+    switch ((errnum = receive_packet(bsf_ctx_.get(), ret.get()))) {
       case AVERROR(EAGAIN):
         co_return;
       case AVERROR_EOF:

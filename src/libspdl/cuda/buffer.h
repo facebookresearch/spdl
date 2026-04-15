@@ -70,7 +70,7 @@ using CUDABufferPtr = std::unique_ptr<CUDABuffer>;
 /// @param elem_class Element class (Int, UInt, or Float).
 /// @param depth Size of each element in bytes.
 /// @return CUDABuffer instance.
-CUDABufferPtr cuda_buffer(
+[[nodiscard]] CUDABufferPtr cuda_buffer(
     const std::vector<size_t>& shape,
     const CUDAConfig& cfg,
     spdl::core::ElemClass elem_class = spdl::core::ElemClass::UInt,

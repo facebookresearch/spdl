@@ -108,7 +108,7 @@ class TracingSession {
 /// Initialize a tracing session.
 ///
 /// @return Unique pointer to a TracingSession.
-std::unique_ptr<TracingSession> init_tracing();
+[[nodiscard]] std::unique_ptr<TracingSession> init_tracing();
 
 /// Record a counter value for tracing.
 ///

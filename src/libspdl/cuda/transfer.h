@@ -22,7 +22,9 @@ namespace spdl::cuda {
 /// @param buffer CPU buffer to transfer.
 /// @param cfg CUDA configuration including device and stream.
 /// @return CUDA buffer containing the transferred data.
-CUDABufferPtr transfer_buffer(core::CPUBufferPtr buffer, const CUDAConfig& cfg);
+[[nodiscard]] CUDABufferPtr transfer_buffer(
+    core::CPUBufferPtr buffer,
+    const CUDAConfig& cfg);
 
 /// Transfer generic array from CPU to CUDA device.
 ///
@@ -34,7 +36,7 @@ CUDABufferPtr transfer_buffer(core::CPUBufferPtr buffer, const CUDAConfig& cfg);
 /// @param ptr Pointer to CPU data.
 /// @param cfg CUDA configuration including device and stream.
 /// @return CUDA buffer containing the transferred data.
-CUDABufferPtr transfer_buffer(
+[[nodiscard]] CUDABufferPtr transfer_buffer(
     const std::vector<size_t>& shape,
     core::ElemClass elem_class,
     size_t depth,
@@ -50,7 +52,7 @@ CUDABufferPtr transfer_buffer(
 /// @param depth Size of each element in bytes.
 /// @param ptr Pointer to GPU data.
 /// @return CPU buffer containing the transferred data.
-spdl::core::CPUBufferPtr transfer_buffer(
+[[nodiscard]] spdl::core::CPUBufferPtr transfer_buffer(
     const std::vector<size_t>& shape,
     core::ElemClass elem_class,
     size_t depth,

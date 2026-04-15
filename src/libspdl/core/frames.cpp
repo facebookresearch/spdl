@@ -25,10 +25,6 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 }
 
-#define _IS_AUDIO (media == MediaType::Audio)
-#define _IS_VIDEO (media == MediaType::Video)
-#define _IS_IMAGE (media == MediaType::Image)
-
 namespace spdl::core {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -122,7 +118,7 @@ OptionDict Frames<media>::get_metadata() const {
 
 template <MediaType media>
 int Frames<media>::get_num_frames() const {
-  if constexpr (_IS_AUDIO) {
+  if constexpr (media == MediaType::Audio) {
     int ret = 0;
     for (auto& f : frames_) {
       ret += f->nb_samples;
@@ -157,14 +153,14 @@ Rational Frames<media>::get_time_base() const {
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media>
 int Frames<media>::get_sample_rate() const
-  requires _IS_AUDIO
+  requires(media == MediaType::Audio)
 {
   return frames_.size() ? frames_[0]->sample_rate : -1;
 }
 
 template <MediaType media>
 int Frames<media>::get_num_channels() const
-  requires _IS_AUDIO
+  requires(media == MediaType::Audio)
 {
   return frames_.size() ? GET_NUM_CHANNELS(frames_[0]) : -1;
 }
@@ -174,7 +170,7 @@ int Frames<media>::get_num_channels() const
 ////////////////////////////////////////////////////////////////////////////////
 template <MediaType media>
 int Frames<media>::get_num_planes() const
-  requires(_IS_IMAGE || _IS_VIDEO)
+  requires(media == MediaType::Image || media == MediaType::Video)
 {
   return frames_.size()
       ? av_pix_fmt_count_planes((AVPixelFormat)frames_[0]->format)
@@ -183,14 +179,14 @@ int Frames<media>::get_num_planes() const
 
 template <MediaType media>
 int Frames<media>::get_width() const
-  requires(_IS_IMAGE || _IS_VIDEO)
+  requires(media == MediaType::Image || media == MediaType::Video)
 {
   return frames_.size() ? frames_[0]->width : -1;
 }
 
 template <MediaType media>
 int Frames<media>::get_height() const
-  requires(_IS_IMAGE || _IS_VIDEO)
+  requires(media == MediaType::Image || media == MediaType::Video)
 {
   return frames_.size() ? frames_[0]->height : -1;
 }
@@ -237,7 +233,7 @@ int adjust_indices(const int length, int* start, int* stop, int step) {
 
 template <MediaType media>
 VideoFramesPtr Frames<media>::slice(int start, int stop, int step) const
-  requires _IS_VIDEO
+  requires(media == MediaType::Video)
 {
   const auto numel = (int)frames_.size();
   int len = adjust_indices(numel, &start, &stop, step);
@@ -256,7 +252,7 @@ VideoFramesPtr Frames<media>::slice(int start, int stop, int step) const
 
 template <MediaType media>
 VideoFramesPtr Frames<media>::slice(const std::vector<int64_t>& index) const
-  requires _IS_VIDEO
+  requires(media == MediaType::Video)
 {
   const auto numel = (int)frames_.size();
   for (const auto& i : index) {
@@ -280,7 +276,7 @@ VideoFramesPtr Frames<media>::slice(const std::vector<int64_t>& index) const
 
 template <MediaType media>
 ImageFramesPtr Frames<media>::slice(int64_t i) const
-  requires _IS_VIDEO
+  requires(media == MediaType::Video)
 {
   const auto numel = (int)frames_.size();
   if (i >= numel || i < -numel) {
