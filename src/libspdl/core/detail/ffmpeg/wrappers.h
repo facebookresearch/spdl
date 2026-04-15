@@ -123,36 +123,37 @@ const char* get_media_format_name(int media_format) {
 
 OptionDict parse_dict(const AVDictionary* metadata);
 
-} // namespace spdl::core::detail
-
 // RAII wrapper for objects that require clean up, but need to expose double
 // pointer. As they are re-allocated by FFmpeg functions.
 // Examples are AVDictionary and AVFilterInOut.
-// They are typically only used in cpp files, so we use macro and let each
-// implementation file defines them in anonymous scope.
-#define DEF_DPtr(Type, delete_func)                         \
-  class Type##DPtr {                                        \
-    Type* p = nullptr;                                      \
-                                                            \
-   public:                                                  \
-    explicit Type##DPtr(Type* p_ = nullptr) : p(p_) {}      \
-    Type##DPtr(const Type##DPtr&) = delete;                 \
-    Type##DPtr& operator=(const Type##DPtr&) = delete;      \
-    Type##DPtr(Type##DPtr&&) noexcept = default;            \
-    Type##DPtr& operator=(Type##DPtr&&) noexcept = default; \
-    ~Type##DPtr() {                                         \
-      delete_func(&p);                                      \
-    }                                                       \
-    operator Type*() const {                                \
-      return p;                                             \
-    }                                                       \
-    operator Type**() {                                     \
-      return &p;                                            \
-    }                                                       \
-    Type* operator->() const {                              \
-      return p;                                             \
-    }                                                       \
+template <typename T, auto DeleteFunc>
+class DPtr {
+  T* p = nullptr;
+
+ public:
+  explicit DPtr(T* p_ = nullptr) : p(p_) {}
+  DPtr(const DPtr&) = delete;
+  DPtr& operator=(const DPtr&) = delete;
+  DPtr(DPtr&&) noexcept = default;
+  DPtr& operator=(DPtr&&) noexcept = default;
+  ~DPtr() {
+    DeleteFunc(&p);
   }
+  operator T*() const {
+    return p;
+  }
+  operator T**() {
+    return &p;
+  }
+  T* operator->() const {
+    return p;
+  }
+};
+
+using AVDictionaryDPtr = DPtr<AVDictionary, av_dict_free>;
+using AVFilterInOutDPtr = DPtr<AVFilterInOut, avfilter_inout_free>;
+
+} // namespace spdl::core::detail
 
 #ifdef SPDL_DEBUG_REFCOUNT
 namespace spdl::core::detail {

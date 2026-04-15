@@ -25,8 +25,6 @@ namespace {
 // AVDictionary
 //////////////////////////////////////////////////////////////////////////////
 
-DEF_DPtr(AVDictionary, av_dict_free); // This defines AVDictionaryDPtr class
-
 AVDictionaryDPtr get_option_dict(const std::optional<OptionDict>& options) {
   AVDictionaryDPtr opt;
   if (options) {
