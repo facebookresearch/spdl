@@ -46,8 +46,6 @@ std::vector<std::string> get_filters() {
 // FilterGraphImpl
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
-DEF_DPtr(AVFilterInOut, avfilter_inout_free);
-
 AVFilterGraphPtr make_graph(const std::string& filter_desc) {
   AVFilterGraphPtr graph{CHECK_AVALLOCATE(avfilter_graph_alloc())};
   graph->nb_threads = 1;
