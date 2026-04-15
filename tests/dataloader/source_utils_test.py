@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import unittest
 from collections.abc import Iterator
@@ -14,7 +14,7 @@ from spdl.source.utils import embed_shuffle
 
 class IterableWithShuffle_:
     def __init__(self, n: int) -> None:
-        self.vals = list(range(n))
+        self.vals: list[int] = list(range(n))
         self._seed: int | None = None
 
     def __iter__(self) -> Iterator[int]:
@@ -27,7 +27,7 @@ class IterableWithShuffle_:
 
 
 class SourceUtilsTest(unittest.TestCase):
-    def test_embed_shuffle(self):
+    def test_embed_shuffle(self) -> None:
         """Iterable created by embed_shuffle calls shuffle automatically"""
 
         foo = IterableWithShuffle_(3)
@@ -40,7 +40,7 @@ class SourceUtilsTest(unittest.TestCase):
         self.assertEqual(list(iterable), [0, 1, 2])
         self.assertEqual(foo._seed, 2)
 
-    def test_embed_shuffle_halt(self):
+    def test_embed_shuffle_halt(self) -> None:
         """The value is shuffled with different seed even after an iteration is halted."""
 
         foo = IterableWithShuffle_(5)
@@ -59,7 +59,7 @@ class SourceUtilsTest(unittest.TestCase):
         self.assertEqual(next(iterator), 3)
         del iterator
 
-    def test_embed_shuffle_shuffle_after(self):
+    def test_embed_shuffle_shuffle_after(self) -> None:
         """Iterable created by embed_shuffle calls shuffle automatically after iteration"""
 
         foo = IterableWithShuffle_(3)
@@ -72,7 +72,7 @@ class SourceUtilsTest(unittest.TestCase):
         self.assertEqual(list(iterable), [2, 0, 1])
         self.assertEqual(foo._seed, 2)
 
-    def test_embed_shuffle_shuffle_after_halt(self):
+    def test_embed_shuffle_shuffle_after_halt(self) -> None:
         """The value is shuffled with different seed even after an iteration is halted."""
 
         foo = IterableWithShuffle_(5)
