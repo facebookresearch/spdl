@@ -10,7 +10,7 @@ import asyncio
 import unittest
 from collections.abc import Callable
 
-from spdl.pipeline._components._common import _P2Percentile, _StatsCounter
+from spdl.pipeline._components._common import _P2Percentile, _StatsCounter, StageInfo
 from spdl.pipeline._components._hook import TaskPerfStats, TaskStatsHook
 from spdl.pipeline._components._queue import QueuePerfStats, StatsQueue
 
@@ -260,7 +260,9 @@ class TaskStatsHookPercentileTest(unittest.IsolatedAsyncioTestCase):
         Checks that after 10 successful tasks, num_tasks/num_success are correct
         and both p90/p99 trackers have non-negative values.
         """
-        hook = TaskStatsHook(name="test", interval=-1)
+        hook = TaskStatsHook(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="test"), interval=-1
+        )
         for _ in range(10):
             async with hook.task_hook():  # pyre-ignore[16]
                 pass
@@ -274,7 +276,9 @@ class TaskStatsHookPercentileTest(unittest.IsolatedAsyncioTestCase):
 
         Runs 3 tasks (2 succeed, 1 fails). Checks that the P² tracker count is 2.
         """
-        hook = TaskStatsHook(name="test", interval=-1)
+        hook = TaskStatsHook(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="test"), interval=-1
+        )
 
         async with hook.task_hook():  # pyre-ignore[16]
             pass
@@ -296,7 +300,9 @@ class TaskStatsHookPercentileTest(unittest.IsolatedAsyncioTestCase):
         """When stage_hook exits, _log_stats is called with a TaskPerfStats that
         includes non-negative p90_time and p99_time values.
         """
-        hook = TaskStatsHook(name="test", interval=-1)
+        hook = TaskStatsHook(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="test"), interval=-1
+        )
         logged_stats: list[TaskPerfStats] = []
         original_log: Callable[[TaskPerfStats], None] = hook._log_stats
 
@@ -325,7 +331,9 @@ class TaskStatsHookPercentileTest(unittest.IsolatedAsyncioTestCase):
         First lap covers 10 tasks; second lap covers 5 new tasks. Each lap's
         p90/p99 should be positive and independent of the other.
         """
-        hook = TaskStatsHook(name="test", interval=-1)
+        hook = TaskStatsHook(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="test"), interval=-1
+        )
 
         for _ in range(10):
             async with hook.task_hook():  # pyre-ignore[16]
@@ -347,7 +355,9 @@ class TaskStatsHookPercentileTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_empty_lap_stats(self) -> None:
         """When no tasks have run, lap stats report zero for all percentile fields."""
-        hook = TaskStatsHook(name="test", interval=-1)
+        hook = TaskStatsHook(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="test"), interval=-1
+        )
         lap = hook._get_lap_stats()
         self.assertEqual(lap.num_tasks, 0)
         self.assertEqual(lap.p90_time, 0.0)
@@ -359,7 +369,11 @@ class StatsQueuePercentileTest(unittest.IsolatedAsyncioTestCase):
         """After put/get operations, the queue's internal counters have
         non-negative p90 percentile values for both put and get.
         """
-        queue = StatsQueue(name="test", buffer_size=10, interval=-1)
+        queue = StatsQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="test"),
+            buffer_size=10,
+            interval=-1,
+        )
         async with queue.stage_hook():  # pyre-ignore[16]
             for i in range(5):
                 await queue.put(i)
@@ -373,7 +387,11 @@ class StatsQueuePercentileTest(unittest.IsolatedAsyncioTestCase):
         """When stage_hook exits, _log_stats receives a QueuePerfStats with
         non-negative p90/p99 values for both put and get operations.
         """
-        queue = StatsQueue(name="test", buffer_size=10, interval=-1)
+        queue = StatsQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="test"),
+            buffer_size=10,
+            interval=-1,
+        )
         logged_stats: list[QueuePerfStats] = []
         original_log: Callable[[QueuePerfStats], None] = queue._log_stats
 
@@ -404,7 +422,11 @@ class StatsQueuePercentileTest(unittest.IsolatedAsyncioTestCase):
         First lap covers 8 items; second lap covers 3 new items. Each lap's
         percentile fields should be non-negative and independent.
         """
-        queue = StatsQueue(name="test", buffer_size=10, interval=-1)
+        queue = StatsQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="test"),
+            buffer_size=10,
+            interval=-1,
+        )
         queue._lap_t0 = asyncio.get_running_loop().time()
         queue._empty_t0 = queue._lap_t0
 

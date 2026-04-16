@@ -10,12 +10,14 @@
 
 from asyncio import Queue
 from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Sequence
+from dataclasses import dataclass
 from typing import TypeAlias, TypeVar
 
 __all__ = [
     "_TAsyncCallables",
     "_TCallables",
     "_TMergeOp",
+    "StageInfo",
 ]
 
 
@@ -36,4 +38,24 @@ _TAsyncCallables: TypeAlias = (
 )
 
 
-_TMergeOp: TypeAlias = Callable[[str, Sequence[Queue], Queue], Awaitable[None]]
+@dataclass(frozen=True)
+class StageInfo:
+    """Structured identity for a pipeline stage.
+
+    Carries the metadata that identifies a stage within a pipeline.
+    Used as the primary identifier for queues, hooks, and nodes.
+    """
+
+    pipeline_id: int
+    stage_id: str
+    stage_name: str
+    concurrency: int | None = None
+
+    def __str__(self) -> str:
+        base = self.stage_name
+        if self.concurrency is not None:
+            base = f"{base}[{self.concurrency}]"
+        return f"{self.pipeline_id}:{self.stage_id}:{base}"
+
+
+_TMergeOp: TypeAlias = Callable[[StageInfo, Sequence[Queue], Queue], Awaitable[None]]

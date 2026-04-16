@@ -30,6 +30,7 @@ from spdl.pipeline.defs import (
 )
 
 from ._aggregate import _aggregate
+from ._common import StageInfo
 from ._hook import get_default_hook_class, TaskHook
 from ._pipe import (
     _disaggregate,
@@ -86,8 +87,8 @@ class _NodeMixin:
     the pipeline build process to create and manage coroutines for each stage.
     """
 
-    name: str
-    """A unique identifier for the node, used for logging and task naming."""
+    info: StageInfo
+    """Stage identity for the node, used for logging, task naming, and telemetry."""
 
     _coro: Coroutine[None, None, None] | None = field(default=None, init=False)
     _task: Task | None = field(default=None, init=False)
@@ -116,7 +117,7 @@ class _NodeMixin:
                 "[INTERNAL ERROR] Attempted to cteate a task, "
                 f"but it is already crated (started): {self}"
             )
-        task = create_task(self.coro, name=self.name)
+        task = create_task(self.coro, name=str(self.info))
         self._task = task
         return task
 
@@ -223,7 +224,7 @@ class _FanOutNode(_NodeMixin):
     def create_task(self) -> Task:
         if self._task is not None:
             return self._task  # Shared: return existing task on revisit.
-        task = create_task(self.coro, name=self.name)
+        task = create_task(self.coro, name=str(self.info))
         self._task = task
         return task
 
@@ -261,7 +262,8 @@ class _MutableInt:
         return str(self.v)
 
 
-def _get_names(cfg: object, pipeline_id: int, stage_id: _MutableInt) -> tuple[str, str]:
+def _get_stage_info(cfg: object, pipeline_id: int, stage_id: _MutableInt) -> StageInfo:
+    concurrency: int | None = None
     match cfg:
         case SourceConfig():
             base = "src"
@@ -269,8 +271,7 @@ def _get_names(cfg: object, pipeline_id: int, stage_id: _MutableInt) -> tuple[st
             base = "sink"
         case PipeConfig():
             base = cfg.name
-            if cfg._args.concurrency > 1:
-                base = f"{base}[{cfg._args.concurrency}]"
+            concurrency = cfg._args.concurrency if cfg._args.concurrency > 1 else None
         case AggregateConfig():
             base = cfg.name or repr(cfg.op)
         case DisaggregateConfig():
@@ -283,10 +284,12 @@ def _get_names(cfg: object, pipeline_id: int, stage_id: _MutableInt) -> tuple[st
             base = "path_variants_merge"
         case _:
             raise NotImplementedError(f"`{type(cfg)}` is not supported.")
-    # Note: Do not change the following pattern used for naming.
-    # They are used by dashboard to query runtime data.
-    name = f"{pipeline_id}:{stage_id}:{base}"
-    return name, f"{name}_queue"
+    return StageInfo(
+        pipeline_id=pipeline_id,
+        stage_id=str(stage_id),
+        stage_name=base,
+        concurrency=concurrency,
+    )
 
 
 # For queues other than Sink, we use buffer_size=2.
@@ -330,10 +333,10 @@ def _convert_pipes(
                 n = _convert_path_variants(cfg, n, q_class, pipeline_id, stage_id, idx)
             case _:
                 in_q = _get_output_queue(n, idx)
-                name, q_name = _get_names(cfg, pipeline_id, stage_id)
+                info = _get_stage_info(cfg, pipeline_id, stage_id)
                 stage_id += 1
-                out_q = q_class(q_name, buffer_size=_BUFFER_SIZE)
-                n = _Node(name, cfg, [n], input_queue=in_q, output_queue=out_q)
+                out_q = q_class(info, buffer_size=_BUFFER_SIZE)
+                n = _Node(info, cfg, [n], input_queue=in_q, output_queue=out_q)
         ret = n
     return ret
 
@@ -381,14 +384,18 @@ def _convert_path_variants(
     # Create per-path queues
     path_queues = []
     for i in range(len(cfg.paths)):
-        q_name = f"{pipeline_id}:{stage_id}:path_variants_path{i}_queue"
-        path_queues.append(q_class(q_name, buffer_size=_BUFFER_SIZE))
+        path_info = StageInfo(
+            pipeline_id=pipeline_id,
+            stage_id=str(stage_id),
+            stage_name=f"path_variants_path{i}",
+        )
+        path_queues.append(q_class(path_info, buffer_size=_BUFFER_SIZE))
 
     # Create router node (fan-out: 1 input, N output queues)
-    router_name, _ = _get_names(cfg, pipeline_id, stage_id)
+    router_info = _get_stage_info(cfg, pipeline_id, stage_id)
     stage_id += 1
     start_node = _FanOutNode(
-        router_name,
+        router_info,
         cfg,
         [n],
         input_queue=_get_output_queue(n, path_idx),
@@ -400,11 +407,15 @@ def _convert_path_variants(
         for i, path_configs in enumerate(cfg.paths)
     ]
     # Create merge node (fan-in: N input queues, 1 output)
-    merge_name = f"{pipeline_id}:{stage_id}:path_variants_merge"
+    merge_info = StageInfo(
+        pipeline_id=pipeline_id,
+        stage_id=str(stage_id),
+        stage_name="path_variants_merge",
+    )
     stage_id += 1
-    merge_out_q = q_class(f"{merge_name}_queue", buffer_size=_BUFFER_SIZE)
+    merge_out_q = q_class(merge_info, buffer_size=_BUFFER_SIZE)
     merge_node = _FanInNode(
-        merge_name,
+        merge_info,
         _PathVariantsMergeConfig(),
         end_nodes,
         input_queues=[n.output_queue for n in end_nodes],
@@ -439,19 +450,19 @@ def _convert_config(
         The sink node (or the last processing node if disable_sink is True) with
         all upstream nodes linked.
     """
-    name, q_name = _get_names(plc.src, pipeline_id, stage_id)
+    info = _get_stage_info(plc.src, pipeline_id, stage_id)
     stage_id += 1
-    q = q_class(q_name, buffer_size=_BUFFER_SIZE)
+    q = q_class(info, buffer_size=_BUFFER_SIZE)
     match cfg := plc.src:
         case SourceConfig():
-            n = _SourceNode(name, cfg, output_queue=q)
+            n = _SourceNode(info, cfg, output_queue=q)
         case MergeConfig():
             upstream = [
                 _convert_config(c, q_class, pipeline_id, stage_id, disable_sink=True)
                 for c in cfg.pipeline_configs
             ]
             in_qs = [n.output_queue for n in upstream]
-            n = _FanInNode(name, cfg, upstream, input_queues=in_qs, output_queue=q)
+            n = _FanInNode(info, cfg, upstream, input_queues=in_qs, output_queue=q)
         case _:
             raise NotImplementedError(f"`{type(cfg)}` is not supported.")
 
@@ -459,11 +470,11 @@ def _convert_config(
         n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
 
     if not disable_sink:
-        name, q_name = _get_names(plc.sink, pipeline_id, stage_id)
+        info = _get_stage_info(plc.sink, pipeline_id, stage_id)
         stage_id += 1
-        sink_out_q = q_class(q_name, buffer_size=plc.sink.buffer_size)
+        sink_out_q = q_class(info, buffer_size=plc.sink.buffer_size)
         n = _Node(
-            name, plc.sink, [n], input_queue=n.output_queue, output_queue=sink_out_q
+            info, plc.sink, [n], input_queue=n.output_queue, output_queue=sink_out_q
         )
     return n
 
@@ -471,7 +482,7 @@ def _convert_config(
 def _build_node(
     node: _TNodes,
     fc_class: type[_FailCounter],
-    task_hook_factory: Callable[[str], list[TaskHook]],
+    task_hook_factory: Callable[[StageInfo], list[TaskHook]],
     max_failures: int | Fraction,
 ) -> None:
     """Build a coroutine for a single node based on its configuration type.
@@ -530,7 +541,7 @@ def _build_node(
         case _SourceNode():
             node._coro = _source(node.cfg.source, node.output_queue)
         case _FanOutNode():
-            hooks = task_hook_factory(node.name)
+            hooks = task_hook_factory(node.info)
             node._coro = _path_variants_router(
                 node.input_queue,
                 node.output_queues,
@@ -538,12 +549,12 @@ def _build_node(
                 hooks,
             )
         case _FanInNode():
-            hooks = task_hook_factory(node.name)
+            hooks = task_hook_factory(node.info)
             fc = fc_class(max_failures)
             match cfg := node.cfg:
                 case MergeConfig():
                     node._coro = _merge(
-                        node.name,
+                        node.info,
                         node.input_queues,
                         node.output_queue,
                         fc,
@@ -552,7 +563,7 @@ def _build_node(
                     )
                 case _PathVariantsMergeConfig():
                     node._coro = _merge(
-                        node.name, node.input_queues, node.output_queue, fc, hooks, None
+                        node.info, node.input_queues, node.output_queue, fc, hooks, None
                     )
                 case _:  # pragma: no cover
                     raise ValueError(
@@ -564,16 +575,16 @@ def _build_node(
                     node._coro = _sink(node.input_queue, node.output_queue)
                 case PipeConfig():
                     in_q, out_q = node.input_queue, node.output_queue
-                    hooks = task_hook_factory(node.name)
+                    hooks = task_hook_factory(node.info)
                     fc = fc_class(max_failures, cfg._max_failures)
                     match cfg._type:
                         case _PipeType.Pipe:
                             node._coro = _pipe(
-                                node.name, in_q, out_q, cfg._args, fc, hooks, False
+                                node.info, in_q, out_q, cfg._args, fc, hooks, False
                             )
                         case _PipeType.OrderedPipe:
                             node._coro = _ordered_pipe(
-                                node.name, in_q, out_q, cfg._args, fc, hooks
+                                node.info, in_q, out_q, cfg._args, fc, hooks
                             )
                         case _:  # pragma: no cover
                             raise ValueError(
@@ -582,14 +593,14 @@ def _build_node(
 
                 case AggregateConfig():
                     in_q, out_q = node.input_queue, node.output_queue
-                    hooks = task_hook_factory(node.name)
+                    hooks = task_hook_factory(node.info)
                     fc = fc_class(max_failures)
                     # Use specialized aggregate pipe that drains the input queue
                     # in bulk to reduce context switching overhead.
                     # When drop_last=False, pass EOF to op so it can emit remaining items
                     # When drop_last=True, don't pass EOF to op, effectively dropping last batch
                     node._coro = _aggregate(
-                        node.name,
+                        node.info,
                         in_q,
                         out_q,
                         cfg.op,
@@ -600,10 +611,10 @@ def _build_node(
 
                 case DisaggregateConfig():
                     in_q, out_q = node.input_queue, node.output_queue
-                    hooks = task_hook_factory(node.name)
+                    hooks = task_hook_factory(node.info)
                     fc = fc_class(max_failures)
                     args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
-                    node._coro = _pipe(node.name, in_q, out_q, args, fc, hooks, False)
+                    node._coro = _pipe(node.info, in_q, out_q, args, fc, hooks, False)
 
                 case _:  # pragma: no cover
                     raise ValueError(
@@ -614,7 +625,7 @@ def _build_node(
 def _build_node_recursive(
     node: _TNodes,
     fc_class: type[_FailCounter],
-    task_hook_factory: Callable[[str], list[TaskHook]],
+    task_hook_factory: Callable[[StageInfo], list[TaskHook]],
     max_failures: int | Fraction,
 ) -> None:
     """Recursively build coroutines for a node and all its upstream nodes.
@@ -661,15 +672,15 @@ def _default_q(interval: float) -> type[AsyncQueue]:
 
 def _default_hook_factory(
     report_stats_interval: float,
-) -> Callable[[str], list[TaskHook]]:
+) -> Callable[[StageInfo], list[TaskHook]]:
     if (hook_class := get_default_hook_class()) is not None:
 
-        def _hook_factory(name: str) -> list[TaskHook]:
-            return [hook_class(name=name, interval=report_stats_interval)]
+        def _hook_factory(stage_info: StageInfo) -> list[TaskHook]:
+            return [hook_class(stage_info, interval=report_stats_interval)]
 
     else:
 
-        def _hook_factory(_: str) -> list[TaskHook]:
+        def _hook_factory(_: StageInfo) -> list[TaskHook]:
             return []
 
     return _hook_factory
@@ -682,7 +693,7 @@ def _build_pipeline_node(
     max_failures: int | Fraction,
     report_stats_interval: float,
     queue_class: type[AsyncQueue] | None,
-    task_hook_factory: Callable[[str], list[TaskHook]] | None,
+    task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None,
     stage_id: int,
 ) -> _TOutputNodes:
     global _PIPELINE_ID
@@ -880,7 +891,7 @@ def _build_pipeline_coro(
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
-    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: Sequence[BackgroundTaskFactory] | None = None,
 ) -> tuple[Coroutine[None, None, None], asyncio.Queue]:

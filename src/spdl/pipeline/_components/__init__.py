@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from ._common import is_eof
+from ._common import is_eof, StageInfo
 from ._hook import (
     get_default_hook_class,
     set_default_hook_class,
@@ -35,6 +35,7 @@ __all__ = [
     "TaskPerfStats",
     "TaskStatsHook",
     "QueuePerfStats",
+    "StageInfo",
     "StatsQueue",
     "AsyncQueue",
 ]

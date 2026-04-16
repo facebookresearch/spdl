@@ -54,7 +54,7 @@ from pathlib import Path
 from queue import Queue
 from typing import Any, TypeVar
 
-from spdl.pipeline import Pipeline, PipelineBuilder
+from spdl.pipeline import Pipeline, PipelineBuilder, StageInfo
 
 try:
     from examples.sqlite_stats_logger import (  # pyre-ignore[21]
@@ -162,10 +162,10 @@ def build_pipeline(
         A configured Pipeline instance ready for execution with performance monitoring.
     """
 
-    def hook_factory(name: str) -> list[Any]:
+    def hook_factory(info: StageInfo) -> list[Any]:
         return [
             TaskStatsHookWithLogging(
-                name=name,
+                info,
                 buffer=buffer,
                 interval=log_interval,
             )

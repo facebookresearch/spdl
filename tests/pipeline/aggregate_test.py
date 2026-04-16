@@ -11,9 +11,11 @@ from typing import Any
 
 from spdl.pipeline import AsyncQueue, PipelineBuilder
 from spdl.pipeline._components._aggregate import _aggregate
-from spdl.pipeline._components._common import _EOF
+from spdl.pipeline._components._common import _EOF, StageInfo
 from spdl.pipeline._components._pipe import _get_fail_counter
 from spdl.pipeline.defs import Aggregator
+
+_TEST_INFO = StageInfo(pipeline_id=0, stage_id="0", stage_name="test")
 
 
 def _put_aqueue(queue, vals, *, eof):
@@ -60,8 +62,12 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
     async def test_stops_draining_on_emit(self) -> None:
         """After the aggregator emits, bulk draining stops and remaining
         items stay in the input queue for the next drain cycle."""
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=0)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         agg = _TrackingAggregator(batch_size=3)
         # Pre-fill 7 items + EOF. The aggregator emits after every 3 items.
@@ -71,7 +77,7 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
         _put_aqueue(input_queue, list(range(7)), eof=True)
 
         await _aggregate(
-            "test",
+            _TEST_INFO,
             input_queue,
             output_queue,
             agg,
@@ -89,8 +95,12 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
     async def test_drains_without_blocking_when_no_emit(self) -> None:
         """When the aggregator doesn't emit, items are drained from the
         queue without blocking (via get_nowait)."""
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=0)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         # batch_size=10 means 5 items won't trigger an emit
         agg = _TrackingAggregator(batch_size=10)
@@ -100,7 +110,7 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
         _put_aqueue(input_queue, list(range(5)), eof=True)
 
         await _aggregate(
-            "test",
+            _TEST_INFO,
             input_queue,
             output_queue,
             agg,
@@ -117,8 +127,12 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
     async def test_drop_last(self) -> None:
         """When op_requires_eof=False, EOF stops processing and flush
         is not called, dropping incomplete batches."""
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=0)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         agg = _TrackingAggregator(batch_size=3)
 
@@ -126,7 +140,7 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
         _put_aqueue(input_queue, list(range(5)), eof=True)
 
         await _aggregate(
-            "test",
+            _TEST_INFO,
             input_queue,
             output_queue,
             agg,
@@ -150,14 +164,18 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
             def flush(self) -> None:
                 return None
 
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=0)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         _put_aqueue(input_queue, [1], eof=True)
 
         with self.assertRaises(ValueError, msg="aggregation failed"):
             await _aggregate(
-                "test",
+                _TEST_INFO,
                 input_queue,
                 output_queue,
                 FailingAggregator(),
@@ -168,15 +186,19 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_single_item_no_emit(self) -> None:
         """A single item that doesn't trigger emit is flushed at EOF."""
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=0)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         agg = _TrackingAggregator(batch_size=5)
 
         _put_aqueue(input_queue, [42], eof=True)
 
         await _aggregate(
-            "test",
+            _TEST_INFO,
             input_queue,
             output_queue,
             agg,
@@ -191,8 +213,12 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
     async def test_eof_with_empty_flush(self) -> None:
         """When items evenly divide batch_size, flush() returns None at EOF.
         The function must still return instead of blocking."""
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=0)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         agg = _TrackingAggregator(batch_size=3)
 
@@ -200,7 +226,7 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
         _put_aqueue(input_queue, list(range(6)), eof=True)
 
         await _aggregate(
-            "test",
+            _TEST_INFO,
             input_queue,
             output_queue,
             agg,
@@ -215,15 +241,19 @@ class AggregatePipeBulkDrainTest(unittest.IsolatedAsyncioTestCase):
     async def test_emit_on_every_item(self) -> None:
         """When batch_size=1, every item triggers an emit and each
         drain cycle processes exactly one item."""
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=0)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         agg = _TrackingAggregator(batch_size=1)
 
         _put_aqueue(input_queue, [10, 20, 30], eof=True)
 
         await _aggregate(
-            "test",
+            _TEST_INFO,
             input_queue,
             output_queue,
             agg,

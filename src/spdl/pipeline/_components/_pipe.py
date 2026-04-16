@@ -24,7 +24,7 @@ from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._common._types import _TMergeOp
 from spdl.pipeline.defs import _PipeArgs
 
-from ._common import _EOF, _SKIP, is_eof
+from ._common import _EOF, _SKIP, is_eof, StageInfo
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._queue import _queue_stage_hook, AsyncQueue
 
@@ -150,19 +150,20 @@ class _FailCounter(TaskHook):
                 self._num_stage_failures += 1
             self._check_threshold()
 
-    def raise_for_failures(self, name: str) -> None:
+    def raise_for_failures(self, info: StageInfo) -> None:
         threshold = self.max_failures
+        display = info
         if isinstance(threshold, Fraction):
             rate = Fraction(self.num_failures, self.num_invocations)
             raise RuntimeError(
-                f"The pipeline stage ({name}) failed {self.num_failures} times "
+                f"The pipeline stage ({display}) failed {self.num_failures} times "
                 f"out of {self.num_invocations} invocations "
                 f"({float(rate):.1%}), which exceeds the threshold "
                 f"({float(threshold):.1%})."
             )
         else:
             raise RuntimeError(
-                f"The pipeline stage ({name}) failed {self.num_failures} times, "
+                f"The pipeline stage ({display}) failed {self.num_failures} times, "
                 f"which exceeds the threshold ({threshold})."
             )
 
@@ -239,7 +240,7 @@ async def _wrap_agen(
 
 
 def _pipe(
-    name: str,
+    info: StageInfo,
     input_queue: AsyncQueue,
     output_queue: AsyncQueue,
     args: _PipeArgs[T, U],
@@ -255,7 +256,7 @@ def _pipe(
     tasks up to the specified concurrency level.
 
     Args:
-        name: The name of the pipeline stage for logging and task naming.
+        info: The stage identity for logging and task naming.
         input_queue: The queue to consume input items from.
         output_queue: The queue to put processed items into.
         args: Pipeline arguments containing the operation, executor, and concurrency.
@@ -303,7 +304,10 @@ def _pipe(
                 break
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
-            task = create_task(_wrap(afunc(item), item), name=f"{name}:{(i := i + 1)}")
+            task = create_task(
+                _wrap(afunc(item), item),
+                name=f"{info}:{(i := i + 1)}",
+            )
             tasks.add(task)
 
             if len(tasks) >= args.concurrency:
@@ -318,13 +322,13 @@ def _pipe(
             await asyncio.wait(tasks)
 
         if fail_counter.too_many_failures():
-            fail_counter.raise_for_failures(name)
+            fail_counter.raise_for_failures(info)
 
     return pipe()
 
 
 def _ordered_pipe(
-    name: str,
+    info: StageInfo,
     input_queue: AsyncQueue,
     output_queue: AsyncQueue,
     args: _PipeArgs[T, U],
@@ -339,7 +343,7 @@ def _ordered_pipe(
     and waiting for them to complete in sequence.
 
     Args:
-        name: The name of the pipeline stage for logging and task naming.
+        info: The stage identity for logging and task naming.
         input_queue: The queue to consume input items from.
         output_queue: The queue to put processed items into (in order).
         args: Pipeline arguments containing the operation, executor, and concurrency.
@@ -397,7 +401,13 @@ def _ordered_pipe(
     )
 
     inter_queue: AsyncQueue = AsyncQueue(
-        f"{name}_interqueue", buffer_size=args.concurrency
+        StageInfo(
+            pipeline_id=info.pipeline_id,
+            stage_id=info.stage_id,
+            stage_name=f"{info.stage_name}_interqueue",
+            concurrency=info.concurrency,
+        ),
+        buffer_size=args.concurrency,
     )
 
     async def _run(item: T) -> U:
@@ -412,7 +422,7 @@ def _ordered_pipe(
             if is_eof(item):
                 break
 
-            task = create_task(_run(item), name=f"{name}:{(i := i + 1)}")
+            task = create_task(_run(item), name=f"{info}:{(i := i + 1)}")
             await inter_queue.put((task, item))
 
         await inter_queue.put(_EOF)
@@ -450,7 +460,7 @@ def _ordered_pipe(
         await asyncio.wait({create_task(get_run_put()), create_task(get_check_put())})
 
         if fail_counter.too_many_failures():
-            fail_counter.raise_for_failures(name)
+            fail_counter.raise_for_failures(info)
 
     return ordered_pipe()
 
@@ -461,7 +471,7 @@ async def _disaggregate(items: list[T]) -> AsyncIterator[T]:
 
 
 async def _default_merge(
-    name: str, input_queues: Sequence[asyncio.Queue], output_queue: asyncio.Queue
+    info: StageInfo, input_queues: Sequence[asyncio.Queue], output_queue: asyncio.Queue
 ) -> None:
     async def _pass(in_q: asyncio.Queue) -> None:
         while True:
@@ -471,14 +481,14 @@ async def _default_merge(
             await output_queue.put(item)
 
     tasks = [
-        create_task(_pass(in_q), name=f"{name}:{i}")
+        create_task(_pass(in_q), name=f"{info}:{i}")
         for i, in_q in enumerate(input_queues)
     ]
     await asyncio.wait(tasks)
 
 
 def _merge(
-    name: str,
+    info: StageInfo,
     input_queues: Sequence[AsyncQueue],
     output_queue: AsyncQueue,
     fail_counter: _FailCounter,
@@ -493,7 +503,7 @@ def _merge(
     merge operation can be provided for more complex merging logic.
 
     Args:
-        name: The name of the pipeline stage for logging and task naming.
+        info: The stage identity for logging and task naming.
         input_queues: Sequence of queues to consume input items from.
         output_queue: The queue to put merged items into.
         fail_counter: Hook for tracking and limiting task failures.
@@ -521,6 +531,6 @@ def _merge(
     @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
     async def merge() -> None:
-        await op(name, input_queues, output_queue)
+        await op(info, input_queues, output_queue)
 
     return merge()

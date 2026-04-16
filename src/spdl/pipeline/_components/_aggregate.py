@@ -14,7 +14,7 @@ from typing import Any
 
 from spdl.pipeline.defs import Aggregator
 
-from ._common import _SKIP, is_eof
+from ._common import _SKIP, is_eof, StageInfo
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._pipe import _FailCounter
 from ._queue import _queue_stage_hook, AsyncQueue
@@ -34,7 +34,7 @@ class _AggregatorWrapper:
 
 
 def _aggregate(
-    name: str,
+    info: StageInfo,
     input_queue: AsyncQueue,
     output_queue: AsyncQueue,
     op: Aggregator,
@@ -106,6 +106,6 @@ def _aggregate(
                     break
 
         if fail_counter.too_many_failures():
-            fail_counter.raise_for_failures(name)
+            fail_counter.raise_for_failures(info)
 
     return aggregate_pipe()

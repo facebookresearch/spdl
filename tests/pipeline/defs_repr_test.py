@@ -11,6 +11,7 @@ import inspect
 import unittest
 from collections.abc import AsyncIterable, AsyncIterator, Iterable, Iterator, Sequence
 
+from spdl.pipeline import StageInfo
 from spdl.pipeline.defs import (
     Aggregate,
     Disaggregate,
@@ -55,7 +56,7 @@ class ExampleAsyncIterable(AsyncIterable[int]):
 
 
 async def custom_merge_op(
-    name: str,
+    info: StageInfo,
     input_queues: Sequence[asyncio.Queue],
     output_queue: asyncio.Queue,
 ) -> None:

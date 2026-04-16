@@ -17,7 +17,13 @@ from typing import Any, AsyncContextManager, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 
-from ._common import _P2Percentile, _periodic_dispatch, _StatsCounter, _time_str
+from ._common import (
+    _P2Percentile,
+    _periodic_dispatch,
+    _StatsCounter,
+    _time_str,
+    StageInfo,
+)
 
 __all__ = [
     "_stage_hooks",
@@ -266,18 +272,17 @@ class TaskStatsHook(TaskHook):
        - :ref:`analysis` explains how to use the exported stats.
 
     Args:
-        name: Name of the stage. Only used for logging.
+        info: The stage identity.
         interval: The interval (in second) to report the performance stats periodically.
             The default behavior is no periodic reporting.
     """
 
     def __init__(
         self,
-        name: str,
+        info: StageInfo,
         interval: float = -1,
     ) -> None:
-        assert interval is not None
-        self.name = name
+        self.info = info
         self.interval = interval
 
         self.num_tasks = 0
@@ -302,7 +307,7 @@ class TaskStatsHook(TaskHook):
             done = asyncio.Event()
             report = create_task(
                 _periodic_dispatch(self._log_interval_stats, done, self.interval),
-                name="f{self.name}_periodic_report",
+                name=f"{self.info}_periodic_report",
                 log_cancelled=False,
             )
 
@@ -393,7 +398,7 @@ class TaskStatsHook(TaskHook):
         _LG.info(
             "[%s]\tCompleted %5d tasks (%3d failed). "
             "Ave task time: %s. P90: %s. P99: %s.",
-            self.name,
+            self.info,
             stats.num_tasks,
             stats.num_failures,
             _time_str(stats.ave_time),
