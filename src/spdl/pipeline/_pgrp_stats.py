@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import multiprocessing
+import multiprocessing.context
 import os
 import signal
 from collections.abc import Awaitable, Callable
@@ -560,16 +561,21 @@ class ProcessGroupStatsMonitor(BackgroundTask):
         callback: An async callable that receives a
             :class:`ProcessGroupResourceUsage` snapshot each interval.
         interval: Collection interval in seconds (default 60).
+        mp_context: A :mod:`multiprocessing` context (e.g. from
+            ``multiprocessing.get_context("forkserver")``) used to spawn the
+            monitor subprocess.  ``None`` (default) uses the default context.
     """
 
     def __init__(
         self,
         callback: Callable[[ProcessGroupResourceUsage], Awaitable[None]],
         interval: float = _PGRP_INTERVAL_SEC,
+        mp_context: multiprocessing.context.BaseContext | None = None,
     ) -> None:
         super().__init__()
         self._callback = callback
         self._interval = interval
+        self._mp_context = mp_context
 
     async def run(self) -> None:
         """Spawn a daemon subprocess to collect process-group stats and wait for it.
@@ -585,7 +591,8 @@ class ProcessGroupStatsMonitor(BackgroundTask):
         is terminated (then killed if it does not exit within 5 seconds)
         and ``CancelledError`` is re-raised.
         """
-        proc = multiprocessing.Process(
+        ctx = self._mp_context or multiprocessing.get_context()
+        proc = ctx.Process(
             target=_pgrp_monitor_subprocess,
             args=(self._interval, self._callback),
             daemon=True,
