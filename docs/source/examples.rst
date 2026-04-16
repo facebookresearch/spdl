@@ -7,6 +7,7 @@ Examples
    :caption: Examples
    :recursive:
 
+   llm_finetune.llm_finetuning
    image_dataloading
    video_dataloading
    imagenet_classification
