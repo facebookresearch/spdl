@@ -53,6 +53,8 @@ With the default settings (global batch size 8x32), the training throughput reac
 samples on H100 GPUs.
 """
 
+from __future__ import annotations
+
 __all__ = [
     "build_model",
     "build_pipeline",
@@ -72,14 +74,16 @@ import time
 from collections.abc import Callable, Iterator
 from datetime import timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import torch
 import torch.distributed as dist
-from peft import get_peft_model, LoraConfig, TaskType
 from spdl.pipeline import PipelineBuilder
 from spdl.source import DistributedRandomSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
-from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenizerBase
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
 
 try:
     from examples.llm_finetune.utils.utils import (  # pyre-ignore[21]
@@ -213,6 +217,9 @@ def build_model(
     lora_dropout: float,
 ) -> torch.nn.Module:
     """Load LLaMA model and apply LoRA."""
+    from peft import get_peft_model, LoraConfig, TaskType
+    from transformers import AutoModelForCausalLM
+
     _LG.info("Loading model from %s", model_path)
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
@@ -268,6 +275,8 @@ def train(
 
     # --- Data ---
     samples = load_data(data_path)
+
+    from transformers import AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     if tokenizer.pad_token is None:
