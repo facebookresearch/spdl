@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from spdl.pipeline._common._misc import create_task
 
-from ._common import _EOF, _periodic_dispatch, _StatsCounter, _time_str
+from ._common import _EOF, _periodic_dispatch, _StatsCounter, _time_str, StageInfo
 
 __all__ = [
     "_queue_stage_hook",
@@ -44,13 +44,18 @@ class AsyncQueue(asyncio.Queue):
     the bottleneck in the pipeline. See :py:class:`StatsQueue`.
 
     Args:
-        name: The name of the queue. Assigned by :py:class:`PipelineBuilder`.
+        info: The stage identity. Assigned by :py:class:`PipelineBuilder`.
         buffer_size: The buffer size. Assigned by :py:class:`PipelineBuilder`.
     """
 
-    def __init__(self, name: str, *, buffer_size: int = 1) -> None:
+    def __init__(
+        self,
+        info: StageInfo,
+        *,
+        buffer_size: int = 1,
+    ) -> None:
         super().__init__(buffer_size)
-        self.name = name
+        self.info = info
 
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
@@ -158,7 +163,7 @@ class StatsQueue(AsyncQueue):
        - :ref:`analysis` explains how to use the exported stats.
 
     Args:
-        name: The name of the queue. Assigned by :py:class:`PipelineBuilder`.
+        info: The stage identity. Assigned by :py:class:`PipelineBuilder`.
         buffer_size: The buffer size. Assigned by :py:class:`PipelineBuilder`.
         interval: The interval (in second) between reporting performance numbers
             to console.
@@ -166,12 +171,12 @@ class StatsQueue(AsyncQueue):
 
     def __init__(
         self,
-        name: str,
+        info: StageInfo,
         *,
         buffer_size: int = 1,
         interval: float = -1,
     ) -> None:
-        super().__init__(name, buffer_size=buffer_size)
+        super().__init__(info, buffer_size=buffer_size)
 
         self.interval = interval
 
@@ -216,7 +221,7 @@ class StatsQueue(AsyncQueue):
             done = asyncio.Event()
             report = create_task(
                 _periodic_dispatch(self._log_interval_stats, done, self.interval),
-                name=f"{self.name}_periodic_report",
+                name=f"{self.info}_queue_periodic_report",
                 log_cancelled=False,
             )
 
@@ -316,7 +321,7 @@ class StatsQueue(AsyncQueue):
             "Ave wait time: put: %s, get (by next stage): %s. "
             "P90: put: %s, get: %s. P99: put: %s, get: %s. "
             "Occupancy rate: %d%%",
-            self.name,
+            f"{self.info}_queue",
             stats.num_items,
             _time_str(stats.elapsed),
             stats.qps,

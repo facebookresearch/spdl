@@ -130,6 +130,7 @@ from spdl.pipeline import (
     Pipeline,
     PipelineBuilder,
     QueuePerfStats,
+    StageInfo,
     StatsQueue,
     TaskHook,
     TaskPerfStats,
@@ -176,7 +177,7 @@ class TaskStatsHookWithLogging(TaskStatsHook):
     plain Python queue.
 
     Args:
-        name: Name of the stage/task.
+        info: The stage identity.
         buffer: Shared queue to write stats entries. This queue is typically
             consumed by a separate writer (e.g., ``SQLiteStatsWriter``).
         interval: The interval (in seconds) to report the performance stats
@@ -185,11 +186,11 @@ class TaskStatsHookWithLogging(TaskStatsHook):
 
     def __init__(
         self,
-        name: str,
+        info: StageInfo,
         buffer: Queue[TaskStatsLogEntry | QueueStatsLogEntry | EventLogEntry],
         interval: float = 59,
     ) -> None:
-        super().__init__(name=name, interval=interval)
+        super().__init__(info, interval=interval)
         self._buffer = buffer
 
     async def interval_stats_callback(self, stats: TaskPerfStats) -> None:
@@ -198,7 +199,7 @@ class TaskStatsHookWithLogging(TaskStatsHook):
 
         entry = TaskStatsLogEntry(
             timestamp=time.time(),
-            name=self.name,
+            name=str(self.info),
             stats=stats,
         )
         self._buffer.put(entry)
@@ -211,7 +212,7 @@ class StatsQueueWithLogging(StatsQueue):
     plain Python queue.
 
     Args:
-        name: Name of the queue. Assigned by PipelineBuilder.
+        info: The stage identity. Assigned by PipelineBuilder.
         buffer: Shared queue to write stats entries. This queue is typically
             consumed by a separate writer (e.g., ``SQLiteStatsWriter``).
         buffer_size: The buffer size. Assigned by PipelineBuilder.
@@ -221,12 +222,12 @@ class StatsQueueWithLogging(StatsQueue):
 
     def __init__(
         self,
-        name: str,
+        info: StageInfo,
         buffer: Queue[TaskStatsLogEntry | QueueStatsLogEntry | EventLogEntry],
         buffer_size: int = 1,
         interval: float = 59,
     ) -> None:
-        super().__init__(name=name, buffer_size=buffer_size, interval=interval)
+        super().__init__(info, buffer_size=buffer_size, interval=interval)
         self._buffer = buffer
 
     async def interval_stats_callback(self, stats: QueuePerfStats) -> None:
@@ -235,7 +236,7 @@ class StatsQueueWithLogging(StatsQueue):
 
         entry = QueueStatsLogEntry(
             timestamp=time.time(),
-            name=self.name,
+            name=str(self.info),
             stats=stats,
         )
         self._buffer.put(entry)
@@ -316,10 +317,10 @@ def build_pipeline(
         A configured Pipeline instance ready for execution.
     """
 
-    def hook_factory(name: str) -> list[TaskHook]:
+    def hook_factory(info: StageInfo) -> list[TaskHook]:
         return [
             TaskStatsHookWithLogging(
-                name=name,
+                info,
                 buffer=buffer,
                 interval=log_interval,
             )

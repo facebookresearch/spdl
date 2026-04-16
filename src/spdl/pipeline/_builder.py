@@ -13,7 +13,7 @@ from fractions import Fraction
 from typing import Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
-from spdl.pipeline._components import AsyncQueue, TaskHook
+from spdl.pipeline._components import AsyncQueue, StageInfo, TaskHook
 from spdl.pipeline.defs import (
     _TPipeInputs,
     Aggregate,
@@ -279,7 +279,7 @@ class PipelineBuilder(Generic[T, U]):
         max_failures: int | Fraction = -1,
         report_stats_interval: float = -1,
         queue_class: type[AsyncQueue] | None = None,
-        task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+        task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         stage_id: int = 0,
     ) -> Pipeline[U]:
         """Build the pipeline.

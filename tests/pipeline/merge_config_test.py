@@ -12,7 +12,7 @@ import asyncio
 import unittest
 from collections.abc import Sequence
 
-from spdl.pipeline import build_pipeline, create_task, is_eof
+from spdl.pipeline import build_pipeline, create_task, is_eof, StageInfo
 from spdl.pipeline.defs import (
     Merge,
     Pipe,
@@ -370,7 +370,7 @@ class MergeConfigTest(unittest.TestCase):
         collected_items: list[str] = []
 
         async def custom_merge_op(
-            name: str,
+            info: StageInfo,
             input_queues: Sequence[asyncio.Queue[object]],
             output_queue: asyncio.Queue[object],
         ) -> None:
@@ -389,7 +389,7 @@ class MergeConfigTest(unittest.TestCase):
                     await output_queue.put(prefixed_item)
 
             tasks = [
-                create_task(process_queue(i, in_q), name=f"{name}:{i}")
+                create_task(process_queue(i, in_q), name=f"{info}:{i}")
                 for i, in_q in enumerate(input_queues)
             ]
             await asyncio.wait(tasks)
@@ -432,7 +432,7 @@ class MergeConfigTest(unittest.TestCase):
         """Test MergeConfig accepts and uses custom merge operation."""
 
         async def custom_merge_op(
-            _: str,
+            _: StageInfo,
             input_queues: Sequence[asyncio.Queue[object]],
             output_queue: asyncio.Queue[object],
         ) -> None:

@@ -12,6 +12,7 @@ __all__ = [
     "_StatsCounter",
     "_time_str",
     "is_eof",
+    "StageInfo",
 ]
 
 import asyncio
@@ -22,6 +23,7 @@ from contextlib import contextmanager
 from typing import Any, TypeVar
 
 from spdl.pipeline._common._misc import create_task
+from spdl.pipeline._common._types import StageInfo as StageInfo  # noqa: F811
 
 # pyre-strict
 

@@ -10,6 +10,7 @@ import asyncio
 import unittest
 
 from spdl.pipeline._components import AsyncQueue
+from spdl.pipeline._components._common import StageInfo
 from spdl.pipeline._components._node import (
     _cancel_orphaned,
     _cancel_recursive,
@@ -41,28 +42,36 @@ def _node(
         else:
             await asyncio.sleep(10)
 
+    info = StageInfo(pipeline_id=0, stage_id="0", stage_name=name)
     n: _TTestNode
     if not deps:
         n = _SourceNode(
-            name,
+            info,
             SourceConfig(source=[]),
-            output_queue=AsyncQueue(name),
+            output_queue=AsyncQueue(info),
         )
     elif len(deps) > 1:
         n = _FanInNode(
-            name,
+            info,
             _PathVariantsMergeConfig(),
             deps,
-            input_queues=[AsyncQueue(f"{name}_in_{i}") for i in range(len(deps))],
-            output_queue=AsyncQueue(name),
+            input_queues=[
+                AsyncQueue(
+                    StageInfo(pipeline_id=0, stage_id="0", stage_name=f"{name}_in_{i}")
+                )
+                for i in range(len(deps))
+            ],
+            output_queue=AsyncQueue(info),
         )
     else:
         n = _Node(
-            name,
+            info,
             SinkConfig(buffer_size=1),
             deps,
-            input_queue=AsyncQueue(f"{name}_in"),
-            output_queue=AsyncQueue(name),
+            input_queue=AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name=f"{name}_in")
+            ),
+            output_queue=AsyncQueue(info),
         )
     n._coro = coro()
     return n
@@ -139,7 +148,7 @@ class PipelineNodeTest(unittest.TestCase):
             errs = _gather_error(c1)
             self.assertEqual(len(errs), 1)
             name, err = errs[0]
-            self.assertEqual(name, "B2")
+            self.assertEqual(name, "0:0:B2")
             self.assertIsInstance(err, DummyException)
             self.assertEqual(err.args[0], "fail B2")
 
@@ -176,11 +185,11 @@ class PipelineNodeTest(unittest.TestCase):
             errs = _gather_error(c1)
             self.assertEqual(len(errs), 2)
             name, err = errs[0]
-            self.assertEqual(name, "A2")
+            self.assertEqual(name, "0:0:A2")
             self.assertIsInstance(err, DummyException)
             self.assertEqual(err.args[0], "fail A2")
             name, err = errs[1]
-            self.assertEqual(name, "B2")
+            self.assertEqual(name, "0:0:B2")
             self.assertIsInstance(err, DummyException)
             self.assertEqual(err.args[0], "fail B2")
 
@@ -238,15 +247,15 @@ class PipelineNodeTest(unittest.TestCase):
             errs = _gather_error(f1)
             self.assertEqual(len(errs), 3)
             name, err = errs[0]
-            self.assertEqual(name, "A2")
+            self.assertEqual(name, "0:0:A2")
             self.assertIsInstance(err, DummyException)
             self.assertEqual(err.args[0], "fail A2")
             name, err = errs[1]
-            self.assertEqual(name, "B2")
+            self.assertEqual(name, "0:0:B2")
             self.assertIsInstance(err, DummyException)
             self.assertEqual(err.args[0], "fail B2")
             name, err = errs[2]
-            self.assertEqual(name, "C2")
+            self.assertEqual(name, "0:0:C2")
             self.assertIsInstance(err, DummyException)
             self.assertEqual(err.args[0], "fail C2")
 
@@ -284,7 +293,7 @@ class PipelineNodeTest(unittest.TestCase):
             errs = _gather_error(c1)
             self.assertEqual(len(errs), 1)
             name, err = errs[0]
-            self.assertEqual(name, "C1")
+            self.assertEqual(name, "0:0:C1")
             self.assertIsInstance(err, DummyException)
 
         asyncio.run(run())

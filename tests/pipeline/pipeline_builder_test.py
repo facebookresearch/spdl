@@ -31,7 +31,7 @@ from spdl.pipeline import (
     TaskStatsHook,
 )
 from spdl.pipeline._components import _get_global_id, _set_global_id
-from spdl.pipeline._components._common import _EOF
+from spdl.pipeline._components._common import _EOF, StageInfo
 from spdl.pipeline._components._hook import _periodic_dispatch
 from spdl.pipeline._components._pipe import (
     _FailCounter,
@@ -45,6 +45,11 @@ from spdl.pipeline.defs import Aggregator
 from spdl.source.utils import embed_shuffle
 
 T = TypeVar("T")
+
+
+def _SI(name: str) -> StageInfo:
+    """Shorthand for creating a test StageInfo."""
+    return StageInfo(pipeline_id=0, stage_id="0", stage_name=name)
 
 
 def _put_aqueue(queue, vals, *, eof):
@@ -73,7 +78,9 @@ async def no_op(val):
 class TestSource(unittest.TestCase):
     def test_async_enqueue_empty(self) -> None:
         """_async_enqueue can handle empty iterator"""
-        queue = AsyncQueue(name="foo", buffer_size=0)
+        queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="foo"), buffer_size=0
+        )
         coro = _source([], queue)
         asyncio.run(coro)
         self.assertEqual(_flush_aqueue(queue), [_EOF])
@@ -81,7 +88,9 @@ class TestSource(unittest.TestCase):
     def test_async_enqueue_simple(self) -> None:
         """_async_enqueue should put the values in the queue."""
         src = list(range(6))
-        queue = AsyncQueue(name="foo", buffer_size=0)
+        queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="foo"), buffer_size=0
+        )
         coro = _source(src, queue)
         asyncio.run(coro)
         vals = _flush_aqueue(queue)
@@ -94,7 +103,12 @@ class TestSource(unittest.TestCase):
             yield from range(10)
             raise RuntimeError("Failing the iterator.")
 
-        coro = _source(src(), AsyncQueue(name="foo", buffer_size=0))
+        coro = _source(
+            src(),
+            AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="foo"), buffer_size=0
+            ),
+        )
 
         with self.assertRaises(RuntimeError):
             asyncio.run(coro)  # Not raising
@@ -103,7 +117,9 @@ class TestSource(unittest.TestCase):
         """_async_enqueue is cancellable."""
 
         async def _test():
-            queue = AsyncQueue(name="foo", buffer_size=1)
+            queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="foo"), buffer_size=1
+            )
 
             src = list(range(3))
 
@@ -134,8 +150,12 @@ class TestSink(unittest.TestCase):
     )
     def test_async_sink_simple(self, empty: bool) -> None:
         """_sink pass the contents from input_queue to output_queue"""
-        input_queue: AsyncQueue = AsyncQueue(name="input", buffer_size=0)
-        output_queue: AsyncQueue = AsyncQueue(name="output", buffer_size=0)
+        input_queue: AsyncQueue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue: AsyncQueue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         data = [] if empty else list(range(3))
         _put_aqueue(input_queue, data, eof=True)
@@ -151,8 +171,12 @@ class TestSink(unittest.TestCase):
         """_async_sink is cancellable."""
 
         async def _test():
-            input_queue = AsyncQueue(name="input")
-            output_queue = AsyncQueue(name="output")
+            input_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="input")
+            )
+            output_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
+            )
 
             coro = _sink(input_queue, output_queue)
             task = asyncio.create_task(coro)
@@ -188,15 +212,19 @@ async def passthrough(val):
 class TestPipe(unittest.IsolatedAsyncioTestCase):
     def test_async_pipe(self) -> None:
         """_pipe processes the data in input queue and pass it to output queue."""
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=0)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         async def test():
             ref = list(range(6))
             _put_aqueue(input_queue, ref, eof=True)
 
             await _pipe(
-                "adouble",
+                _SI("adouble"),
                 input_queue,
                 output_queue,
                 _PipeArgs(op=adouble),
@@ -213,8 +241,12 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
 
     def test_async_pipe_skip(self) -> None:
         """_pipe skips the result if it's None."""
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=0)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         async def skip_even(v):
             if v % 2:
@@ -224,7 +256,7 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
             _put_aqueue(input_queue, range(10), eof=True)
 
             await _pipe(
-                "skip_even",
+                _SI("skip_even"),
                 input_queue,
                 output_queue,
                 _PipeArgs(op=skip_even),
@@ -241,8 +273,12 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
 
     def test_async_pipe_wrong_task_signature(self) -> None:
         """_pipe fails immediately if user provided incompatible iterator/afunc."""
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=0)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=0
+        )
 
         async def _2args(val: int, _):
             return val
@@ -253,7 +289,7 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
 
             with self.assertRaises(TypeError):
                 await _pipe(
-                    "_2args",
+                    _SI("_2args"),
                     input_queue,
                     output_queue,
                     _PipeArgs(op=_2args, concurrency=3),
@@ -278,8 +314,12 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
     )
     def test_async_pipe_cancel(self, full: bool) -> None:
         """_pipe is cancellable."""
-        input_queue = AsyncQueue(name="input", buffer_size=0)
-        output_queue = AsyncQueue(name="output", buffer_size=1)
+        input_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="input"), buffer_size=0
+        )
+        output_queue = AsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output"), buffer_size=1
+        )
 
         _put_aqueue(input_queue, list(range(3)), eof=False)
 
@@ -299,7 +339,7 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
 
         async def test():
             coro = _pipe(
-                "astuck",
+                _SI("astuck"),
                 input_queue,
                 output_queue,
                 _PipeArgs(op=astuck),
@@ -328,14 +368,20 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
             return val
 
         async def test(concurrency):
-            input_queue = AsyncQueue(name="input", buffer_size=0)
-            output_queue = AsyncQueue(name="output", buffer_size=0)
+            input_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="input"),
+                buffer_size=0,
+            )
+            output_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="output"),
+                buffer_size=0,
+            )
 
             ref = [1, 2, 3, 4]
             _put_aqueue(input_queue, ref, eof=False)
 
             coro = _pipe(
-                "delay",
+                _SI("delay"),
                 input_queue,
                 output_queue,
                 _PipeArgs(
@@ -373,15 +419,21 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
             return val
 
         async def test(concurrency):
-            input_queue = AsyncQueue(name="input", buffer_size=0)
-            output_queue = AsyncQueue(name="output", buffer_size=0)
+            input_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="input"),
+                buffer_size=0,
+            )
+            output_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="output"),
+                buffer_size=0,
+            )
 
             ref = [4, 5, 6, 7, _EOF]
             _put_aqueue(input_queue, ref, eof=False)
 
             t0 = time.monotonic()
             await _pipe(
-                "delay",
+                _SI("delay"),
                 input_queue,
                 output_queue,
                 _PipeArgs(
@@ -494,14 +546,15 @@ class TestPipelineHook(unittest.TestCase):
 
         h1, h2, h3 = CountHook(), CountHook(), CountHook()
 
-        def hook_factory(name: str) -> list[TaskHook]:
-            if "adouble" in name:
+        def hook_factory(name) -> list[TaskHook]:
+            sname = str(name)
+            if "adouble" in sname:
                 return [h1]
-            if "aggregate" in name:
+            if "aggregate" in sname:
                 return [h2]
-            if "_fail" in name:
+            if "_fail" in sname:
                 return [h3]
-            raise RuntimeError(f"Unexpected name: {name}")
+            raise RuntimeError(f"Unexpected name: {sname}")
 
         async def _fail(_):
             raise RuntimeError("Failing")
@@ -858,7 +911,9 @@ class TestTaskStatsHook(unittest.TestCase):
     def test_task_stats(self) -> None:
         """TaskStatsHook logs the interval of each task."""
 
-        hook = TaskStatsHook("foo", 1)
+        hook = TaskStatsHook(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="foo"), 1
+        )
 
         async def _test():
             async with hook.stage_hook():
@@ -916,7 +971,9 @@ class TestPeriodicDispatch(unittest.TestCase):
     def test_task_stats_log_interval_stats(self) -> None:
         """Smoke test for _log_interval_stats."""
 
-        hook = TaskStatsHook("foo", 1)
+        hook = TaskStatsHook(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="foo"), 1
+        )
         asyncio.run(hook._log_interval_stats())
 
 
@@ -2128,7 +2185,7 @@ def plusN(x: int, N: int) -> int:
     return x + N
 
 
-def hook_factory(_: str) -> list[TaskHook]:
+def hook_factory(_: StageInfo) -> list[TaskHook]:
     return [CountHook()]
 
 
@@ -2533,9 +2590,9 @@ class TestOverrideStage(unittest.TestCase):
         class CheckNameQueue(AsyncQueue):
             index = ref
 
-            def __init__(self, name: str, *, buffer_size: int = 1) -> None:
+            def __init__(self, name, *, buffer_size: int = 1) -> None:
                 print(name)
-                id = re.match(r"\d+:(\d+):.*", name).group(1)
+                id = re.match(r"\d+:(\d+):.*", str(name)).group(1)
                 assert id == str(self.index)
                 CheckNameQueue.index += 1
                 super().__init__(name, buffer_size=buffer_size)

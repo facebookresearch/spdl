@@ -31,6 +31,7 @@ from spdl.pipeline._components import (
     _get_global_id,
     _set_global_id,
     AsyncQueue,
+    StageInfo,
     TaskHook,
 )
 from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
@@ -124,7 +125,7 @@ def _build_pipeline(
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
-    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
 ) -> Pipeline[U]:
@@ -171,7 +172,7 @@ def build_pipeline(
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
-    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
 ) -> Pipeline[U]:
@@ -270,7 +271,7 @@ class _Wrapper(Generic[U]):
         max_failures: int | Fraction,
         report_stats_interval: float,
         queue_class: type[AsyncQueue] | None,
-        task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+        task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         background_tasks: list[BackgroundTaskFactory] | None = None,
     ) -> None:
         self.config = config
@@ -316,7 +317,7 @@ def run_pipeline_in_subprocess(
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
-    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     **kwargs: Any,
 ) -> Iterable[T]:
@@ -387,7 +388,7 @@ def run_pipeline_in_subinterpreter(
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
     queue_class: type[AsyncQueue] | None = None,
-    task_hook_factory: Callable[[str], list[TaskHook]] | None = None,
+    task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     **kwargs: Any,
 ) -> Iterable[T]:
