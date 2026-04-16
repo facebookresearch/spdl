@@ -383,20 +383,22 @@ class ProcessGroupStatsMonitorSubprocessTest(unittest.TestCase):
         mock_proc.pid = 12345
         mock_proc.is_alive.side_effect = [True, True, False]
 
-        with patch(f"{_MODULE}.multiprocessing.Process") as mock_cls:
-            mock_cls.return_value = mock_proc
+        mock_ctx: MagicMock = MagicMock()
+        mock_ctx.Process.return_value = mock_proc
 
-            async def run_monitor() -> None:
-                monitor = ProcessGroupStatsMonitor(callback=AsyncMock())
-                task = asyncio.create_task(monitor.run())
-                await asyncio.sleep(0.01)
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
+        async def run_monitor() -> None:
+            monitor = ProcessGroupStatsMonitor(
+                callback=AsyncMock(), mp_context=mock_ctx
+            )
+            task = asyncio.create_task(monitor.run())
+            await asyncio.sleep(0.01)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
-            asyncio.run(run_monitor())
+        asyncio.run(run_monitor())
 
         mock_proc.start.assert_called_once()
         mock_proc.terminate.assert_called_once()
@@ -409,15 +411,17 @@ class ProcessGroupStatsMonitorSubprocessTest(unittest.TestCase):
         mock_proc.exitcode = 1
         mock_proc.is_alive.return_value = False
 
-        with patch(f"{_MODULE}.multiprocessing.Process") as mock_cls:
-            mock_cls.return_value = mock_proc
+        mock_ctx: MagicMock = MagicMock()
+        mock_ctx.Process.return_value = mock_proc
 
-            async def run_monitor() -> None:
-                monitor = ProcessGroupStatsMonitor(callback=AsyncMock())
-                await monitor.run()
+        async def run_monitor() -> None:
+            monitor = ProcessGroupStatsMonitor(
+                callback=AsyncMock(), mp_context=mock_ctx
+            )
+            await monitor.run()
 
-            with self.assertLogs(_MODULE, level="WARNING") as cm:
-                asyncio.run(run_monitor())
+        with self.assertLogs(_MODULE, level="WARNING") as cm:
+            asyncio.run(run_monitor())
 
         exit_warnings = [m for m in cm.output if "exited unexpectedly" in m]
         self.assertEqual(len(exit_warnings), 1)
