@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import os
 import sys
@@ -17,7 +17,7 @@ from parameterized import parameterized
 
 from ..fixture import FFMPEG_CLI, get_sample, load_ref_audio
 
-sample_fmt2dtype = {
+sample_fmt2dtype: dict[str, type[np.generic]] = {
     "s16": np.int16,
     "s32": np.int32,
     "s64": np.int64,
