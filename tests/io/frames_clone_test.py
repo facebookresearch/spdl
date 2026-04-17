@@ -4,13 +4,15 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import unittest
 
 import numpy as np
 import spdl.io
+from numpy.typing import NDArray
 from parameterized import parameterized
+from spdl.io import AudioFrames, ImageFrames, VideoFrames
 
 from ..fixture import FFMPEG_CLI, get_sample
 
@@ -21,7 +23,9 @@ CMDS = {
 }
 
 
-def _load_from_frames(frames):
+def _load_from_frames(
+    frames: AudioFrames | VideoFrames | ImageFrames,
+) -> NDArray[np.uint8]:
     buffer = spdl.io.convert_frames(frames)
     return spdl.io.to_numpy(buffer)
 
