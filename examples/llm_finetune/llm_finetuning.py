@@ -57,8 +57,7 @@ from __future__ import annotations
 
 __all__ = [
     "build_model",
-    "build_pipeline",
-    "iterate_pipeline",
+    "build_spdl_dataloader",
     "load_data",
     "main",
     "train",
@@ -69,139 +68,35 @@ __all__ = [
 import argparse
 import logging
 import os
-import threading
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import torch
 import torch.distributed as dist
-from spdl.pipeline import PipelineBuilder
-from spdl.source import DistributedRandomSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-if TYPE_CHECKING:
-    from transformers import PreTrainedTokenizerBase
-
 try:
+    from examples.llm_finetune.utils.pipeline import (  # pyre-ignore[21]
+        build_spdl_dataloader,
+    )
     from examples.llm_finetune.utils.utils import (  # pyre-ignore[21]
-        format_prompt,
         load_data,
         report_progress,
         resolve_model_path,
     )
 except ImportError:
+    from spdl.examples.llm_finetune.utils.pipeline import (
+        build_spdl_dataloader,
+    )
     from spdl.examples.llm_finetune.utils.utils import (
-        format_prompt,
         load_data,
         report_progress,
         resolve_model_path,
     )
 
 _LG: logging.Logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# SPDL data pipeline
-# ---------------------------------------------------------------------------
-
-
-def build_pipeline(
-    samples: list[dict[str, str]],
-    tokenizer: PreTrainedTokenizerBase,
-    max_seq_len: int,
-    batch_size: int,
-    rank: int,
-    world_size: int,
-    num_threads: int,
-    seed: int,
-) -> PipelineBuilder:
-    """Build an SPDL pipeline for concurrent tokenization.
-
-    Pipeline stages:
-      1. Source: DistributedRandomSampler yields sample indices
-      2. Pipe: Look up sample by index
-      3. Pipe (concurrent): Format prompt and tokenize
-      4. Aggregate: Group into batches
-      5. Pipe: Collate into tensors
-      6. Sink: Buffer for the training loop
-    """
-
-    sampler = DistributedRandomSampler(
-        len(samples),
-        rank=rank,
-        world_size=world_size,
-        seed=seed,
-    )
-
-    # The HuggingFace fast tokenizer's Rust backend is not thread-safe.
-    # Use thread-local copies so each SPDL worker thread has its own instance.
-    class _TokenizerTLS(threading.local):
-        tokenizer: PreTrainedTokenizerBase | None = None
-
-    _tls: _TokenizerTLS = _TokenizerTLS()
-
-    def _get_tokenizer() -> PreTrainedTokenizerBase:
-        if _tls.tokenizer is None:
-            import copy
-
-            _tls.tokenizer = copy.deepcopy(tokenizer)
-        return _tls.tokenizer
-
-    def lookup(idx: int) -> dict[str, str]:
-        return samples[idx]
-
-    def tokenize(sample: dict[str, str]) -> dict[str, torch.Tensor]:
-        tok = _get_tokenizer()
-        text = format_prompt(sample)
-        enc = tok(
-            text,
-            max_length=max_seq_len,
-            truncation=True,
-            padding="max_length",
-            return_tensors="pt",
-        )
-        input_ids = enc["input_ids"].squeeze(0)
-        attention_mask = enc["attention_mask"].squeeze(0)
-        # For causal LM, labels = input_ids; mask padding with -100
-        labels = input_ids.clone()
-        labels[attention_mask == 0] = -100
-        return {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "labels": labels,
-        }
-
-    def collate(items: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
-        return {
-            "input_ids": torch.stack([it["input_ids"] for it in items]),
-            "attention_mask": torch.stack([it["attention_mask"] for it in items]),
-            "labels": torch.stack([it["labels"] for it in items]),
-        }
-
-    return (
-        PipelineBuilder()
-        .add_source(sampler)
-        .pipe(lookup)
-        .pipe(tokenize, concurrency=num_threads)
-        .aggregate(batch_size)
-        .pipe(collate)
-        .add_sink(buffer_size=3)
-    )
-
-
-def iterate_pipeline(
-    pipeline_builder: PipelineBuilder,
-    num_threads: int,
-    device: torch.device,
-) -> Iterator[dict[str, torch.Tensor]]:
-    """Build, run, and iterate over the SPDL pipeline, transferring to device."""
-    pipeline = pipeline_builder.build(num_threads=num_threads)
-    with pipeline.auto_stop():
-        for batch in pipeline.get_iterator(timeout=120):
-            yield {k: v.to(device, non_blocking=True) for k, v in batch.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -319,6 +214,17 @@ def train(
         eta_min=lr * 0.1,
     )
 
+    # --- Build data source ---
+    dataloader = build_spdl_dataloader(
+        samples=samples,
+        tokenizer=tokenizer,
+        max_seq_len=max_seq_len,
+        batch_size=batch_size,
+        rank=rank,
+        world_size=world_size,
+        num_threads=num_workers,
+    )
+
     # --- Training loop ---
     global_step = 0
     ddp_model.train()
@@ -326,22 +232,11 @@ def train(
     for epoch in range(num_epochs):
         _LG.info("Epoch %d/%d", epoch + 1, num_epochs)
 
-        pipeline_builder = build_pipeline(
-            samples=samples,
-            tokenizer=tokenizer,
-            max_seq_len=max_seq_len,
-            batch_size=batch_size,
-            rank=rank,
-            world_size=world_size,
-            num_threads=num_workers,
-            seed=epoch,  # different shuffle per epoch
-        )
-
         t0 = time.monotonic()
         epoch_loss = 0.0
         num_batches = 0
 
-        for batch in iterate_pipeline(pipeline_builder, num_workers, device):
+        for batch in dataloader:
             outputs = ddp_model(
                 input_ids=batch["input_ids"],
                 attention_mask=batch["attention_mask"],
