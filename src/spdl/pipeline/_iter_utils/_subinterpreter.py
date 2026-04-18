@@ -73,7 +73,13 @@ else:
 
     class _SubinterpreterIterable(Iterable[T]):
         """An Iterable interface that manipulates the iterable in a subinterpreter
-        and fetches the results."""
+        and fetches the results.
+
+        This object supports multiple iterations. Each call to ``__iter__()``
+        instructs the worker subinterpreter to create a fresh iterator from the
+        underlying iterable (via ``iter(iterable)``), without creating a new
+        subinterpreter. The subinterpreter is reused across iterations.
+        """
 
         def __init__(self, interface: _iic[T]) -> None:
             self._if: _iic[T] | None = interface
@@ -145,6 +151,28 @@ def iterate_in_subinterpreter(
     Python 3.14's :py:mod:`concurrent.interpreters` module instead of multiprocessing.
     Subinterpreters provide isolation while sharing the same process, which can be
     more lightweight than spawning a separate process.
+
+    The subinterpreter is created once and reused across iterations.
+    The returned :py:class:`Iterable` supports multiple iterations —
+    each call to ``iter()`` (or ``for ... in``) instructs the worker to
+    create a fresh iterator from the underlying iterable without creating
+    a new subinterpreter. Reusing the same worker avoids the overhead of
+    repeated subinterpreter creation and initializer execution.
+
+    .. note::
+
+       ``fn()`` is called once in the subinterpreter to create the iterable.
+       Each subsequent ``iter()`` call creates a fresh iterator by calling
+       ``iter(iterable)`` on the same object. If ``fn()`` returns a proper
+       ``Iterable`` (a class with ``__iter__`` that creates a new iterator
+       each time), re-iteration works as expected.
+
+       However, if ``fn()`` returns a **generator** (or any single-use
+       iterator), re-iteration will silently yield no items. This is
+       because a generator is its own iterator — ``iter(generator)``
+       returns ``self`` — so once exhausted, calling ``iter()`` again
+       returns the same exhausted object. The first iteration will work
+       correctly, but all subsequent iterations will appear empty.
 
     Args:
         fn: Function that returns an iterator. Use :py:func:`functools.partial` to
