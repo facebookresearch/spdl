@@ -71,7 +71,13 @@ class _ipc(Generic[T]):
 
 class _SubprocessIterable(Iterable[T]):
     """An Iterable interface that manipulates the iterable in worker process
-    and fetch the results."""
+    and fetch the results.
+
+    This object supports multiple iterations. Each call to ``__iter__()``
+    instructs the worker subprocess to create a fresh iterator from the
+    underlying iterable (via ``iter(iterable)``), without spawning a new
+    process. The subprocess is reused across iterations.
+    """
 
     def __init__(self, interface: _ipc[T]) -> None:
         self._interface: _ipc[T] | None = interface
@@ -107,6 +113,29 @@ def iterate_in_subprocess(
     daemon: bool = False,
 ) -> Iterable[T]:
     """**[Experimental]** Run the given ``iterable`` in a subprocess.
+
+    The subprocess is created once and reused across iterations.
+    The returned :py:class:`Iterable` supports multiple iterations —
+    each call to ``iter()`` (or ``for ... in``) instructs the worker to
+    create a fresh iterator from the underlying iterable without spawning
+    a new process. Because process creation involves overhead (fork/spawn,
+    initializer execution, and pickling), reusing the same worker is more
+    efficient than calling this function repeatedly.
+
+    .. note::
+
+       ``fn()`` is called once in the subprocess to create the iterable.
+       Each subsequent ``iter()`` call creates a fresh iterator by calling
+       ``iter(iterable)`` on the same object. If ``fn()`` returns a proper
+       ``Iterable`` (a class with ``__iter__`` that creates a new iterator
+       each time), re-iteration works as expected.
+
+       However, if ``fn()`` returns a **generator** (or any single-use
+       iterator), re-iteration will silently yield no items. This is
+       because a generator is its own iterator — ``iter(generator)``
+       returns ``self`` — so once exhausted, calling ``iter()`` again
+       returns the same exhausted object. The first iteration will work
+       correctly, but all subsequent iterations will appear empty.
 
     Args:
         fn: Function that returns an iterator. Use :py:func:`functools.partial` to

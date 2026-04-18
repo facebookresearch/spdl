@@ -323,6 +323,21 @@ def run_pipeline_in_subprocess(
 ) -> Iterable[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
 
+    The returned :py:class:`Iterable` supports multiple iterations. The
+    subprocess is created once and reused — each call to ``iter()`` (or
+    ``for ... in``) builds a fresh :py:class:`Pipeline` inside the same
+    subprocess without spawning a new process. This avoids the overhead
+    of subprocess creation (fork/spawn, initializer execution, and
+    pickling) on every iteration.
+
+    For multi-epoch training, create the iterable once before the epoch
+    loop and iterate it each epoch::
+
+        src = run_pipeline_in_subprocess(config, num_threads=4)
+        for epoch in range(num_epochs):
+            for batch in src:
+                train(batch)
+
     Args:
         config_or_builder: The definition of :py:class:`Pipeline`. Can be either a
             :py:class:`PipelineConfig` or :py:class:`PipelineBuilder`.
@@ -393,6 +408,21 @@ def run_pipeline_in_subinterpreter(
     **kwargs: Any,
 ) -> Iterable[T]:
     """**[Experimental]** Run the given Pipeline in a subinterpreter, and iterate on the result.
+
+    The returned :py:class:`Iterable` supports multiple iterations. The
+    subinterpreter is created once and reused — each call to ``iter()``
+    (or ``for ... in``) builds a fresh :py:class:`Pipeline` inside the
+    same subinterpreter without creating a new one. This avoids the
+    overhead of repeated subinterpreter creation and initializer
+    execution on every iteration.
+
+    For multi-epoch training, create the iterable once before the epoch
+    loop and iterate it each epoch::
+
+        src = run_pipeline_in_subinterpreter(config, num_threads=4)
+        for epoch in range(num_epochs):
+            for batch in src:
+                train(batch)
 
     Args:
         config: The definition of :py:class:`Pipeline`.
