@@ -6,8 +6,11 @@
 
 """Data loading and model resolution helpers (OSS version, local filesystem)."""
 
+from __future__ import annotations
+
 __all__ = [
-    "format_prompt",
+    "_collate",
+    "_tokenize_sample",
     "load_data",
     "report_progress",
     "resolve_model_path",
@@ -19,8 +22,13 @@ import builtins
 import json
 import logging
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
-_LG: logging.Logger = logging.getLogger(__name__)
+import torch
+from torch import Tensor
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
 
 try:
     from .fb.helpers import open_fn, report_progress, resolve_model_path
@@ -36,9 +44,7 @@ except ImportError:
         pass
 
 
-# ---------------------------------------------------------------------------
-# Data loading
-# ---------------------------------------------------------------------------
+_LG: logging.Logger = logging.getLogger(__name__)
 
 
 def _load_jsonl(path: str) -> list[dict[str, str]]:
@@ -63,7 +69,7 @@ def load_data(paths: Sequence[str]) -> list[dict[str, str]]:
     return samples
 
 
-def format_prompt(sample: dict[str, str]) -> str:
+def _format_prompt(sample: dict[str, str]) -> str:
     """Format an Alpaca-style sample into a single prompt string."""
     instruction = sample["instruction"]
     inp = sample.get("input", "")
@@ -75,3 +81,37 @@ def format_prompt(sample: dict[str, str]) -> str:
             f"### Response:\n{output}"
         )
     return f"### Instruction:\n{instruction}\n\n### Response:\n{output}"
+
+
+def _tokenize_sample(
+    sample: dict[str, str],
+    tokenizer: "PreTrainedTokenizerBase",
+    max_seq_len: int,
+) -> dict[str, Tensor]:
+    """Format and tokenize a single Alpaca-style sample."""
+    text = _format_prompt(sample)
+    enc = tokenizer(
+        text,
+        max_length=max_seq_len,
+        truncation=True,
+        padding="max_length",
+        return_tensors="pt",
+    )
+    input_ids = enc["input_ids"].squeeze(0)
+    attention_mask = enc["attention_mask"].squeeze(0)
+    labels = input_ids.clone()
+    labels[attention_mask == 0] = -100
+    return {
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
+        "labels": labels,
+    }
+
+
+def _collate(items: list[dict[str, Tensor]]) -> dict[str, Tensor]:
+    """Stack a list of tokenized samples into a batch."""
+    return {
+        "input_ids": torch.stack([it["input_ids"] for it in items]),
+        "attention_mask": torch.stack([it["attention_mask"] for it in items]),
+        "labels": torch.stack([it["labels"] for it in items]),
+    }
