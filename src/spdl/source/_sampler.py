@@ -60,6 +60,11 @@ class DistributedDeterministicSampler:
     subset of the data indices. When distributed training is not initialized, it returns
     all indices.
 
+    The iteration order is deterministic and always the same: indices are assigned
+    in a round-robin fashion (``range(rank, N, world_size)``). Every iteration
+    produces the identical sequence. If you need a different order each epoch,
+    use :py:class:`DistributedRandomSampler` instead.
+
     Args:
         n: The size of the dataset.
 
@@ -187,32 +192,6 @@ class DistributedRandomSampler:
     subset of the data indices. When distributed training is not initialized, it returns
     all indices.
 
-    This sampler can apply two randomness; shuffling and wieghted sampling.
-
-    .. admonition:: Example
-       :class: note
-
-       >>> sampler = DistributedRandomSampler(5, rank=0, world_size=1)
-       >>> list(sampler)
-       [4, 2, 0, 1, 3]
-       >>> # If not shuffling, the second iteratoin generates the same sequence
-       >>> list(sampler)
-       [4, 2, 0, 1, 3]
-       >>> sampler.shuffle(seed=1)
-       >>> list(sampler)
-       [3, 2, 4, 1, 5]
-
-       You can use :py:func:`~spdl.source.utils.embed_shuffle` to shuffle automatically
-       at each iteration.
-
-       >>> sampler = embed_shuffle(DistributedRandomSampler(5, rank=0, world_size=1))
-       >>> list(sampler)
-       [4, 2, 0, 1, 3]
-       >>> list(sampler)
-       [3, 2, 4, 1, 5]
-       >>> list(sampler)
-       [2, 1, 4, 3, 5]
-
     .. admonition:: Example - Distributed sampling
        :class: note
 
@@ -228,6 +207,66 @@ class DistributedRandomSampler:
        >>> sampler = DistributedRandomSampler(N, rank=2, world_size=3)
        >>> list(sampler)
        [5, 8, 0]
+
+    Without calling :py:meth:`shuffle`, the sampler produces the **same** sequence
+    on every iteration. To get a different order each epoch, call
+    ``sampler.shuffle(seed=epoch)`` before iterating:
+
+    .. admonition:: Example
+       :class: note
+
+       >>> sampler = DistributedRandomSampler(5, rank=0, world_size=1)
+       >>> list(sampler)
+       [4, 2, 0, 1, 3]
+       >>> # If not shuffling, the second iteratoin generates the same sequence
+       >>> list(sampler)
+       [4, 2, 0, 1, 3]
+       >>> sampler.shuffle(seed=1)
+       >>> list(sampler)
+       [3, 2, 4, 1, 5]
+
+    You can use :py:func:`~spdl.source.utils.embed_shuffle` to shuffle automatically
+    at each iteration.
+
+    .. admonition:: Example - Auto-shuffle
+       :class: note
+
+       >>> sampler = embed_shuffle(DistributedRandomSampler(5, rank=0, world_size=1))
+       >>> list(sampler)
+       [4, 2, 0, 1, 3]
+       >>> list(sampler)
+       [3, 2, 4, 1, 5]
+       >>> list(sampler)
+       [2, 1, 4, 3, 5]
+
+    This is especially useful when the sampler is iterated in a subprocess via
+    :py:func:`~spdl.pipeline.iterate_in_subprocess`, where calling
+    :py:meth:`shuffle` manually from the main process has no effect on the subprocess
+    copy.
+
+    .. admonition:: Example - Running in a subprocess
+       :class: note
+
+       When iterating the sampler in a subprocess, wrap it with
+       :py:func:`~spdl.source.utils.embed_shuffle` so that each epoch is automatically
+       reshuffled inside the subprocess:
+
+       .. code-block:: python
+
+          from functools import partial
+          from spdl.pipeline import iterate_in_subprocess
+          from spdl.source import DistributedRandomSampler
+          from spdl.source.utils import embed_shuffle
+
+          sampler = DistributedRandomSampler(N, rank=rank, world_size=world_size)
+          src = iterate_in_subprocess(embed_shuffle(sampler))
+
+          # Each epoch, ranks generate different disjoint set of indices
+          for epoch in range(num_epochs):
+              for idx in src:
+                  ...
+
+    This sampler supports wieghted sampling.
 
     .. admonition:: Example - Weighted sampling
        :class: note
@@ -258,16 +297,15 @@ class DistributedRandomSampler:
         world_size: The number of ranks in the distributed communication config.
             You can fetch the values with :py:func:`torch.distributed.get_world_size`.
 
-        num_draws: The number of samples to draw at each iteration.
-            If peforming weighted sampling, (``deterministic=False`` and
-            ``weights`` is provided)  then it can be greater than the
-            size of dataset. Otherwise, it must be smaller than or equal
-            to the size of dataset.
+        num_draws: *Oprional* The number of samples to draw at each iteration.
+            When performing weighted sampling (``weights`` is provided),
+            this can be greater than the size of the dataset. Otherwise,
+            it must be smaller than or equal to the size of the dataset.
 
         weights: *Optional* The sampling weight of each sample in the dataset.
-            When provided, the length of the sequence must match the size of the dataset.
-            (``size``).
-            This option is ignored if ``deterministic=True``.
+            When provided, the length of the sequence must match the size of
+            the dataset. (``size``).
+            Indices are drawn with replacement when weights are provided.
 
         seed: The seed value for generating the sequence.
     """
@@ -312,5 +350,11 @@ class DistributedRandomSampler:
         yield from indices[self._rank :: self._world_size]
 
     def shuffle(self, seed: int) -> None:
-        """Set the random seed for future iterations."""
+        """Set the random seed for future iterations.
+
+        The resulting sequence depends only on the given ``seed`` value and is not
+        affected by any prior iterations or previous calls to :py:meth:`shuffle`.
+        Calling ``shuffle(seed=K)`` always produces the same sequence for a given
+        sampler configuration, regardless of history.
+        """
         self._seed = seed
