@@ -66,6 +66,18 @@ class TestDistributedSamplerDeterministic(unittest.TestCase):
             self.assertEqual(set(c.keys()), set(range(num_iters)))
             self.assertTrue(all(v == 1 for v in c.values()))
 
+    def test_deterministic_iter_stable_across_epochs(self) -> None:
+        """Deterministic sampler produces the same sequence on every iteration."""
+        N = 30
+        world_size = 4
+        for rank in range(world_size):
+            sampler = DistributedDeterministicSampler(
+                N, rank=rank, world_size=world_size
+            )
+            first_epoch = list(sampler)
+            for _ in range(5):
+                self.assertEqual(list(sampler), first_epoch)
+
 
 class TestDistributedSamplerRandom(unittest.TestCase):
     def test_shuffle(self) -> None:
@@ -74,7 +86,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
         rank = 3
         world_size = 8
 
-        previous = []
+        previous: list[int] = []
         for epoch in range(100):
             sampler = DistributedRandomSampler(N, rank=rank, world_size=world_size)
             sampler.shuffle(seed=epoch)
@@ -83,6 +95,61 @@ class TestDistributedSamplerRandom(unittest.TestCase):
             print(f"{indices=}")
             self.assertNotEqual(indices, previous)
             previous = indices
+
+    def test_shuffle_epoch_loop(self) -> None:
+        """Calling shuffle(seed=epoch) on a single sampler produces different sequences each epoch."""
+        N = 640
+        world_size = 8
+
+        for rank in range(world_size):
+            sampler = DistributedRandomSampler(N, rank=rank, world_size=world_size)
+            previous: list[int] = []
+            for epoch in range(10):
+                sampler.shuffle(seed=epoch)
+                indices = list(sampler)
+                self.assertEqual(len(indices), N // world_size)
+                self.assertNotEqual(indices, previous)
+                previous = indices
+
+    def test_shuffle_is_stateless(self) -> None:
+        """shuffle(seed) output depends only on the seed, not on prior iteration history."""
+        N = 640
+        world_size = 8
+
+        for rank in range(world_size):
+            sampler = DistributedRandomSampler(N, rank=rank, world_size=world_size)
+            for i in range(10):
+                sampler.shuffle(seed=i)
+                list(sampler)
+            sampler.shuffle(seed=5)
+            after_many = list(sampler)
+
+            fresh = DistributedRandomSampler(N, rank=rank, world_size=world_size)
+            fresh.shuffle(seed=5)
+            from_fresh = list(fresh)
+
+            self.assertEqual(after_many, from_fresh)
+
+    def test_shuffle_epoch_loop_mutual_exclusive(self) -> None:
+        """All ranks together cover the full dataset at each epoch when using shuffle(seed=epoch)."""
+        N = 640
+        world_size = 8
+
+        samplers = [
+            DistributedRandomSampler(N, rank=rank, world_size=world_size)
+            for rank in range(world_size)
+        ]
+
+        for epoch in range(10):
+            c = Counter()
+            for sampler in samplers:
+                sampler.shuffle(seed=epoch)
+                c.update(sampler)
+
+            self.assertEqual(c.total(), N)
+            self.assertEqual(len(c.keys()), N)
+            self.assertEqual(set(c.keys()), set(range(N)))
+            self.assertTrue(all(v == 1 for v in c.values()))
 
     @parameterized.expand(
         [
