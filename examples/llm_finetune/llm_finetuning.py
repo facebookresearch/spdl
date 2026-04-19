@@ -57,6 +57,7 @@ from __future__ import annotations
 
 __all__ = [
     "build_model",
+    "build_pytorch_dataloader",
     "build_spdl_dataloader",
     "load_data",
     "main",
@@ -78,6 +79,9 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 try:
+    from examples.llm_finetune.utils.dataloader import (  # pyre-ignore[21]
+        build_pytorch_dataloader,
+    )
     from examples.llm_finetune.utils.pipeline import (  # pyre-ignore[21]
         build_spdl_dataloader,
     )
@@ -87,6 +91,7 @@ try:
         resolve_model_path,
     )
 except ImportError:
+    from spdl.examples.llm_finetune.utils.dataloader import build_pytorch_dataloader
     from spdl.examples.llm_finetune.utils.pipeline import (
         build_spdl_dataloader,
     )
@@ -157,6 +162,8 @@ def train(
     lora_alpha: int,
     lora_dropout: float,
     num_workers: int,
+    dataloader: str = "spdl",
+    mp_context: str = "forkserver",
     progress_fn: Callable[[int, int], None] | None = None,
 ) -> None:
     """Main training function, called per-rank."""
@@ -166,7 +173,13 @@ def train(
     device = torch.device(f"cuda:{local_rank}")
     torch.cuda.set_device(device)
 
-    _LG.info("Rank %d/%d on device %s", rank, world_size, device)
+    _LG.info(
+        "Rank %d/%d on device %s (dataloader=%s)",
+        rank,
+        world_size,
+        device,
+        dataloader,
+    )
 
     # --- Data ---
     samples = load_data(data_path)
@@ -215,15 +228,29 @@ def train(
     )
 
     # --- Build data source ---
-    dataloader = build_spdl_dataloader(
-        samples=samples,
-        tokenizer=tokenizer,
-        max_seq_len=max_seq_len,
-        batch_size=batch_size,
-        rank=rank,
-        world_size=world_size,
-        num_threads=num_workers,
-    )
+    if dataloader == "pytorch":
+        dl = build_pytorch_dataloader(
+            samples=samples,
+            tokenizer=tokenizer,
+            max_seq_len=max_seq_len,
+            batch_size=batch_size,
+            rank=rank,
+            world_size=world_size,
+            num_workers=num_workers,
+            mp_context=mp_context,
+            device=device,
+        )
+    else:
+        dl = build_spdl_dataloader(
+            samples=samples,
+            tokenizer=tokenizer,
+            max_seq_len=max_seq_len,
+            batch_size=batch_size,
+            rank=rank,
+            world_size=world_size,
+            num_threads=num_workers,
+            mp_context=mp_context,
+        )
 
     # --- Training loop ---
     global_step = 0
@@ -236,7 +263,7 @@ def train(
         epoch_loss = 0.0
         num_batches = 0
 
-        for batch in dataloader:
+        for batch in dl:
             outputs = ddp_model(
                 input_ids=batch["input_ids"],
                 attention_mask=batch["attention_mask"],
@@ -328,7 +355,21 @@ def parse_args() -> argparse.Namespace:
         "--num-workers",
         type=int,
         default=8,
-        help="Concurrent tokenization workers in the SPDL pipeline",
+        help="Concurrent tokenization workers in the data pipeline",
+    )
+    parser.add_argument(
+        "--dataloader",
+        type=str,
+        choices=["spdl", "pytorch"],
+        default="spdl",
+        help="Data loading backend: 'spdl' (default) or 'pytorch' (torch DataLoader)",
+    )
+    parser.add_argument(
+        "--mp-context",
+        type=str,
+        choices=["fork", "spawn", "forkserver"],
+        default="forkserver",
+        help="Multiprocessing context for workers (default: forkserver)",
     )
     return parser.parse_args()
 
@@ -360,6 +401,8 @@ def main(args: argparse.Namespace) -> None:
             lora_alpha=args.lora_alpha,
             lora_dropout=args.lora_dropout,
             num_workers=args.num_workers,
+            dataloader=args.dataloader,
+            mp_context=args.mp_context,
             progress_fn=report_progress,
         )
     finally:
