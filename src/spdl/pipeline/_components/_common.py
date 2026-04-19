@@ -6,12 +6,14 @@
 
 __all__ = [
     "_EOF",
+    "_EPOCH_END",
     "_periodic_dispatch",
     "_P2Percentile",
     "_SKIP",
     "_StatsCounter",
     "_time_str",
     "is_eof",
+    "is_epoch_end",
     "StageInfo",
 ]
 
@@ -42,12 +44,22 @@ class _Sentinel:
 
 
 _EOF = _Sentinel("EOF")  # Indicate the end of stream.
+_EPOCH_END = _Sentinel("EPOCH_END")  # Indicate the end of one epoch.
 _SKIP: None = None
 
 
 def is_eof(item: Any) -> bool:
     """Test whether the input item is EOF sentinel value."""
     return bool(item is _EOF)
+
+
+def is_epoch_end(item: Any) -> bool:
+    """Test whether the input item is an epoch-end sentinel value.
+
+    Custom aggregators can use this to handle epoch boundaries,
+    for example to flush or discard partial batches.
+    """
+    return bool(item is _EPOCH_END)
 
 
 def _time_str(val: float) -> str:

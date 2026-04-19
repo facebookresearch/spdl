@@ -86,7 +86,7 @@ def _path_variants_router(
     path_queues: Sequence[AsyncQueue],
     router: Callable[[Any], int] | Callable[[Any], Awaitable[int]],
     task_hooks: list[TaskHook],
-) -> Coroutine:
+) -> Coroutine[None, None, None]:
     """Create a coroutine that routes items to per-path queues.
 
     The router reads items from ``input_queue``, calls ``router(item)`` to

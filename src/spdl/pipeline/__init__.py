@@ -19,6 +19,7 @@ from ._common._misc import create_task
 from ._components import (
     AsyncQueue,
     is_eof,
+    is_epoch_end,
     PipelineFailure,
     QueuePerfStats,
     StageInfo,
@@ -46,6 +47,7 @@ __all__ = [
     "ProcessGroupStatsMonitor",
     "build_pipeline",
     "is_eof",
+    "is_epoch_end",
     "profile_pipeline",
     "ProfileResult",
     "ProfileHook",

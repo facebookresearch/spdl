@@ -70,6 +70,11 @@ class SourceConfig(Generic[T]):
     source: Iterable | AsyncIterable
     """Generates the series of source data."""
 
+    continuous: bool = False
+    """If True, the source continuously re-iterates, injecting a sentinel
+    object representing an epoch boundary between iterations. This enables
+    multi-epoch pipeline reuse without rebuilding."""
+
     def __post_init__(self) -> None:
         if not (hasattr(self.source, "__aiter__") or hasattr(self.source, "__iter__")):
             raise ValueError("Source must be either generator or async generator.")

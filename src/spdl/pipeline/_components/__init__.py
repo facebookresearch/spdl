@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from ._common import is_eof, StageInfo
+from ._common import is_eof, is_epoch_end, StageInfo
 from ._hook import (
     get_default_hook_class,
     set_default_hook_class,
@@ -28,6 +28,7 @@ __all__ = [
     "get_default_hook_class",
     "get_default_queue_class",
     "is_eof",
+    "is_epoch_end",
     "PipelineFailure",
     "set_default_hook_class",
     "set_default_queue_class",

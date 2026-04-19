@@ -86,7 +86,10 @@ class PipelineBuilder(Generic[T, U]):
         self._sink: SinkConfig[U] | None = None
 
     def add_source(
-        self, source: Iterable[T] | AsyncIterable[T]
+        self,
+        source: Iterable[T] | AsyncIterable[T],
+        *,
+        continuous: bool = False,
     ) -> "PipelineBuilder[T, U]":
         """Attach an iterator to the source buffer.
 
@@ -98,11 +101,18 @@ class PipelineBuilder(Generic[T, U]):
                    The source iterator must be lightweight as it is executed in async
                    event loop. If the iterator performs a blocking operation,
                    the entire pipeline will be blocked.
+
+            continuous: If ``True``, the source continuously re-iterates,
+                injecting a sentinel object representing an epoch boundary
+                between iterations. This enables multi-epoch pipeline reuse
+                without rebuilding. Use :py:func:`is_epoch_end` to detect
+                epoch boundaries in custom merge operations if needed;
+                regular pipe stage functions do not need to handle it.
         """
         if self._src is not None:
             raise ValueError("Source already set.")
 
-        self._src = SourceConfig(source)
+        self._src = SourceConfig(source, continuous=continuous)
         return self
 
     def pipe(
