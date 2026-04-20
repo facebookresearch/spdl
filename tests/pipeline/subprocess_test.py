@@ -469,3 +469,222 @@ class TestIterateInSubprocessFailures(unittest.TestCase):
 
         global _VERY_BAD_REFERENCE
         _VERY_BAD_REFERENCE = iterate_in_subprocess(partial(SourceIterable, 3))
+
+
+# ---------------------------------------------------------------------------
+# Continuous mode tests
+# ---------------------------------------------------------------------------
+
+
+def _continuous_src(n: int) -> Iterable[int]:
+    return SourceIterable(n)
+
+
+class _FailsOnNthEpoch:
+    """Iterable whose iter() raises on the Nth call."""
+
+    def __init__(self, n: int, fail_epoch: int) -> None:
+        self.n = n
+        self.fail_epoch = fail_epoch
+        self.epoch = 0
+
+    def __iter__(self) -> Iterator[int]:
+        self.epoch += 1
+        if self.epoch == self.fail_epoch:
+            raise ValueError(f"Failed on epoch {self.epoch}")
+        yield from range(self.n)
+
+
+class _FailsAfterN:
+    """Iterable whose iterator raises after yielding N items."""
+
+    def __init__(self, total: int, fail_after: int) -> None:
+        self.total = total
+        self.fail_after = fail_after
+
+    def __iter__(self) -> Iterator[int]:
+        for i in range(self.total):
+            if i == self.fail_after:
+                raise ValueError(f"Failed at item {i}")
+            yield i
+
+
+def _fails_on_nth_epoch(n: int, fail_epoch: int) -> Iterable[int]:
+    return _FailsOnNthEpoch(n, fail_epoch)
+
+
+def _fails_after_n(total: int, fail_after: int) -> Iterable[int]:
+    return _FailsAfterN(total, fail_after)
+
+
+class TestContinuousIteration(unittest.TestCase):
+    def test_continuous_multi_epoch(self) -> None:
+        """continuous mode iterates correctly across multiple epochs"""
+        N = 5
+        src = iterate_in_subprocess(
+            partial(_continuous_src, N), continuous=True, timeout=10,
+        )
+
+        for epoch in range(3):
+            result = list(src)
+            self.assertEqual(result, list(range(N)), f"epoch {epoch}")
+
+    def test_continuous_single_item(self) -> None:
+        """continuous mode works with single-item epochs"""
+        src = iterate_in_subprocess(
+            partial(_continuous_src, 1), continuous=True, timeout=10,
+        )
+
+        for epoch in range(5):
+            result = list(src)
+            self.assertEqual(result, [0], f"epoch {epoch}")
+
+    def test_continuous_empty_epoch(self) -> None:
+        """continuous mode handles empty iterations (0 items)"""
+        src = iterate_in_subprocess(
+            partial(_continuous_src, 0), continuous=True, timeout=10,
+        )
+
+        for epoch in range(3):
+            result = list(src)
+            self.assertEqual(result, [], f"epoch {epoch}")
+
+    def test_continuous_abort_mid_iteration(self) -> None:
+        """deleting the iterable mid-iteration triggers clean shutdown"""
+        src = iterate_in_subprocess(
+            partial(_continuous_src, 100), continuous=True, timeout=10,
+        )
+        it = iter(src)
+        # Consume a few items then abandon
+        self.assertEqual(next(it), 0)
+        self.assertEqual(next(it), 1)
+        # Delete should trigger ABORT via finalizer — must not hang
+        del it
+        del src
+
+    def test_continuous_abort_between_epochs(self) -> None:
+        """deleting the iterable between epochs triggers clean shutdown"""
+        src = iterate_in_subprocess(
+            partial(_continuous_src, 3), continuous=True, timeout=10,
+        )
+        result = list(src)
+        self.assertEqual(result, [0, 1, 2])
+        # Delete between epochs — must not hang
+        del src
+
+    def test_continuous_early_break(self) -> None:
+        """breaking mid-epoch then iterating again gets correct next epoch"""
+        N = 10
+        src = iterate_in_subprocess(
+            partial(_continuous_src, N), continuous=True, timeout=10,
+        )
+
+        # Consume only 3 items from first epoch
+        it = iter(src)
+        for i in range(3):
+            self.assertEqual(next(it), i)
+        del it  # abandon
+
+        # Next epoch should get full correct items (not leftovers)
+        result = list(src)
+        self.assertEqual(result, list(range(N)))
+
+    def test_continuous_iteration_failure_mid_epoch(self) -> None:
+        """next() raising mid-epoch propagates error to parent"""
+        src = iterate_in_subprocess(
+            partial(_fails_after_n, total=10, fail_after=3),
+            continuous=True,
+            timeout=10,
+        )
+        it = iter(src)
+        self.assertEqual(next(it), 0)
+        self.assertEqual(next(it), 1)
+        self.assertEqual(next(it), 2)
+
+        with self.assertRaisesRegex(RuntimeError, "Failed at item 3"):
+            next(it)
+
+        # Subsequent iteration should fail — worker is dead
+        with self.assertRaisesRegex(RuntimeError, "shutdown"):
+            list(src)
+
+    def test_continuous_iter_creation_failure(self) -> None:
+        """iter(iterable) failure on 2nd epoch propagates error"""
+        src = iterate_in_subprocess(
+            partial(_fails_on_nth_epoch, n=3, fail_epoch=2),
+            continuous=True,
+            timeout=10,
+        )
+        # First epoch succeeds
+        result = list(src)
+        self.assertEqual(result, [0, 1, 2])
+
+        # Second epoch: iter() fails in worker
+        with self.assertRaisesRegex(RuntimeError, "Failed on epoch 2"):
+            list(src)
+
+        # Worker is dead
+        with self.assertRaisesRegex(RuntimeError, "shutdown"):
+            list(src)
+
+    def test_continuous_subprocess_crash(self) -> None:
+        """subprocess dying unexpectedly (e.g. segfault) raises timeout error.
+
+        When the worker process is killed, the parent should eventually get
+        a timeout error instead of hanging forever.
+        """
+        import os
+        import signal
+
+        class _CrashMidIteration:
+            """Yields a few items then kills the process."""
+
+            def __init__(self) -> None:
+                self.epoch = 0
+
+            def __iter__(self) -> Iterator[int]:
+                self.epoch += 1
+                for i in range(10):
+                    if self.epoch >= 2 and i == 5:
+                        os.kill(os.getpid(), signal.SIGKILL)
+                    yield i
+
+        def _crash_source() -> Iterable[int]:
+            return _CrashMidIteration()
+
+        src = iterate_in_subprocess(
+            _crash_source, continuous=True, timeout=3, buffer_size=1,
+        )
+
+        # Consume items until the crash causes a timeout
+        with self.assertRaisesRegex(RuntimeError, "did not produce any data"):
+            for _ in range(100):
+                list(src)
+
+    def test_continuous_backpressure(self) -> None:
+        """worker blocks on put() when buffer is full — no unbounded memory"""
+        src = iterate_in_subprocess(
+            partial(_continuous_src, 1000),
+            continuous=True,
+            timeout=10,
+            buffer_size=1,
+        )
+        # Don't consume — just let the worker fill the tiny buffer
+        time.sleep(1)
+        # Now consume — should get correct items
+        result = list(src)
+        self.assertEqual(result, list(range(1000)))
+
+    def test_continuous_with_run_pipeline_in_subprocess(self) -> None:
+        """end-to-end with PipelineBuilder + continuous=True"""
+        from spdl.pipeline import PipelineBuilder, run_pipeline_in_subprocess
+
+        builder = PipelineBuilder().add_source(SourceIterable(5)).add_sink()
+
+        src = run_pipeline_in_subprocess(
+            builder, num_threads=1, continuous=True, timeout=10,
+        )
+
+        for epoch in range(3):
+            result = list(src)
+            self.assertEqual(result, list(range(5)), f"epoch {epoch}")

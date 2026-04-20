@@ -23,8 +23,10 @@ from typing import Generic, TypeVar
 from spdl.pipeline._iter_utils._common import (
     _Cmd,
     _drain,
+    _drain_until_finished,
     _enter_iteration_mode,
     _execute_iterable,
+    _execute_iterable_continuous,
     _iterate_results,
     _Msg,
     _wait_for_init,
@@ -103,6 +105,47 @@ class _SubprocessIterable(Iterable[T]):
             self._interface = None
 
 
+class _ContinuousSubprocessIterable(Iterable[T]):
+    """Iterable backed by a continuously-iterating subprocess.
+
+    The worker produces items non-stop, separated by ``ITERATION_FINISHED``
+    markers at epoch boundaries. Each ``__iter__()`` call consumes one epoch
+    of items (up to the next ``ITERATION_FINISHED``). Items for the next
+    epoch may already be buffered in ``data_q``.
+
+    If the previous iteration was abandoned early (parent broke out of the
+    ``for`` loop), residual items are drained from ``data_q`` until the next
+    ``ITERATION_FINISHED`` before yielding items from the new epoch.
+    """
+
+    def __init__(self, interface: _ipc[T]) -> None:
+        self._interface: _ipc[T] | None = interface
+        self._finalizer = weakref.finalize(self, interface.terminate)
+        self._partially_consumed: bool = False
+
+    def __iter__(self) -> Iterator[T]:
+        if (if_ := self._interface) is None:
+            raise RuntimeError("The worker process is shutdown. Cannot iterate again.")
+
+        try:
+            # If previous iteration was abandoned early, drain residual items
+            if self._partially_consumed:
+                _drain_until_finished(if_.data_q, if_.timeout, "subprocess")
+
+            self._partially_consumed = True
+            yield from _iterate_results(if_.data_q, if_.timeout, "subprocess")
+            self._partially_consumed = False
+        except (Exception, KeyboardInterrupt):
+            self._shutdown()
+            raise
+
+    def _shutdown(self) -> None:
+        if (interface := self._interface) is not None:
+            interface.terminate()
+            self._finalizer.detach()
+            self._interface = None
+
+
 def iterate_in_subprocess(
     fn: Callable[[], Iterable[T]],
     *,
@@ -111,6 +154,7 @@ def iterate_in_subprocess(
     mp_context: str | None = None,
     timeout: float | None = None,
     daemon: bool = False,
+    continuous: bool = False,
 ) -> Iterable[T]:
     """**[Experimental]** Run the given ``iterable`` in a subprocess.
 
@@ -147,6 +191,11 @@ def iterate_in_subprocess(
         timeout: Timeout for inactivity. If the generator function does not yield
             any item for this amount of time, the process is terminated.
         daemon: Whether to run the process as a daemon. Use it only for debugging.
+        continuous: If ``True``, the worker continuously iterates without
+            waiting for commands. After each ``StopIteration``, it immediately
+            starts the next ``iter(iterable)``. ``data_q`` backpressure
+            provides flow control. This eliminates idle time at epoch
+            boundaries in multi-epoch training.
 
     Returns:
         Iterator over the results of the generator function.
@@ -168,11 +217,13 @@ def iterate_in_subprocess(
         else ([initializer] if not isinstance(initializer, Sequence) else initializer)
     )
 
+    target = _execute_iterable_continuous if continuous else _execute_iterable
+
     ctx = mp.get_context(mp_context)
     cmd_q: queue.Queue[_Cmd] = ctx.Queue()
     data_q: queue.Queue[_Msg[T]] = ctx.Queue(maxsize=buffer_size)
     process = ctx.Process(
-        target=_execute_iterable,
+        target=target,
         args=(cmd_q, data_q, fn, initializers),
         daemon=daemon,
     )
@@ -183,4 +234,6 @@ def iterate_in_subprocess(
 
     _wait_for_init(if_.data_q, if_.timeout, "subprocess")
 
+    if continuous:
+        return _ContinuousSubprocessIterable(if_)
     return _SubprocessIterable(if_)

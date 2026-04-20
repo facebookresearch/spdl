@@ -29,6 +29,8 @@ __all__ = [
     "_enter_iteration_mode",
     "_iterate_results",
     "_execute_iterable",
+    "_execute_iterable_continuous",
+    "_drain_until_finished",
 ]
 
 T = TypeVar("T")
@@ -453,3 +455,150 @@ def _iterate_results(
                     raise RuntimeError(
                         f"[INTERNAL ERROR] Unexpected return value: {item}"
                     )
+
+
+def _drain_until_finished(
+    data_q: _Queue[_Msg[T]], timeout: float, worker_type: str
+) -> None:
+    """Drain items from the queue until ``ITERATION_FINISHED`` is found.
+
+    Used by continuous mode to discard residual items from a partially
+    consumed iteration before starting the next one.
+
+    Raises:
+        RuntimeError: If the worker fails, sends an unexpected message,
+            or does not produce any data within the timeout.
+    """
+    wtype = f"worker {worker_type}"
+    wait = min(0.1, timeout)
+    t0 = time.monotonic()
+    while True:
+        try:
+            item = data_q.get(timeout=wait)
+            t0 = time.monotonic()
+        except queue.Empty:
+            if (elapsed := time.monotonic() - t0) > timeout:
+                raise RuntimeError(
+                    f"The {wtype} did not produce any data for {elapsed:.2f} seconds."
+                ) from None
+            continue
+        else:
+            match item.status:
+                case _Status.ITERATION_FINISHED:
+                    return
+                case _Status.ITERATOR_SUCCESS:
+                    continue  # discard
+                case _Status.ITERATOR_FAILED:
+                    raise RuntimeError(f"The {wtype} quit. {item.message}")
+                case _:
+                    raise RuntimeError(
+                        f"[INTERNAL ERROR] Unexpected message while draining: {item}"
+                    )
+
+
+def _execute_iterable_continuous(
+    cmd_q: "mp.Queue[_Cmd]",
+    data_q: "mp.Queue[_Msg[T]]",
+    fn: Callable[[], Iterable[T]],
+    initializers: Sequence[Callable[[], None]] | None,
+) -> None:
+    """Worker that continuously iterates without waiting for commands.
+
+    After initialization, immediately starts iterating. After each
+    ``StopIteration``, starts the next iteration without returning to
+    stand-by. ``data_q.put()`` blocks when the queue is full, providing
+    natural backpressure. Only ``ABORT`` is checked (non-blocking, each
+    item step).
+
+    .. mermaid::
+
+       stateDiagram-v2
+           state Initialization {
+               init0: Call Initializer
+               init1: Create Iterable
+               init0 --> init1
+           }
+           state Iteration {
+               j0: Create Iterator
+               j1: Check ABORT (non-blocking)
+               j2: Get Next Item
+               j3: Push ITERATOR_SUCCESS (blocks when full)
+               j4: Push ITERATION_FINISHED
+
+               j0 --> j1
+               j1 --> j2: No command
+               j1 --> Done: ABORT
+               j2 --> j3: Success
+               j2 --> j4: StopIteration
+               j2 --> Done: Error
+               j3 --> j1
+               j4 --> j0: Start next epoch
+           }
+
+           [*] --> Initialization
+           Initialization --> Iteration: Success
+           Initialization --> Done: Fail
+           Done --> [*]
+    """
+    if initializers is not None:
+        try:
+            for initializer in initializers:
+                initializer()
+        except Exception as e:
+            data_q.put(
+                _Msg(
+                    _Status.INITIALIZATION_FAILED,
+                    message=f"Initializer failed: {e}",
+                )
+            )
+            return
+
+    try:
+        iterable = fn()
+    except Exception as e:
+        data_q.put(
+            _Msg(
+                _Status.INITIALIZATION_FAILED,
+                message=f"Failed to create the iterable: {e}",
+            )
+        )
+        return
+
+    data_q.put(_Msg(_Status.INITIALIZATION_SUCCEEDED))
+
+    # Continuous iteration loop — no stand-by, no START_ITERATION
+    while True:
+        try:
+            gen = iter(iterable)
+        except Exception as e:
+            data_q.put(
+                _Msg(
+                    _Status.ITERATOR_FAILED,
+                    message=f"Failed to create the iterator: {e}",
+                )
+            )
+            return
+
+        while True:
+            try:
+                cmd = cmd_q.get_nowait()
+            except queue.Empty:
+                pass
+            else:
+                if cmd == _Cmd.ABORT:
+                    return
+
+            try:
+                item = next(gen)
+                data_q.put(_Msg(_Status.ITERATOR_SUCCESS, message=item))
+            except StopIteration:
+                data_q.put(_Msg(_Status.ITERATION_FINISHED))
+                break
+            except Exception as e:
+                data_q.put(
+                    _Msg(
+                        _Status.ITERATOR_FAILED,
+                        message=f"Failed to fetch the next item: {e}",
+                    )
+                )
+                return
