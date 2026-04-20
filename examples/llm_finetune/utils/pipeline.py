@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Iterable, Iterator
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 import spdl.pipeline
 import spdl.source.utils
@@ -42,51 +42,47 @@ class _Lookup:
         return self.samples[idx]
 
 
-# subclass threading.local for better type inference
-class ThreadLocalTokenizer(threading.local):
-    def __init__(self, model_path: str) -> None:
-        self._model_path = model_path
+class _ThreadLocalTokenizer(threading.local):
+    """Thread-local tokenizer that deepcopies from a source tokenizer.
+
+    Each thread gets its own copy since the HuggingFace fast tokenizer's
+    Rust backend is not thread-safe.
+    """
+
+    def __init__(self, source: "PreTrainedTokenizerBase") -> None:
+        self._source = source
         self._tokenizer: "PreTrainedTokenizerBase | None" = None
 
     @property
     def tokenizer(self) -> "PreTrainedTokenizerBase":
         if self._tokenizer is None:
-            from transformers import AutoTokenizer
+            import copy
 
-            tok = AutoTokenizer.from_pretrained(self._model_path)
-            if tok.pad_token is None:
-                tok.pad_token = tok.eos_token
-            self._tokenizer = tok
-        assert self._tokenizer is not None
+            self._tokenizer = copy.deepcopy(self._source)
         return self._tokenizer
 
 
 class _Tokenize:
     """Picklable callable that tokenizes a sample using a thread-local tokenizer.
 
-    Uses thread-local storage so each SPDL worker thread gets its own
-    tokenizer copy, since the HuggingFace fast tokenizer's Rust backend
-    is not thread-safe. Implements ``__getstate__``/``__setstate__`` so
-    the callable can be pickled for ``run_pipeline_in_subprocess``.
+    The tokenizer object is pickled to the subprocess (avoiding re-import
+    of ``transformers`` which can fail in PAR/XAR subprocess environments).
+    Each thread gets its own copy via ``_ThreadLocalTokenizer``.
     """
 
-    def __init__(self, model_path: str, max_seq_len: int) -> None:
-        self.model_path = model_path
+    def __init__(self, tokenizer: "PreTrainedTokenizerBase", max_seq_len: int) -> None:
+        self._tokenizer = tokenizer
         self.max_seq_len = max_seq_len
-        self._tlt = ThreadLocalTokenizer(self.model_path)
+        self._tlt = _ThreadLocalTokenizer(tokenizer)
 
-    class _State(TypedDict):
-        model_path: str
-        max_seq_len: int
+    def __getstate__(self) -> dict[str, object]:
+        # threading.local is not picklable, but the tokenizer is.
+        return {"tokenizer": self._tokenizer, "max_seq_len": self.max_seq_len}
 
-    def __getstate__(self) -> _State:
-        # threading.local is not picklable; reconstruct it in the subprocess.
-        return {"model_path": self.model_path, "max_seq_len": self.max_seq_len}
-
-    def __setstate__(self, state: _State) -> None:
-        self.model_path = state["model_path"]
-        self.max_seq_len = state["max_seq_len"]
-        self._tlt = ThreadLocalTokenizer(self.model_path)
+    def __setstate__(self, state: dict[str, object]) -> None:
+        self._tokenizer = state["tokenizer"]  # pyre-ignore[8]
+        self.max_seq_len = state["max_seq_len"]  # pyre-ignore[8]
+        self._tlt = _ThreadLocalTokenizer(self._tokenizer)
 
     def __call__(self, sample: dict[str, str]) -> dict[str, Tensor]:
         return _tokenize_sample(sample, self._tlt.tokenizer, self.max_seq_len)
@@ -152,14 +148,12 @@ def build_spdl_dataloader(
     )
     source = spdl.source.utils.embed_shuffle(sampler)
 
-    model_path: str = tokenizer.name_or_path
-
     backend = (
         PipelineBuilder()
         .add_source(source)
         .pipe(_Lookup(samples))
-        .pipe(_Tokenize(model_path, max_seq_len), concurrency=num_threads)
-        .aggregate(batch_size)
+        .pipe(_Tokenize(tokenizer, max_seq_len), concurrency=num_threads)
+        .aggregate(batch_size, drop_last=True)
         .pipe(_collate)
         .add_sink(buffer_size=3)
     )

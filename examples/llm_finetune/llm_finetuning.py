@@ -384,7 +384,7 @@ def init_logging() -> None:
 
 
 def main(args: argparse.Namespace) -> None:
-    dist.init_process_group(backend="nccl", timeout=timedelta(minutes=30))
+    dist.init_process_group(backend="nccl", timeout=timedelta(minutes=3))
     try:
         train(
             model_path=resolve_model_path(args.model_path),
