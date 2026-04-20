@@ -35,7 +35,7 @@ from spdl.pipeline._components import (
     TaskHook,
 )
 from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
-from spdl.pipeline.defs import PipelineConfig
+from spdl.pipeline.defs import MergeConfig, PipelineConfig, SourceConfig
 
 from ._pipeline import Pipeline
 
@@ -263,6 +263,16 @@ def build_pipeline(
 ################################################################################
 
 
+def _has_continuous_source(config: PipelineConfig[Any]) -> bool:
+    """Check if any source in the pipeline config is continuous."""
+    src = config.src
+    if isinstance(src, SourceConfig):
+        return src.continuous
+    if isinstance(src, MergeConfig):
+        return any(_has_continuous_source(plc) for plc in src.pipeline_configs)
+    return False
+
+
 class _Wrapper(Generic[U]):
     def __init__(
         self,
@@ -281,9 +291,11 @@ class _Wrapper(Generic[U]):
         self.queue_class = queue_class
         self.task_hook_factory = task_hook_factory
         self.background_tasks = background_tasks
+        self._continuous: bool = _has_continuous_source(config)
+        self._pipeline: Pipeline[U] | None = None
 
-    def __iter__(self) -> Iterator[U]:
-        pipeline = build_pipeline(
+    def _build(self) -> Pipeline[U]:
+        return build_pipeline(
             self.config,
             num_threads=self.num_threads,
             max_failures=self.max_failures,
@@ -292,8 +304,25 @@ class _Wrapper(Generic[U]):
             task_hook_factory=self.task_hook_factory,
             background_tasks=self.background_tasks,
         )
-        with pipeline.auto_stop():
-            yield from pipeline
+
+    def _get_reusable_pipeline(self) -> Pipeline[U]:
+        assert self._continuous
+        if self._pipeline is None:
+            self._pipeline = self._build()
+            self._pipeline.start()
+        assert self._pipeline is not None
+        return self._pipeline
+
+    def __iter__(self) -> Iterator[U]:
+        if self._continuous:
+            # Reuse the same pipeline across iterations. Build once on
+            # first iter, then use get_iterator() per epoch. This avoids
+            # rebuilding the thread pool and event loop each epoch.
+            yield from self._get_reusable_pipeline().get_iterator()
+        else:
+            pipeline = self._build()
+            with pipeline.auto_stop():
+                yield from pipeline
 
 
 def _get_initializer(kwargs: Any) -> Sequence[Callable[[], None]]:

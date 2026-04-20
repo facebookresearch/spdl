@@ -6,6 +6,9 @@
 
 # pyre-unsafe
 
+import os
+import sys
+import threading
 import time
 import unittest
 import weakref
@@ -15,6 +18,7 @@ from spdl.pipeline import (
     build_pipeline,
     PipelineBuilder,
     PipelineFailure,
+    run_pipeline_in_subinterpreter,
     run_pipeline_in_subprocess,
 )
 from spdl.pipeline.defs import Merge, PipelineConfig, SinkConfig
@@ -470,3 +474,123 @@ class TestContinuousPipelineValidation(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "Mixed continuous mode"):
             build_pipeline(merged_config, num_threads=1)
+
+
+class _RecordIDs:
+    """Pipe function that records the thread ID and process ID."""
+
+    def __init__(self) -> None:
+        self.thread_ids: list[int] = []
+        self.process_ids: list[int] = []
+
+    def __call__(self, x: int) -> int:
+        self.thread_ids.append(threading.get_ident())
+        self.process_ids.append(os.getpid())
+        return x
+
+
+class TestContinuousSubprocessPipelineReuse(unittest.TestCase):
+    def test_subprocess_pipeline_reused_across_epochs(self) -> None:
+        """Thread and process IDs stay the same across epochs, proving
+        the pipeline is reused rather than rebuilt."""
+        recorder = _RecordIDs()
+
+        backend = (
+            PipelineBuilder()
+            .add_source(SourceIterable(5), continuous=True)
+            .pipe(recorder, concurrency=1)
+            .add_sink(buffer_size=3)
+        )
+        source = run_pipeline_in_subprocess(
+            backend.get_config(),
+            num_threads=1,
+            timeout=10,
+        )
+
+        all_thread_ids: list[set[int]] = []
+        all_process_ids: list[set[int]] = []
+
+        for epoch in range(3):
+            recorder.thread_ids.clear()
+            recorder.process_ids.clear()
+            result = list(source)
+            self.assertEqual(sorted(result), [0, 1, 2, 3, 4], f"epoch {epoch}")
+            all_thread_ids.append(set(recorder.thread_ids))
+            all_process_ids.append(set(recorder.process_ids))
+
+        # All epochs should use the same thread(s) — pipeline was reused
+        self.assertEqual(
+            all_thread_ids[0],
+            all_thread_ids[1],
+            "Thread IDs changed between epoch 0 and 1 — pipeline was rebuilt",
+        )
+        self.assertEqual(
+            all_thread_ids[1],
+            all_thread_ids[2],
+            "Thread IDs changed between epoch 1 and 2 — pipeline was rebuilt",
+        )
+
+        # All epochs should run in the same subprocess
+        self.assertEqual(
+            all_process_ids[0],
+            all_process_ids[1],
+            "Process IDs changed between epoch 0 and 1",
+        )
+        self.assertEqual(
+            all_process_ids[1],
+            all_process_ids[2],
+            "Process IDs changed between epoch 1 and 2",
+        )
+
+
+@unittest.skipIf(
+    sys.version_info < (3, 14),
+    "Subinterpreters require Python 3.14+",
+)
+class TestContinuousSubinterpreterPipelineReuse(unittest.TestCase):
+    def test_subinterpreter_pipeline_reused_across_epochs(self) -> None:
+        """Thread and process IDs stay the same across epochs in subinterpreter."""
+        recorder = _RecordIDs()
+
+        config = (
+            PipelineBuilder()
+            .add_source(SourceIterable(5), continuous=True)
+            .pipe(recorder, concurrency=1)
+            .add_sink(buffer_size=3)
+            .get_config()
+        )
+        source = run_pipeline_in_subinterpreter(
+            config,
+            num_threads=1,
+            timeout=10,
+        )
+
+        all_thread_ids: list[set[int]] = []
+        all_process_ids: list[set[int]] = []
+
+        for epoch in range(3):
+            recorder.thread_ids.clear()
+            recorder.process_ids.clear()
+            result = list(source)
+            self.assertEqual(sorted(result), [0, 1, 2, 3, 4], f"epoch {epoch}")
+            all_thread_ids.append(set(recorder.thread_ids))
+            all_process_ids.append(set(recorder.process_ids))
+
+        # All epochs should use the same thread(s) — pipeline was reused
+        self.assertEqual(
+            all_thread_ids[0],
+            all_thread_ids[1],
+            "Thread IDs changed between epoch 0 and 1 — pipeline was rebuilt",
+        )
+        self.assertEqual(
+            all_thread_ids[1],
+            all_thread_ids[2],
+            "Thread IDs changed between epoch 1 and 2 — pipeline was rebuilt",
+        )
+
+        # All epochs should run in the same process (subinterpreter shares process)
+        self.assertEqual(
+            all_process_ids[0],
+            all_process_ids[1],
+            "Process IDs changed between epoch 0 and 1",
+        )
