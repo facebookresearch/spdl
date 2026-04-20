@@ -8,9 +8,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 __all__ = [
     "_collate",
     "_tokenize_sample",
+    "_TSample",
+    "_TDataLoader",
     "load_data",
     "report_progress",
     "resolve_model_path",
@@ -43,6 +47,9 @@ except ImportError:
         """Report training progress. In OSS mode, does nothing."""
         pass
 
+
+type _TSample = dict[str, Tensor]
+type _TDataLoader = Iterable[_TSample]
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
