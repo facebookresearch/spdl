@@ -14,7 +14,7 @@ from typing import Any
 
 from spdl.pipeline.defs import Aggregator
 
-from ._common import _SKIP, is_eof, StageInfo
+from ._common import _EPOCH_END, _SKIP, is_eof, is_epoch_end, StageInfo
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._pipe import _FailCounter
 from ._queue import _queue_stage_hook, AsyncQueue
@@ -85,6 +85,20 @@ def _aggregate(
             # can consume the result. Otherwise, keep draining without
             # blocking to reduce context switching overhead.
             while True:
+                if is_epoch_end(item):
+                    # Epoch boundary: handle same as EOF.
+                    # If op_requires_eof (drop_last=False), flush the
+                    # aggregator and emit the partial batch.
+                    # Otherwise (drop_last=True), discard partial batch.
+                    if op_requires_eof:
+                        result = wrapper._agg.flush()
+                        if result is not _SKIP and result is not None:
+                            await output_queue.put(result)
+                    else:
+                        wrapper._agg.flush()  # reset state, discard
+                    await output_queue.put(_EPOCH_END)
+                    break
+
                 if is_eof(item) and not op_requires_eof:
                     return
 

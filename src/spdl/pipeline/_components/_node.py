@@ -42,7 +42,7 @@ from ._pipe import (
 )
 from ._queue import AsyncQueue, get_default_queue_class
 from ._sink import _sink
-from ._source import _source
+from ._source import _source, _source_continuous
 from ._variants import _path_variants_router
 
 T = TypeVar("T")
@@ -539,7 +539,8 @@ def _build_node(
 
     match node:
         case _SourceNode():
-            node._coro = _source(node.cfg.source, node.output_queue)
+            fn = _source_continuous if node.cfg.continuous else _source
+            node._coro = fn(node.cfg.source, node.output_queue)
         case _FanOutNode():
             hooks = task_hook_factory(node.info)
             node._coro = _path_variants_router(
@@ -708,8 +709,32 @@ def _build_pipeline_node(
 
     fc_class = _get_fail_counter()
     node = _convert_config(plc, q_class, _PIPELINE_ID, _MutableInt(stage_id))
+    _validate_continuous_mode(node)
     _build_node_recursive(node, fc_class, hook_factory, max_failures)
     return node
+
+
+def _collect_source_nodes(node: _TNodes) -> list[_SourceNode]:
+    """Collect all source nodes in the pipeline graph."""
+    if isinstance(node, _SourceNode):
+        return [node]
+    result: list[_SourceNode] = []
+    for n in node.upstream:
+        result.extend(_collect_source_nodes(n))
+    return result
+
+
+def _validate_continuous_mode(node: _TNodes) -> None:
+    """Validate that all source nodes agree on continuous mode."""
+    sources = _collect_source_nodes(node)
+    if not sources:
+        return
+    continuous_values = {s.cfg.continuous for s in sources}
+    if len(continuous_values) > 1:
+        raise ValueError(
+            "Mixed continuous mode is not supported. All sources in a pipeline "
+            "(including merged sub-pipelines) must have the same continuous setting."
+        )
 
 
 ################################################################################

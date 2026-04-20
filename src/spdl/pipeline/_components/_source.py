@@ -4,13 +4,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-__all__ = ["_source"]
+__all__ = ["_source", "_source_continuous"]
 
 from collections.abc import AsyncIterable, Iterable
 from typing import TypeVar
 
 from spdl.pipeline._common._convert import _to_async_gen
 
+from ._common import _EPOCH_END
 from ._queue import _queue_stage_hook, AsyncQueue
 
 # pyre-strict
@@ -52,3 +53,29 @@ async def _source(
             num_items += 1
             if max_items is not None and num_items >= max_items:
                 return
+
+
+async def _source_continuous(
+    src: Iterable[T] | AsyncIterable[T],
+    queue: AsyncQueue,
+) -> None:
+    """Coroutine that continuously re-iterates the source, injecting epoch-end markers.
+
+    After each iteration of the source exhausts, an ``_EPOCH_END`` sentinel is
+    put into the queue and the source is re-iterated. This continues indefinitely
+    until the coroutine is cancelled (via pipeline shutdown).
+
+    Args:
+        src: The source iterable (synchronous or asynchronous) to consume data from.
+        queue: The async queue to put items into for downstream consumption.
+    """
+    _to_async = _to_async_gen(iter, None)
+
+    async with _queue_stage_hook(queue):
+        while True:
+            src_: AsyncIterable[T] = (  # pyre-ignore: [9]
+                src if hasattr(src, "__aiter__") else _to_async(src)
+            )
+            async for item in src_:
+                await queue.put(item)
+            await queue.put(_EPOCH_END)

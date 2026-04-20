@@ -24,7 +24,7 @@ from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._common._types import _TMergeOp
 from spdl.pipeline.defs import _PipeArgs
 
-from ._common import _EOF, _SKIP, is_eof, StageInfo
+from ._common import _EOF, _EPOCH_END, _SKIP, is_eof, is_epoch_end, StageInfo
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._queue import _queue_stage_hook, AsyncQueue
 
@@ -300,6 +300,15 @@ def _pipe(
         i, tasks = 0, set()
         while not fail_counter.too_many_failures():
             item = await input_queue.get()
+
+            if is_epoch_end(item):
+                # Epoch boundary: wait for all in-flight tasks, propagate, continue
+                if tasks:
+                    await asyncio.wait(tasks)
+                    tasks = set()
+                await output_queue.put(_EPOCH_END)
+                continue
+
             if is_eof(item) and not op_requires_eof:
                 break
             # note: Make sure that `afunc` is called directly in this function,
@@ -419,6 +428,10 @@ def _ordered_pipe(
         while not fail_counter.too_many_failures():
             item = await input_queue.get()
 
+            if is_epoch_end(item):
+                await inter_queue.put(_EPOCH_END)
+                continue
+
             if is_eof(item):
                 break
 
@@ -430,6 +443,10 @@ def _ordered_pipe(
     async def get_check_put() -> None:
         while not fail_counter.too_many_failures():
             entry = await inter_queue.get()
+
+            if is_epoch_end(entry):
+                await output_queue.put(_EPOCH_END)
+                continue
 
             if is_eof(entry):
                 # Propagating EOF is done by `_queue_stage_hook`
@@ -473,11 +490,27 @@ async def _disaggregate(items: list[T]) -> AsyncIterator[T]:
 async def _default_merge(
     info: StageInfo, input_queues: Sequence[asyncio.Queue], output_queue: asyncio.Queue
 ) -> None:
+    epoch_end_count: int = 0
+    epoch_end_barrier: asyncio.Event = asyncio.Event()
+
     async def _pass(in_q: asyncio.Queue) -> None:
+        nonlocal epoch_end_count
         while True:
             item = await in_q.get()
             if is_eof(item):
                 return
+            if is_epoch_end(item):
+                epoch_end_count += 1
+                if epoch_end_count >= len(input_queues):
+                    # All sub-pipelines reached epoch end
+                    epoch_end_count = 0
+                    await output_queue.put(_EPOCH_END)
+                    epoch_end_barrier.set()
+                    epoch_end_barrier.clear()
+                else:
+                    # Wait for other sub-pipelines to reach epoch end
+                    await epoch_end_barrier.wait()
+                continue
             await output_queue.put(item)
 
     tasks = [

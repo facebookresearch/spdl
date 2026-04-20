@@ -22,6 +22,7 @@ from typing import Any, Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
 from spdl.pipeline._common._misc import create_task
+from spdl.pipeline._components import is_epoch_end
 
 __all__ = ["Pipeline"]
 
@@ -208,6 +209,9 @@ class _EventLoopState(IntEnum):
     STOPPED = 2
 
 
+_EOF_MSG: str = "Reached the end of the pipeline."
+
+
 class Pipeline(Generic[T]):
     """Pipeline()
 
@@ -344,7 +348,23 @@ class Pipeline(Generic[T]):
         """
         if _EventLoopState.STARTED <= self._event_loop_state < _EventLoopState.STOPPED:
             self._event_loop.stop()
-            self._event_loop.join(timeout=timeout)
+
+            # Try to join first. If it doesn't join, drain the output queue
+            # to resolve the congestion, then retry.
+            # (e.g. the frontend does not consume any data, thus the upstream tasks
+            # are not able to complete),
+            to1: float = 3 if timeout is None else min(3, timeout)
+            to2: float | None = None if timeout is None else timeout - to1
+            try:
+                self._event_loop.join(timeout=to1)
+            except TimeoutError:
+                # Empty queue, release backpressure
+                while not self._output_queue.empty():
+                    try:
+                        self._output_queue.get_nowait()
+                    except Exception:
+                        break
+                self._event_loop.join(timeout=to2)
             self._event_loop_state = _EventLoopState.STOPPED
             self._finalizer.detach()
 
@@ -380,8 +400,12 @@ class Pipeline(Generic[T]):
             EOFError: When the pipeline is exhausted or cancelled and there are no more items
                 in the sink.
         """
-        eof_message = "Reached the end of the pipeline."
+        item = self._get_item(timeout=timeout)
+        if is_epoch_end(item):
+            raise EOFError(_EOF_MSG)
+        return item
 
+    def _get_item(self, *, timeout: float | None) -> T:
         if not self._event_loop.is_started():
             raise RuntimeError("Pipeline is not started.")
 
@@ -404,7 +428,7 @@ class Pipeline(Generic[T]):
 
             # Now, all the items from the queue are fetched. We can stop the pipeline loop/thread.
             self._event_loop.stop()
-            raise EOFError(eof_message)
+            raise EOFError(_EOF_MSG)
 
         # The task is not completed. To access the sink queue, the async method must be used.
         # The loop keeps running unless we explicitly request stop, so the use of async method
@@ -433,7 +457,7 @@ class Pipeline(Generic[T]):
                 # This case we can switch to EOFError.
                 if self._event_loop.is_task_completed() and self._output_queue.empty():
                     self._event_loop.stop()
-                    raise EOFError(eof_message) from None
+                    raise EOFError(_EOF_MSG) from None
 
         _LG.debug("EventLoop: %s", str(self._event_loop))
 
