@@ -11,18 +11,18 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import Iterable, Iterator
+import weakref
+from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 import spdl.pipeline
 import spdl.source.utils
 from spdl.io import transfer_tensor
-from spdl.pipeline import PipelineBuilder
+from spdl.pipeline import build_pipeline, Pipeline, PipelineBuilder
 from spdl.pipeline.defs import PipelineConfig
 from spdl.source import DistributedRandomSampler
-from torch import Tensor
 
-from .utils import _collate, _tokenize_sample
+from .utils import _collate, _TDataLoader, _tokenize_sample, _TSample
 
 if TYPE_CHECKING:
     from transformers import PreTrainedTokenizerBase
@@ -84,24 +84,31 @@ class _Tokenize:
         self.max_seq_len = state["max_seq_len"]  # pyre-ignore[8]
         self._tlt = _ThreadLocalTokenizer(self._tokenizer)
 
-    def __call__(self, sample: dict[str, str]) -> dict[str, Tensor]:
+    def __call__(self, sample: dict[str, str]) -> _TSample:
         return _tokenize_sample(sample, self._tlt.tokenizer, self.max_seq_len)
 
 
-class _DataLoaderWrapper(Iterable[dict[str, Tensor]]):
-    """Wraps a SPDL pipeline into an iterable."""
+def _stop_pipeline(pipeline: Pipeline) -> None:
+    """Stop a pipeline and wait for it to finish."""
+    pipeline.stop(timeout=10)
 
-    def __init__(self, config: PipelineConfig, num_threads: int) -> None:
-        self.config = config
-        self.num_threads = num_threads
 
-    def __iter__(self) -> Iterator[dict[str, Tensor]]:
-        pipeline = spdl.pipeline.build_pipeline(
-            self.config, num_threads=self.num_threads
-        )
+class _SPDLDataLoader:
+    """Wraps a continuous Pipeline to match the PyTorch DataLoader interface.
 
-        with pipeline.auto_stop():
-            yield from pipeline.get_iterator(timeout=120)
+    Each ``for batch in dl:`` loop consumes one epoch (up to the next
+    epoch boundary marker). The pipeline stays alive across epochs.
+    The pipeline is automatically stopped when this object is garbage
+    collected.
+    """
+
+    def __init__(self, cfg: PipelineConfig[_TSample]) -> None:
+        self._pipeline: Pipeline[_TSample] = build_pipeline(cfg, num_threads=1)
+        self._pipeline.start()
+        self._finalizer = weakref.finalize(self, _stop_pipeline, self._pipeline)
+
+    def __iter__(self) -> Iterator[_TSample]:
+        return self._pipeline.get_iterator(timeout=120)
 
 
 def build_spdl_dataloader(
@@ -113,7 +120,7 @@ def build_spdl_dataloader(
     world_size: int,
     num_threads: int,
     mp_context: str = "forkserver",
-) -> Iterable[dict[str, Tensor]]:
+) -> _TDataLoader:
     """Build a reusable SPDL data loader with nested pipeline architecture.
 
     Creates two nested pipelines to separate CPU-bound data loading from
@@ -141,16 +148,17 @@ def build_spdl_dataloader(
             for batch in dataloader:
                 train(batch)
     """
-    sampler = DistributedRandomSampler(
-        len(samples),
-        rank=rank,
-        world_size=world_size,
+    source = spdl.source.utils.embed_shuffle(
+        DistributedRandomSampler(
+            len(samples),
+            rank=rank,
+            world_size=world_size,
+        )
     )
-    source = spdl.source.utils.embed_shuffle(sampler)
 
     backend = (
         PipelineBuilder()
-        .add_source(source)
+        .add_source(source, continuous=True)
         .pipe(_Lookup(samples))
         .pipe(_Tokenize(tokenizer, max_seq_len), concurrency=num_threads)
         .aggregate(batch_size, drop_last=True)
@@ -166,9 +174,8 @@ def build_spdl_dataloader(
 
     frontend = (
         PipelineBuilder()
-        .add_source(source2)
+        .add_source(source2, continuous=True)
         .pipe(transfer_tensor)
         .add_sink(buffer_size=3)
     )
-
-    return _DataLoaderWrapper(frontend.get_config(), num_threads=1)
+    return _SPDLDataLoader(frontend.get_config())

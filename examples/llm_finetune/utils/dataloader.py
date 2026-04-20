@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 import torch
 import torch.utils.data
 
-from .utils import _collate, _tokenize_sample
+from .utils import _collate, _TDataLoader, _tokenize_sample, _TSample
 
 if TYPE_CHECKING:
     from transformers import PreTrainedTokenizerBase
@@ -60,18 +60,17 @@ class _DeviceDataLoader:
         self.device = device
         self._epoch: int = 0
 
-    def __iter__(self) -> Iterator[dict[str, torch.Tensor]]:
+    def __iter__(self) -> Iterator[_TSample]:
         sampler = self.dataloader.sampler
         if isinstance(sampler, torch.utils.data.DistributedSampler):
             sampler.set_epoch(self._epoch)
         self._epoch += 1
-        if self.device is not None:
-            for batch in self.dataloader:
-                yield {
+        for batch in self.dataloader:
+            if self.device is not None:
+                batch = {
                     k: v.to(self.device, non_blocking=True) for k, v in batch.items()
                 }
-        else:
-            yield from self.dataloader
+            yield batch
 
 
 def build_pytorch_dataloader(
@@ -84,12 +83,14 @@ def build_pytorch_dataloader(
     num_workers: int,
     mp_context: str = "forkserver",
     device: torch.device | None = None,
-) -> _DeviceDataLoader:
+) -> _TDataLoader:
     """Build a reusable PyTorch DataLoader for distributed LLM fine-tuning.
 
     Build once before the training loop and reuse across epochs.
     The returned wrapper automatically calls ``DistributedSampler.set_epoch``
     on each iteration, so no manual ``set_epoch`` call is needed.
+    Similarly, yielded batches are automatically transferred to the given
+    device, if any, so no manual ``to(device)`` call is needed.
     """
     dataset = _InstructDataset(samples, tokenizer, max_seq_len)
     sampler = torch.utils.data.DistributedSampler(
