@@ -4,9 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import unittest
+from collections.abc import Iterable
 from typing import Any
 
 from spdl.pipeline import AsyncQueue, PipelineBuilder
@@ -18,14 +19,14 @@ from spdl.pipeline.defs import Aggregator
 _TEST_INFO = StageInfo(pipeline_id=0, stage_id="0", stage_name="test")
 
 
-def _put_aqueue(queue, vals, *, eof):
+def _put_aqueue(queue: AsyncQueue, vals: Iterable[object], *, eof: bool) -> None:
     for val in vals:
         queue.put_nowait(val)
     if eof:
         queue.put_nowait(_EOF)
 
 
-def _flush_aqueue(queue):
+def _flush_aqueue(queue: AsyncQueue) -> list[object]:
     ret = []
     while not queue.empty():
         ret.append(queue.get_nowait())
