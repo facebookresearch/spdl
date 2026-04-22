@@ -11,6 +11,7 @@ import os
 import platform
 import random
 import re
+import sys
 import threading
 import time
 import unittest
@@ -2523,7 +2524,7 @@ class TestPipelinePropagate(unittest.TestCase):
             .add_sink()
             .build(num_threads=1)
         )
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 pass
 
@@ -2606,3 +2607,110 @@ class TestOverrideStage(unittest.TestCase):
             .add_sink()
             .build(num_threads=1, queue_class=CheckNameQueue, stage_id=ref)
         )
+
+
+class TestPipelineFailureStructure(unittest.TestCase):
+    def _build_failing_pipeline(self):
+        def failing_range(n):
+            yield from range(n)
+            raise ValueError("Iterator failed")
+
+        return (
+            PipelineBuilder()
+            .add_source(failing_range(3))
+            .pipe(passthrough)
+            .add_sink(1000)
+            .build(num_threads=1)
+        )
+
+    def test_pipeline_failure_is_exception_group(self) -> None:
+        pipeline = self._build_failing_pipeline()
+
+        with self.assertRaises(PipelineFailure) as ctx:
+            with pipeline.auto_stop():
+                list(pipeline.get_iterator(timeout=10))
+
+        pf = ctx.exception
+        if sys.version_info >= (3, 11):
+            self.assertIsInstance(pf, ExceptionGroup)
+        else:
+            self.assertIsInstance(pf, RuntimeError)
+        self.assertGreaterEqual(len(pf.exceptions), 1)
+        exception_types = {type(e) for e in pf.exceptions}
+        self.assertTrue(exception_types & {ValueError})
+
+    def test_pipeline_failure_individual_exceptions(self) -> None:
+        def failing_range(n):
+            yield from range(n)
+            raise TypeError("source failed")
+
+        pipeline = (
+            PipelineBuilder()
+            .add_source(failing_range(3))
+            .pipe(passthrough)
+            .add_sink(1000)
+            .build(num_threads=1)
+        )
+
+        with self.assertRaises(PipelineFailure) as ctx:
+            with pipeline.auto_stop():
+                list(pipeline.get_iterator(timeout=10))
+
+        pf = ctx.exception
+        if sys.version_info >= (3, 11):
+            self.assertIsInstance(pf, ExceptionGroup)
+        else:
+            self.assertIsInstance(pf, RuntimeError)
+        self.assertGreaterEqual(len(pf.exceptions), 1)
+        self.assertTrue(
+            any(isinstance(e, TypeError) for e in pf.exceptions),
+        )
+
+    @unittest.skipIf(sys.version_info < (3, 11), "ExceptionGroup requires Python 3.11+")
+    def test_pipeline_failure_subgroup(self) -> None:
+        def failing_range(n):
+            yield from range(n)
+            raise ValueError("Iterator failed")
+
+        pipeline = (
+            PipelineBuilder()
+            .add_source(failing_range(3))
+            .pipe(passthrough)
+            .add_sink(1000)
+            .build(num_threads=1)
+        )
+
+        with self.assertRaises(PipelineFailure) as ctx:
+            with pipeline.auto_stop():
+                list(pipeline.get_iterator(timeout=10))
+
+        pf = ctx.exception
+        sub = pf.subgroup(ValueError)
+        self.assertIsNotNone(sub)
+        self.assertIsInstance(sub, PipelineFailure)
+        self.assertTrue(all(isinstance(e, ValueError) for e in sub.exceptions))
+
+    @unittest.skipIf(sys.version_info < (3, 11), "ExceptionGroup requires Python 3.11+")
+    def test_pipeline_failure_notes_contain_stage_name(self) -> None:
+        def failing_range(n):
+            yield from range(n)
+            raise ValueError("Iterator failed")
+
+        pipeline = (
+            PipelineBuilder()
+            .add_source(failing_range(3))
+            .pipe(passthrough)
+            .add_sink(1000)
+            .build(num_threads=1)
+        )
+
+        with self.assertRaises(PipelineFailure) as ctx:
+            with pipeline.auto_stop():
+                list(pipeline.get_iterator(timeout=10))
+
+        pf = ctx.exception
+        for exc in pf.exceptions:
+            notes = getattr(exc, "__notes__", [])
+            self.assertTrue(
+                any(note.startswith("Pipeline stage:") for note in notes),
+            )
