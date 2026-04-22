@@ -15,6 +15,8 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 
+#include "memoryview_utils.h"
+
 namespace nb = nanobind;
 using namespace nb::literals;
 
@@ -203,6 +205,14 @@ void register_tar(nb::module_& m) {
       "parse_tar",
       [](const nb::bytes& data) {
         return InMemoryTarParser{std::string_view{data.c_str(), data.size()}};
+      }
+      //,nb::call_guard<nb::gil_scoped_release>()
+  );
+
+  m.def(
+      "parse_tar",
+      [](const nb::memoryview& data) {
+        return InMemoryTarParser{::spdl::detail::memoryview_to_sv(data)};
       }
       //,nb::call_guard<nb::gil_scoped_release>()
   );

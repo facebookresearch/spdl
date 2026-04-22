@@ -27,6 +27,8 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/variant.h>
 
+#include "memoryview_utils.h"
+
 namespace nb = nanobind;
 
 using cpu_array = nb::ndarray<const uint8_t, nb::ndim<1>, nb::device::cpu>;
@@ -127,6 +129,17 @@ PyDemuxerPtr _make_demuxer_bytes(
     bool zero_clear,
     const std::optional<std::string>& name) {
   auto data_ = std::string_view{data.c_str(), data.size()};
+  nb::gil_scoped_release __g;
+  return std::make_unique<PyDemuxer>(
+      make_demuxer(data_, dmx_cfg, name), data_, zero_clear);
+}
+
+PyDemuxerPtr _make_demuxer_memoryview(
+    const nb::memoryview& data,
+    const std::optional<DemuxConfig>& dmx_cfg,
+    bool zero_clear,
+    const std::optional<std::string>& name) {
+  auto data_ = ::spdl::detail::memoryview_to_sv(data);
   nb::gil_scoped_release __g;
   return std::make_unique<PyDemuxer>(
       make_demuxer(data_, dmx_cfg, name), data_, zero_clear);
@@ -351,6 +364,14 @@ void register_demuxing(nb::module_& m) {
   m.def(
       "_demuxer",
       &_make_demuxer_bytes,
+      nb::arg("src"),
+      nb::kw_only(),
+      nb::arg("demux_config") = nb::none(),
+      nb::arg("_zero_clear") = false,
+      nb::arg("name") = nb::none());
+  m.def(
+      "_demuxer",
+      &_make_demuxer_memoryview,
       nb::arg("src"),
       nb::kw_only(),
       nb::arg("demux_config") = nb::none(),

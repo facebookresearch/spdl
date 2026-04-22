@@ -14,10 +14,68 @@
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/optional.h>
 
+#include "memoryview_utils.h"
+
 namespace nb = nanobind;
 
 namespace spdl::core {
 namespace {
+
+nb::dict load_wav_impl(
+    const char* p,
+    size_t s,
+    nb::handle owner,
+    std::optional<double> time_offset_seconds,
+    std::optional<double> duration_seconds) {
+  WAVHeader header{};
+  size_t num_samples;
+  std::string_view view;
+  {
+    nb::gil_scoped_release _{};
+    std::string_view d{p, s};
+    header = parse_wav_header(d);
+    view = extract_wav_samples(d, time_offset_seconds, duration_seconds);
+    num_samples = view.size() / header.block_align;
+  }
+
+  nb::dict array_interface;
+  array_interface["version"] = 3;
+  array_interface["shape"] = nb::make_tuple(num_samples, header.num_channels);
+
+  nb::str typestr = [&header]() -> nb::str {
+    switch (header.bits_per_sample) {
+      case 8:
+        return nb::str{"|u1"};
+      case 16:
+        return nb::str{"<i2"};
+      case 32:
+        return nb::str{header.audio_format == 3 ? "<f4" : "<i4"};
+      case 64:
+        return nb::str{"<f8"};
+      default:
+        throw std::domain_error(
+            "Unsupported bits_per_sample: " +
+            std::to_string(header.bits_per_sample));
+    }
+  }();
+  array_interface["typestr"] = typestr;
+  array_interface["data"] =
+      nb::make_tuple(reinterpret_cast<uintptr_t>(view.data()), false);
+  array_interface["owner"] = owner;
+
+  return array_interface;
+}
+
+WAVHeader parse_wav_impl(const char* p, size_t s) {
+  WAVHeader header{};
+  {
+    nb::gil_scoped_release _{};
+    std::string_view d{p, s};
+    header = parse_wav_header(d);
+  }
+  return header;
+}
+
 NB_MODULE(_wav, m) {
   nb::class_<WAVHeader>(m, "WAVHeader", "WAV file header information.")
       .def_ro(
@@ -43,47 +101,12 @@ NB_MODULE(_wav, m) {
       [](const nb::bytes& data,
          std::optional<double> time_offset_seconds = std::nullopt,
          std::optional<double> duration_seconds = std::nullopt) -> nb::dict {
-        const char* p = data.c_str();
-        size_t s = data.size();
-        WAVHeader header{};
-        size_t num_samples;
-        std::string_view view;
-        {
-          nb::gil_scoped_release _{};
-          std::string_view d{p, s};
-          header = parse_wav_header(d);
-          view = extract_wav_samples(d, time_offset_seconds, duration_seconds);
-          num_samples = view.size() / header.block_align;
-        }
-
-        nb::dict array_interface;
-        array_interface["version"] = 3;
-        array_interface["shape"] =
-            nb::make_tuple(num_samples, header.num_channels);
-
-        nb::str typestr = [&header]() -> nb::str {
-          switch (header.bits_per_sample) {
-            case 8:
-              return nb::str{"|u1"};
-            case 16:
-              return nb::str{"<i2"};
-            case 32: {
-              return nb::str{header.audio_format == 3 ? "<f4" : "<i4"};
-            }
-            case 64:
-              return nb::str{"<f8"};
-            default:
-              throw std::domain_error(
-                  "Unsupported bits_per_sample: " +
-                  std::to_string(header.bits_per_sample));
-          }
-        }();
-        array_interface["typestr"] = typestr;
-        array_interface["data"] =
-            nb::make_tuple(reinterpret_cast<uintptr_t>(view.data()), false);
-        array_interface["owner"] = data;
-
-        return array_interface;
+        return load_wav_impl(
+            data.c_str(),
+            data.size(),
+            data,
+            time_offset_seconds,
+            duration_seconds);
       },
       nb::arg("data"),
       nb::kw_only(),
@@ -105,17 +128,23 @@ NB_MODULE(_wav, m) {
       "    WAVParseError: If the WAV data is invalid or time range is out of bounds");
 
   m.def(
+      "load_wav",
+      [](const nb::memoryview& data,
+         std::optional<double> time_offset_seconds = std::nullopt,
+         std::optional<double> duration_seconds = std::nullopt) -> nb::dict {
+        auto sv = ::spdl::detail::memoryview_to_sv(data);
+        return load_wav_impl(
+            sv.data(), sv.size(), data, time_offset_seconds, duration_seconds);
+      },
+      nb::arg("data"),
+      nb::kw_only(),
+      nb::arg("time_offset_seconds") = nb::none(),
+      nb::arg("duration_seconds") = nb::none());
+
+  m.def(
       "parse_wav",
       [](const nb::bytes& data) -> WAVHeader {
-        const char* p = data.c_str();
-        size_t s = data.size();
-        WAVHeader header{};
-        {
-          nb::gil_scoped_release _{};
-          std::string_view d{p, s};
-          header = parse_wav_header(d);
-        }
-        return header;
+        return parse_wav_impl(data.c_str(), data.size());
       },
       nb::arg("data"),
       "Parse WAV file header and extract metadata.\n\n"
@@ -132,6 +161,14 @@ NB_MODULE(_wav, m) {
       "        - data_size: Size of audio data in bytes\n\n"
       "Raises:\n"
       "    WAVParseError: If the WAV data is invalid or malformed");
+
+  m.def(
+      "parse_wav",
+      [](const nb::memoryview& data) -> WAVHeader {
+        auto sv = ::spdl::detail::memoryview_to_sv(data);
+        return parse_wav_impl(sv.data(), sv.size());
+      },
+      nb::arg("data"));
 }
 } // namespace
 } // namespace spdl::core

@@ -21,7 +21,7 @@ from . import lib as _libspdl
 
 # pyre-strict
 
-Buffer: TypeAlias = bytes | bytearray | memoryview  # pyre-ignore[24]
+Buffer: TypeAlias = "bytes | bytearray | memoryview[bytes]"
 
 
 def _get_pointer(data: Buffer) -> int:
@@ -92,7 +92,11 @@ class NpzFile(Mapping):
     See :py:func:`load_npz` for the usage.
     """
 
-    def __init__(self, data: bytes, meta: dict[str, tuple[int, int, int, int]]) -> None:
+    def __init__(
+        self,
+        data: "bytes | memoryview[bytes]",
+        meta: dict[str, tuple[int, int, int, int]],
+    ) -> None:
         self._data: int = _get_pointer(data)
         self._len: int = len(data)
         self._meta = meta
@@ -142,7 +146,7 @@ class NpzFile(Mapping):
         return f"NpzFile object with {len(self)} entries."
 
 
-def load_npz(data: bytes) -> NpzFile:
+def load_npz(data: "bytes | memoryview[bytes]") -> NpzFile:
     """**[Experimental]** Load a numpy archive file (``npz``).
 
     It is almost a drop-in replacement for :py:func:`numpy.load` function,
@@ -169,5 +173,6 @@ def load_npz(data: bytes) -> NpzFile:
        >>> assert np.array_equal(data["y"], y)
 
     """
+    # pyre-fixme[6]: stubs use bare `memoryview`; will resolve when stubs are regenerated
     meta = {val[0]: val[1:] for val in _libspdl._archive.parse_zip(data)}
     return NpzFile(data, meta)
