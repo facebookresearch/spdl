@@ -802,23 +802,54 @@ def _gather_error(
     return errs
 
 
-# TODO [Python 3.11]: Migrate to ExceptionGroup
-class PipelineFailure(RuntimeError):
-    """PipelineFailure()
-    Thrown by :py:class:`spdl.pipeline.Pipeline` when pipeline encounters an error.
-    """
+if sys.version_info >= (3, 11):
 
-    def __init__(self, errs: list[tuple[str, Exception]]) -> None:
-        msg = []
-        for k, v in errs:
-            e = str(v)
-            msg.append(f"{k}:{e if e else type(v).__name__}")
-        msg.sort()
+    class PipelineFailure(ExceptionGroup[Exception]):
+        """PipelineFailure()
+        Thrown by :py:class:`spdl.pipeline.Pipeline` when pipeline encounters an error.
 
-        super().__init__(", ".join(msg))
+        On Python 3.11+, this is an :py:class:`ExceptionGroup` subclass, so
+        ``except*`` and :py:meth:`~BaseExceptionGroup.subgroup` /
+        :py:meth:`~BaseExceptionGroup.split` work as expected.
+        Individual exceptions are accessible via the
+        :py:attr:`~BaseExceptionGroup.exceptions` attribute.
+        """
 
-        # This is for unittesting.
-        self._errs = errs
+        def __new__(
+            cls,
+            errs: list[tuple[str, Exception]],
+        ) -> "PipelineFailure":
+            for name, exc in errs:
+                exc.add_note(f"Pipeline stage: {name}")
+            return super().__new__(
+                cls,
+                "pipeline stages failed",
+                [e for _, e in errs],
+            )
+
+        def __init__(self, errs: list[tuple[str, Exception]]) -> None:
+            pass
+
+        def derive(  # pyre-ignore[14]
+            self, excs: Sequence[Exception]
+        ) -> "PipelineFailure":
+            return super().__new__(type(self), self.message, excs)
+
+else:
+
+    class PipelineFailure(RuntimeError):  # type: ignore[no-redef]
+        """PipelineFailure()
+        Thrown by :py:class:`spdl.pipeline.Pipeline` when pipeline encounters an error.
+        """
+
+        def __init__(self, errs: list[tuple[str, Exception]]) -> None:
+            msg = []
+            for k, v in errs:
+                e = str(v)
+                msg.append(f"{k}:{e if e else type(v).__name__}")
+            msg.sort()
+            super().__init__(", ".join(msg))
+            self.exceptions: tuple[Exception, ...] = tuple(e for _, e in errs)
 
 
 async def _run_pipeline_coroutines(
