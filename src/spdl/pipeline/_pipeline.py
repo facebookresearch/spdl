@@ -179,25 +179,6 @@ class _EventLoop:
         return asyncio.run_coroutine_threadsafe(coro, self._loop)  # pyre-ignore[6]
 
 
-def _ensure_stopped(event_loop: _EventLoop) -> None:
-    """Stop the pipeline if running."""
-    # Check if the event loop was actually started by checking the thread
-    if event_loop.is_started() and not event_loop.is_task_completed():
-        warnings.warn(
-            "Pipeline is running in the background, but "
-            "there is no valid reference pointing the foreground object. "
-            "Stopping the background thread. "
-            "It is strongly advised to stop the pipeline explicitly, "
-            "using the `auto_stop` context manager. "
-            "If you are using a framework and you cannot use the "
-            "context manager, try calling `stop` in done callback and "
-            "error callback.",
-            stacklevel=1,
-        )
-        event_loop.stop()
-        event_loop.join()
-
-
 ################################################################################
 # Pipeline
 ################################################################################
@@ -210,6 +191,174 @@ class _EventLoopState(IntEnum):
 
 
 _EOF_MSG: str = "Reached the end of the pipeline."
+
+
+class _PipelineImpl(Generic[T]):
+    """Internal implementation of the data processing pipeline.
+
+    Use :py:class:`Pipeline` (the public facade) instead.
+    """
+
+    def __init__(
+        self,
+        coro: Coroutine[None, None, None],
+        output_queue: AsyncQueue,
+        executor: ThreadPoolExecutor,
+        *,
+        desc: str,
+    ) -> None:
+        self._str: str = "\n".join([repr(self), desc])
+
+        self._output_queue: AsyncQueue = output_queue
+        self._event_loop = _EventLoop(coro, executor)
+        self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
+
+    def __str__(self) -> str:
+        return self._str
+
+    def start(self, *, timeout: float | None = None, **kwargs: Any) -> None:
+        """Start the pipeline in background thread.
+
+        Args:
+            timeout: Timeout value used when starting the thread and
+                waiting for the pipeline to be initialized. [Unit: second]
+
+        .. note::
+
+           Calling ``start`` multiple times raises ``RuntimeError``.
+        """
+        if self._event_loop_state >= _EventLoopState.STARTED:
+            raise RuntimeError("The pipeline was already started.")
+
+        self._event_loop.start(timeout=timeout, **kwargs)
+        self._event_loop_state = _EventLoopState.STARTED
+
+    def stop(self, *, timeout: float | None = None) -> None:
+        """Stop the pipeline.
+
+        Args:
+            timeout: Timeout value used when stopping the pipeline and
+                waiting for the thread to join. [Unit: second]
+
+        .. note::
+
+           It is safe to call ``stop`` multiple times.
+        """
+        if _EventLoopState.STARTED <= self._event_loop_state < _EventLoopState.STOPPED:
+            self._event_loop.stop()
+
+            # Try to join first. If it doesn't join, drain the output queue
+            # to resolve the congestion, then retry.
+            # (e.g. the frontend does not consume any data, thus the upstream tasks
+            # are not able to complete),
+            to1: float = 3 if timeout is None else min(3, timeout)
+            to2: float | None = None if timeout is None else timeout - to1
+            try:
+                self._event_loop.join(timeout=to1)
+            except TimeoutError:
+                # Empty queue, release backpressure
+                while not self._output_queue.empty():
+                    try:
+                        self._output_queue.get_nowait()
+                    except Exception:
+                        break
+                self._event_loop.join(timeout=to2)
+            self._event_loop_state = _EventLoopState.STOPPED
+
+        if self._event_loop._task_exception is not None:
+            raise self._event_loop._task_exception
+
+    def get_item(self, *, timeout: float | None = None) -> T:
+        """Get the next item.
+
+        Args:
+            timeout: The duration to wait for the next item to become available. [Unit: second]
+                If ``None`` (default), it waits indefinitely.
+
+        Raises:
+            RuntimeError: The pipeline is not started.
+
+            TimeoutError: When pipeline is not producing the next item within the given time.
+
+            EOFError: When the pipeline is exhausted or cancelled and there are no more items
+                in the sink.
+        """
+        item = self._get_item(timeout=timeout)
+        if is_epoch_end(item):
+            raise EOFError(_EOF_MSG)
+        return item
+
+    def _get_item(self, *, timeout: float | None) -> T:
+        if not self._event_loop.is_started():
+            raise RuntimeError("Pipeline is not started.")
+
+        # The event loop (thread) was started, but it might be stopped by now.
+        # However, what matters for `get_item` method is whether the task is running or not.
+        # Because if the task is running, then accessing the sink queue must be done through
+        # async method, invoked via event loop's `run_coroutine_threadsafe` method.
+        # If the task is not running, then, sync method can be used to access sink queue,
+        # even if the loop is not running.
+
+        if self._event_loop.is_task_completed():
+            # The pipeline is stopped.
+            # The sink queue is not accessed by background event loop anymore, so we can use
+            # sync access without being worried about thread safety.
+
+            # There are remaining items in the queue if the pipeline was stopped by client code
+            # before it processes all the items.
+            if not self._output_queue.empty():
+                return self._output_queue.get_nowait()
+
+            # Now, all the items from the queue are fetched. We can stop the pipeline loop/thread.
+            self._event_loop.stop()
+            raise EOFError(_EOF_MSG)
+
+        # The task is not completed. To access the sink queue, the async method must be used.
+        # The loop keeps running unless we explicitly request stop, so the use of async method
+        # itself is fine.
+
+        # However, the background task can complete at any point.
+        # It turned out to be very easy to hit the race condition where the foreground execution
+        # control reaches here, in the short time window between the background thread puts the
+        # last item and issues task completion.
+        # In this case, without timeout, the foreground gets stuck.
+        # Therefore, we split the timeout into small window and periodically check the state of
+        # the background task.
+        max_elapsed = float("inf") if timeout is None else timeout
+
+        future = self._event_loop.run_coroutine_threadsafe(self._output_queue.get())
+        t0 = time.monotonic()
+        while (elapsed := time.monotonic() - t0) < max_elapsed:
+            try:
+                return future.result(timeout=min(0.1, max_elapsed))
+            except concurrent.futures.TimeoutError:
+                # The sink queue is empty.
+                # In this condition, we cannot really tell if it is due to EOF or
+                # pipeline being too slow.
+
+                # One exception is that the task is now complete and queue is still empty.
+                # This case we can switch to EOFError.
+                if self._event_loop.is_task_completed() and self._output_queue.empty():
+                    self._event_loop.stop()
+                    raise EOFError(_EOF_MSG) from None
+
+        _LG.debug("EventLoop: %s", str(self._event_loop))
+
+        raise TimeoutError(f"The next item is not available after {elapsed:.1f} sec.")
+
+
+################################################################################
+# Pipeline (Public Facade)
+################################################################################
+
+_STOP_TIMEOUT: float = 10.0
+
+
+def _stop_impl(impl: _PipelineImpl[Any]) -> None:
+    try:
+        impl.stop(timeout=_STOP_TIMEOUT)
+    except Exception:
+        _LG.debug("Exception during automatic pipeline shutdown.", exc_info=True)
 
 
 class Pipeline(Generic[T]):
@@ -295,6 +444,20 @@ class Pipeline(Generic[T]):
                for item in pipeline.get_iterator(timeout=30):
                    # do something with the decoded image
                    ...
+
+    When the ``Pipeline`` object is garbage collected, the background thread is
+    automatically stopped. You can still use :py:meth:`auto_stop` or
+    :py:meth:`stop` for deterministic, scoped lifecycle management.
+
+    .. versionchanged:: 0.4.0
+
+       **[Experimental]** Calling :py:meth:`start` and :py:meth:`stop` is now
+       optional. When iterating a pipeline that has not been explicitly started,
+       the background thread is started automatically on the first item request.
+       When the ``Pipeline`` object is garbage collected, the background thread
+       is stopped automatically via :py:func:`weakref.finalize`.
+       Explicit :py:meth:`start` / :py:meth:`stop` and the :py:meth:`auto_stop`
+       context manager continue to work as before.
     """
 
     def __init__(
@@ -305,18 +468,13 @@ class Pipeline(Generic[T]):
         *,
         desc: str,
     ) -> None:
-        self._str: str = "\n".join([repr(self), desc])
-
-        self._output_queue: AsyncQueue = output_queue
-        self._event_loop = _EventLoop(coro, executor)
-        self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
-
-        self._finalizer = weakref.finalize(self, _ensure_stopped, self._event_loop)
-
-        log_api_usage_once("spdl.pipeline.Pipeline")
+        self._impl: _PipelineImpl[T] = _PipelineImpl(
+            coro, output_queue, executor, desc=desc
+        )
+        self._finalizer = weakref.finalize(self, _stop_impl, self._impl)
 
     def __str__(self) -> str:
-        return self._str
+        return str(self._impl)
 
     def start(self, *, timeout: float | None = None, **kwargs: Any) -> None:
         """Start the pipeline in background thread.
@@ -329,11 +487,7 @@ class Pipeline(Generic[T]):
 
            Calling ``start`` multiple times raises ``RuntimeError``.
         """
-        if self._event_loop_state >= _EventLoopState.STARTED:
-            raise RuntimeError("The pipeline was already started.")
-
-        self._event_loop.start(timeout=timeout, **kwargs)
-        self._event_loop_state = _EventLoopState.STARTED
+        self._impl.start(timeout=timeout, **kwargs)
 
     def stop(self, *, timeout: float | None = None) -> None:
         """Stop the pipeline.
@@ -346,37 +500,16 @@ class Pipeline(Generic[T]):
 
            It is safe to call ``stop`` multiple times.
         """
-        if _EventLoopState.STARTED <= self._event_loop_state < _EventLoopState.STOPPED:
-            self._event_loop.stop()
-
-            # Try to join first. If it doesn't join, drain the output queue
-            # to resolve the congestion, then retry.
-            # (e.g. the frontend does not consume any data, thus the upstream tasks
-            # are not able to complete),
-            to1: float = 3 if timeout is None else min(3, timeout)
-            to2: float | None = None if timeout is None else timeout - to1
-            try:
-                self._event_loop.join(timeout=to1)
-            except TimeoutError:
-                # Empty queue, release backpressure
-                while not self._output_queue.empty():
-                    try:
-                        self._output_queue.get_nowait()
-                    except Exception:
-                        break
-                self._event_loop.join(timeout=to2)
-            self._event_loop_state = _EventLoopState.STOPPED
-            self._finalizer.detach()
-
-        if self._event_loop._task_exception is not None:
-            raise self._event_loop._task_exception
+        self._impl.stop(timeout=timeout)
+        self._finalizer.detach()
 
     @contextmanager
     def auto_stop(self, *, timeout: float | None = None) -> Iterator[None]:
         """Context manager to start/stop the background thread automatically.
 
         Args:
-            timeout: The duration to wait for the thread initialization / shutdown. [Unit: second]
+            timeout: The duration to wait for the thread
+                initialization / shutdown. [Unit: second]
                 If ``None`` (default), it waits indefinitely.
         """
         self.start(timeout=timeout)
@@ -400,68 +533,12 @@ class Pipeline(Generic[T]):
             EOFError: When the pipeline is exhausted or cancelled and there are no more items
                 in the sink.
         """
-        item = self._get_item(timeout=timeout)
-        if is_epoch_end(item):
-            raise EOFError(_EOF_MSG)
-        return item
-
-    def _get_item(self, *, timeout: float | None) -> T:
-        if not self._event_loop.is_started():
-            raise RuntimeError("Pipeline is not started.")
-
-        # The event loop (thread) was started, but it might be stopped by now.
-        # However, what matters for `get_item` method is whether the task is running or not.
-        # Because if the task is running, then accessing the sink queue must be done through
-        # async method, invoked via event loop's `run_coroutine_threadsafe` method.
-        # If the task is not running, then, sync method can be used to access sink queue,
-        # even if the loop is not running.
-
-        if self._event_loop.is_task_completed():
-            # The pipeline is stopped.
-            # The sink queue is not accessed by background event loop anymore, so we can use
-            # sync access without being worried about thread safety.
-
-            # There are remaining items in the queue if the pipeline was stopped by client code
-            # before it processes all the items.
-            if not self._output_queue.empty():
-                return self._output_queue.get_nowait()
-
-            # Now, all the items from the queue are fetched. We can stop the pipeline loop/thread.
-            self._event_loop.stop()
-            raise EOFError(_EOF_MSG)
-
-        # The task is not completed. To access the sink queue, the async method must be used.
-        # The loop keeps running unless we explicitly request stop, so the use of async method
-        # itself is fine.
-
-        # However, the background task can complete at any point.
-        # It turned out to be very easy to hit the race condition where the foreground execution
-        # control reaches here, in the short time window between the background thread puts the
-        # last item and issues task completion.
-        # In this case, without timeout, the foreground gets stuck.
-        # Therefore, we split the timeout into small window and periodically check the state of
-        # the background task.
-        max_elapsed = float("inf") if timeout is None else timeout
-
-        future = self._event_loop.run_coroutine_threadsafe(self._output_queue.get())
-        t0 = time.monotonic()
-        while (elapsed := time.monotonic() - t0) < max_elapsed:
-            try:
-                return future.result(timeout=min(0.1, max_elapsed))
-            except concurrent.futures.TimeoutError:
-                # The sink queue is empty.
-                # In this condition, we cannot really tell if it is due to EOF or
-                # pipeline being too slow.
-
-                # One exception is that the task is now complete and queue is still empty.
-                # This case we can switch to EOFError.
-                if self._event_loop.is_task_completed() and self._output_queue.empty():
-                    self._event_loop.stop()
-                    raise EOFError(_EOF_MSG) from None
-
-        _LG.debug("EventLoop: %s", str(self._event_loop))
-
-        raise TimeoutError(f"The next item is not available after {elapsed:.1f} sec.")
+        # Ensure that the pipeline is started before accessing the sink queue.
+        # Note: This check-then-start pattern is not thread-safe, but `get_item` is not
+        # it is not supposed to be called from multiple threads.
+        if self._impl._event_loop_state == _EventLoopState.NOT_STARTED:
+            self._impl.start()
+        return self._impl.get_item(timeout=timeout)
 
     def get_iterator(self, *, timeout: float | None = None) -> Iterator[T]:
         """Get an iterator, which iterates over the pipeline outputs.

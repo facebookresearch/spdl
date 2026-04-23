@@ -1256,8 +1256,6 @@ class TestPipelineNoop(unittest.TestCase):
         """AsyncPipeline2 functions without pipe."""
 
         apl = PipelineBuilder().add_source(range(10)).add_sink(1).build(num_threads=1)
-        with self.assertRaises(RuntimeError):
-            apl.get_item(timeout=1)
 
         with apl.auto_stop():
             for i in range(10):
@@ -1282,8 +1280,6 @@ class TestPipelinePassthrough(unittest.TestCase):
             .add_sink(1)
             .build(num_threads=1)
         )
-        with self.assertRaises(RuntimeError):
-            apl.get_item(timeout=1)
 
         with apl.auto_stop():
             for i in range(10):
@@ -1334,8 +1330,6 @@ class TestPipelineLambda(unittest.TestCase):
             .add_sink(1)
             .build(num_threads=1)
         )
-        with self.assertRaises(RuntimeError):
-            apl.get_item(timeout=1)
 
         with apl.auto_stop():
             for i in range(10):
@@ -1611,9 +1605,6 @@ class TestPipelineFail(unittest.TestCase):
             .add_sink(1)
             .build(num_threads=1)
         )
-
-        with self.assertRaises(RuntimeError):
-            apl.get_item(timeout=1)
 
         with self.assertRaises(PipelineFailure):
             with apl.auto_stop():

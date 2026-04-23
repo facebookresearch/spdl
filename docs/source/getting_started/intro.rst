@@ -36,6 +36,20 @@ perform the operations in an async event loop in a background thread.
 Running a Pipeline
 ------------------
 
+.. note::
+
+   The v0.4.0 introduced the experimental automatic start and stop.
+   The :py:meth:`Pipeline.get_item` method ensures that the background
+   thread is started, and the :py:meth:`Pipeline.stop` method is called
+   when the Pipeline object is garbage collected.
+
+   You should be simply able to do ``for item in pipeline:``.
+   Please file an issue if you find any problems with the automatic start
+   and stop.
+
+   If you need to control the resource usage, then you can explicitly call
+   :py:meth:`start` and `stop`.
+
 To run the pipeline, call :py:meth:`Pipeline.start`.
 Once the pipeline starts executing, you can iterate on the pipeline.
 Finally call :py:meth:`Pipeline.stop` to stop the background thread.
