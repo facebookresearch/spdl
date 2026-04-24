@@ -215,7 +215,7 @@ def _profile_pipe(
             qps_, outputs = _run(pipeline)
 
         occupancy_rate = (
-            pipeline._output_queue._get_lap_stats().occupancy_rate  # pyre-ignore[16]
+            pipeline._impl._output_queue._get_lap_stats().occupancy_rate  # pyre-ignore[16]
         )
         _LG.info(" - Concurrency: %d", concurrency)
         _LG.info(" - QPS: %.2f", qps_)
