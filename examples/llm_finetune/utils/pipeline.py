@@ -11,15 +11,12 @@
 from __future__ import annotations
 
 import threading
-import weakref
-from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 import spdl.pipeline
 import spdl.source.utils
 from spdl.io import transfer_tensor
-from spdl.pipeline import build_pipeline, Pipeline, PipelineBuilder
-from spdl.pipeline.defs import PipelineConfig
+from spdl.pipeline import PipelineBuilder
 from spdl.source import DistributedRandomSampler
 
 from .utils import _collate, _TDataLoader, _tokenize_sample, _TSample
@@ -86,29 +83,6 @@ class _Tokenize:
 
     def __call__(self, sample: dict[str, str]) -> _TSample:
         return _tokenize_sample(sample, self._tlt.tokenizer, self.max_seq_len)
-
-
-def _stop_pipeline(pipeline: Pipeline) -> None:
-    """Stop a pipeline and wait for it to finish."""
-    pipeline.stop(timeout=10)
-
-
-class _SPDLDataLoader:
-    """Wraps a continuous Pipeline to match the PyTorch DataLoader interface.
-
-    Each ``for batch in dl:`` loop consumes one epoch (up to the next
-    epoch boundary marker). The pipeline stays alive across epochs.
-    The pipeline is automatically stopped when this object is garbage
-    collected.
-    """
-
-    def __init__(self, cfg: PipelineConfig[_TSample]) -> None:
-        self._pipeline: Pipeline[_TSample] = build_pipeline(cfg, num_threads=1)
-        self._pipeline.start()
-        self._finalizer = weakref.finalize(self, _stop_pipeline, self._pipeline)
-
-    def __iter__(self) -> Iterator[_TSample]:
-        return self._pipeline.get_iterator(timeout=120)
 
 
 def build_spdl_dataloader(
@@ -178,4 +152,4 @@ def build_spdl_dataloader(
         .pipe(transfer_tensor)
         .add_sink(buffer_size=3)
     )
-    return _SPDLDataLoader(frontend.get_config())
+    return frontend.build(num_threads=1)
