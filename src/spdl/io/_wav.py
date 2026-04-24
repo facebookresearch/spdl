@@ -61,14 +61,14 @@ class _WAVArrayInterface(ArrayInterface):
 
 
 def load_wav(
-    data: bytes,
+    data: "bytes | memoryview[bytes]",
     time_offset_seconds: float | None = None,
     duration_seconds: float | None = None,
 ) -> ArrayInterface:
     """Extract audio samples from WAV data.
 
     Args:
-        data: Binary WAV data as bytes
+        data: Binary WAV data as bytes or memoryview
         time_offset_seconds: Optional starting time in seconds (default: 0.0)
         duration_seconds: Optional duration in seconds (default: until end)
 
@@ -93,18 +93,18 @@ def load_wav(
           :py:func:`load_audio` and ``libsoundfile``.
     """
     array_interface_dict = _libspdl._wav.load_wav(
-        data,
+        data,  # pyre-fixme[6]: stubs use bare `memoryview`
         time_offset_seconds=time_offset_seconds,
         duration_seconds=duration_seconds,
     )
     return _WAVArrayInterface(array_interface_dict)
 
 
-def parse_wav(data: bytes) -> "WAVHeader":
+def parse_wav(data: "bytes | memoryview[bytes]") -> "WAVHeader":
     """Parse WAV file header and extract metadata.
 
     Args:
-        data: Binary WAV data as bytes
+        data: Binary WAV data as bytes or memoryview
 
     Returns:
         WAVHeader: Object containing WAV header information.
@@ -112,4 +112,4 @@ def parse_wav(data: bytes) -> "WAVHeader":
     Raises:
         ValueError: If the WAV data is invalid or malformed.
     """
-    return _libspdl._wav.parse_wav(data)
+    return _libspdl._wav.parse_wav(data)  # pyre-fixme[6]

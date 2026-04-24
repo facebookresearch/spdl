@@ -465,23 +465,26 @@ def load_image_batch(
     return buffer
 
 
-def _get_bytes(srcs: Sequence[str | bytes]) -> list[bytes]:
-    ret: list[bytes] = []
+def _get_bytes(
+    srcs: "Sequence[str | bytes | memoryview[bytes]]",
+) -> "list[bytes | memoryview[bytes]]":
+    ret: "list[bytes | memoryview[bytes]]" = []
     for src in srcs:
-        if isinstance(src, bytes):
+        if isinstance(src, (bytes, memoryview)):
             ret.append(src)
         elif isinstance(src, str):
             with open(src, "rb") as f:
                 ret.append(f.read())
         else:
             raise TypeError(
-                f"Source must be either `str` (path) or `bytes` (data). Found: {type(src)}"
+                f"Source must be `str` (path), `bytes` (data),"
+                f" or `memoryview`. Found: {type(src)}"
             )
     return ret
 
 
 def load_image_batch_nvjpeg(
-    srcs: Sequence[str | bytes],
+    srcs: "Sequence[str | bytes | memoryview[bytes]]",
     *,
     device_config: "CUDAConfig",
     width: int,

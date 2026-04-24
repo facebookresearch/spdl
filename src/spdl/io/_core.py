@@ -44,7 +44,7 @@ from collections.abc import Iterator, Sequence
 from decimal import Decimal
 from fractions import Fraction
 from pathlib import Path
-from typing import Any, Generic, overload, TYPE_CHECKING, TypeVar
+from typing import Any, Generic, overload, TYPE_CHECKING, TypeAlias, TypeVar
 
 try:
     from spdl._internal import log_api_usage_once
@@ -94,7 +94,9 @@ if TYPE_CHECKING:
     CUDAConfig = _libspdl_cuda.CUDAConfig
     NvDecDecoder = _libspdl_cuda.NvDecDecoder
 
-    SourceType = str | Path | bytes | UintArray | Tensor
+    SourceType: TypeAlias = (
+        "str | Path | bytes | memoryview[bytes] | UintArray | Tensor"
+    )
 
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -830,7 +832,7 @@ def decode_packets_nvdec(
 
 
 def decode_image_nvjpeg(
-    src: str | bytes | Sequence[bytes],
+    src: "str | bytes | memoryview[bytes] | Sequence[bytes | memoryview[bytes]]",
     *,
     device_config: "CUDAConfig | None" = None,
     scale_width: int = -1,
@@ -850,7 +852,7 @@ def decode_image_nvjpeg(
        Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
 
     Args:
-        src: File path to a JPEG image or data in bytes.
+        src: File path to a JPEG image or data in bytes/memoryview.
         device_config: The CUDA device to use for decoding.
 
         scale_width, scale_height (int): Resize image.
