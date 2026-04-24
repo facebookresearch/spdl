@@ -291,8 +291,10 @@ class _Wrapper(Generic[U]):
         self.queue_class = queue_class
         self.task_hook_factory = task_hook_factory
         self.background_tasks = background_tasks
-        self._continuous: bool = _has_continuous_source(config)
         self._pipeline: Pipeline[U] | None = None
+        if _has_continuous_source(config):
+            self._pipeline = self._build()
+            self._pipeline.start()
 
     def _build(self) -> Pipeline[U]:
         return build_pipeline(
@@ -305,20 +307,10 @@ class _Wrapper(Generic[U]):
             background_tasks=self.background_tasks,
         )
 
-    def _get_reusable_pipeline(self) -> Pipeline[U]:
-        assert self._continuous
-        if self._pipeline is None:
-            self._pipeline = self._build()
-            self._pipeline.start()
-        assert self._pipeline is not None
-        return self._pipeline
-
     def __iter__(self) -> Iterator[U]:
-        if self._continuous:
-            # Reuse the same pipeline across iterations. Build once on
-            # first iter, then use get_iterator() per epoch. This avoids
-            # rebuilding the thread pool and event loop each epoch.
-            yield from self._get_reusable_pipeline().get_iterator()
+        if (pipeline := self._pipeline) is not None:
+            # The pipeline is in continuous mode. It is already running.
+            yield from pipeline
         else:
             pipeline = self._build()
             with pipeline.auto_stop():
