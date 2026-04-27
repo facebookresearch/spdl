@@ -60,19 +60,19 @@ void register_bsf(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>());
 
   m.def(
-      "_make_bsf",
+      "make_bsf",
       [](const VideoCodec& codec, const std::string& name) {
         return std::make_unique<BSF<MediaType::Video>>(codec, name);
       },
       nb::call_guard<nb::gil_scoped_release>());
   m.def(
-      "_make_bsf",
+      "make_bsf",
       [](const AudioCodec& codec, const std::string& name) {
         return std::make_unique<BSF<MediaType::Audio>>(codec, name);
       },
       nb::call_guard<nb::gil_scoped_release>());
   m.def(
-      "_make_bsf",
+      "make_bsf",
       [](const ImageCodec& codec, const std::string& name) {
         return std::make_unique<BSF<MediaType::Image>>(codec, name);
       },

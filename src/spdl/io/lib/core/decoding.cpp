@@ -95,7 +95,7 @@ void register_decoding(nb::module_& m) {
           "Flush the decoder and yield remaining frames");
 
   m.def(
-      "_make_decoder",
+      "make_decoder",
       &_make_decoder<MediaType::Audio>,
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("codec"),
@@ -103,7 +103,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = nb::none());
   m.def(
-      "_make_decoder",
+      "make_decoder",
       &_make_decoder<MediaType::Video>,
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("codec"),
@@ -111,7 +111,7 @@ void register_decoding(nb::module_& m) {
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = nb::none());
   m.def(
-      "_make_decoder",
+      "make_decoder",
       &_make_decoder<MediaType::Image>,
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("codec"),

@@ -164,8 +164,11 @@ class Demuxer:
         name: str | None = None,
         **kwargs: Any,
     ) -> None:
-        self._demuxer: _libspdl.Demuxer = _libspdl._demuxer(
-            _resolve_src(src), demux_config=demux_config, name=name, **kwargs
+        self._demuxer: _libspdl.Demuxer = _libspdl.make_demuxer(
+            _resolve_src(src),
+            demux_config=demux_config,
+            name=name,
+            **kwargs,  # pyre-ignore[6]
         )
 
     def demux_audio(
@@ -461,7 +464,7 @@ class BSF(Generic[TCodec, TPackets]):
     """
 
     def __init__(self, codec: TCodec, bsf: str) -> None:
-        self._bsf: Any = _libspdl._make_bsf(codec, bsf)
+        self._bsf: Any = _libspdl.make_bsf(codec, bsf)  # pyre-ignore[6]
 
     def filter(self, packets: TPackets, flush: bool = False) -> TPackets | None:
         """Apply the filter to the input packets
@@ -621,8 +624,10 @@ def Decoder(
     if filter_desc is not None:
         filter_desc = _resolve_filter_graph(filter_desc, codec)
 
-    return _libspdl._make_decoder(
-        codec, filter_desc=filter_desc, decode_config=decode_config
+    return _libspdl.make_decoder(
+        codec,
+        filter_desc=filter_desc,
+        decode_config=decode_config,  # pyre-ignore[6]
     )
 
 
@@ -893,7 +898,7 @@ _THREAD_LOCAL = threading.local()
 
 def _get_decoder() -> "NvDecDecoder":
     if getattr(_THREAD_LOCAL, "_decoder", None) is None:
-        _THREAD_LOCAL._decoder = _libspdl_cuda._nvdec_decoder()  # pyre-ignore[16]
+        _THREAD_LOCAL._decoder = _libspdl_cuda.make_nvdec_decoder()  # pyre-ignore[16]
     return _THREAD_LOCAL._decoder
 
 

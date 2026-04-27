@@ -312,7 +312,7 @@ void register_demuxing(nb::module_& m) {
       .def("_drop", &PyDemuxer::_drop);
 
   m.def(
-      "_demuxer",
+      "make_demuxer",
       &_make_demuxer,
       nb::arg("src"),
       nb::kw_only(),
@@ -321,7 +321,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("name") = nb::none());
 
   m.def(
-      "_demuxer",
+      "make_demuxer",
       &_make_demuxer_memoryview,
       nb::arg("src"),
       nb::kw_only(),

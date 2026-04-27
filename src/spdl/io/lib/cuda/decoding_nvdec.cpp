@@ -272,7 +272,7 @@ Returns:
           nb::call_guard<nb::gil_scoped_release>());
 
   m.def(
-      "_nvdec_decoder",
+      "make_nvdec_decoder",
       []() -> std::unique_ptr<NvDecDecoder> {
 #ifdef SPDL_USE_NVCODEC
         return std::make_unique<NvDecDecoder>();

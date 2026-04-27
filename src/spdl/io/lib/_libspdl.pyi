@@ -583,6 +583,12 @@ class Demuxer:
 
     def streaming_demux(self, indices: Set[int], *, num_packets: int, duration: float) -> PacketsIterator: ...
 
+@overload
+def make_demuxer(src: str, *, demux_config: DemuxConfig | None = None, _adaptor: "spdl::core::SourceAdaptor" | None = None, name: str | None = None) -> Demuxer: ...
+
+@overload
+def make_demuxer(src: memoryview, *, demux_config: DemuxConfig | None = None, name: str | None = None) -> Demuxer: ...
+
 class AudioDecoder:
     """
     Decode stream of audio packets. See :py:class:`Decoder` for the detail.
@@ -609,6 +615,15 @@ class VideoDecoder:
 
     def flush(self) -> VideoFramesIterator:
         """Flush the decoder and yield remaining frames"""
+
+@overload
+def make_decoder(codec: AudioCodec, *, decode_config: DecodeConfig | None = None, filter_desc: str | None = None) -> AudioDecoder: ...
+
+@overload
+def make_decoder(codec: VideoCodec, *, decode_config: DecodeConfig | None = None, filter_desc: str | None = None) -> VideoDecoder: ...
+
+@overload
+def make_decoder(codec: ImageCodec, *, decode_config: DecodeConfig | None = None, filter_desc: str | None = None) -> "spdl::core::Decoder<(spdl::core::MediaType)2>": ...
 
 class AudioFramesIterator:
     def __iter__(self) -> AudioFramesIterator: ...
@@ -982,5 +997,14 @@ class ImageBSF:
     def filter(self, packets: ImagePackets, *, flush: bool = False) -> ImagePackets | None: ...
 
     def flush(self) -> ImagePackets | None: ...
+
+@overload
+def make_bsf(arg0: VideoCodec, arg1: str, /) -> VideoBSF: ...
+
+@overload
+def make_bsf(arg0: AudioCodec, arg1: str, /) -> AudioBSF: ...
+
+@overload
+def make_bsf(arg0: ImageCodec, arg1: str, /) -> ImageBSF: ...
 
 def apply_bsf(packets: VideoPackets, bsf: str) -> VideoPackets | None: ...
