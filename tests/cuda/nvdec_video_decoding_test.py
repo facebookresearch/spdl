@@ -323,7 +323,7 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
         # Clean up any cached decoders after each test
         spdl.io._core._del_cached_decoder()
 
-    @patch("spdl.io._core._libspdl_cuda._nvdec_decoder")
+    @patch("spdl.io._core._libspdl_cuda.make_nvdec_decoder")
     def test_decoder_caching_same_thread(self, mock_nvdec_decoder: MagicMock) -> None:
         """Verify that nvdec_decoder returns the same cached instance within the same thread."""
         # Setup: Mock decoder creation to return a mock object
@@ -343,7 +343,7 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
             mock_nvdec_decoder.call_count, 1, "Decoder should be created only once"
         )
 
-    @patch("spdl.io._core._libspdl_cuda._nvdec_decoder")
+    @patch("spdl.io._core._libspdl_cuda.make_nvdec_decoder")
     def test_decoder_no_caching(self, mock_nvdec_decoder: MagicMock) -> None:
         """Verify that nvdec_decoder creates a new instance when use_cache=False."""
         # Setup: Mock decoder creation to return different mock objects each time
@@ -366,7 +366,7 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
             mock_nvdec_decoder.call_count, 2, "Decoder should be created twice"
         )
 
-    @patch("spdl.io._core._libspdl_cuda._nvdec_decoder")
+    @patch("spdl.io._core._libspdl_cuda.make_nvdec_decoder")
     def test_decoder_caching_different_threads(
         self, mock_nvdec_decoder: MagicMock
     ) -> None:
@@ -412,7 +412,7 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
             creation_count["count"], 2, "Decoder should be created once per thread"
         )
 
-    @patch("spdl.io._core._libspdl_cuda._nvdec_decoder")
+    @patch("spdl.io._core._libspdl_cuda.make_nvdec_decoder")
     def test_decoder_cache_cleared_on_crop(self, mock_nvdec_decoder: MagicMock) -> None:
         """Verify that providing crop parameters forces recreation of the decoder.
 
@@ -449,7 +449,7 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
             "Decoder should be recreated when crop parameters change",
         )
 
-    @patch("spdl.io._core._libspdl_cuda._nvdec_decoder")
+    @patch("spdl.io._core._libspdl_cuda.make_nvdec_decoder")
     def test_cache_cleanup_with_hasattr_delattr(
         self, mock_nvdec_decoder: MagicMock
     ) -> None:
@@ -471,7 +471,7 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
             "Decoder should be created twice after cache clear",
         )
 
-    @patch("spdl.io._core._libspdl_cuda._nvdec_decoder")
+    @patch("spdl.io._core._libspdl_cuda.make_nvdec_decoder")
     def test_thread_local_isolation_with_getattr(
         self, mock_nvdec_decoder: MagicMock
     ) -> None:
