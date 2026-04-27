@@ -13,10 +13,7 @@
 
 #include <fmt/core.h>
 
-#include <cstring>
-
 #include <nanobind/nanobind.h>
-#include <nanobind/ndarray.h>
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/optional.h>
@@ -31,8 +28,6 @@
 
 namespace nb = nanobind;
 
-using cpu_array = nb::ndarray<const uint8_t, nb::ndim<1>, nb::device::cpu>;
-
 namespace spdl::core {
 namespace {
 
@@ -40,17 +35,11 @@ namespace {
 // 1. Release GIL
 // 2. Allow explicit deallocation with `drop` method, so that it can be
 //    deallocated in a thread other than the main thread.
-// 3. Add `zero_clear`, method for testing purpose.
 
 struct PyDemuxer {
   DemuxerPtr demuxer;
 
-  std::string_view data;
-  bool zero_clear = false;
-
   explicit PyDemuxer(DemuxerPtr&& demuxer_) : demuxer(std::move(demuxer_)) {}
-  PyDemuxer(DemuxerPtr&& demuxer_, std::string_view data_, bool zero_clear_)
-      : demuxer(std::move(demuxer_)), data(data_), zero_clear(zero_clear_) {}
 
   bool has_audio() {
     nb::gil_scoped_release __g;
@@ -103,10 +92,6 @@ struct PyDemuxer {
 
   void _drop() {
     nb::gil_scoped_release __g;
-    if (zero_clear) {
-      std::memset((void*)data.data(), 0, data.size());
-    }
-    // Explicitly release
     demuxer.reset();
   }
 };
@@ -123,39 +108,13 @@ PyDemuxerPtr _make_demuxer(
       make_demuxer(src, std::move(_adaptor), dmx_cfg, name));
 }
 
-PyDemuxerPtr _make_demuxer_bytes(
-    nb::bytes data,
-    const std::optional<DemuxConfig>& dmx_cfg,
-    bool zero_clear,
-    const std::optional<std::string>& name) {
-  auto data_ = std::string_view{data.c_str(), data.size()};
-  nb::gil_scoped_release __g;
-  return std::make_unique<PyDemuxer>(
-      make_demuxer(data_, dmx_cfg, name), data_, zero_clear);
-}
-
 PyDemuxerPtr _make_demuxer_memoryview(
     const nb::memoryview& data,
     const std::optional<DemuxConfig>& dmx_cfg,
-    bool zero_clear,
     const std::optional<std::string>& name) {
   auto data_ = ::spdl::detail::memoryview_to_sv(data);
   nb::gil_scoped_release __g;
-  return std::make_unique<PyDemuxer>(
-      make_demuxer(data_, dmx_cfg, name), data_, zero_clear);
-}
-
-PyDemuxerPtr _make_demuxer_array(
-    cpu_array data,
-    const std::optional<DemuxConfig>& dmx_cfg,
-    bool zero_clear,
-    const std::optional<std::string>& name) {
-  auto ptr = reinterpret_cast<const char*>(data.data());
-  // Note size() returns the number of elements, not the size in bytes.
-  auto data_ = std::string_view{ptr, data.size()};
-  nb::gil_scoped_release __g;
-  return std::make_unique<PyDemuxer>(
-      make_demuxer(data_, dmx_cfg, name), data_, zero_clear);
+  return std::make_unique<PyDemuxer>(make_demuxer(data_, dmx_cfg, name));
 }
 
 } // namespace
@@ -363,27 +322,10 @@ void register_demuxing(nb::module_& m) {
 
   m.def(
       "_demuxer",
-      &_make_demuxer_bytes,
-      nb::arg("src"),
-      nb::kw_only(),
-      nb::arg("demux_config") = nb::none(),
-      nb::arg("_zero_clear") = false,
-      nb::arg("name") = nb::none());
-  m.def(
-      "_demuxer",
       &_make_demuxer_memoryview,
       nb::arg("src"),
       nb::kw_only(),
       nb::arg("demux_config") = nb::none(),
-      nb::arg("_zero_clear") = false,
-      nb::arg("name") = nb::none());
-  m.def(
-      "_demuxer",
-      &_make_demuxer_array,
-      nb::arg("src"),
-      nb::kw_only(),
-      nb::arg("demux_config") = nb::none(),
-      nb::arg("_zero_clear") = false,
       nb::arg("name") = nb::none());
 }
 } // namespace spdl::core

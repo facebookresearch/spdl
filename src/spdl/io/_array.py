@@ -173,6 +173,6 @@ def load_npz(data: "bytes | memoryview[bytes]") -> NpzFile:
        >>> assert np.array_equal(data["y"], y)
 
     """
-    # pyre-fixme[6]: stubs use bare `memoryview`; will resolve when stubs are regenerated
-    meta = {val[0]: val[1:] for val in _libspdl._archive.parse_zip(data)}
+    mv = memoryview(data)
+    meta = {val[0]: val[1:] for val in _libspdl._archive.parse_zip(mv)}
     return NpzFile(data, meta)

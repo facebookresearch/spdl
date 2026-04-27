@@ -25,12 +25,8 @@ def iter_tarfile(src: SupportsRead) -> Iterator[tuple[str, bytes]]: ...
 
 
 @overload
-def iter_tarfile(src: bytes) -> "Iterator[tuple[str, memoryview[bytes]]]": ...
-
-
-@overload
 def iter_tarfile(
-    src: "memoryview[bytes]",
+    src: "bytes | memoryview[bytes]",
 ) -> "Iterator[tuple[str, memoryview[bytes]]]": ...
 
 
@@ -77,12 +73,9 @@ def iter_tarfile(
                   print(f"File: {filepath}, ({len(contents)} bytes)")
                   print(f"Preview: {contents[:30]}")
     """
-    if isinstance(src, memoryview):
-        for name, offset, size in _libspdl._archive.parse_tar(src):
-            yield name, src[offset : offset + size]
-    elif isinstance(src, bytes):
+    if isinstance(src, (bytes, memoryview)):
         mv = memoryview(src)
-        for name, offset, size in _libspdl._archive.parse_tar(src):
+        for name, offset, size in _libspdl._archive.parse_tar(mv):
             yield name, mv[offset : offset + size]
     else:
         yield from _libspdl._archive.parse_tar(src)

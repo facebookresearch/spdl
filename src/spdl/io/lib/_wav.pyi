@@ -12,7 +12,6 @@
 # Use spdl/io/lib/stubgen.py to generate stubs.
 
 
-from typing import overload
 
 
 class WAVHeader:
@@ -46,8 +45,7 @@ class WAVHeader:
     def data_size(self) -> int:
         """Size of audio data in bytes"""
 
-@overload
-def load_wav(data: bytes, *, time_offset_seconds: float | None = None, duration_seconds: float | None = None) -> dict:
+def load_wav(data: memoryview, *, time_offset_seconds: float | None = None, duration_seconds: float | None = None) -> dict:
     """
     Extract audio samples from WAV data.
 
@@ -68,11 +66,7 @@ def load_wav(data: bytes, *, time_offset_seconds: float | None = None, duration_
         WAVParseError: If the WAV data is invalid or time range is out of bounds
     """
 
-@overload
-def load_wav(data: memoryview, *, time_offset_seconds: float | None = None, duration_seconds: float | None = None) -> dict: ...
-
-@overload
-def parse_wav(data: bytes) -> WAVHeader:
+def parse_wav(data: memoryview) -> WAVHeader:
     """
     Parse WAV file header and extract metadata.
 
@@ -92,6 +86,3 @@ def parse_wav(data: bytes) -> WAVHeader:
     Raises:
         WAVParseError: If the WAV data is invalid or malformed
     """
-
-@overload
-def parse_wav(data: memoryview) -> WAVHeader: ...

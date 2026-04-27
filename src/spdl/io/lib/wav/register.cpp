@@ -98,15 +98,12 @@ NB_MODULE(_wav, m) {
           "data_size", &WAVHeader::data_size, "Size of audio data in bytes");
   m.def(
       "load_wav",
-      [](const nb::bytes& data,
+      [](const nb::memoryview& data,
          std::optional<double> time_offset_seconds = std::nullopt,
          std::optional<double> duration_seconds = std::nullopt) -> nb::dict {
+        auto sv = ::spdl::detail::memoryview_to_sv(data);
         return load_wav_impl(
-            data.c_str(),
-            data.size(),
-            data,
-            time_offset_seconds,
-            duration_seconds);
+            sv.data(), sv.size(), data, time_offset_seconds, duration_seconds);
       },
       nb::arg("data"),
       nb::kw_only(),
@@ -128,23 +125,10 @@ NB_MODULE(_wav, m) {
       "    WAVParseError: If the WAV data is invalid or time range is out of bounds");
 
   m.def(
-      "load_wav",
-      [](const nb::memoryview& data,
-         std::optional<double> time_offset_seconds = std::nullopt,
-         std::optional<double> duration_seconds = std::nullopt) -> nb::dict {
-        auto sv = ::spdl::detail::memoryview_to_sv(data);
-        return load_wav_impl(
-            sv.data(), sv.size(), data, time_offset_seconds, duration_seconds);
-      },
-      nb::arg("data"),
-      nb::kw_only(),
-      nb::arg("time_offset_seconds") = nb::none(),
-      nb::arg("duration_seconds") = nb::none());
-
-  m.def(
       "parse_wav",
-      [](const nb::bytes& data) -> WAVHeader {
-        return parse_wav_impl(data.c_str(), data.size());
+      [](const nb::memoryview& data) -> WAVHeader {
+        auto sv = ::spdl::detail::memoryview_to_sv(data);
+        return parse_wav_impl(sv.data(), sv.size());
       },
       nb::arg("data"),
       "Parse WAV file header and extract metadata.\n\n"
@@ -161,14 +145,6 @@ NB_MODULE(_wav, m) {
       "        - data_size: Size of audio data in bytes\n\n"
       "Raises:\n"
       "    WAVParseError: If the WAV data is invalid or malformed");
-
-  m.def(
-      "parse_wav",
-      [](const nb::memoryview& data) -> WAVHeader {
-        auto sv = ::spdl::detail::memoryview_to_sv(data);
-        return parse_wav_impl(sv.data(), sv.size());
-      },
-      nb::arg("data"));
 }
 } // namespace
 } // namespace spdl::core

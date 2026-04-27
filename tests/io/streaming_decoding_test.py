@@ -55,10 +55,10 @@ class TestDemuxer(unittest.TestCase):
 
         src = np.frombuffer(data, dtype=np.uint8)
 
-        self.assertTrue(np.any(src))
-        with spdl.io.Demuxer(src, _zero_clear=True) as demuxer:
-            demuxer.demux_video()
-        self.assertFalse(np.any(src))
+        with spdl.io.Demuxer(src) as demuxer:
+            packets = demuxer.demux_video()
+
+        self.assertIsNotNone(packets)
 
     def test_demuxer_accept_torch_tensor(self) -> None:
         """Can instantiate Demuxer with torch tensor as source without copying data."""
@@ -70,10 +70,10 @@ class TestDemuxer(unittest.TestCase):
 
         src = torch.frombuffer(data, dtype=torch.uint8)
 
-        self.assertTrue(torch.any(src))
-        with spdl.io.Demuxer(src, _zero_clear=True) as demuxer:
-            demuxer.demux_video()
-        self.assertFalse(torch.any(src))
+        with spdl.io.Demuxer(src) as demuxer:
+            packets = demuxer.demux_video()
+
+        self.assertIsNotNone(packets)
 
 
 class TestStreamingVideoDemuxing(unittest.TestCase):

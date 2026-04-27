@@ -13,7 +13,6 @@ from io import BytesIO
 import numpy as np
 import spdl.io
 from parameterized import parameterized
-from spdl.io.lib._archive import parse_zip
 
 
 def _dump_npy(arr: np.ndarray) -> bytes:
@@ -104,13 +103,13 @@ class TestParseZip(unittest.TestCase):
             with self.assertRaisesRegex(
                 RuntimeError, "The data is not a valid zip file."
             ):
-                parse_zip(b"o" * i)
+                spdl.io.load_npz(b"o" * i)
 
     def test_parse_zip_no_eocdr_sig(self) -> None:
         with self.assertRaisesRegex(
             RuntimeError, "Failed to locate the end of the central directory."
         ):
-            parse_zip(b"foooooooooooooooooooooooooo")
+            spdl.io.load_npz((b"foooooooooooooooooooooooooo"))
 
 
 def _get_test_float_arr(dtype: type[np.floating]) -> np.ndarray:

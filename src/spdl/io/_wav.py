@@ -92,8 +92,9 @@ def load_wav(
           A benchmark script that compares the performance of ``load_wav`` function with
           :py:func:`load_audio` and ``libsoundfile``.
     """
+    mv = memoryview(data)
     array_interface_dict = _libspdl._wav.load_wav(
-        data,  # pyre-fixme[6]: stubs use bare `memoryview`
+        mv,
         time_offset_seconds=time_offset_seconds,
         duration_seconds=duration_seconds,
     )
@@ -112,4 +113,4 @@ def parse_wav(data: "bytes | memoryview[bytes]") -> "WAVHeader":
     Raises:
         ValueError: If the WAV data is invalid or malformed.
     """
-    return _libspdl._wav.parse_wav(data)  # pyre-fixme[6]
+    return _libspdl._wav.parse_wav(memoryview(data))
