@@ -203,14 +203,6 @@ void register_tar(nb::module_& m) {
 
   m.def(
       "parse_tar",
-      [](const nb::bytes& data) {
-        return InMemoryTarParser{std::string_view{data.c_str(), data.size()}};
-      }
-      //,nb::call_guard<nb::gil_scoped_release>()
-  );
-
-  m.def(
-      "parse_tar",
       [](const nb::memoryview& data) {
         return InMemoryTarParser{::spdl::detail::memoryview_to_sv(data)};
       }

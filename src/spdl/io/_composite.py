@@ -467,14 +467,14 @@ def load_image_batch(
 
 def _get_bytes(
     srcs: "Sequence[str | bytes | memoryview[bytes]]",
-) -> "list[bytes | memoryview[bytes]]":
-    ret: "list[bytes | memoryview[bytes]]" = []
+) -> "list[memoryview[bytes]]":
+    ret: "list[memoryview[bytes]]" = []
     for src in srcs:
         if isinstance(src, (bytes, memoryview)):
-            ret.append(src)
+            ret.append(memoryview(src))
         elif isinstance(src, str):
             with open(src, "rb") as f:
-                ret.append(f.read())
+                ret.append(memoryview(f.read()))
         else:
             raise TypeError(
                 f"Source must be `str` (path), `bytes` (data),"
@@ -490,7 +490,6 @@ def load_image_batch_nvjpeg(
     width: int,
     height: int,
     pix_fmt: str = "rgb",
-    _zero_clear: bool = False,
 ) -> "CUDABuffer":
     """**[Experimental]** Batch load images with nvJPEG.
 
@@ -522,7 +521,6 @@ def load_image_batch_nvjpeg(
         scale_height=height,
         device_config=device_config,
         pix_fmt=pix_fmt,
-        _zero_clear=_zero_clear,
     )
 
 

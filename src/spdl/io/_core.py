@@ -55,6 +55,7 @@ except ImportError:
 
 
 from . import _preprocessing
+from ._common import _resolve_src
 from .lib import _libspdl, _libspdl_cuda
 
 # We import NumPy only when type-checking.
@@ -163,10 +164,8 @@ class Demuxer:
         name: str | None = None,
         **kwargs: Any,
     ) -> None:
-        if isinstance(src, Path):
-            src = str(src)
         self._demuxer: _libspdl.Demuxer = _libspdl._demuxer(
-            src, demux_config=demux_config, name=name, **kwargs
+            _resolve_src(src), demux_config=demux_config, name=name, **kwargs
         )
 
     def demux_audio(
@@ -831,6 +830,15 @@ def decode_packets_nvdec(
     raise AssertionError(f"[SPDL Internal Error] Unexpected {pix_fmt=}")
 
 
+def _resolve_src2(obj: object) -> "memoryview[bytes]":
+    src = _resolve_src(obj)
+    if isinstance(src, str):
+        with open(src, "rb") as f:
+            return memoryview(f.read())
+    else:
+        return src
+
+
 def decode_image_nvjpeg(
     src: "str | bytes | memoryview[bytes] | Sequence[bytes | memoryview[bytes]]",
     *,
@@ -838,7 +846,6 @@ def decode_image_nvjpeg(
     scale_width: int = -1,
     scale_height: int = -1,
     pix_fmt: str = "rgb",
-    _zero_clear: bool = False,
 ) -> "CUDABuffer":
     """**[Experimental]** Decode image with nvJPEG.
 
@@ -867,19 +874,17 @@ def decode_image_nvjpeg(
     if device_config is None:
         raise ValueError("device_config must be provided.")
 
-    if isinstance(src, str):
-        with open(src, "rb") as f:
-            data = f.read()
+    data: "memoryview[bytes] | Sequence[memoryview[bytes]]"
+    if isinstance(src, Sequence) and not isinstance(src, (str, bytes)):
+        data = [_resolve_src2(s) for s in src]
     else:
-        data = src
+        data = _resolve_src2(src)
     return _libspdl_cuda.decode_image_nvjpeg(
-        # See decode_packets for the rational behind this suppression
         data,  # pyre-ignore[6]
         device_config=device_config,
         scale_width=scale_width,
         scale_height=scale_height,
         pix_fmt=pix_fmt,
-        _zero_clear=_zero_clear,
     )
 
 
@@ -1156,7 +1161,7 @@ def transfer_buffer_cpu(buffer: "CUDABuffer") -> "CPUBuffer":
     Returns:
         Buffer data on CPU.
     """
-    return _libspdl_cuda.transfer_buffer_cpu(buffer)  # pyre-ignore[6]
+    return _libspdl_cuda.transfer_buffer_cpu(buffer)
 
 
 ################################################################################

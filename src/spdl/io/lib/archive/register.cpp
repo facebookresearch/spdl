@@ -38,13 +38,6 @@ nb::dict _cast(const NPYArray& a) {
 NB_MODULE(_archive, m) {
   m.def(
       "parse_zip",
-      [](const nb::bytes& bytes) {
-        return zip::parse_zip(bytes.c_str(), bytes.size());
-      },
-      nb::call_guard<nb::gil_scoped_release>());
-
-  m.def(
-      "parse_zip",
       [](const nb::memoryview& data) {
         auto sv = ::spdl::detail::memoryview_to_sv(data);
         return zip::parse_zip(sv.data(), sv.size());

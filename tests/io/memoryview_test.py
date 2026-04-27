@@ -15,7 +15,6 @@ import wave
 
 import numpy as np
 import spdl.io
-from spdl.io.lib._archive import parse_zip
 
 
 def _create_wav_data(
@@ -104,17 +103,6 @@ class TestIterTarfileMemoryview(unittest.TestCase):
         ):
             self.assertEqual(name_m, name_b)
             self.assertEqual(bytes(content_m), bytes(content_b))
-
-
-class TestParseZipMemoryview(unittest.TestCase):
-    def test_parse_zip_with_memoryview(self) -> None:
-        npz_data = _create_npz_data()
-        mv = memoryview(npz_data)
-
-        result_bytes = parse_zip(npz_data)
-        result_mv = parse_zip(mv)
-
-        self.assertEqual(result_mv, result_bytes)
 
 
 class TestLoadNpzMemoryview(unittest.TestCase):

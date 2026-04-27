@@ -10,49 +10,8 @@ import unittest
 
 import numpy as np
 import spdl.io
-from parameterized import parameterized
 
 from ..fixture import FFMPEG_CLI, get_sample
-
-CMDS = {
-    "audio": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:sample_rate=48000:duration=3 -c:a pcm_s16le sample.wav",
-    "video": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1000 sample.mp4",
-    "image": f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i color=0x000000,format=gray -frames:v 1 sample.png",
-}
-
-
-def _is_all_zero(arr):
-    return all(int(v) == 0 for v in arr)
-
-
-class TestDemuxBytesWithoutCopy(unittest.TestCase):
-    @parameterized.expand(
-        [
-            ("audio",),
-            ("video",),
-            ("image",),
-        ]
-    )
-    def test_demux_bytes_without_copy(self, media_type: str) -> None:
-        """Data passed as bytes must be passed without copy."""
-        cmd = CMDS[media_type]
-        sample = get_sample(cmd)
-
-        demux_func = {
-            "audio": spdl.io.demux_audio,
-            "video": spdl.io.demux_video,
-            "image": spdl.io.demux_image,
-        }[media_type]
-
-        def _test(src):
-            self.assertFalse(_is_all_zero(src))
-            _ = demux_func(src, _zero_clear=True)
-            self.assertTrue(_is_all_zero(src))
-
-        with open(sample.path, "rb") as f:
-            data = f.read()
-
-        _test(data)
 
 
 def _decode(media_type, src):

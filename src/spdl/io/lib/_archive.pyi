@@ -16,10 +16,6 @@ from collections.abc import Iterator
 from typing import overload
 
 
-@overload
-def parse_zip(arg: bytes, /) -> list[tuple[str, int, int, int, int]]: ...
-
-@overload
 def parse_zip(arg: memoryview, /) -> list[tuple[str, int, int, int, int]]: ...
 
 class NPYArray:
@@ -32,9 +28,6 @@ def load_npy_compressed(data: int, offset: int, compressed_size: int, uncompress
 
 class InMemoryTarParser:
     def __iter__(self) -> Iterator[tuple[str, int, int]]: ...
-
-@overload
-def parse_tar(arg: bytes, /) -> InMemoryTarParser: ...
 
 @overload
 def parse_tar(arg: memoryview, /) -> InMemoryTarParser: ...

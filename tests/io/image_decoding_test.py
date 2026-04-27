@@ -12,7 +12,7 @@ import numpy as np
 import spdl.io
 import spdl.io.utils
 from spdl.io import get_video_filter_desc
-from spdl.io.utils._ffmpeg import get_ffmpeg_versions
+from spdl.io.utils import get_ffmpeg_versions
 
 from ..fixture import FFMPEG_CLI, get_sample, get_samples, load_ref_data, load_ref_image
 

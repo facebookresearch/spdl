@@ -17,8 +17,6 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
-#include <cstring>
-
 #include "memoryview_utils.h"
 
 namespace nb = nanobind;
@@ -38,54 +36,7 @@ namespace spdl::cuda {
 
 using namespace spdl::core;
 
-namespace {
-#ifdef SPDL_USE_NVJPEG
-void zero_clear(const nb::bytes& data) {
-  std::memset((void*)data.c_str(), 0, data.size());
-}
-void zero_clear(const nb::memoryview& data) {
-  auto sv = ::spdl::detail::memoryview_to_sv(data);
-  std::memset(const_cast<char*>(sv.data()), 0, sv.size());
-}
-#endif
-} // namespace
-
 void register_decoding_nvjpeg(nb::module_& m) {
-  m.def(
-      "decode_image_nvjpeg",
-      [](nb::bytes _(data),
-         const CUDAConfig& _(cuda_config),
-         int _(scale_width),
-         int _(scale_height),
-         const std::string& _(pix_fmt),
-         bool _(sync),
-         bool _(_zero_clear)) -> CUDABufferPtr {
-#ifndef SPDL_USE_NVJPEG
-        NOT_SUPPORTED_NVJPEG;
-#else
-        auto ret = decode_image_nvjpeg(
-            std::string_view{data.c_str(), data.size()},
-            cuda_config,
-            scale_width,
-            scale_height,
-            pix_fmt,
-            sync);
-        if (_zero_clear) {
-          zero_clear(data);
-        }
-        return ret;
-#endif
-      },
-      nb::call_guard<nb::gil_scoped_release>(),
-      nb::arg("data"),
-      nb::kw_only(),
-      nb::arg("device_config"),
-      nb::arg("scale_width") = -1,
-      nb::arg("scale_height") = -1,
-      nb::arg("pix_fmt") = "rgb",
-      nb::arg("sync") = true,
-      nb::arg("_zero_clear") = false);
-
   m.def(
       "decode_image_nvjpeg",
       [](const nb::memoryview& _(data),
@@ -93,22 +44,17 @@ void register_decoding_nvjpeg(nb::module_& m) {
          int _(scale_width),
          int _(scale_height),
          const std::string& _(pix_fmt),
-         bool _(sync),
-         bool _(_zero_clear)) -> CUDABufferPtr {
+         bool _(sync)) -> CUDABufferPtr {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
 #else
-        auto ret = decode_image_nvjpeg(
+        return decode_image_nvjpeg(
             detail::memoryview_to_sv(data),
             cuda_config,
             scale_width,
             scale_height,
             pix_fmt,
             sync);
-        if (_zero_clear) {
-          zero_clear(data);
-        }
-        return ret;
 #endif
       },
       nb::call_guard<nb::gil_scoped_release>(),
@@ -118,45 +64,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
       nb::arg("scale_width") = -1,
       nb::arg("scale_height") = -1,
       nb::arg("pix_fmt") = "rgb",
-      nb::arg("sync") = true,
-      nb::arg("_zero_clear") = false);
-
-  m.def(
-      "decode_image_nvjpeg",
-      [](const std::vector<nb::bytes>& _(data),
-         const CUDAConfig& _(cuda_config),
-         int _(scale_width),
-         int _(scale_height),
-         const std::string& _(pix_fmt),
-         bool _(sync),
-         bool _(_zero_clear)) -> CUDABufferPtr {
-#ifndef SPDL_USE_NVJPEG
-        NOT_SUPPORTED_NVJPEG;
-#else
-        std::vector<std::string_view> dataset;
-        dataset.reserve(data.size());
-        for (const auto& d : data) {
-          dataset.emplace_back(d.c_str(), d.size());
-        }
-        auto ret = decode_image_nvjpeg(
-            dataset, cuda_config, scale_width, scale_height, pix_fmt, sync);
-        if (_zero_clear) {
-          for (const auto& d : data) {
-            zero_clear(d);
-          }
-        }
-        return ret;
-#endif
-      },
-      nb::call_guard<nb::gil_scoped_release>(),
-      nb::arg("data"),
-      nb::kw_only(),
-      nb::arg("device_config"),
-      nb::arg("scale_width"),
-      nb::arg("scale_height"),
-      nb::arg("pix_fmt") = "rgb",
-      nb::arg("sync") = true,
-      nb::arg("_zero_clear") = false);
+      nb::arg("sync") = true);
 
   m.def(
       "decode_image_nvjpeg",
@@ -165,8 +73,7 @@ void register_decoding_nvjpeg(nb::module_& m) {
          int _(scale_width),
          int _(scale_height),
          const std::string& _(pix_fmt),
-         bool _(sync),
-         bool _(_zero_clear)) -> CUDABufferPtr {
+         bool _(sync)) -> CUDABufferPtr {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
 #else
@@ -175,14 +82,8 @@ void register_decoding_nvjpeg(nb::module_& m) {
         for (const auto& d : data) {
           dataset.emplace_back(detail::memoryview_to_sv(d));
         }
-        auto ret = decode_image_nvjpeg(
+        return decode_image_nvjpeg(
             dataset, cuda_config, scale_width, scale_height, pix_fmt, sync);
-        if (_zero_clear) {
-          for (const auto& d : data) {
-            zero_clear(d);
-          }
-        }
-        return ret;
 #endif
       },
       nb::call_guard<nb::gil_scoped_release>(),
@@ -192,7 +93,6 @@ void register_decoding_nvjpeg(nb::module_& m) {
       nb::arg("scale_width"),
       nb::arg("scale_height"),
       nb::arg("pix_fmt") = "rgb",
-      nb::arg("sync") = true,
-      nb::arg("_zero_clear") = false);
+      nb::arg("sync") = true);
 }
 } // namespace spdl::cuda
