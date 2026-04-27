@@ -57,23 +57,32 @@ class LiveProcMonitorTest(unittest.TestCase):
 
     def test_collect_pgrp_stats_returns_complete_snapshot(self) -> None:
         """_collect_pgrp_stats should return a fully populated snapshot."""
-        result, cpu_usec, time_usec = _collect_pgrp_stats()
+        result, cpu_usec, time_usec, net_rx, net_tx = _collect_pgrp_stats()
         self.assertIsInstance(result, ProcessGroupResourceUsage)
         self.assertEqual(result.pid, os.getpid())
         self.assertEqual(result.pgid, os.getpgrp())
 
-        # First call: cpu_percent should be None (no previous value).
+        # First call: cpu_percent and net deltas should be None (no previous value).
         self.assertIsNone(result.cpu_percent)
         self.assertIsNotNone(cpu_usec)
         self.assertIsNotNone(result.rss_bytes)
         self.assertIsNotNone(result.num_procs)
-        self.assertIsNotNone(result.net_rx_bytes)
-        self.assertIsNotNone(result.net_tx_bytes)
+        self.assertIsNone(result.net_rx_bytes)
+        self.assertIsNone(result.net_tx_bytes)
+        self.assertIsNotNone(net_rx)
+        self.assertIsNotNone(net_tx)
 
-        # Second call with prev values: cpu_percent should be set.
-        result2, _, _ = _collect_pgrp_stats(cpu_usec, time_usec)
-        self.assertIsNotNone(result2.cpu_percent)
-        self.assertGreaterEqual(result2.cpu_percent, 0.0)
+        # Second call with prev values: cpu_percent and net deltas should be set.
+        result2, _, _, _, _ = _collect_pgrp_stats(cpu_usec, time_usec, net_rx, net_tx)
+        cpu_pct = result2.cpu_percent
+        assert cpu_pct is not None
+        self.assertGreaterEqual(cpu_pct, 0.0)
+        rx = result2.net_rx_bytes
+        assert rx is not None
+        self.assertGreaterEqual(rx, 0)
+        tx = result2.net_tx_bytes
+        assert tx is not None
+        self.assertGreaterEqual(tx, 0)
 
         # Sanity: at least one process (this one) should be counted.
         assert result.num_procs is not None
@@ -449,7 +458,7 @@ class PgrpMonitorSubprocessFunctionTest(unittest.TestCase):
             net_rx_bytes=100,
             net_tx_bytes=200,
         )
-        mock_collect.return_value = (usage, 500000, 1000000)
+        mock_collect.return_value = (usage, 500000, 1000000, 100, 200)
 
         mock_callback = AsyncMock()
 

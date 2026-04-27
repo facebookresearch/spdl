@@ -437,16 +437,26 @@ class ProcessGroupResourceUsage:
     """Number of processes in the process group."""
 
     net_rx_bytes: int | None = None
-    """Total network bytes received (excluding loopback)."""
+    """Network bytes received since the previous snapshot (excluding loopback).
+
+    ``None`` on the first snapshot (no previous value to diff against).
+    Note: this is host-wide (per network namespace), not process-group-scoped.
+    """
 
     net_tx_bytes: int | None = None
-    """Total network bytes transmitted (excluding loopback)."""
+    """Network bytes transmitted since the previous snapshot (excluding loopback).
+
+    ``None`` on the first snapshot (no previous value to diff against).
+    Note: this is host-wide (per network namespace), not process-group-scoped.
+    """
 
 
 def _collect_pgrp_stats(
     prev_cpu_usec: int | None = None,
     prev_time_usec: int | None = None,
-) -> tuple[ProcessGroupResourceUsage, int | None, int]:
+    prev_net_rx_bytes: int | None = None,
+    prev_net_tx_bytes: int | None = None,
+) -> tuple[ProcessGroupResourceUsage, int | None, int, int | None, int | None]:
     """Collect all process-group stats.
 
     Reads CPU, memory (RSS, PSS, private), disk IO from
@@ -459,16 +469,24 @@ def _collect_pgrp_stats(
             (used to compute ``cpu_percent``).  ``None`` on the first call.
         prev_time_usec: Wall-clock µs (``time.monotonic()`` × 1e6) of the
             previous snapshot.
+        prev_net_rx_bytes: Cumulative network RX bytes from the previous
+            snapshot.  ``None`` on the first call.
+        prev_net_tx_bytes: Cumulative network TX bytes from the previous
+            snapshot.  ``None`` on the first call.
 
     Returns:
-        A tuple of ``(usage, current_cpu_usec, current_time_usec)``.
+        A tuple of
+        ``(usage, current_cpu_usec, current_time_usec, current_net_rx_bytes, current_net_tx_bytes)``.
         ``current_cpu_usec`` is ``None`` when /proc could not be read.
+        ``current_net_*_bytes`` are ``None`` when /proc/net/dev could not be read.
     """
     import time as _time
 
     now_usec = int(_time.monotonic() * 1_000_000)
     result = ProcessGroupResourceUsage(pid=os.getpid(), pgid=os.getpgrp())
     current_cpu_usec: int | None = None
+    current_net_rx_bytes: int | None = None
+    current_net_tx_bytes: int | None = None
 
     try:
         pgrp = _read_pgrp_stats()
@@ -492,12 +510,21 @@ def _collect_pgrp_stats(
 
     try:
         net = _read_network_bytes()
-        result.net_rx_bytes = net.rx_bytes
-        result.net_tx_bytes = net.tx_bytes
+        current_net_rx_bytes = net.rx_bytes
+        current_net_tx_bytes = net.tx_bytes
+        if prev_net_rx_bytes is not None and prev_net_tx_bytes is not None:
+            result.net_rx_bytes = net.rx_bytes - prev_net_rx_bytes
+            result.net_tx_bytes = net.tx_bytes - prev_net_tx_bytes
     except RuntimeError as e:
         _warn_once("net_dev", "%s", e)
 
-    return result, current_cpu_usec, now_usec
+    return (
+        result,
+        current_cpu_usec,
+        now_usec,
+        current_net_rx_bytes,
+        current_net_tx_bytes,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -528,10 +555,23 @@ def _pgrp_monitor_subprocess(
         loop = asyncio.get_running_loop()
         prev_cpu_usec: int | None = None
         prev_time_usec: int | None = None
+        prev_net_rx_bytes: int | None = None
+        prev_net_tx_bytes: int | None = None
         while running:
             try:
-                usage, prev_cpu_usec, prev_time_usec = await loop.run_in_executor(
-                    None, _collect_pgrp_stats, prev_cpu_usec, prev_time_usec
+                (
+                    usage,
+                    prev_cpu_usec,
+                    prev_time_usec,
+                    prev_net_rx_bytes,
+                    prev_net_tx_bytes,
+                ) = await loop.run_in_executor(
+                    None,
+                    _collect_pgrp_stats,
+                    prev_cpu_usec,
+                    prev_time_usec,
+                    prev_net_rx_bytes,
+                    prev_net_tx_bytes,
                 )
                 await callback(usage)
             except Exception:
