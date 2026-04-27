@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import unittest
 from fractions import Fraction
@@ -37,7 +37,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         After probation: rate = 1% > 0.1% threshold -> fails.
         """
 
-        def fail_on_hundred(x):
+        def fail_on_hundred(x: int) -> int:
             if x % 100 == 0:  # Fails on 0, 100, 200, ..., 900 (10 out of 1000)
                 raise ValueError(f"Multiple of 100: {x}")
             return x
@@ -74,7 +74,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         After probation: rate = 10% < 15% -> succeeds.
         """
 
-        def fail_on_ten(x):
+        def fail_on_ten(x: int) -> int:
             if x % 10 == 0:  # Fails on 0, 10, 20, ..., 90 (10 out of 100 = 10%)
                 raise ValueError(f"Multiple of 10: {x}")
             return x
@@ -111,7 +111,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         After probation: rate = 10% < 11% -> succeeds.
         """
 
-        def fail_late(x):
+        def fail_late(x: int) -> int:
             if x >= 90:  # Fails on 90-99 (10 out of 100 = 10%)
                 raise ValueError(f"Item >= 90: {x}")
             return x
@@ -145,7 +145,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         After probation: rate = 10% > 9% -> fails.
         """
 
-        def fail_late(x):
+        def fail_late(x: int) -> int:
             if x >= 90:  # Fails on 90-99 (10 out of 100 = 10%)
                 raise ValueError(f"Item >= 90: {x}")
             return x
@@ -181,7 +181,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         Since probation never completes, pipeline succeeds despite 20% > 1%.
         """
 
-        def fail_on_five(x):
+        def fail_on_five(x: int) -> int:
             if x % 5 == 0:  # Fails on 0, 5, 10, 15 (4 out of 20 = 20%)
                 raise ValueError(f"Multiple of 5: {x}")
             return x
@@ -218,7 +218,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         Since pipe-level is stricter, pipeline should fail.
         """
 
-        def fail_on_seven(x):
+        def fail_on_seven(x: int) -> int:
             if x % 7 == 0:  # Fails on 0, 7, 14, ..., 98 (15 out of 100 = 15%)
                 raise ValueError(f"Multiple of 7: {x}")
             return x
@@ -260,12 +260,12 @@ class PipelineFailureRateTest(unittest.TestCase):
         Note: probation is fixed at 100, but only 50 items reach second stage.
         """
 
-        def fail_odd(x):
+        def fail_odd(x: int) -> int:
             if x % 2:
                 raise ValueError(f"Odd number: {x}")
             return x
 
-        def fail_twelve(x):
+        def fail_twelve(x: int) -> int:
             if (x % 12) == 0:
                 raise ValueError(f"Divisible by 12: {x}")
             return x
@@ -305,7 +305,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         Count-based: Allow 5 failures - should fail.
         """
 
-        def fail_on_ten(x):
+        def fail_on_ten(x: int) -> int:
             if x % 10 == 0:  # Fails on 0, 10, 20, ..., 90 (10 failures)
                 raise ValueError(f"Multiple of 10: {x}")
             return x
@@ -353,7 +353,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         After probation: rate = 15% > 11% -> should fail.
         """
 
-        def fail_on_seven(x):
+        def fail_on_seven(x: int) -> int:
             if x % 7 == 0:  # Fails on 0, 7, 14, ..., 98 (15 out of 100 = 15%)
                 raise ValueError(f"Multiple of 7: {x}")
             return x
@@ -391,7 +391,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         With high concurrency, exact processing order is nondeterministic.
         """
 
-        def fail_on_five(x):
+        def fail_on_five(x: int) -> int:
             if x % 5 == 0:  # Fails on 0, 5, 10, ..., 95 (20 out of 100 = 20%)
                 raise ValueError(f"Multiple of 5: {x}")
             return x
@@ -426,7 +426,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         0% failure rate with 10% threshold - should succeed.
         """
 
-        def no_fail(x):
+        def no_fail(x: int) -> int:
             return x * 2
 
         # 0% failure rate with 10% threshold - should succeed
@@ -460,7 +460,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         Since only 10 items processed, probation not reached -> succeeds.
         """
 
-        def fail_on_three(x):
+        def fail_on_three(x: int) -> int:
             if x % 3 == 0:  # Fails on 0, 3, 6, 9 (4 out of 10 = 40%)
                 raise ValueError(f"Multiple of 3: {x}")
             return x
@@ -486,7 +486,7 @@ class PipelineFailureRateTest(unittest.TestCase):
     def test_pipeline_failure_rate_invalid_fraction_zero(self) -> None:
         """Building pipeline with Fraction <= 0 raises ValueError."""
 
-        def noop(x):
+        def noop(x: int) -> int:
             return x
 
         # Zero Fraction should raise ValueError
@@ -500,7 +500,7 @@ class PipelineFailureRateTest(unittest.TestCase):
     def test_pipeline_failure_rate_invalid_fraction_negative(self) -> None:
         """Building pipeline with negative Fraction raises ValueError."""
 
-        def noop(x):
+        def noop(x: int) -> int:
             return x
 
         # Negative Fraction should raise ValueError
@@ -514,7 +514,7 @@ class PipelineFailureRateTest(unittest.TestCase):
     def test_pipeline_failure_rate_invalid_fraction_greater_than_one(self) -> None:
         """Building pipeline with Fraction > 1 raises ValueError."""
 
-        def noop(x):
+        def noop(x: int) -> int:
             return x
 
         # Fraction > 1 (e.g., 150%) should raise ValueError
@@ -528,7 +528,7 @@ class PipelineFailureRateTest(unittest.TestCase):
     def test_pipeline_failure_rate_invalid_pipe_fraction_zero(self) -> None:
         """Building pipeline with zero Fraction at pipe level raises ValueError."""
 
-        def noop(x):
+        def noop(x: int) -> int:
             return x
 
         # Zero Fraction at pipe level should raise ValueError
@@ -542,7 +542,7 @@ class PipelineFailureRateTest(unittest.TestCase):
     def test_pipeline_failure_rate_invalid_pipe_fraction_greater_than_one(self) -> None:
         """Building pipeline with Fraction > 1 at pipe level raises ValueError."""
 
-        def noop(x):
+        def noop(x: int) -> int:
             return x
 
         # Fraction > 1 at pipe level should raise ValueError
@@ -559,7 +559,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         With > comparison, rate can never exceed 100%, so pipeline always succeeds.
         """
 
-        def always_fail(x):
+        def always_fail(x: int) -> int:
             raise ValueError(f"Always fail: {x}")
 
         # 100% failure rate threshold - should never fail
@@ -581,7 +581,7 @@ class PipelineFailureRateTest(unittest.TestCase):
     def test_pipeline_failure_rate_valid_small_fraction(self) -> None:
         """Very small Fraction like Fraction(1, 1000) is valid."""
 
-        def fail_on_hundred(x):
+        def fail_on_hundred(x: int) -> int:
             if x % 100 == 0:  # Fails on 0, 100, 200, ..., 900 (10 out of 1000 = 1%)
                 raise ValueError(f"Multiple of 100: {x}")
             return x
@@ -618,7 +618,7 @@ class PipelineFailureRateTest(unittest.TestCase):
     ) -> None:
         """Parameterized test for various invalid Fraction values."""
 
-        def noop(x):
+        def noop(x: int) -> int:
             return x
 
         # Note: Fraction(-1, -10) normalizes to Fraction(1, 10) which is valid
@@ -654,7 +654,7 @@ class PipelineFailureRateTest(unittest.TestCase):
     ) -> None:
         """Parameterized test for Fraction values > 1 (greater than 100%)."""
 
-        def noop(x):
+        def noop(x: int) -> int:
             return x
 
         with self.assertRaises(ValueError) as ctx:
@@ -678,7 +678,7 @@ class PipelineFailureRateTest(unittest.TestCase):
     ) -> None:
         """Parameterized test for valid Fraction values in range (0, 1]."""
 
-        def noop(x):
+        def noop(x: int) -> int:
             return x
 
         # Should not raise - these are all valid fractions
@@ -704,7 +704,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         Since probation not reached, pipeline succeeds despite 20% > 1%.
         """
 
-        def fail_on_five(x):
+        def fail_on_five(x: int) -> int:
             if x % 5 == 0:  # Fails on 0, 5 (2 out of 10 = 20%)
                 raise ValueError(f"Multiple of 5: {x}")
             return x
@@ -733,7 +733,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         After 100 invocations: rate = 20% > 10% -> fails.
         """
 
-        def fail_on_five(x):
+        def fail_on_five(x: int) -> int:
             if x % 5 == 0:  # Fails on 0, 5, ..., 95 (20 out of 100 = 20%)
                 raise ValueError(f"Multiple of 5: {x}")
             return x
