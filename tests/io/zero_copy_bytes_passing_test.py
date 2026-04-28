@@ -4,17 +4,19 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import unittest
+from typing import Any
 
 import numpy as np
 import spdl.io
+from numpy.typing import NDArray
 
 from ..fixture import FFMPEG_CLI, get_sample
 
 
-def _decode(media_type, src):
+def _decode(media_type: str, src: str | bytes) -> NDArray[Any]:
     demux_func = {
         "audio": spdl.io.demux_audio,
         "video": spdl.io.demux_video,
@@ -22,7 +24,7 @@ def _decode(media_type, src):
     }[media_type]
 
     packets = demux_func(src)
-    frames = spdl.io.decode_packets(packets)
+    frames = spdl.io.decode_packets(packets)  # pyre-ignore[6]
     buffer = spdl.io.convert_frames(frames)
     return spdl.io.to_numpy(buffer)
 
