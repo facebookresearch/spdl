@@ -165,10 +165,10 @@ class Demuxer:
         **kwargs: Any,
     ) -> None:
         self._demuxer: _libspdl.Demuxer = _libspdl.make_demuxer(
-            _resolve_src(src),
+            _resolve_src(src),  # pyre-ignore[6]
             demux_config=demux_config,
             name=name,
-            **kwargs,  # pyre-ignore[6]
+            **kwargs,
         )
 
     def demux_audio(
@@ -625,9 +625,9 @@ def Decoder(
         filter_desc = _resolve_filter_graph(filter_desc, codec)
 
     return _libspdl.make_decoder(
-        codec,
+        codec,  # pyre-ignore[6]
         filter_desc=filter_desc,
-        decode_config=decode_config,  # pyre-ignore[6]
+        decode_config=decode_config,
     )
 
 
