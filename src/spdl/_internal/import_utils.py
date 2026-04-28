@@ -4,10 +4,12 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import importlib
+from collections.abc import Callable
 from types import ModuleType
+from typing import Any
 
 __all__ = [
     "lazy_import",
@@ -17,28 +19,28 @@ __all__ = [
 class _LazilyImportedModule(ModuleType):
     """Delay module import until its attribute is accessed."""
 
-    def __init__(self, name, import_func):
+    def __init__(self, name: str, import_func: Callable[[], ModuleType]) -> None:
         super().__init__(name)
         self.import_func = import_func
-        self.module = None
+        self.module: ModuleType | None = None
 
     # Note:
     # Python caches what was retrieved with `__getattr__`, so this method will not be
     # called again for the same item.
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Any:
         self._import_once()
         return getattr(self.module, item)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.module is None:
             return f"<module '{self.__module__}.{self.__class__.__name__}(\"{self.__name__}\")'>"
         return repr(self.module)
 
-    def __dir__(self):
+    def __dir__(self) -> list[str]:
         self._import_once()
         return dir(self.module)
 
-    def _import_once(self):
+    def _import_once(self) -> None:
         if self.module is None:
             self.module = self.import_func()
             # Note:

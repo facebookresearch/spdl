@@ -197,7 +197,8 @@ def _warmup_executor(
     last_output: T | None = None
     for future in as_completed(futures):
         last_output = future.result()
-    return last_output  # pyre-ignore[7]
+    assert last_output is not None
+    return last_output
 
 
 class BenchmarkRunner:
@@ -282,7 +283,8 @@ class BenchmarkRunner:
             qps_samples.append(iterations / elapsed)
             cpu_samples.append(cpu_percent / iterations)
 
-        return qps_samples, cpu_samples, last_output  # pyre-ignore[7]
+        assert last_output is not None
+        return qps_samples, cpu_samples, last_output
 
     def run(
         self,
