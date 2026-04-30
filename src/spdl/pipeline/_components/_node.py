@@ -5,11 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import asyncio
+import inspect
 import logging
 import sys
 from asyncio import ALL_COMPLETED, FIRST_COMPLETED, Task
 from collections.abc import Callable, Coroutine, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 from functools import partial
 from typing import Any, TypeAlias, TypeVar
@@ -484,6 +485,8 @@ def _build_node(
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[StageInfo], list[TaskHook]],
     max_failures: int | Fraction,
+    scheduler: Any = None,
+    depth: int = 0,
 ) -> None:
     """Build a coroutine for a single node based on its configuration type.
 
@@ -520,6 +523,17 @@ def _build_node(
         task_hook_factory: A factory function for creating task hooks for
             monitoring.
         max_failures: The maximum number of failures allowed before halting.
+        scheduler: Optional :py:class:`PriorityScheduler` instance. When
+            provided, sync stages get a per-stage
+            :py:class:`_PrioritizedExecutor` shim injected into
+            ``_PipeArgs.executor`` so that
+            :py:meth:`asyncio.AbstractEventLoop.run_in_executor` routes
+            through the scheduler's priority heap instead of the
+            underlying ``ThreadPoolExecutor``'s FIFO.
+        depth: Depth of this node in the pipeline graph (source-to-sink
+            distance). Used to compute scheduler priority as
+            ``priority = -depth`` (deeper stages dispatch first). Only
+            consumed when ``scheduler is not None``.
 
     Raises:
         ValueError: If an unsupported configuration type is encountered.
@@ -578,14 +592,31 @@ def _build_node(
                     in_q, out_q = node.input_queue, node.output_queue
                     hooks = task_hook_factory(node.info)
                     fc = fc_class(max_failures, cfg._max_failures)
+
+                    args = cfg._args
+
+                    # When a scheduler is provided, register this stage's
+                    # priority and inject a per-stage executor (created
+                    # by `scheduler.make_stage_executor`) so
+                    # loop.run_in_executor() routes through the heap.
+                    # Only sync ops are routed (async/generator ops
+                    # bypass the executor entirely in convert_to_async).
+                    # The factory call decouples `_node.py` from the
+                    # concrete `_PrioritizedExecutor` class — this avoids
+                    # a Buck dep cycle through `_scheduler.py`.
+                    if scheduler is not None and _is_sync_op(args):
+                        scheduler.register_stage(node.info, priority=-depth)
+                        per_stage_exec = scheduler.make_stage_executor(node.info)
+                        args = replace(args, executor=per_stage_exec)
+
                     match cfg._type:
                         case _PipeType.Pipe:
                             node._coro = _pipe(
-                                node.info, in_q, out_q, cfg._args, fc, hooks, False
+                                node.info, in_q, out_q, args, fc, hooks, False
                             )
                         case _PipeType.OrderedPipe:
                             node._coro = _ordered_pipe(
-                                node.info, in_q, out_q, cfg._args, fc, hooks
+                                node.info, in_q, out_q, args, fc, hooks
                             )
                         case _:  # pragma: no cover
                             raise ValueError(
@@ -623,11 +654,52 @@ def _build_node(
                     )
 
 
+def _is_sync_op(args: _PipeArgs) -> bool:
+    """Whether ``convert_to_async`` will use the executor branch for ``args.op``.
+
+    The :py:class:`PriorityScheduler` only routes work that
+    :py:func:`~spdl.pipeline._common._convert.convert_to_async` would
+    submit through a :py:class:`~concurrent.futures.Executor`. Coroutine
+    functions and async-gen functions bypass the executor entirely, so
+    they must NOT receive a :py:class:`_PrioritizedExecutor` shim.
+    Generator functions and process-pool branches are also excluded for
+    Diff 2 to keep the scope minimal.
+    """
+    op = args.op
+    if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
+        return False
+    if inspect.isgeneratorfunction(op):
+        # Generators take the _to_async_gen branch, which uses
+        # loop.run_in_executor on `next` rather than the user op as a
+        # whole — routing through the scheduler doesn't fit cleanly.
+        return False
+    if args.executor is not None:
+        # User-supplied executor (e.g., ProcessPoolExecutor). Don't
+        # override.
+        return False
+    return True
+
+
+def _node_depth(node: _TNodes) -> int:
+    """Compute a node's depth (distance from the nearest source).
+
+    Source nodes have depth 0; each downstream node is one deeper than
+    the deepest of its upstream nodes. Used by :py:func:`_build_node`
+    to compute scheduler priorities (priority = -depth).
+    """
+    if isinstance(node, _SourceNode):
+        return 0
+    if not node.upstream:
+        return 0
+    return 1 + max(_node_depth(n) for n in node.upstream)
+
+
 def _build_node_recursive(
     node: _TNodes,
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[StageInfo], list[TaskHook]],
     max_failures: int | Fraction,
+    scheduler: Any = None,
 ) -> None:
     """Recursively build coroutines for a node and all its upstream nodes.
 
@@ -640,6 +712,8 @@ def _build_node_recursive(
         fc_class: The failure counter class for tracking task failures.
         task_hook_factory: A factory function for creating task hooks for monitoring.
         max_failures: The maximum number of failures allowed before halting.
+        scheduler: Optional :py:class:`PriorityScheduler` instance for
+            priority dispatch.
 
     Raises:
         RuntimeError: If attempting to build a coroutine for a node that already has one.
@@ -648,9 +722,10 @@ def _build_node_recursive(
         return
 
     for n in node.upstream:
-        _build_node_recursive(n, fc_class, task_hook_factory, max_failures)
+        _build_node_recursive(n, fc_class, task_hook_factory, max_failures, scheduler)
 
-    _build_node(node, fc_class, task_hook_factory, max_failures)
+    depth = _node_depth(node) if scheduler is not None else 0
+    _build_node(node, fc_class, task_hook_factory, max_failures, scheduler, depth=depth)
 
 
 # Used to append stage name with pipeline
@@ -696,6 +771,7 @@ def _build_pipeline_node(
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None,
     stage_id: int,
+    scheduler: Any = None,
 ) -> _TOutputNodes:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
@@ -710,7 +786,7 @@ def _build_pipeline_node(
     fc_class = _get_fail_counter()
     node = _convert_config(plc, q_class, _PIPELINE_ID, _MutableInt(stage_id))
     _validate_continuous_mode(node)
-    _build_node_recursive(node, fc_class, hook_factory, max_failures)
+    _build_node_recursive(node, fc_class, hook_factory, max_failures, scheduler)
     return node
 
 
@@ -950,6 +1026,7 @@ def _build_pipeline_coro(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: Sequence[BackgroundTaskFactory] | None = None,
+    scheduler: Any = None,
 ) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
     try:
         node = _build_pipeline_node(
@@ -959,6 +1036,7 @@ def _build_pipeline_coro(
             queue_class=queue_class,
             task_hook_factory=task_hook_factory,
             stage_id=stage_id,
+            scheduler=scheduler,
         )
         coro = _run_pipeline_coroutines(node, background_tasks=background_tasks)
 

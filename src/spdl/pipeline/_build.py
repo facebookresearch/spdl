@@ -128,6 +128,7 @@ def _build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
+    use_priority_scheduler: bool = False,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
         try:
@@ -147,6 +148,33 @@ def _build_pipeline(
     if background_tasks:
         all_bg_tasks.extend(background_tasks)
 
+    # Create executor before building the pipeline so the scheduler can
+    # reference it via _underlying_executor attribute binding.
+    executor = ThreadPoolExecutor(
+        max_workers=num_threads,
+        thread_name_prefix="spdl_worker_thread_",
+    )
+
+    # Construct PriorityScheduler if requested. Per V5.4 plumbing, we
+    # bind the underlying ThreadPoolExecutor by direct attribute
+    # assignment (no _bind_executor method) and wire its run loop as a
+    # BackgroundTask via _PrioritySchedulerBackgroundTask.
+    scheduler = None
+    if use_priority_scheduler:
+        from spdl.pipeline._scheduler import (
+            _PrioritySchedulerBackgroundTask,
+            PriorityScheduler,
+        )
+
+        scheduler = PriorityScheduler(max_concurrent=num_threads)
+        scheduler._underlying_executor = executor
+
+        # Capture in a default arg so the lambda refers to *this* scheduler
+        # instance (avoid late-binding in a loop, defensive).
+        all_bg_tasks.append(
+            lambda sched=scheduler: _PrioritySchedulerBackgroundTask(sched)
+        )
+
     coro, queue = _build_pipeline_coro(
         pipeline_cfg,
         max_failures=max_failures,
@@ -155,12 +183,9 @@ def _build_pipeline(
         task_hook_factory=task_hook_factory,
         stage_id=stage_id,
         background_tasks=all_bg_tasks or None,
+        scheduler=scheduler,
     )
 
-    executor = ThreadPoolExecutor(
-        max_workers=num_threads,
-        thread_name_prefix="spdl_worker_thread_",
-    )
     return Pipeline(coro, queue, executor, desc=desc)
 
 
@@ -175,6 +200,7 @@ def build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
+    use_priority_scheduler: bool = False,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -240,6 +266,11 @@ def build_pipeline(
             :py:meth:`~BackgroundTask.run` method runs alongside the pipeline stages.
             Tasks are cancelled when the pipeline completes. Their errors are logged
             but do not cause the pipeline to fail.
+
+        use_priority_scheduler: If ``True``, enable priority-based
+            dispatch for sync stages via :py:class:`PriorityScheduler`.
+            Deeper stages (closer to sink) are given higher priority,
+            reducing pipeline bubble time.
     """
     from . import _profile
 
@@ -255,6 +286,7 @@ def build_pipeline(
         task_hook_factory=task_hook_factory,
         stage_id=stage_id,
         background_tasks=background_tasks,
+        use_priority_scheduler=use_priority_scheduler,
     )
 
 
