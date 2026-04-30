@@ -20,6 +20,7 @@ from ._queue import (
     set_default_queue_class,
     StatsQueue,
 )
+from ._semaphore import ResizableSemaphore
 
 __all__ = [
     "_build_pipeline_coro",
@@ -30,6 +31,7 @@ __all__ = [
     "is_eof",
     "is_epoch_end",
     "PipelineFailure",
+    "ResizableSemaphore",
     "set_default_hook_class",
     "set_default_queue_class",
     "TaskHook",
