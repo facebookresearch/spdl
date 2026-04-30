@@ -600,6 +600,66 @@ class Pipeline(Generic[T]):
         """Call :py:meth:`~spdl.pipeline.Pipeline.get_iterator` without arguments."""
         return self.get_iterator()
 
+    # --------------------------------------------------------------
+    # Diff 3b — runtime concurrency adjustment (INTERNAL)
+    # --------------------------------------------------------------
+
+    async def _resize_concurrency_async(
+        self,
+        qualified_name: str,
+        new_value: int,
+    ) -> None:
+        """Resize the in-flight admission cap for a registered stage.
+
+        INTERNAL — must be awaited from a coroutine running on the
+        pipeline's own event loop (e.g., a
+        :py:class:`~spdl.pipeline.BackgroundTask`). There is no
+        public, foreground-thread wrapper: cross-thread resize is
+        intentionally not exposed because the only intended caller is
+        an in-loop adaptive-concurrency controller.
+
+        Atomicity: the body has zero ``await`` statements between
+        :py:meth:`ResizableSemaphore.resize` and the
+        ``_dynamic_concurrency`` dict assignment. asyncio is
+        single-threaded, so the entire method runs in one event-loop
+        turn and is therefore cancel-safe by structural invariant
+        (``CancelledError`` can only fire BEFORE the call begins or
+        AFTER it completes, never between the two writes).
+
+        Args:
+            qualified_name: A fully-qualified stage name. For
+                non-MultiPipe stages this equals
+                :py:attr:`StageInfo.stage_name` (e.g.,
+                ``"decode_single_frame"``). For MultiPipe sub-pipelines
+                it is ``"<branch_label>/<stage_name>"``. The set of
+                valid names is ``pipeline._impl._semaphore_registry``.
+            new_value: New admission cap; must be >= 1. Resize-up is
+                immediate; resize-down is graceful — in-flight tasks
+                finish, but no new tasks admit until in-flight drops
+                below ``new_value``.
+
+        Raises:
+            ValueError: ``new_value < 1``.
+            KeyError: ``qualified_name`` is not registered. The error
+                message includes the list of valid names.
+        """
+        if new_value < 1:
+            raise ValueError(f"new_value must be >= 1, got {new_value}")
+
+        registry = self._impl._semaphore_registry
+        sem = registry.get(qualified_name)
+        if sem is None:
+            valid = sorted(registry.keys())
+            raise KeyError(
+                f"qualified_name {qualified_name!r} not found. "
+                f"Valid stage names: {valid}"
+            )
+        sem.resize(new_value)
+        # Keep the sibling registry in sync for observability.
+        # asyncio is single-threaded so this update is atomic with the
+        # semaphore.resize() above (no concurrent writer).
+        self._impl._dynamic_concurrency[qualified_name] = new_value
+
 
 class PipelineIterator(Generic[T]):
     """PipelineIterator()"""

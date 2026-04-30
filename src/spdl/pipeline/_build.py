@@ -130,6 +130,7 @@ def _build_pipeline(
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_priority_scheduler: bool = False,
+    enable_adaptive_concurrency: bool = False,
     _install_semaphores_for_test: bool = False,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
@@ -178,9 +179,12 @@ def _build_pipeline(
         )
 
     # V5.1+V5.5 Diff 3a: pre-allocate the per-pipeline registries that
-    # `_components/_node.py` populates when ``_install_semaphores_for_test``
-    # is True. These are then handed off to ``_PipelineImpl.__init__`` so
-    # ``Pipeline.resize_concurrency`` (Diff 3b) can find them.
+    # `_components/_node.py` populates when semaphore installation is
+    # enabled (either via the public ``enable_adaptive_concurrency`` flag
+    # or the test-only ``_install_semaphores_for_test`` knob). These are
+    # then handed off to ``_PipelineImpl.__init__`` so
+    # ``Pipeline._resize_concurrency_async`` (Diff 3b internal) can find
+    # them.
     # ``output_queue_by_name`` (Phase D) caches each registered stage's
     # output ``AsyncQueue`` so the Diff 6 controller can read its lap
     # stats — the same key set as ``semaphore_registry``.
@@ -188,6 +192,8 @@ def _build_pipeline(
     dynamic_concurrency: dict[str, int] = {}
     stage_info_by_name: dict[str, StageInfo] = {}
     output_queue_by_name: dict[str, AsyncQueue] = {}
+
+    install_semaphores = enable_adaptive_concurrency or _install_semaphores_for_test
 
     coro, queue = _build_pipeline_coro(
         pipeline_cfg,
@@ -198,7 +204,7 @@ def _build_pipeline(
         stage_id=stage_id,
         background_tasks=all_bg_tasks or None,
         scheduler=scheduler,
-        install_semaphores_for_test=_install_semaphores_for_test,
+        install_semaphores_for_test=install_semaphores,
         semaphore_registry=semaphore_registry,
         dynamic_concurrency=dynamic_concurrency,
         stage_info_by_name=stage_info_by_name,
@@ -229,6 +235,7 @@ def build_pipeline(
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_priority_scheduler: bool = False,
+    enable_adaptive_concurrency: bool = False,
     _install_semaphores_for_test: bool = False,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
@@ -301,15 +308,25 @@ def build_pipeline(
             Deeper stages (closer to sink) are given higher priority,
             reducing pipeline bubble time.
 
-        _install_semaphores_for_test: **Test-only.** When ``True``, every
-            ``Pipe`` stage is built with a :py:class:`ResizableSemaphore`
-            whose initial value matches its static ``concurrency``, and
-            the semaphore is wired to the V5.6 REPLACE admission gate in
-            :py:func:`~spdl.pipeline._components._pipe._pipe`. Used by
-            the V5.5 throughput regression test and the
-            :py:meth:`Pipeline.resize_concurrency` continuous-mode test.
-            Production code MUST NOT pass this — it bypasses the
-            selective opt-in semantics of ``Pipeline.resize_concurrency``.
+        enable_adaptive_concurrency: If ``True``, every ``Pipe`` stage is
+            built with a :py:class:`ResizableSemaphore` whose initial value
+            matches its static ``concurrency``, and the semaphore is wired
+            to the V5.6 REPLACE admission gate in
+            :py:func:`~spdl.pipeline._components._pipe._pipe`. This enables
+            runtime adjustment of per-stage concurrency via the internal
+            :py:meth:`Pipeline._resize_concurrency_async` (intended to be
+            driven by an in-loop adaptive-concurrency controller running
+            as a :py:class:`BackgroundTask`). Default: ``False``
+            (per-stage concurrency is fixed at build time, with zero
+            per-task overhead in the admission gate).
+
+        _install_semaphores_for_test: **Test-only.** Same mechanical effect
+            as ``enable_adaptive_concurrency`` (both flip the same internal
+            switch), kept as a separate flag so tests can opt in without
+            implying the production-facing semantic. Used by the V5.5
+            throughput regression test and the in-loop async-resize
+            regression test. Production code MUST use
+            ``enable_adaptive_concurrency``.
     """
     from . import _profile
 
@@ -326,6 +343,7 @@ def build_pipeline(
         stage_id=stage_id,
         background_tasks=background_tasks,
         use_priority_scheduler=use_priority_scheduler,
+        enable_adaptive_concurrency=enable_adaptive_concurrency,
         _install_semaphores_for_test=_install_semaphores_for_test,
     )
 

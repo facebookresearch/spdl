@@ -381,8 +381,8 @@ def _pipe_with_semaphore(
     """V5.6 REPLACE branch: ``semaphore.acquire()`` IS the admission gate.
 
     ``args.concurrency`` is ignored — the registered semaphore (whose value
-    is mutable via :py:meth:`Pipeline.resize_concurrency`) governs the
-    in-flight cap. Task completion calls ``semaphore.release()`` via a
+    is mutable via :py:meth:`Pipeline._resize_concurrency_async`) governs
+    the in-flight cap. Task completion calls ``semaphore.release()`` via a
     done-callback so the admit cycle is symmetric with the gate.
     """
 
@@ -421,7 +421,7 @@ def _pipe_with_semaphore(
             # V5.6 admission gate: REPLACES `len(tasks) >= args.concurrency`.
             # `acquire()` blocks here when the in-flight count reaches the
             # semaphore's current value (which may have been resized via
-            # Pipeline.resize_concurrency).
+            # Pipeline._resize_concurrency_async).
             await semaphore.acquire()
 
             task = create_task(

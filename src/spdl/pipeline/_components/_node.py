@@ -482,7 +482,7 @@ def _convert_config(
 
 
 def _qualified_name(info: StageInfo, branch_label: str | None = None) -> str:
-    """Build the qualified stage name used by ``Pipeline.resize_concurrency``.
+    """Build the qualified stage name used by ``Pipeline._resize_concurrency_async``.
 
     For non-MultiPipe stages, ``qualified_name = info.stage_name``.
     For MultiPipe sub-pipelines, the branch label is prefixed with ``/``
@@ -825,8 +825,11 @@ def _build_node_recursive(
             every Pipe stage gets a :py:class:`ResizableSemaphore` whose
             initial value matches its static ``concurrency``, and the
             semaphore is passed to ``_pipe()`` so its V5.6 REPLACE branch
-            governs admission. Production code should use
-            :py:meth:`Pipeline.resize_concurrency` (Diff 3b) instead.
+            governs admission. Production code should pass
+            ``enable_adaptive_concurrency=True`` to
+            :py:func:`build_pipeline` instead so that an in-loop
+            controller can call
+            :py:meth:`Pipeline._resize_concurrency_async`.
         semaphore_registry: Per-pipeline ``dict[qualified_name, ResizableSemaphore]``
             populated when ``install_semaphores_for_test=True``.
         dynamic_concurrency: Per-pipeline ``dict[qualified_name, int]``
