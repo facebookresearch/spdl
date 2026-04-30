@@ -5,11 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import asyncio
+import inspect
 import logging
 import sys
 from asyncio import ALL_COMPLETED, FIRST_COMPLETED, Task
 from collections.abc import Callable, Coroutine, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 from functools import partial
 from typing import Any, TypeAlias, TypeVar
@@ -41,6 +42,7 @@ from ._pipe import (
     _pipe,
 )
 from ._queue import AsyncQueue, get_default_queue_class
+from ._semaphore import ResizableSemaphore
 from ._sink import _sink
 from ._source import _source, _source_continuous
 from ._variants import _path_variants_router
@@ -479,11 +481,77 @@ def _convert_config(
     return n
 
 
+def _qualified_name(info: StageInfo, branch_label: str | None = None) -> str:
+    """Build the qualified stage name used by ``Pipeline._resize_concurrency_async``.
+
+    For non-MultiPipe stages, ``qualified_name = info.stage_name``.
+    For MultiPipe sub-pipelines, the branch label is prefixed with ``/``
+    (e.g., ``"video/decode_frame"``). LCA's MultiPipe is a single SPDL
+    Pipe with internal dispatcher so qualified names match plain
+    ``stage_name`` in practice today; the addressing scheme is
+    forward-compatible for true SPDL fan-out.
+    """
+    if branch_label is None:
+        return info.stage_name
+    return f"{branch_label}/{info.stage_name}"
+
+
+def _register_semaphore(
+    semaphore_registry: dict[str, ResizableSemaphore] | None,
+    dynamic_concurrency: dict[str, int] | None,
+    stage_info_by_name: dict[str, StageInfo] | None,
+    output_queue_by_name: dict[str, AsyncQueue] | None,
+    qname: str,
+    info: StageInfo,
+    sem: ResizableSemaphore,
+    initial_value: int,
+    output_queue: AsyncQueue,
+) -> None:
+    """Insert ``sem`` into the per-pipeline registries under ``qname``.
+
+    Duplicate ``qname`` is treated as an internal error (each stage must
+    have a unique qualified name across the pipeline). This is the only
+    write site for ``_PipelineImpl._semaphore_registry`` /
+    ``_dynamic_concurrency`` / ``_stage_info_by_name`` /
+    ``_output_queue_by_name``.
+
+    Phase D: ``output_queue_by_name`` mirrors the same key set as
+    ``semaphore_registry``. The captured queue handle is the SAME
+    instance that this stage's ``_pipe()`` coroutine writes to and
+    the next stage's coroutine reads from — i.e., the canonical
+    per-stage output queue. The Diff 6
+    ``DomeVideoConcurrencyController`` reads this dict to obtain
+    each stage's ``StatsQueue._last_lap_stats`` (or equivalent
+    cached lap stats) for adaptive-tuning decisions.
+    """
+    if semaphore_registry is None:
+        return
+    if qname in semaphore_registry:
+        raise RuntimeError(
+            f"Duplicate qualified stage name {qname!r}. "
+            f"This is an internal error — please report."
+        )
+    semaphore_registry[qname] = sem
+    if dynamic_concurrency is not None:
+        dynamic_concurrency[qname] = initial_value
+    if stage_info_by_name is not None:
+        stage_info_by_name[qname] = info
+    if output_queue_by_name is not None:
+        output_queue_by_name[qname] = output_queue
+
+
 def _build_node(
     node: _TNodes,
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[StageInfo], list[TaskHook]],
     max_failures: int | Fraction,
+    scheduler: Any = None,
+    depth: int = 0,
+    install_semaphores_for_test: bool = False,
+    semaphore_registry: dict[str, ResizableSemaphore] | None = None,
+    dynamic_concurrency: dict[str, int] | None = None,
+    stage_info_by_name: dict[str, StageInfo] | None = None,
+    output_queue_by_name: dict[str, AsyncQueue] | None = None,
 ) -> None:
     """Build a coroutine for a single node based on its configuration type.
 
@@ -520,6 +588,17 @@ def _build_node(
         task_hook_factory: A factory function for creating task hooks for
             monitoring.
         max_failures: The maximum number of failures allowed before halting.
+        scheduler: Optional :py:class:`PriorityScheduler` instance. When
+            provided, sync stages get a per-stage
+            :py:class:`_PrioritizedExecutor` shim injected into
+            ``_PipeArgs.executor`` so that
+            :py:meth:`asyncio.AbstractEventLoop.run_in_executor` routes
+            through the scheduler's priority heap instead of the
+            underlying ``ThreadPoolExecutor``'s FIFO.
+        depth: Depth of this node in the pipeline graph (source-to-sink
+            distance). Used to compute scheduler priority as
+            ``priority = -depth`` (deeper stages dispatch first). Only
+            consumed when ``scheduler is not None``.
 
     Raises:
         ValueError: If an unsupported configuration type is encountered.
@@ -578,14 +657,68 @@ def _build_node(
                     in_q, out_q = node.input_queue, node.output_queue
                     hooks = task_hook_factory(node.info)
                     fc = fc_class(max_failures, cfg._max_failures)
+
+                    args = cfg._args
+
+                    # When a scheduler is provided, register this stage's
+                    # priority and inject a per-stage executor (created
+                    # by `scheduler.make_stage_executor`) so
+                    # loop.run_in_executor() routes through the heap.
+                    # Only sync ops are routed (async/generator ops
+                    # bypass the executor entirely in convert_to_async).
+                    # The factory call decouples `_node.py` from the
+                    # concrete `_PrioritizedExecutor` class — this avoids
+                    # a Buck dep cycle through `_scheduler.py`.
+                    if scheduler is not None and _is_sync_op(args):
+                        scheduler.register_stage(node.info, priority=-depth)
+                        per_stage_exec = scheduler.make_stage_executor(node.info)
+                        args = replace(args, executor=per_stage_exec)
+
+                    # V5.1+V5.6 Diff 3a: opt the stage into the per-pipeline
+                    # semaphore registry. When ``install_semaphores_for_test``
+                    # is True (test-only knob), every Pipe stage gets a
+                    # ``ResizableSemaphore`` whose initial value matches the
+                    # static ``args.concurrency``. The semaphore is passed
+                    # to ``_pipe`` which uses V5.6 REPLACE semantics: the
+                    # semaphore IS the admission gate (the static
+                    # ``len(tasks) >= concurrency`` check is skipped).
+                    # When the knob is off, ``semaphore=None`` and ``_pipe``
+                    # uses its existing static gate — ZERO per-task overhead.
+                    pipe_semaphore: ResizableSemaphore | None = None
+                    if install_semaphores_for_test:
+                        qname = _qualified_name(node.info)
+                        pipe_semaphore = ResizableSemaphore(args.concurrency)
+                        _register_semaphore(
+                            semaphore_registry,
+                            dynamic_concurrency,
+                            stage_info_by_name,
+                            output_queue_by_name,
+                            qname,
+                            node.info,
+                            pipe_semaphore,
+                            args.concurrency,
+                            out_q,
+                        )
+
                     match cfg._type:
                         case _PipeType.Pipe:
                             node._coro = _pipe(
-                                node.info, in_q, out_q, cfg._args, fc, hooks, False
+                                node.info,
+                                in_q,
+                                out_q,
+                                args,
+                                fc,
+                                hooks,
+                                False,
+                                semaphore=pipe_semaphore,
                             )
                         case _PipeType.OrderedPipe:
+                            # OrderedPipe uses an intermediate queue sized
+                            # to ``concurrency`` and is not part of the
+                            # Diff 3a admission-gate change. Static
+                            # concurrency only.
                             node._coro = _ordered_pipe(
-                                node.info, in_q, out_q, cfg._args, fc, hooks
+                                node.info, in_q, out_q, args, fc, hooks
                             )
                         case _:  # pragma: no cover
                             raise ValueError(
@@ -623,11 +756,57 @@ def _build_node(
                     )
 
 
+def _is_sync_op(args: _PipeArgs) -> bool:
+    """Whether ``convert_to_async`` will use the executor branch for ``args.op``.
+
+    The :py:class:`PriorityScheduler` only routes work that
+    :py:func:`~spdl.pipeline._common._convert.convert_to_async` would
+    submit through a :py:class:`~concurrent.futures.Executor`. Coroutine
+    functions and async-gen functions bypass the executor entirely, so
+    they must NOT receive a :py:class:`_PrioritizedExecutor` shim.
+    Generator functions and process-pool branches are also excluded for
+    Diff 2 to keep the scope minimal.
+    """
+    op = args.op
+    if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
+        return False
+    if inspect.isgeneratorfunction(op):
+        # Generators take the _to_async_gen branch, which uses
+        # loop.run_in_executor on `next` rather than the user op as a
+        # whole — routing through the scheduler doesn't fit cleanly.
+        return False
+    if args.executor is not None:
+        # User-supplied executor (e.g., ProcessPoolExecutor). Don't
+        # override.
+        return False
+    return True
+
+
+def _node_depth(node: _TNodes) -> int:
+    """Compute a node's depth (distance from the nearest source).
+
+    Source nodes have depth 0; each downstream node is one deeper than
+    the deepest of its upstream nodes. Used by :py:func:`_build_node`
+    to compute scheduler priorities (priority = -depth).
+    """
+    if isinstance(node, _SourceNode):
+        return 0
+    if not node.upstream:
+        return 0
+    return 1 + max(_node_depth(n) for n in node.upstream)
+
+
 def _build_node_recursive(
     node: _TNodes,
     fc_class: type[_FailCounter],
     task_hook_factory: Callable[[StageInfo], list[TaskHook]],
     max_failures: int | Fraction,
+    scheduler: Any = None,
+    install_semaphores_for_test: bool = False,
+    semaphore_registry: dict[str, ResizableSemaphore] | None = None,
+    dynamic_concurrency: dict[str, int] | None = None,
+    stage_info_by_name: dict[str, StageInfo] | None = None,
+    output_queue_by_name: dict[str, AsyncQueue] | None = None,
 ) -> None:
     """Recursively build coroutines for a node and all its upstream nodes.
 
@@ -640,6 +819,27 @@ def _build_node_recursive(
         fc_class: The failure counter class for tracking task failures.
         task_hook_factory: A factory function for creating task hooks for monitoring.
         max_failures: The maximum number of failures allowed before halting.
+        scheduler: Optional :py:class:`PriorityScheduler` instance for
+            priority dispatch.
+        install_semaphores_for_test: V5.5 test-only knob. When True,
+            every Pipe stage gets a :py:class:`ResizableSemaphore` whose
+            initial value matches its static ``concurrency``, and the
+            semaphore is passed to ``_pipe()`` so its V5.6 REPLACE branch
+            governs admission. Production code should pass
+            ``enable_adaptive_concurrency=True`` to
+            :py:func:`build_pipeline` instead so that an in-loop
+            controller can call
+            :py:meth:`Pipeline._resize_concurrency_async`.
+        semaphore_registry: Per-pipeline ``dict[qualified_name, ResizableSemaphore]``
+            populated when ``install_semaphores_for_test=True``.
+        dynamic_concurrency: Per-pipeline ``dict[qualified_name, int]``
+            populated when ``install_semaphores_for_test=True``.
+        stage_info_by_name: Per-pipeline ``dict[qualified_name, StageInfo]``
+            populated when ``install_semaphores_for_test=True``.
+        output_queue_by_name: Per-pipeline
+            ``dict[qualified_name, AsyncQueue]`` populated when
+            ``install_semaphores_for_test=True``. Phase D: enables the
+            Diff 6 controller to read each stage's lap stats.
 
     Raises:
         RuntimeError: If attempting to build a coroutine for a node that already has one.
@@ -648,9 +848,33 @@ def _build_node_recursive(
         return
 
     for n in node.upstream:
-        _build_node_recursive(n, fc_class, task_hook_factory, max_failures)
+        _build_node_recursive(
+            n,
+            fc_class,
+            task_hook_factory,
+            max_failures,
+            scheduler,
+            install_semaphores_for_test=install_semaphores_for_test,
+            semaphore_registry=semaphore_registry,
+            dynamic_concurrency=dynamic_concurrency,
+            stage_info_by_name=stage_info_by_name,
+            output_queue_by_name=output_queue_by_name,
+        )
 
-    _build_node(node, fc_class, task_hook_factory, max_failures)
+    depth = _node_depth(node) if scheduler is not None else 0
+    _build_node(
+        node,
+        fc_class,
+        task_hook_factory,
+        max_failures,
+        scheduler,
+        depth=depth,
+        install_semaphores_for_test=install_semaphores_for_test,
+        semaphore_registry=semaphore_registry,
+        dynamic_concurrency=dynamic_concurrency,
+        stage_info_by_name=stage_info_by_name,
+        output_queue_by_name=output_queue_by_name,
+    )
 
 
 # Used to append stage name with pipeline
@@ -696,6 +920,12 @@ def _build_pipeline_node(
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None,
     stage_id: int,
+    scheduler: Any = None,
+    install_semaphores_for_test: bool = False,
+    semaphore_registry: dict[str, ResizableSemaphore] | None = None,
+    dynamic_concurrency: dict[str, int] | None = None,
+    stage_info_by_name: dict[str, StageInfo] | None = None,
+    output_queue_by_name: dict[str, AsyncQueue] | None = None,
 ) -> _TOutputNodes:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
@@ -710,7 +940,18 @@ def _build_pipeline_node(
     fc_class = _get_fail_counter()
     node = _convert_config(plc, q_class, _PIPELINE_ID, _MutableInt(stage_id))
     _validate_continuous_mode(node)
-    _build_node_recursive(node, fc_class, hook_factory, max_failures)
+    _build_node_recursive(
+        node,
+        fc_class,
+        hook_factory,
+        max_failures,
+        scheduler,
+        install_semaphores_for_test=install_semaphores_for_test,
+        semaphore_registry=semaphore_registry,
+        dynamic_concurrency=dynamic_concurrency,
+        stage_info_by_name=stage_info_by_name,
+        output_queue_by_name=output_queue_by_name,
+    )
     return node
 
 
@@ -950,7 +1191,13 @@ def _build_pipeline_coro(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: Sequence[BackgroundTaskFactory] | None = None,
-) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
+    scheduler: Any = None,
+    install_semaphores_for_test: bool = False,
+    semaphore_registry: dict[str, ResizableSemaphore] | None = None,
+    dynamic_concurrency: dict[str, int] | None = None,
+    stage_info_by_name: dict[str, StageInfo] | None = None,
+    output_queue_by_name: dict[str, AsyncQueue] | None = None,
+) -> tuple[Coroutine[None, None, None], AsyncQueue]:
     try:
         node = _build_pipeline_node(
             plc,
@@ -959,6 +1206,12 @@ def _build_pipeline_coro(
             queue_class=queue_class,
             task_hook_factory=task_hook_factory,
             stage_id=stage_id,
+            scheduler=scheduler,
+            install_semaphores_for_test=install_semaphores_for_test,
+            semaphore_registry=semaphore_registry,
+            dynamic_concurrency=dynamic_concurrency,
+            stage_info_by_name=stage_info_by_name,
+            output_queue_by_name=output_queue_by_name,
         )
         coro = _run_pipeline_coroutines(node, background_tasks=background_tasks)
 

@@ -31,6 +31,7 @@ from spdl.pipeline._components import (
     _get_global_id,
     _set_global_id,
     AsyncQueue,
+    ResizableSemaphore,
     StageInfo,
     TaskHook,
 )
@@ -128,6 +129,9 @@ def _build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
+    use_priority_scheduler: bool = False,
+    enable_adaptive_concurrency: bool = False,
+    _install_semaphores_for_test: bool = False,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
         try:
@@ -147,6 +151,50 @@ def _build_pipeline(
     if background_tasks:
         all_bg_tasks.extend(background_tasks)
 
+    # Create executor before building the pipeline so the scheduler can
+    # reference it via _underlying_executor attribute binding.
+    executor = ThreadPoolExecutor(
+        max_workers=num_threads,
+        thread_name_prefix="spdl_worker_thread_",
+    )
+
+    # Construct PriorityScheduler if requested. Per V5.4 plumbing, we
+    # bind the underlying ThreadPoolExecutor by direct attribute
+    # assignment (no _bind_executor method) and wire its run loop as a
+    # BackgroundTask via _PrioritySchedulerBackgroundTask.
+    scheduler = None
+    if use_priority_scheduler:
+        from spdl.pipeline._scheduler import (
+            _PrioritySchedulerBackgroundTask,
+            PriorityScheduler,
+        )
+
+        scheduler = PriorityScheduler(max_concurrent=num_threads)
+        scheduler._underlying_executor = executor
+
+        # Capture in a default arg so the lambda refers to *this* scheduler
+        # instance (avoid late-binding in a loop, defensive).
+        all_bg_tasks.append(
+            lambda sched=scheduler: _PrioritySchedulerBackgroundTask(sched)
+        )
+
+    # V5.1+V5.5 Diff 3a: pre-allocate the per-pipeline registries that
+    # `_components/_node.py` populates when semaphore installation is
+    # enabled (either via the public ``enable_adaptive_concurrency`` flag
+    # or the test-only ``_install_semaphores_for_test`` knob). These are
+    # then handed off to ``_PipelineImpl.__init__`` so
+    # ``Pipeline._resize_concurrency_async`` (Diff 3b internal) can find
+    # them.
+    # ``output_queue_by_name`` (Phase D) caches each registered stage's
+    # output ``AsyncQueue`` so the Diff 6 controller can read its lap
+    # stats — the same key set as ``semaphore_registry``.
+    semaphore_registry: dict[str, ResizableSemaphore] = {}
+    dynamic_concurrency: dict[str, int] = {}
+    stage_info_by_name: dict[str, StageInfo] = {}
+    output_queue_by_name: dict[str, AsyncQueue] = {}
+
+    install_semaphores = enable_adaptive_concurrency or _install_semaphores_for_test
+
     coro, queue = _build_pipeline_coro(
         pipeline_cfg,
         max_failures=max_failures,
@@ -155,13 +203,24 @@ def _build_pipeline(
         task_hook_factory=task_hook_factory,
         stage_id=stage_id,
         background_tasks=all_bg_tasks or None,
+        scheduler=scheduler,
+        install_semaphores_for_test=install_semaphores,
+        semaphore_registry=semaphore_registry,
+        dynamic_concurrency=dynamic_concurrency,
+        stage_info_by_name=stage_info_by_name,
+        output_queue_by_name=output_queue_by_name,
     )
 
-    executor = ThreadPoolExecutor(
-        max_workers=num_threads,
-        thread_name_prefix="spdl_worker_thread_",
+    return Pipeline(
+        coro,
+        queue,
+        executor,
+        desc=desc,
+        semaphore_registry=semaphore_registry,
+        dynamic_concurrency=dynamic_concurrency,
+        stage_info_by_name=stage_info_by_name,
+        output_queue_by_name=output_queue_by_name,
     )
-    return Pipeline(coro, queue, executor, desc=desc)
 
 
 def build_pipeline(
@@ -175,6 +234,9 @@ def build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
+    use_priority_scheduler: bool = False,
+    enable_adaptive_concurrency: bool = False,
+    _install_semaphores_for_test: bool = False,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -240,6 +302,31 @@ def build_pipeline(
             :py:meth:`~BackgroundTask.run` method runs alongside the pipeline stages.
             Tasks are cancelled when the pipeline completes. Their errors are logged
             but do not cause the pipeline to fail.
+
+        use_priority_scheduler: If ``True``, enable priority-based
+            dispatch for sync stages via :py:class:`PriorityScheduler`.
+            Deeper stages (closer to sink) are given higher priority,
+            reducing pipeline bubble time.
+
+        enable_adaptive_concurrency: If ``True``, every ``Pipe`` stage is
+            built with a :py:class:`ResizableSemaphore` whose initial value
+            matches its static ``concurrency``, and the semaphore is wired
+            to the V5.6 REPLACE admission gate in
+            :py:func:`~spdl.pipeline._components._pipe._pipe`. This enables
+            runtime adjustment of per-stage concurrency via the internal
+            :py:meth:`Pipeline._resize_concurrency_async` (intended to be
+            driven by an in-loop adaptive-concurrency controller running
+            as a :py:class:`BackgroundTask`). Default: ``False``
+            (per-stage concurrency is fixed at build time, with zero
+            per-task overhead in the admission gate).
+
+        _install_semaphores_for_test: **Test-only.** Same mechanical effect
+            as ``enable_adaptive_concurrency`` (both flip the same internal
+            switch), kept as a separate flag so tests can opt in without
+            implying the production-facing semantic. Used by the V5.5
+            throughput regression test and the in-loop async-resize
+            regression test. Production code MUST use
+            ``enable_adaptive_concurrency``.
     """
     from . import _profile
 
@@ -255,6 +342,9 @@ def build_pipeline(
         task_hook_factory=task_hook_factory,
         stage_id=stage_id,
         background_tasks=background_tasks,
+        use_priority_scheduler=use_priority_scheduler,
+        enable_adaptive_concurrency=enable_adaptive_concurrency,
+        _install_semaphores_for_test=_install_semaphores_for_test,
     )
 
 

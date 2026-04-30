@@ -291,6 +291,8 @@ class PipelineBuilder(Generic[T, U]):
         queue_class: type[AsyncQueue] | None = None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         stage_id: int = 0,
+        use_priority_scheduler: bool = False,
+        enable_adaptive_concurrency: bool = False,
     ) -> Pipeline[U]:
         """Build the pipeline.
 
@@ -328,6 +330,19 @@ class PipelineBuilder(Generic[T, U]):
                 To disable hooks, provide a function that returns an empty list.
 
             stage_id: The index of the initial stage  used for logging.
+
+            use_priority_scheduler: If ``True``, enable priority-based
+                dispatch for sync stages via :py:class:`PriorityScheduler`.
+                Deeper stages (closer to sink) are given higher priority,
+                reducing pipeline bubble time.
+
+            enable_adaptive_concurrency: If ``True``, every ``Pipe`` stage
+                is built with a :py:class:`ResizableSemaphore` so per-stage
+                concurrency can be adjusted at runtime via the internal
+                :py:meth:`Pipeline._resize_concurrency_async` (intended to
+                be driven by an in-loop adaptive-concurrency controller
+                running as a :py:class:`BackgroundTask`). Default:
+                ``False`` (per-stage concurrency is fixed at build time).
         """
         return build_pipeline(
             self.get_config(),
@@ -337,4 +352,6 @@ class PipelineBuilder(Generic[T, U]):
             report_stats_interval=report_stats_interval,
             task_hook_factory=task_hook_factory,
             stage_id=stage_id,
+            use_priority_scheduler=use_priority_scheduler,
+            enable_adaptive_concurrency=enable_adaptive_concurrency,
         )

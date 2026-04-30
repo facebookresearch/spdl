@@ -196,6 +196,15 @@ class StatsQueue(AsyncQueue):
         self._lap_ave_put_time = 0.0
         self._lap_dur_empty = 0.0
 
+        # Cached snapshot of the latest lap stats. ``_get_lap_stats()`` is
+        # destructive — it resets the lap counters — so non-callback readers
+        # (e.g., the LCA ``DomeVideoConcurrencyController``) cannot call it
+        # safely. ``_log_interval_stats()`` now writes the freshly computed
+        # stats here so an external reader can observe the latest interval
+        # without disturbing the periodic logging path. ``None`` until the
+        # first interval has elapsed.
+        self._last_lap_stats: QueuePerfStats | None = None
+
     async def get(self) -> object:
         """Remove and return an item from the queue, track the time."""
         with self._getc.count():
@@ -301,7 +310,14 @@ class StatsQueue(AsyncQueue):
         )
 
     async def _log_interval_stats(self) -> None:
-        await self.interval_stats_callback(self._get_lap_stats())
+        stats = self._get_lap_stats()
+        # Cache for non-callback readers (e.g., adaptive concurrency
+        # controller). ``_get_lap_stats()`` resets the lap counters, so
+        # this is the only safe way for an external reader to observe
+        # the most recent interval's stats without racing the periodic
+        # logging path.
+        self._last_lap_stats = stats
+        await self.interval_stats_callback(stats)
 
     async def interval_stats_callback(self, stats: QueuePerfStats) -> None:
         """Callback for processing interval performance statistics.

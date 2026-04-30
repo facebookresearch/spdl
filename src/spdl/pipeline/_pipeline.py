@@ -12,7 +12,7 @@ import logging
 import time
 import warnings
 import weakref
-from asyncio import AbstractEventLoop, Queue as AsyncQueue
+from asyncio import AbstractEventLoop
 from collections.abc import Coroutine, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -22,7 +22,9 @@ from typing import Any, Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
 from spdl.pipeline._common._misc import create_task
-from spdl.pipeline._components import is_epoch_end
+from spdl.pipeline._common._types import StageInfo
+from spdl.pipeline._components import AsyncQueue, is_epoch_end
+from spdl.pipeline._components._semaphore import ResizableSemaphore
 
 __all__ = ["Pipeline"]
 
@@ -206,12 +208,47 @@ class _PipelineImpl(Generic[T]):
         executor: ThreadPoolExecutor,
         *,
         desc: str,
+        semaphore_registry: dict[str, ResizableSemaphore] | None = None,
+        dynamic_concurrency: dict[str, int] | None = None,
+        stage_info_by_name: dict[str, StageInfo] | None = None,
+        output_queue_by_name: dict[str, AsyncQueue] | None = None,
     ) -> None:
         self._str: str = "\n".join([repr(self), desc])
 
         self._output_queue: AsyncQueue = output_queue
         self._event_loop = _EventLoop(coro, executor)
         self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
+
+        # V5.1 sibling registries for runtime concurrency adjustment.
+        # Populated at pipeline build time by ``_components/_node.py``
+        # when a stage opts into the registry (e.g., via the test-only
+        # ``_install_semaphores_for_test`` knob on ``build_pipeline``).
+        # Two parallel dicts keyed on the qualified stage name (see V5.4
+        # Diff 3a). NOT a mutation of ``StageInfo`` (preserves
+        # frozen=True / hashability for third-party code).
+        self._semaphore_registry: dict[str, ResizableSemaphore] = (
+            semaphore_registry if semaphore_registry is not None else {}
+        )
+        self._dynamic_concurrency: dict[str, int] = (
+            dynamic_concurrency if dynamic_concurrency is not None else {}
+        )
+        # Useful for error messages and future Track B logging hooks; not
+        # mutated after build time.
+        self._stage_info_by_name: dict[str, StageInfo] = (
+            stage_info_by_name if stage_info_by_name is not None else {}
+        )
+        # Phase D: per-stage output queue handles, keyed by qualified
+        # stage name (same key set as ``_semaphore_registry``). Captured
+        # at registry-population time in ``_components/_node.py`` so the
+        # Diff 6 ``DomeVideoConcurrencyController`` can read each stage's
+        # ``StatsQueue._last_lap_stats`` (or equivalent cached lap stats)
+        # to drive the adaptive concurrency loop. The queue stored here
+        # is the SAME instance that is passed as the OUTPUT queue to the
+        # stage's ``_pipe()`` coroutine and as the INPUT queue to the
+        # next stage — it is the canonical per-stage output queue.
+        self._output_queue_by_name: dict[str, AsyncQueue] = (
+            output_queue_by_name if output_queue_by_name is not None else {}
+        )
 
     def __str__(self) -> str:
         return self._str
@@ -467,9 +504,20 @@ class Pipeline(Generic[T]):
         executor: ThreadPoolExecutor,
         *,
         desc: str,
+        semaphore_registry: dict[str, ResizableSemaphore] | None = None,
+        dynamic_concurrency: dict[str, int] | None = None,
+        stage_info_by_name: dict[str, StageInfo] | None = None,
+        output_queue_by_name: dict[str, AsyncQueue] | None = None,
     ) -> None:
         self._impl: _PipelineImpl[T] = _PipelineImpl(
-            coro, output_queue, executor, desc=desc
+            coro,
+            output_queue,
+            executor,
+            desc=desc,
+            semaphore_registry=semaphore_registry,
+            dynamic_concurrency=dynamic_concurrency,
+            stage_info_by_name=stage_info_by_name,
+            output_queue_by_name=output_queue_by_name,
         )
         self._finalizer = weakref.finalize(self, _stop_impl, self._impl)
 
@@ -551,6 +599,66 @@ class Pipeline(Generic[T]):
     def __iter__(self) -> Iterator[T]:
         """Call :py:meth:`~spdl.pipeline.Pipeline.get_iterator` without arguments."""
         return self.get_iterator()
+
+    # --------------------------------------------------------------
+    # Diff 3b — runtime concurrency adjustment (INTERNAL)
+    # --------------------------------------------------------------
+
+    async def _resize_concurrency_async(
+        self,
+        qualified_name: str,
+        new_value: int,
+    ) -> None:
+        """Resize the in-flight admission cap for a registered stage.
+
+        INTERNAL — must be awaited from a coroutine running on the
+        pipeline's own event loop (e.g., a
+        :py:class:`~spdl.pipeline.BackgroundTask`). There is no
+        public, foreground-thread wrapper: cross-thread resize is
+        intentionally not exposed because the only intended caller is
+        an in-loop adaptive-concurrency controller.
+
+        Atomicity: the body has zero ``await`` statements between
+        :py:meth:`ResizableSemaphore.resize` and the
+        ``_dynamic_concurrency`` dict assignment. asyncio is
+        single-threaded, so the entire method runs in one event-loop
+        turn and is therefore cancel-safe by structural invariant
+        (``CancelledError`` can only fire BEFORE the call begins or
+        AFTER it completes, never between the two writes).
+
+        Args:
+            qualified_name: A fully-qualified stage name. For
+                non-MultiPipe stages this equals
+                :py:attr:`StageInfo.stage_name` (e.g.,
+                ``"decode_single_frame"``). For MultiPipe sub-pipelines
+                it is ``"<branch_label>/<stage_name>"``. The set of
+                valid names is ``pipeline._impl._semaphore_registry``.
+            new_value: New admission cap; must be >= 1. Resize-up is
+                immediate; resize-down is graceful — in-flight tasks
+                finish, but no new tasks admit until in-flight drops
+                below ``new_value``.
+
+        Raises:
+            ValueError: ``new_value < 1``.
+            KeyError: ``qualified_name`` is not registered. The error
+                message includes the list of valid names.
+        """
+        if new_value < 1:
+            raise ValueError(f"new_value must be >= 1, got {new_value}")
+
+        registry = self._impl._semaphore_registry
+        sem = registry.get(qualified_name)
+        if sem is None:
+            valid = sorted(registry.keys())
+            raise KeyError(
+                f"qualified_name {qualified_name!r} not found. "
+                f"Valid stage names: {valid}"
+            )
+        sem.resize(new_value)
+        # Keep the sibling registry in sync for observability.
+        # asyncio is single-threaded so this update is atomic with the
+        # semaphore.resize() above (no concurrent writer).
+        self._impl._dynamic_concurrency[qualified_name] = new_value
 
 
 class PipelineIterator(Generic[T]):
