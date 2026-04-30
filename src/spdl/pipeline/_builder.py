@@ -291,6 +291,7 @@ class PipelineBuilder(Generic[T, U]):
         queue_class: type[AsyncQueue] | None = None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         stage_id: int = 0,
+        use_priority_scheduler: bool = False,
     ) -> Pipeline[U]:
         """Build the pipeline.
 
@@ -328,6 +329,11 @@ class PipelineBuilder(Generic[T, U]):
                 To disable hooks, provide a function that returns an empty list.
 
             stage_id: The index of the initial stage  used for logging.
+
+            use_priority_scheduler: If ``True``, enable priority-based
+                dispatch for sync stages via :py:class:`PriorityScheduler`.
+                Deeper stages (closer to sink) are given higher priority,
+                reducing pipeline bubble time.
         """
         return build_pipeline(
             self.get_config(),
@@ -337,4 +343,5 @@ class PipelineBuilder(Generic[T, U]):
             report_stats_interval=report_stats_interval,
             task_hook_factory=task_hook_factory,
             stage_id=stage_id,
+            use_priority_scheduler=use_priority_scheduler,
         )

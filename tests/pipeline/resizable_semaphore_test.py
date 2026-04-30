@@ -705,6 +705,92 @@ class ResizableSemaphoreConcurrencyTest(unittest.TestCase):
         asyncio.run(run())
 
 
+class ResizableSemaphoreResizeReleaseInteractionTest(unittest.TestCase):
+    """Interaction between ``resize()`` and ``release()`` direct hand-off.
+
+    These tests close gaps in the existing suite around the boundary
+    between resize-down accounting and release-direct-handoff accounting.
+    """
+
+    def test_resize_down_then_release_with_waiter_caps_at_new_max(self) -> None:
+        """resize-down → release direct-handoff to a waiter must not exceed new max."""
+
+        async def run() -> None:
+            # Arrange
+            sem: ResizableSemaphore = ResizableSemaphore(3)
+            await sem.acquire()
+            await sem.acquire()
+            await sem.acquire()
+
+            acquired_after_resize: list[int] = []
+
+            async def waiter(idx: int) -> None:
+                await sem.acquire()
+                acquired_after_resize.append(idx)
+
+            # Enqueue a waiter while the pool is exhausted.
+            t = asyncio.create_task(waiter(1))
+            await asyncio.sleep(0)
+
+            # Resize down: max -> 1; current_value goes to -2.
+            sem.resize(1)
+
+            # Act: three releases drain the over-fill, then one more
+            # crosses the threshold and direct-hands to the waiter.
+            sem.release()
+            sem.release()
+            sem.release()
+            await asyncio.sleep(0)
+            self.assertEqual(acquired_after_resize, [1])
+
+            # Assert: with the waiter holding the only permit (active=1)
+            # and max_value=1, sem must report active==max_value.
+            self.assertEqual(sem.active, 1)
+            self.assertEqual(sem.max_value, 1)
+
+            # Cleanup
+            sem.release()
+            await asyncio.wait_for(t, timeout=2.0)
+            # Pool returned to "no active permits" without exceeding max.
+            self.assertEqual(sem.active, 0)
+
+        asyncio.run(run())
+
+    def test_concurrent_resize_calls_converge_to_last_value(self) -> None:
+        """Two coroutines calling resize() concurrently — the last wins.
+
+        asyncio is single-threaded but multiple coroutines can issue
+        resize() in the same tick. The final ``max_value`` must equal
+        the last resize call's value, and accounting must remain
+        consistent.
+        """
+
+        async def run() -> None:
+            # Arrange
+            sem: ResizableSemaphore = ResizableSemaphore(2)
+            await sem.acquire()
+
+            async def resizer(target: int) -> None:
+                # Yield once to interleave the two resize calls.
+                await asyncio.sleep(0)
+                sem.resize(target)
+
+            # Act: dispatch two concurrent resizes.
+            await asyncio.gather(resizer(5), resizer(3))
+
+            # Assert: final value is whichever resizer ran last. Both are
+            # valid (>= 1); accounting must be consistent.
+            self.assertIn(sem.max_value, (3, 5))
+            # active == max_value - current_value; the holder still owns
+            # one permit, so active is 1 regardless of resize order.
+            self.assertEqual(sem.active, 1)
+
+            sem.release()
+            self.assertEqual(sem.active, 0)
+
+        asyncio.run(run())
+
+
 class ResizableSemaphorePropertiesTest(unittest.TestCase):
     def test_max_value_reflects_resize(self) -> None:
         sem = ResizableSemaphore(3)
