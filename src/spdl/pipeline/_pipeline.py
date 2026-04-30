@@ -20,7 +20,6 @@ from enum import IntEnum
 from threading import Event as SyncEvent, Thread
 from typing import Any, Generic, TypeVar
 
-from spdl._internal import log_api_usage_once
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._components import is_epoch_end
 
