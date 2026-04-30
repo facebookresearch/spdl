@@ -27,6 +27,7 @@ from spdl.pipeline.defs import _PipeArgs
 from ._common import _EOF, _EPOCH_END, _SKIP, is_eof, is_epoch_end, StageInfo
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._queue import _queue_stage_hook, AsyncQueue
+from ._semaphore import ResizableSemaphore
 
 # pyre-strict
 
@@ -247,6 +248,7 @@ def _pipe(
     fail_counter: _FailCounter,
     task_hooks: list[TaskHook],
     op_requires_eof: bool,
+    semaphore: ResizableSemaphore | None = None,
 ) -> Coroutine:
     """Create a coroutine for processing data from input queue to output queue.
 
@@ -264,6 +266,12 @@ def _pipe(
         task_hooks: List of hooks for monitoring task execution.
         op_requires_eof: If True, pass EOF token to the operation; otherwise stop
             processing before EOF.
+        semaphore: Optional :py:class:`ResizableSemaphore` admission gate
+            (V5.6). When provided, the static ``len(tasks) >= concurrency``
+            gate is **REPLACED** by ``await semaphore.acquire()`` —
+            ``args.concurrency`` is ignored for admission control.
+            When ``None`` (default), behaviour is unchanged from
+            pre-V5: the static admission gate applies.
 
     Returns:
         A coroutine that executes the pipeline stage.
@@ -294,6 +302,26 @@ def _pipe(
     else:
         raise ValueError(f"{afunc=} must be either async function or async generator.")
 
+    # V5.6: branch ONCE outside the hot loop. When `semaphore` is provided,
+    # the admission gate is REPLACED — `await semaphore.acquire()` becomes
+    # the gate, and the static `len(tasks) >= concurrency` check is
+    # skipped entirely. When `semaphore` is None (the default), the
+    # original gate applies unchanged so there is ZERO per-task overhead
+    # added to the existing fast path.
+    if semaphore is not None:
+        return _pipe_with_semaphore(
+            info,
+            input_queue,
+            output_queue,
+            afunc,
+            _wrap,
+            args,
+            fail_counter,
+            hooks,
+            op_requires_eof,
+            semaphore,
+        )
+
     @_queue_stage_hook(output_queue)
     @_stage_hooks(hooks)
     async def pipe() -> None:
@@ -323,6 +351,85 @@ def _pipe(
                 _, tasks = await asyncio.wait(
                     tasks, return_when=asyncio.FIRST_COMPLETED
                 )
+
+            if is_eof(item):
+                break
+
+        if tasks:
+            await asyncio.wait(tasks)
+
+        if fail_counter.too_many_failures():
+            fail_counter.raise_for_failures(info)
+
+    return pipe()
+
+
+def _pipe_with_semaphore(
+    info: StageInfo,
+    input_queue: AsyncQueue,
+    output_queue: AsyncQueue,
+    # pyre-ignore[2]: afunc has a polymorphic shape (afunc / agen)
+    afunc: Callable[[T], Any],
+    # pyre-ignore[2]: _wrap closure type matches the branch in _pipe
+    _wrap: Callable[..., Coroutine],
+    args: _PipeArgs[T, U],
+    fail_counter: _FailCounter,
+    hooks: list[TaskHook],
+    op_requires_eof: bool,
+    semaphore: ResizableSemaphore,
+) -> Coroutine:
+    """V5.6 REPLACE branch: ``semaphore.acquire()`` IS the admission gate.
+
+    ``args.concurrency`` is ignored — the registered semaphore (whose value
+    is mutable via :py:meth:`Pipeline.resize_concurrency`) governs the
+    in-flight cap. Task completion calls ``semaphore.release()`` via a
+    done-callback so the admit cycle is symmetric with the gate.
+    """
+
+    # Define _on_done OUTSIDE the loop so the closure captures the
+    # single ``tasks`` set / ``semaphore`` once, and so flake8 B023
+    # ("loop variable") doesn't fire. ``tasks`` is mutated in-place via
+    # ``add()`` / ``discard()`` / ``clear()`` (never rebound) so the
+    # closure always sees the current contents.
+    tasks: set[asyncio.Task[Any]] = set()
+
+    def _on_done(t: asyncio.Task[Any]) -> None:
+        tasks.discard(t)
+        semaphore.release()
+
+    @_queue_stage_hook(output_queue)
+    @_stage_hooks(hooks)
+    async def pipe() -> None:
+        i = 0
+        while not fail_counter.too_many_failures():
+            item = await input_queue.get()
+
+            if is_epoch_end(item):
+                # Epoch boundary: wait for all in-flight tasks, propagate, continue
+                if tasks:
+                    await asyncio.wait(tasks)
+                    # Done callbacks have already discarded each task as it
+                    # completed, so ``tasks`` is empty here. Clear in-place
+                    # (no rebind) for symmetry with the static-gate branch.
+                    tasks.clear()
+                await output_queue.put(_EPOCH_END)
+                continue
+
+            if is_eof(item) and not op_requires_eof:
+                break
+
+            # V5.6 admission gate: REPLACES `len(tasks) >= args.concurrency`.
+            # `acquire()` blocks here when the in-flight count reaches the
+            # semaphore's current value (which may have been resized via
+            # Pipeline.resize_concurrency).
+            await semaphore.acquire()
+
+            task = create_task(
+                _wrap(afunc(item), item),
+                name=f"{info}:{(i := i + 1)}",
+            )
+            tasks.add(task)
+            task.add_done_callback(_on_done)
 
             if is_eof(item):
                 break

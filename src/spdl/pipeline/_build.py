@@ -31,6 +31,7 @@ from spdl.pipeline._components import (
     _get_global_id,
     _set_global_id,
     AsyncQueue,
+    ResizableSemaphore,
     StageInfo,
     TaskHook,
 )
@@ -129,6 +130,7 @@ def _build_pipeline(
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_priority_scheduler: bool = False,
+    _install_semaphores_for_test: bool = False,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
         try:
@@ -175,6 +177,18 @@ def _build_pipeline(
             lambda sched=scheduler: _PrioritySchedulerBackgroundTask(sched)
         )
 
+    # V5.1+V5.5 Diff 3a: pre-allocate the per-pipeline registries that
+    # `_components/_node.py` populates when ``_install_semaphores_for_test``
+    # is True. These are then handed off to ``_PipelineImpl.__init__`` so
+    # ``Pipeline.resize_concurrency`` (Diff 3b) can find them.
+    # ``output_queue_by_name`` (Phase D) caches each registered stage's
+    # output ``AsyncQueue`` so the Diff 6 controller can read its lap
+    # stats — the same key set as ``semaphore_registry``.
+    semaphore_registry: dict[str, ResizableSemaphore] = {}
+    dynamic_concurrency: dict[str, int] = {}
+    stage_info_by_name: dict[str, StageInfo] = {}
+    output_queue_by_name: dict[str, AsyncQueue] = {}
+
     coro, queue = _build_pipeline_coro(
         pipeline_cfg,
         max_failures=max_failures,
@@ -184,9 +198,23 @@ def _build_pipeline(
         stage_id=stage_id,
         background_tasks=all_bg_tasks or None,
         scheduler=scheduler,
+        install_semaphores_for_test=_install_semaphores_for_test,
+        semaphore_registry=semaphore_registry,
+        dynamic_concurrency=dynamic_concurrency,
+        stage_info_by_name=stage_info_by_name,
+        output_queue_by_name=output_queue_by_name,
     )
 
-    return Pipeline(coro, queue, executor, desc=desc)
+    return Pipeline(
+        coro,
+        queue,
+        executor,
+        desc=desc,
+        semaphore_registry=semaphore_registry,
+        dynamic_concurrency=dynamic_concurrency,
+        stage_info_by_name=stage_info_by_name,
+        output_queue_by_name=output_queue_by_name,
+    )
 
 
 def build_pipeline(
@@ -201,6 +229,7 @@ def build_pipeline(
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_priority_scheduler: bool = False,
+    _install_semaphores_for_test: bool = False,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -271,6 +300,16 @@ def build_pipeline(
             dispatch for sync stages via :py:class:`PriorityScheduler`.
             Deeper stages (closer to sink) are given higher priority,
             reducing pipeline bubble time.
+
+        _install_semaphores_for_test: **Test-only.** When ``True``, every
+            ``Pipe`` stage is built with a :py:class:`ResizableSemaphore`
+            whose initial value matches its static ``concurrency``, and
+            the semaphore is wired to the V5.6 REPLACE admission gate in
+            :py:func:`~spdl.pipeline._components._pipe._pipe`. Used by
+            the V5.5 throughput regression test and the
+            :py:meth:`Pipeline.resize_concurrency` continuous-mode test.
+            Production code MUST NOT pass this — it bypasses the
+            selective opt-in semantics of ``Pipeline.resize_concurrency``.
     """
     from . import _profile
 
@@ -287,6 +326,7 @@ def build_pipeline(
         stage_id=stage_id,
         background_tasks=background_tasks,
         use_priority_scheduler=use_priority_scheduler,
+        _install_semaphores_for_test=_install_semaphores_for_test,
     )
 
 
