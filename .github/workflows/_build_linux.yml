@@ -148,6 +148,7 @@ jobs:
         run: |
           set -ex
 
+          python -m venv /opt/venv && . /opt/venv/bin/activate
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
             conda install -q -c conda-forge python-freethreading
           fi
@@ -201,6 +202,7 @@ jobs:
         run: |
           set -ex
 
+          python -m venv /opt/venv && . /opt/venv/bin/activate
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
             conda install -q -c conda-forge python-freethreading
           fi
