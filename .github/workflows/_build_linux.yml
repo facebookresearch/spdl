@@ -208,7 +208,7 @@ jobs:
           fi
 
           # Install SPDL
-          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          pip install -vv $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install deps
           pip install numpy nanobind==2.8.0 typing_extensions
