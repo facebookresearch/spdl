@@ -137,6 +137,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Dependency Check
         run: |
+          python -m venv /opt/venv && . /opt/venv/bin/activate
           # Install NumPy (the only dep) of SPDL manually, so that
           # if a dependency is introduced accidentally, check_deps will catch
           pip install numpy
@@ -167,28 +168,32 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: ${{ inputs.python-version }}
           channels: conda-forge
           conda-remove-defaults: "true"
+          auto-activate: true
+          activate-environment: "test_env"
 
       - name: Setup
         run: |
           set -ex
 
+          packages=(pip)
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            conda install -q -c conda-forge python-freethreading
+            packages+=(python-freethreading)
           fi
+          conda install -q -c conda-forge -n test_env "${packages[@]}"
 
           # Install SPDL
-          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          conda run -n test_env python -m pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install PyTorch and others
-          pip install pytest pytest-xdist parameterized
+          conda run -n test_env python -m pip install pytest pytest-xdist parameterized
 
           cu_ver="${{ inputs.cuda-version }}"
           cu_ver="${cu_ver//[.]/}"  # Remove dots  12.4.1 -> 1241
           cu_ver="${cu_ver:0:3}"  # Retain three chars 1241 -> 124
-          pip install numpy torch --index-url "https://download.pytorch.org/whl/cu${cu_ver}"
+          conda run -n test_env python -m pip install numpy torch --index-url "https://download.pytorch.org/whl/cu${cu_ver}"
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
@@ -245,20 +250,24 @@ jobs:
           python-version: ${{ inputs.python-version }}
           channels: conda-forge
           conda-remove-defaults: "true"
+          auto-activate: true
+          activate-environment: "test_env"
 
       - name: Setup
         run: |
           set -ex
 
+          packages=(pip)
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            conda install -q -c conda-forge python-freethreading
+            packages+=(python-freethreading)
           fi
+          conda install -q -c conda-forge -n test_env "${packages[@]}"
 
           # Install SPDL
-          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          conda run -n test_env python -m pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install PyTorch and others
-          pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
+          conda run -n test_env python -m pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
           conda install -q numba pytest pytest-xdist parameterized
 
           # Install FFmpeg
@@ -271,6 +280,7 @@ jobs:
       - name: Unit test
         run: |
           set -ex
+
           pytest -v -n ${{ inputs.test-concurrency }} \
               tests/io \
               tests/dataloader \
@@ -297,20 +307,24 @@ jobs:
           python-version: ${{ inputs.python-version }}
           channels: conda-forge
           conda-remove-defaults: "true"
+          auto-activate: true
+          activate-environment: "test_env"
 
       - name: Setup
         run: |
           set -ex
 
+          packages=(pip)
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            conda install -q -c conda-forge python-freethreading
+            packages+=(python-freethreading)
           fi
+          conda install -q -c conda-forge -n test_env "${packages[@]}"
 
           # Install SPDL
-          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          conda run -n test_env python -m pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
 
           # Install deps
-          pip install numpy nanobind==2.8.0 typing_extensions
+          conda run -n test_env python -m pip install numpy nanobind==2.8.0 typing_extensions
 
           # Install CUDA
           cuda_ver="${{ inputs.cuda-version }}"
@@ -331,7 +345,8 @@ jobs:
       - name: Generate stubs
         run: |
           set -ex
-          python src/spdl/io/lib/stubgen.py --output-dir src/spdl/io/lib
+
+          conda run -n test_env python src/spdl/io/lib/stubgen.py --output-dir src/spdl/io/lib
           git diff --exit-code
 
       - uses: actions/upload-artifact@v4
