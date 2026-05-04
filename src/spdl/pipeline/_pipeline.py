@@ -9,6 +9,7 @@
 import asyncio
 import concurrent.futures
 import logging
+import queue
 import time
 import warnings
 import weakref
@@ -20,9 +21,8 @@ from enum import IntEnum
 from threading import Event as SyncEvent, Thread
 from typing import Any, Generic, TypeVar
 
-from spdl._internal import log_api_usage_once
 from spdl.pipeline._common._misc import create_task
-from spdl.pipeline._components import is_epoch_end
+from spdl.pipeline._components import _ThreadBasedAsyncQueue, is_epoch_end
 
 __all__ = ["Pipeline"]
 
@@ -292,6 +292,11 @@ class _PipelineImpl(Generic[T]):
         if not self._event_loop.is_started():
             raise RuntimeError("Pipeline is not started.")
 
+        if isinstance(self._output_queue, _ThreadBasedAsyncQueue):
+            return self._get_item_thread_queue(timeout=timeout)
+        return self._get_item_async_queue(timeout=timeout)
+
+    def _get_item_async_queue(self, *, timeout: float | None) -> T:
         # The event loop (thread) was started, but it might be stopped by now.
         # However, what matters for `get_item` method is whether the task is running or not.
         # Because if the task is running, then accessing the sink queue must be done through
@@ -345,6 +350,30 @@ class _PipelineImpl(Generic[T]):
         _LG.debug("EventLoop: %s", str(self._event_loop))
 
         raise TimeoutError(f"The next item is not available after {elapsed:.1f} sec.")
+
+    def _get_item_thread_queue(self, *, timeout: float | None) -> T:
+        q = self._output_queue._queue  # pyre-ignore[16]
+
+        if self._event_loop.is_task_completed():
+            if not q.empty():
+                return q.get_nowait()
+            self._event_loop.stop()
+            raise EOFError(_EOF_MSG)
+
+        max_elapsed = float("inf") if timeout is None else timeout
+        t0 = time.monotonic()
+        while (elapsed := time.monotonic() - t0) < max_elapsed:
+            remaining = max_elapsed - elapsed
+            try:
+                return q.get(timeout=min(0.1, remaining))
+            except queue.Empty:
+                if self._event_loop.is_task_completed() and q.empty():
+                    self._event_loop.stop()
+                    raise EOFError(_EOF_MSG) from None
+
+        raise TimeoutError(
+            f"The next item is not available after {time.monotonic() - t0:.1f} sec."
+        )
 
 
 ################################################################################
