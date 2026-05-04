@@ -8,10 +8,12 @@
 
 import asyncio
 import logging
+import queue
 import time
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from typing import Any
 
 from spdl.pipeline._common._misc import create_task
 
@@ -20,6 +22,7 @@ from ._common import _EOF, _periodic_dispatch, _StatsCounter, _time_str, StageIn
 __all__ = [
     "_queue_stage_hook",
     "AsyncQueue",
+    "_ThreadBasedAsyncQueue",
     "StatsQueue",
     "QueuePerfStats",
     "set_default_queue_class",
@@ -334,6 +337,74 @@ class StatsQueue(AsyncQueue):
             100 * stats.occupancy_rate,
             stacklevel=2,
         )
+
+
+class _ThreadBasedAsyncQueue(AsyncQueue):
+    """AsyncQueue backed by :py:class:`queue.Queue` instead of
+    :py:class:`asyncio.Queue`.
+
+    The default :py:class:`AsyncQueue` is an :py:class:`asyncio.Queue`.
+    When the foreground (non-async) consumer thread needs the next item,
+    it must go through ``asyncio.run_coroutine_threadsafe`` to schedule a
+    ``get()`` coroutine on the background event loop, then poll the
+    resulting ``Future``.  This cross-thread coroutine scheduling adds
+    ~200-280us of CPU-side overhead per call — a fixed tax that cannot be
+    hidden by GPU compute overlap.
+
+    This class replaces the underlying storage with a standard
+    :py:class:`queue.Queue`, whose blocking ``get``/``put`` release the
+    GIL while waiting.  The async ``put``/``get`` methods delegate to the
+    queue via ``run_in_executor`` so the event loop is never blocked.
+    The foreground consumer can also call ``_queue.get(timeout=...)``
+    directly, bypassing the asyncio event loop entirely and reducing
+    handoff latency to ~10us when an item is already available.
+
+    Benchmark (devserver, 500 int items, simulated foreground work)::
+
+        FG work   default (p50)   default (p99)   thread_q (p50)   thread_q (p99)
+        -------   -------------   -------------   --------------   --------------
+          0ms         199us           625us           116us            313us
+          3ms         246us           642us           223us            646us
+          6ms         232us           532us           190us            555us
+          9ms         287us           485us           153us            549us
+         12ms         280us           822us            14us            464us
+         15ms         221us           396us             8us            385us
+         18ms         227us           431us             9us             70us
+         21ms         224us           450us            11us             41us
+         24ms         240us           533us            12us             34us
+         27ms         227us           470us            12us             27us
+         30ms         242us           512us            12us             26us
+
+    See ``spdl/examples/benchmark_thread_output_queue.py`` for the full
+    benchmark.
+    """
+
+    def __init__(
+        self,
+        info: StageInfo,
+        *,
+        buffer_size: int = 1,
+    ) -> None:
+        # Skip asyncio.Queue.__init__ — we don't use the underlying queue.
+        self.info = info
+        self._queue: queue.Queue[Any] = queue.Queue(maxsize=buffer_size)
+
+    async def put(self, item: object) -> None:
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._queue.put, item)  # pyre-ignore[32]
+
+    async def get(self) -> object:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._queue.get)  # pyre-ignore[32]
+
+    def get_nowait(self) -> object:
+        return self._queue.get_nowait()
+
+    def empty(self) -> bool:
+        return self._queue.empty()
+
+    def qsize(self) -> int:
+        return self._queue.qsize()
 
 
 _DEFAULT_QUEUE_CLASS: type[AsyncQueue] = StatsQueue

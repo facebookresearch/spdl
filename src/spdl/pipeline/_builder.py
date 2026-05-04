@@ -291,6 +291,7 @@ class PipelineBuilder(Generic[T, U]):
         queue_class: type[AsyncQueue] | None = None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         stage_id: int = 0,
+        use_thread_output_queue: bool = False,
     ) -> Pipeline[U]:
         """Build the pipeline.
 
@@ -328,6 +329,10 @@ class PipelineBuilder(Generic[T, U]):
                 To disable hooks, provide a function that returns an empty list.
 
             stage_id: The index of the initial stage  used for logging.
+
+            use_thread_output_queue: If ``True``, replace the sink's output queue with a
+                ``queue.Queue``-backed queue for lower-latency batch handoff.
+                Default: ``False``.
         """
         return build_pipeline(
             self.get_config(),
@@ -337,4 +342,5 @@ class PipelineBuilder(Generic[T, U]):
             report_stats_interval=report_stats_interval,
             task_hook_factory=task_hook_factory,
             stage_id=stage_id,
+            use_thread_output_queue=use_thread_output_queue,
         )

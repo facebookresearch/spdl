@@ -40,7 +40,7 @@ from ._pipe import (
     _ordered_pipe,
     _pipe,
 )
-from ._queue import AsyncQueue, get_default_queue_class
+from ._queue import _ThreadBasedAsyncQueue, AsyncQueue, get_default_queue_class
 from ._sink import _sink
 from ._source import _source, _source_continuous
 from ._variants import _path_variants_router
@@ -431,6 +431,7 @@ def _convert_config(
     pipeline_id: int,
     stage_id: _MutableInt,
     disable_sink: bool = False,
+    use_thread_output_queue: bool = False,
 ) -> _TOutputNodes:
     """Convert a :py:class:`~spdl.pipeline.defs.PipelineConfig` into a linked list of
     :py:class:`~spdl.pipeline._components._node._Node` objects.
@@ -472,7 +473,10 @@ def _convert_config(
     if not disable_sink:
         info = _get_stage_info(plc.sink, pipeline_id, stage_id)
         stage_id += 1
-        sink_out_q = q_class(info, buffer_size=plc.sink.buffer_size)
+        if use_thread_output_queue:
+            sink_out_q = _ThreadBasedAsyncQueue(info, buffer_size=plc.sink.buffer_size)
+        else:
+            sink_out_q = q_class(info, buffer_size=plc.sink.buffer_size)
         n = _Node(
             info, plc.sink, [n], input_queue=n.output_queue, output_queue=sink_out_q
         )
@@ -696,6 +700,7 @@ def _build_pipeline_node(
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None,
     stage_id: int,
+    use_thread_output_queue: bool = False,
 ) -> _TOutputNodes:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
@@ -708,7 +713,13 @@ def _build_pipeline_node(
     )
 
     fc_class = _get_fail_counter()
-    node = _convert_config(plc, q_class, _PIPELINE_ID, _MutableInt(stage_id))
+    node = _convert_config(
+        plc,
+        q_class,
+        _PIPELINE_ID,
+        _MutableInt(stage_id),
+        use_thread_output_queue=use_thread_output_queue,
+    )
     _validate_continuous_mode(node)
     _build_node_recursive(node, fc_class, hook_factory, max_failures)
     return node
@@ -758,7 +769,7 @@ def _cancel_recursive(node: _TNodes) -> None:
 
 def _cancel_orphaned(node: _TNodes) -> None:
     """
-    Cancel upstream tasks when the current node's task has completed to prevent orphaned producers.
+    Cancel upstream tasks when this node's task completes to avoid leaving producer tasks orphaned.
 
     This function traverses the pipeline graph upstream from the given node.
     If the current node's asyncio Task is done (completed, errored, or cancelled),
@@ -950,6 +961,7 @@ def _build_pipeline_coro(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: Sequence[BackgroundTaskFactory] | None = None,
+    use_thread_output_queue: bool = False,
 ) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
     try:
         node = _build_pipeline_node(
@@ -959,6 +971,7 @@ def _build_pipeline_coro(
             queue_class=queue_class,
             task_hook_factory=task_hook_factory,
             stage_id=stage_id,
+            use_thread_output_queue=use_thread_output_queue,
         )
         coro = _run_pipeline_coroutines(node, background_tasks=background_tasks)
 
