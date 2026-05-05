@@ -128,6 +128,7 @@ def _build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
+    use_thread_output_queue: bool = False,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
         try:
@@ -155,6 +156,7 @@ def _build_pipeline(
         task_hook_factory=task_hook_factory,
         stage_id=stage_id,
         background_tasks=all_bg_tasks or None,
+        use_thread_output_queue=use_thread_output_queue,
     )
 
     executor = ThreadPoolExecutor(
@@ -175,6 +177,7 @@ def build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
+    use_thread_output_queue: bool = False,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -240,6 +243,12 @@ def build_pipeline(
             :py:meth:`~BackgroundTask.run` method runs alongside the pipeline stages.
             Tasks are cancelled when the pipeline completes. Their errors are logged
             but do not cause the pipeline to fail.
+
+        use_thread_output_queue: If ``True``, replace the sink's output queue with a
+            :py:class:`queue.Queue`-backed queue for the final handoff from the
+            background event loop to the foreground consumer thread. This bypasses
+            ``asyncio.run_coroutine_threadsafe``, reducing per-batch latency from
+            ~200-400us to ~10us. Default: ``False``.
     """
     from . import _profile
 
@@ -255,6 +264,7 @@ def build_pipeline(
         task_hook_factory=task_hook_factory,
         stage_id=stage_id,
         background_tasks=background_tasks,
+        use_thread_output_queue=use_thread_output_queue,
     )
 
 
@@ -283,6 +293,7 @@ class _Wrapper(Generic[U]):
         queue_class: type[AsyncQueue] | None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         background_tasks: list[BackgroundTaskFactory] | None = None,
+        use_thread_output_queue: bool = False,
     ) -> None:
         self.config = config
         self.num_threads = num_threads
@@ -291,6 +302,7 @@ class _Wrapper(Generic[U]):
         self.queue_class = queue_class
         self.task_hook_factory = task_hook_factory
         self.background_tasks = background_tasks
+        self.use_thread_output_queue = use_thread_output_queue
         self._pipeline: Pipeline[U] | None = None
         if _has_continuous_source(config):
             self._pipeline = self._build()
@@ -305,6 +317,7 @@ class _Wrapper(Generic[U]):
             queue_class=self.queue_class,
             task_hook_factory=self.task_hook_factory,
             background_tasks=self.background_tasks,
+            use_thread_output_queue=self.use_thread_output_queue,
         )
 
     def __iter__(self) -> Iterator[U]:
@@ -340,6 +353,7 @@ def run_pipeline_in_subprocess(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
+    use_thread_output_queue: bool = False,
     **kwargs: Any,
 ) -> Iterable[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
@@ -405,6 +419,7 @@ def run_pipeline_in_subprocess(
             queue_class=queue_class,
             task_hook_factory=task_hook_factory,
             background_tasks=background_tasks,
+            use_thread_output_queue=use_thread_output_queue,
         ),
         initializer=initializer,
         **kwargs,
@@ -426,6 +441,7 @@ def run_pipeline_in_subinterpreter(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
+    use_thread_output_queue: bool = False,
     **kwargs: Any,
 ) -> Iterable[T]:
     """**[Experimental]** Run the given Pipeline in a subinterpreter, and iterate on the result.
@@ -471,6 +487,7 @@ def run_pipeline_in_subinterpreter(
             queue_class=queue_class,
             task_hook_factory=task_hook_factory,
             background_tasks=background_tasks,
+            use_thread_output_queue=use_thread_output_queue,
         ),
         initializer=initializer,
         **kwargs,
