@@ -153,7 +153,7 @@ def to_torch(buffer: "ArrayInterface | CUDABuffer") -> "Tensor":
     return torch.as_tensor(np.array(buffer, copy=False))
 
 
-def to_numba(buffer: ArrayInterface | CUDAArrayInterface):  # pyre-ignore[3]
+def to_numba(buffer: ArrayInterface | CUDAArrayInterface) -> object:
     """Convert to Numba DeviceNDArray or NumPy NDArray.
 
     Args:
@@ -173,7 +173,7 @@ def to_numba(buffer: ArrayInterface | CUDAArrayInterface):  # pyre-ignore[3]
     return np.array(buffer, copy=False)
 
 
-def to_jax(buffer: ArrayInterface):  # pyre-ignore[3]
+def to_jax(buffer: ArrayInterface) -> object:
     """Convert to JAX Array.
 
     Args:
