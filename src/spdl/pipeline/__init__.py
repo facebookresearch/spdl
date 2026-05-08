@@ -38,6 +38,12 @@ from ._pgrp_stats import (
     ProcessGroupStatsMonitor,
 )
 from ._pipeline import Pipeline
+from ._priority_executor import (
+    PriorityExecutorEntrypoint,
+    PriorityProcessPoolExecutor,
+    PriorityThreadPoolExecutor,
+)
+from ._priority_interpreter_executor import PriorityInterpreterPoolExecutor
 from ._profile import profile_pipeline, ProfileHook, ProfileResult
 
 __all__ = [
@@ -63,6 +69,10 @@ __all__ = [
     "StageInfo",
     "StatsQueue",
     "QueuePerfStats",
+    "PriorityExecutorEntrypoint",
+    "PriorityInterpreterPoolExecutor",
+    "PriorityThreadPoolExecutor",
+    "PriorityProcessPoolExecutor",
     "iterate_in_subinterpreter",
     "iterate_in_subprocess",
     "run_pipeline_in_subprocess",

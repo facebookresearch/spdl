@@ -25,6 +25,20 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
+def _is_process_pool(executor: Executor | type[Executor] | None) -> bool:
+    """Check if executor is or wraps a ProcessPoolExecutor."""
+    if isinstance(executor, ProcessPoolExecutor):
+        return True
+    pool_cls = getattr(executor, "_pool_executor_class", None)
+    if pool_cls is not None:
+        return issubclass(pool_cls, ProcessPoolExecutor)
+    # PriorityExecutorEntrypoint: resolve via _owner property
+    owner = getattr(executor, "_owner", None)
+    if owner is not None:
+        return _is_process_pool(owner)
+    return False
+
+
 def _func_in_subprocess(func: Callable[[T], U], item: T) -> U:
     try:
         return func(item)
@@ -45,7 +59,7 @@ def _to_async(
     func: Callable[[T], U],
     executor: type[Executor] | None,
 ) -> Callable[[T], Awaitable[U]]:
-    if isinstance(executor, ProcessPoolExecutor):
+    if _is_process_pool(executor):
 
         async def afunc(item: T) -> U:
             loop = asyncio.get_running_loop()
@@ -66,7 +80,7 @@ def _wrap_gen(generator: Callable[[T], Iterable[U]], item: T) -> list[U]:
 
 def _to_batch_async_gen(
     func: Callable[[T], Iterable[U]],
-    executor: ProcessPoolExecutor,
+    executor: Executor,
 ) -> Callable[[T], AsyncIterable[U]]:
     async def afunc(item: T) -> AsyncIterable[U]:
         loop = asyncio.get_running_loop()
@@ -132,9 +146,10 @@ def convert_to_async(
 
     if inspect.isgeneratorfunction(op):
         # op is sync generator. Convert to async generator.
-        if isinstance(executor, ProcessPoolExecutor):
+        if _is_process_pool(executor):
             # If executing in subprocess, data can be only exchanged at the end
             # of the generator.
+            assert isinstance(executor, Executor)
             return _to_batch_async_gen(op, executor=executor)
         return _to_async_gen(op, executor=executor)
 
