@@ -1,0 +1,1 @@
+../../skills/pipeline_perf/optimization_strategies.md
