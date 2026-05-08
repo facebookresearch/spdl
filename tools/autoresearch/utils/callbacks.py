@@ -290,6 +290,9 @@ def _get_plan(
                 last_analysis = afile.read_text()
                 break
 
+    findings_file = workdir / "findings.md"
+    findings = findings_file.read_text() if findings_file.exists() else "(none yet)"
+
     prompt = load_prompt(
         "plan_next",
         KNOWLEDGE=knowledge,
@@ -309,6 +312,7 @@ def _get_plan(
         BUILD_COMMAND=config.get("build_command", ""),
         CACHED_IMAGE=(state.get("cached_image") or "(none — build first)"),
         HISTORY_JSON=json.dumps(state["history"], indent=2)[:6000],
+        FINDINGS=findings[:4000],
         NOTES=config.get("notes", ""),
     )
 
@@ -648,7 +652,27 @@ def update_on_complete(
 
     _update_plateau(state, cur_val)
 
+    _append_findings(workdir, node.name, result.structured)
+
     write_state(workdir, state)
+
+
+def _append_findings(workdir: Path, name: str, structured: dict | None) -> None:
+    """Append new findings from an experiment to findings.md."""
+    if not structured:
+        return
+    findings = structured.get("findings", [])
+    if not findings:
+        return
+
+    findings_file = workdir / "findings.md"
+    lines = []
+    if not findings_file.exists():
+        lines.append("# Accumulated Findings\n\n")
+    for fact in findings:
+        lines.append(f"- [{name}] {fact}\n")
+    with open(findings_file, "a") as f:
+        f.writelines(lines)
 
 
 def update_summary_and_plot(workdir: Path, state: dict) -> None:
