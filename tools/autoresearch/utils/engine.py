@@ -38,6 +38,169 @@ Usage::
 
     # Ctrl+C to stop gracefully — state is persisted to disk.
     # Re-run to resume from where it left off.
+
+
+Requirements
+============
+
+The following requirements are testable with mock callbacks. Each
+requirement has a tag (R-XX) for traceability in unit tests.
+
+Concurrency
+-----------
+
+R-01  At most ``max_concurrency`` nodes may be in "running" status
+      simultaneously. The engine must not launch more tasks than
+      there are available slots.
+
+R-02  When a task completes and a slot opens, the engine fills the
+      slot from the priority queue within one event loop tick (no
+      unnecessary delay).
+
+R-03  ``prepare_fn`` calls are serialized via ``_state_lock`` — two
+      prepare calls must never execute their thread-pool work at the
+      same time (shared working directory).
+
+Immediate Analysis
+------------------
+
+R-04  When a job reaches a terminal status ("completed" or "failed"),
+      the engine calls ``analyze_fn`` immediately — it does not wait
+      for other running jobs to finish first.
+
+R-05  ``analyze_fn`` and ``on_node_complete`` are serialized via
+      ``_state_lock`` — they must not run concurrently with each
+      other or with ``prepare_fn`` / ``plan_fn``.
+
+Tree Structure
+--------------
+
+R-06  After analyzing a completed node, the engine calls ``plan_fn``
+      which returns a list of child experiment specs. Each spec
+      becomes a new ``HypothesisNode`` with ``parent_id`` set to the
+      completed node's ``node_id``.
+
+R-07  Child nodes inherit the parent's ``commit`` value by default.
+
+R-08  The completed node's ``children`` list is updated to include
+      all newly created child node IDs.
+
+Priority Queue
+--------------
+
+R-09  Nodes are dequeued in priority order (lowest ``priority`` value
+      first).
+
+R-10  After each completion, if ``reprioritize_fn`` is provided, the
+      queue is re-sorted using the updated priorities.
+
+R-11  When ``plan_fn`` returns an empty list, no children are
+      enqueued.
+
+Deduplication
+-------------
+
+R-12  If a proposed child spec has the same ``name`` as any existing
+      node in the tree, it is rejected (not enqueued).
+
+R-13  If a proposed child spec has the same ``launch_command`` and
+      ``rebuild=False`` as any existing node, it is rejected even
+      if the name differs (semantic dedup).
+
+Stuck Detection
+---------------
+
+R-14  If ``progress_fn`` is provided and returns a non-None value
+      that has not changed for ``job_timeout_s`` seconds, the engine
+      calls ``cancel_fn`` and marks the node as failed.
+
+R-15  If ``progress_fn`` returns None (no signal), the stall timer
+      resets — the engine gives benefit of the doubt.
+
+R-16  If ``progress_fn`` has NEVER returned a non-None value for a
+      node (training never started) and the wall-clock time exceeds
+      ``3 * job_timeout_s``, the engine kills the job (OOM / init
+      hang fast-fail).
+
+R-17  If ``progress_fn`` is not provided, the engine falls back to
+      a simple wall-clock timeout: kill after ``job_timeout_s``
+      total elapsed time.
+
+Lifecycle and Status
+--------------------
+
+R-18  Each node progresses through statuses in order:
+      ``queued → preparing → running → analyzing → completed/failed``.
+
+R-19  A node whose ``prepare_fn`` returns False goes directly to
+      ``failed`` (skipping running/analyzing).
+
+R-20  A node whose ``launch_fn`` returns None goes directly to
+      ``failed`` (skipping running/analyzing).
+
+Stopping
+--------
+
+R-21  The engine stops when the queue is empty, no tasks are running,
+      and ``should_stop_fn`` returns True.
+
+R-22  When ``should_stop_fn`` returns True but tasks are still
+      running, the engine drains them (waits for completion, does
+      NOT enqueue new children) before exiting.
+
+R-23  When all initial nodes are processed and no follow-ups are
+      produced, the engine exits even if ``should_stop_fn`` returns
+      False.
+
+Graceful Shutdown
+-----------------
+
+R-24  On SIGINT or SIGTERM, all running tasks are cancelled. The
+      engine persists tree, queue, and active jobs to disk before
+      exiting. ``engine_state.json`` shows ``"interrupted"``.
+
+R-25  Running jobs on the remote side are NOT cancelled by the
+      engine — they continue independently.
+
+R-26  On resume (``load_state`` + ``run``), nodes that were
+      "running" are re-checked: if completed/failed, they are
+      queued for analysis; if still running, they are re-polled.
+
+Persistence
+-----------
+
+R-27  After every node status change, the node is persisted to
+      ``engine/nodes/<node_id>/spec.json`` + ``status.txt``.
+
+R-28  After every queue modification, ``engine/queue.json`` is
+      updated.
+
+R-29  On completion or shutdown, ``engine/tree.json`` contains
+      the full serialized tree.
+
+R-30  ``engine/engine_state.json`` reflects the current engine
+      status (``running``, ``stopped``, ``interrupted``) with
+      node counts.
+
+WorkQueue
+---------
+
+R-31  ``_WorkQueue.push`` maintains sorted order.
+
+R-32  ``_WorkQueue.pop`` returns the lowest-priority node ID and
+      removes it. Returns None when empty.
+
+R-33  ``_WorkQueue.reprioritize`` re-sorts without losing entries.
+
+R-34  ``_WorkQueue.from_list`` round-trips with ``to_list``.
+
+HypothesisNode
+--------------
+
+R-35  ``to_dict`` / ``from_dict`` round-trip correctly for all
+      fields, including defaults.
+
+R-36  ``from_dict`` ignores unknown keys (forward compatibility).
 """
 
 from __future__ import annotations
@@ -599,6 +762,7 @@ class ExperimentEngine:
 
         last_progress: str | None = None
         stall_start = time.monotonic()
+        ever_progressed = False
 
         status = "running"
         while True:
@@ -607,13 +771,18 @@ class ExperimentEngine:
                 _LG.info("Node %s job %s: %s", node.node_id, node.job_id, status)
                 break
 
-            if await self._check_stalled(node, last_progress, stall_start):
+            if await self._check_stalled(
+                node, last_progress, stall_start, ever_progressed
+            ):
                 status = "failed"
                 break
 
+            prev_progress = last_progress
             last_progress, stall_start = await self._update_progress(
                 node, last_progress, stall_start
             )
+            if last_progress is not None and last_progress != prev_progress:
+                ever_progressed = True
 
             await asyncio.sleep(self.poll_interval)
 
@@ -624,13 +793,34 @@ class ExperimentEngine:
         node: HypothesisNode,
         last_progress: str | None,
         stall_start: float,
+        ever_progressed: bool = True,
     ) -> bool:
-        """Check if a job has stalled and kill it if so. Returns True if killed."""
+        """Check if a job has stalled and kill it if so. Returns True if killed.
+
+        Two modes:
+        - If training has started (ever_progressed=True): kill after
+          job_timeout_s with no progress change.
+        - If training never started (ever_progressed=False): apply a
+          hard 3x wall-clock ceiling to catch OOM / init hangs. These
+          jobs produce no [autoresearch] progress lines, so stall_start
+          keeps resetting — the ceiling prevents infinite runs.
+        """
+        elapsed = time.monotonic() - (node.launched_at or stall_start)
+
+        if not ever_progressed and elapsed > self.job_timeout_s * 3:
+            _LG.warning(
+                "Node %s job %s never started training (%.0fs), killing",
+                node.node_id,
+                node.job_id,
+                elapsed,
+            )
+            await self.cancel_fn(node.job_id)
+            return True
+
         stall_duration = time.monotonic() - stall_start
         if stall_duration <= self.job_timeout_s:
             return False
 
-        elapsed = time.monotonic() - (node.launched_at or stall_start)
         _LG.warning(
             "Node %s job %s stuck — no progress for %.0fs (%.0fs total), killing",
             node.node_id,
@@ -723,6 +913,7 @@ class ExperimentEngine:
             node.duration = result.duration
             self._persist_node(node)
             self._persist_active()
+            self._persist_tree()
 
             if self.on_node_complete:
                 await self.on_node_complete(node, result)
@@ -766,12 +957,26 @@ class ExperimentEngine:
         )
 
     def _is_duplicate(self, spec: dict) -> bool:
-        """Check if an experiment with the same name already exists."""
+        """Check if a semantically equivalent experiment already exists.
+
+        Checks both name match and launch parameter match (same
+        launch_command + same rebuild flag = same experiment regardless
+        of name).
+        """
         name = spec.get("name", "")
-        if not name:
-            return False
+        launch_cmd = spec.get("launch_command", "")
+        rebuild = spec.get("rebuild", False)
+
         for node in self._tree.values():
-            if node.name == name:
+            if name and node.name == name:
+                return True
+            existing = node.spec
+            if (
+                launch_cmd
+                and existing.get("launch_command") == launch_cmd
+                and existing.get("rebuild", False) == rebuild
+                and not rebuild
+            ):
                 return True
         return False
 
@@ -854,13 +1059,17 @@ class ExperimentEngine:
             json.dumps(state, indent=2) + "\n"
         )
 
-    def _persist_all(self) -> None:
-        """Persist tree, queue, and active state."""
+    def _persist_tree(self) -> None:
+        """Write the full hypothesis tree to engine/tree.json."""
         self._engine_dir.mkdir(parents=True, exist_ok=True)
         tree_data = [n.to_dict() for n in self._tree.values()]
         (self._engine_dir / "tree.json").write_text(
             json.dumps(tree_data, indent=2) + "\n"
         )
+
+    def _persist_all(self) -> None:
+        """Persist tree, queue, and active state."""
+        self._persist_tree()
         self._persist_queue()
         self._persist_active()
 

@@ -44,6 +44,12 @@ __HISTORY_JSON__
 __PIPELINE_CODE__
 ```
 
+### Accumulated Findings
+
+The following facts have been established by previous experiments. **Respect these findings — do NOT propose experiments that contradict them.**
+
+__FINDINGS__
+
 ### Additional Context
 __NOTES__
 
@@ -93,17 +99,32 @@ Propose **2-3 experiments per iteration** to make efficient use of compute. The 
    - If Tier 1 was tried (module-level functions with `functools.partial`, re-creating objects in subprocess) and failed, retry with Tier 2 (picklable callable classes that pickle objects directly from the main process, avoiding subprocess imports). Write the `description` field to explicitly specify "Use Tier 2 pickling approach — pickle tokenizer/data objects directly instead of re-creating them in the subprocess."
    - Do NOT mark `subprocess_mtp` as tried until at least one MTP attempt has succeeded or both tiers have been tried.
 
-2. **If all best practices are tried and results are still improving**: Continue with Bayesian optimization principles:
+2. **Use headspace to guide priorities**: Look at the headspace result in the Master Table (the `headspace_cache` row). If headspace is **less than 10%**, data loading is NOT the bottleneck — pivot immediately to model-side optimizations:
+   - `torch.compile` — often the single biggest win (20-40% step time reduction)
+   - Optimizer changes (fused AdamW, FSDP settings)
+   - Mixed precision / gradient scaling
+   - Batch size scaling (to saturate GPU compute, not to fix data loading)
+
+   Do NOT spend experiments sweeping pipeline parameters (num_workers, concurrency) when headspace is <10%. Those will yield <10% improvement at most.
+
+3. **Mark hypotheses as concluded**: Before proposing an experiment, check if the hypothesis has already been tested and disproven:
+   - If **3+ experiments** have shown that varying a parameter (e.g., num_workers) has **no meaningful effect** (<2% difference), that parameter is concluded — do not test more values.
+   - If a batch size caused OOM once, do NOT retry the same or larger batch size.
+   - If a structural change (e.g., fused optimizer) was tried and regressed, do not re-test it unless the approach is fundamentally different.
+
+   State your conclusions explicitly in the reasoning before proposing experiments.
+
+4. **If all best practices are tried and results are still improving**: Continue with Bayesian optimization principles:
    - Model the parameter → metric relationship from history
    - Pick values that maximize expected improvement
    - Balance exploration (untested regions) vs exploitation (near the current best)
    - Respect constraints: CPU ≤ 40%, concurrency ≤ num_CPU_cores / 8
 
-3. **If parameter tuning has plateaued** (diminishing returns across recent iterations): Propose a structural change — splitting stages, different I/O functions, different pipeline topology. The orchestrator can modify source code in-place. Describe the code changes in the experiment's `"description"` field and set `"rebuild": true`.
+5. **If parameter tuning has plateaued** (diminishing returns across recent iterations): Propose a structural change — splitting stages, different I/O functions, different pipeline topology. The orchestrator can modify source code in-place. Describe the code changes in the experiment's `"description"` field and set `"rebuild": true`.
 
-4. **If results are noisy or contradictory**: Propose a repeat of the best configuration to confirm, plus one new exploration point.
+6. **If results are noisy or contradictory**: Propose a repeat of the best configuration to confirm, plus one new exploration point.
 
-5. **Only stop** (`"action": "stop"`) when:
+7. **Only stop** (`"action": "stop"`) when:
    - ALL best practices have been tried (the "Not yet tried" list is empty), AND
    - Metrics have plateaued for __PATIENCE__ consecutive iterations (the plateau count has reached __PATIENCE__)
    - If either condition is not met, you MUST continue with `"action": "launch"`.
@@ -131,10 +152,10 @@ Output your reasoning, then a JSON block:
 ```
 
 Rules:
-- **Do NOT propose experiments that duplicate names already in the Master Table or Experiment History.** Check the existing run names before proposing. If a configuration has already been tested, do not re-test it unless you have a specific reason (e.g., high variance in previous result). Use a distinct name if varying a different parameter.
+- **Do NOT propose experiments that are semantically identical to existing ones**, even under a different name. Before proposing, check the Master Table for any run that used the same launch parameters (batch_size, num_workers, etc.) and code changes. If a configuration has been tested — regardless of what it was named — do not re-test it. The orchestrator also rejects duplicates with matching launch commands.
 - Use `$IMAGE` as placeholder for the job image (the orchestrator substitutes it)
 - torchx entrypoint args use **underscores**, not dashes (e.g. `--num_threads`)
 - If `rebuild` is true, the orchestrator will call a separate Claude session to apply the code changes described in `description`, commit them, rebuild the image, and then launch. **Write the `description` field as precise instructions for what code to modify** — specify function names, SPDL API calls to add/change, and the exact transformation. Do not write vague descriptions like "enable MTP" — instead write "Refactor `build_pipeline()` to return a `PipelineBuilder` config (without `.build()`), wrap it with `spdl.pipeline.run_pipeline_in_subprocess(config, num_threads=16, mp_context='forkserver')`, and create an outer pipeline that takes the subprocess source and applies GPU transfer via `pipe(transfer_tensor, executor=ThreadPoolExecutor(1))`."
 - Each experiment should differ from the baseline in exactly one dimension (or a small, justified set of changes)
 - **`best_practices_tags`**: Tag each experiment with which best practices it covers from the valid tags list. This is how the orchestrator tracks progress. If an experiment covers multiple practices, include all relevant tags.
-- **`revert_to`**: If you want to branch from an earlier experiment's code state instead of building on the current one, set this to the commit hash from that experiment's history entry. The orchestrator will go back to that commit before applying new changes. You cannot revert to before the anchor commit (the state when autoresearch was initialized). Set to `null` to continue from the current state.
+- **`revert_to`**: Set this to the commit hash of the **best successful experiment** before applying new code changes. This prevents regressions from accumulating in the source tree. Check the experiment history for the commit hash of the current best run. If the current source has changes from a failed or regressed experiment, you MUST set `revert_to` to revert to a clean state. Set to `null` only if the current source is already at the desired state (no regressions applied).
