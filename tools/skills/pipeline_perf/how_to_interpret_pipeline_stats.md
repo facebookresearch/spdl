@@ -27,6 +27,37 @@ Use this regex to parse events: `pipeline:(\d+:\d+:.+?)_(ave_time|num_tasks|num_
 
 Group stages by stripping the metric suffix. Each stage will have both task metrics and queue metrics.
 
+## Initialization vs Steady-State Metrics
+
+Training jobs have two distinct phases that produce very different metrics:
+
+### Initialization Phase
+The first N steps (typically 20-30) include TTFB (time to first batch), torch.compile warmup (if enabled), and first-epoch ramp-up. During this phase:
+- **SM Utilization is near zero** — no GPU compute is happening while data loads, models compile, etc.
+- **Step time is artificially high** — dominated by one-time setup costs
+- **Pipeline stats are unreliable** — queue occupancy hasn't stabilized
+
+### Steady-State Phase
+After the warmup steps, metrics stabilize and reflect the true training throughput:
+- **SM Utilization reflects actual GPU efficiency**
+- **Step time reflects per-iteration throughput** (the most important metric for optimization)
+- **Pipeline queue occupancy stabilizes** — bottleneck analysis is reliable
+
+### Impact on Short Experiments (Autoresearch)
+Short experiments (3 epochs, ~5-8 minutes) have a high init-to-steady-state ratio. Raw averages are heavily diluted:
+- **Average SM Utilization** includes the zero-utilization init period, making it appear much lower than actual steady-state efficiency. For a 5-minute job with 1 minute of init, the average is ~20% lower than reality.
+- **Maximum SM Utilization** can be an outlier (a single burst). Don't use it.
+- **Median (p50) SM Utilization** is a better approximation of steady-state but still affected by init if it's a large fraction of the job.
+
+### Recommended Metrics for Short Experiments
+1. **Steady-state step time**: Median step time after discarding the first 20 steps. This directly predicts production throughput.
+2. **Steady-state SM Utilization**: The p50 or p75 SM util from system metrics (these percentiles naturally exclude the init zero-period if the job is long enough). For very short jobs, the p75 is more representative.
+3. **Initialization time**: Time from job start to the first training step. Flag if > 10 minutes — indicates a problem. With SPDL, init should be under a few minutes.
+4. **Extrapolated full-job duration**: `init_time + (target_total_steps × steady_step_time)`. Use this for comparing experiments, not raw short-experiment wall clock.
+
+### Inter-Epoch Drops
+Metrics may drop between epochs (data loader reset, new sampler shuffle). When computing steady-state metrics, use the **median** — it naturally handles these periodic drops as well as occasional GC pauses or checkpoint saves.
+
 ## Quick Reference: Queue Health
 
 | Scenario | Queue Put Time | Queue Get Time | Occupancy |
