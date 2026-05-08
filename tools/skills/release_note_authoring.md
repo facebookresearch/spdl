@@ -1,9 +1,3 @@
----
-description: 'Generate SPDL release notes from a list of GitHub PRs. Classifies PRs into categories (BC-breaking, new features, bug fixes, etc.), checks diffs for unlabeled BC-breaking changes, and produces formatted release notes.'
-apply_to_user_prompt: '(?i)\b(release.?note|changelog|what.?s.?new|release.?summary)\b'
-oncalls: ['spdl']
----
-
 # SPDL Release Notes Generator
 
 Generate release notes for a new SPDL release given a list of GitHub PRs merged since the last release.
