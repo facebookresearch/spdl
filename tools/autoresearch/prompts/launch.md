@@ -20,6 +20,8 @@ Optional inputs (have sensible defaults):
 - **Max concurrency** — concurrent training jobs, default 3
 - **Job timeout** — wall-clock timeout per job in seconds, default 1800 (30 min)
 - **Poll interval** — seconds between status checks, default 120
+- **Platform** — execution platform, default `auto`; use `local` for local subprocess execution
+- **Agent** — coding agent, default `claude`; use `codex` when that CLI is configured
 
 ## Step 2: Start the Engine
 
@@ -36,7 +38,9 @@ python run.py <workdir> \
   --max-iterations 10 \
   --patience 3 \
   --max-concurrency 3 \
-  --job-timeout 1800
+  --job-timeout 1800 \
+  --platform auto \
+  --agent claude
 ```
 
 Run this command in the background so you can monitor it. The engine handles everything: initialization, pipeline instrumentation, baseline job, headspace analysis, MTP experiment, and iterative optimization.
@@ -65,7 +69,7 @@ The engine runs these fixed initial experiments (skipping any already done):
 2. **Headspace** — wraps pipeline with CacheDataLoader to measure data loading overhead ceiling
 3. **MTP** — runs pipeline in subprocess to test GIL contention elimination
 
-After the fixed experiments, Claude proposes follow-up experiments based on analysis results. The engine:
+After the fixed experiments, the coding agent proposes follow-up experiments based on analysis results. The engine:
 
 - Runs up to `max_concurrency` jobs simultaneously
 - Analyzes each job immediately on completion (no waiting for the batch)
@@ -100,21 +104,23 @@ All files are in `<workdir>/`. Read them periodically to report progress to the 
 - `"interrupted"` — stopped by Ctrl+C, can resume
 - `"stopped"` — finished (stopping conditions met or all work exhausted)
 
+**`engine/checkpoint.json`** — Runner checkpoint containing serialized queued and running `WorkSpec` objects. This is the source of truth for resume after Ctrl+C or a crash.
+
 **`summary.md`** — Human-readable progress summary. Updated after each job completion. Show this to the user when they ask about progress.
 
 **`progress.png`** — Karpathy-style scatter plot showing job duration and SM utilization over time. Green dots are improvements, gray are discarded, red X are failures.
 
 **`hypothesis_tree.png`** — Tree visualization of the experiment hierarchy. Color-coded: green=completed/improved, gray=completed/no improvement, red=failed, blue=running, white dashed=queued. The best path is highlighted with thick green edges.
 
-**`engine/active.json`** — Currently running jobs with node_id, job_id, and launch timestamp.
+**`engine/active.json`** — Currently running jobs with node_id, job_id, and launch timestamp. This is a monitoring view.
 
-**`engine/queue.json`** — Pending experiments in priority order.
+**`engine/queue.json`** — Pending experiments in priority order. This is a monitoring view; do not treat it as the resume source of truth.
 
 **`engine/nodes/<node_id>/`** — Per-experiment details: `spec.json` (what it does), `status.txt` (current state), `result.json` (analysis results after completion).
 
 **`master_table.tsv`** — Tab-separated table of all experiments with metrics.
 
-**`runs/<run_id>/analysis.md`** — Claude's detailed analysis for each completed experiment.
+**`runs/<run_id>/analysis.md`** — Coding-agent detailed analysis for each completed experiment.
 
 ### Reporting Progress
 
@@ -141,9 +147,9 @@ To stop the engine gracefully, send SIGINT to the process. The engine needs time
 4. If still alive after 15 seconds, send `kill -TERM <pid>` and wait another 10 seconds
 5. Verify `engine/engine_state.json` shows `"status": "interrupted"`
 
-Do NOT send SIGKILL — it prevents state persistence and you'll lose the queue.
+Do NOT send SIGKILL — it prevents state persistence and can lose queued or running work that has not reached `engine/checkpoint.json`.
 
-Running jobs on the cluster are NOT cancelled by stopping the engine. They continue independently. The engine re-checks their status on resume.
+Running jobs on the cluster are NOT cancelled by stopping the engine. They continue independently. The engine re-checks their status on resume from `engine/checkpoint.json`.
 
 ### Engine Status: "interrupted"
 
@@ -151,7 +157,7 @@ Normal — the engine was stopped. Resume by re-running the engine with just the
 
 ### Build Failures
 
-Check `<workdir>/logs/last_build_error.txt`. Common causes: dependency issues from code changes, syntax errors in Claude's modifications. To intervene: stop the engine (Ctrl+C), fix the code in the source directory, then resume.
+Check `<workdir>/logs/last_build_error.txt`. Common causes: dependency issues from code changes or syntax errors in agent modifications. To intervene: stop the engine (Ctrl+C), fix the code in the source directory, then resume.
 
 ### All Jobs Failing
 
@@ -171,11 +177,11 @@ Check `hypothesis_tree.png` — are all branches exhausted? Read the latest `run
 
 ### Modifying the Queue
 
-The engine reads `engine/queue.json` on resume. To remove or reorder experiments: stop the engine, edit `engine/queue.json` (remove entries or change priority values — lower = higher priority), then resume.
+The engine reads `engine/checkpoint.json` on resume. To remove or reorder experiments, stop the engine and edit the `queued` list in `engine/checkpoint.json` only if manual queue surgery is required. Remove specs or change their `priority` values; lower priority values run first. `engine/queue.json` is only a monitoring view and is regenerated by the workflow.
 
 ### Log Files
 
 - `<workdir>/logs/autoresearch.log` — full execution log
-- `<workdir>/logs/*_prompt.md` — prompts sent to Claude
-- `<workdir>/logs/*_output.md` — Claude's responses
+- `<workdir>/logs/*_prompt.md` — prompts sent to the coding agent
+- `<workdir>/logs/*_output.md` — Coding-agent responses
 - `<workdir>/logs/*_raw.json` — raw JSON including cost and duration

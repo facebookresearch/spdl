@@ -39,6 +39,7 @@ dataloader = CacheDataLoader(dataloader, num_caches=10, return_caches_after=100)
   If the code uses nested epoch/batch loops, add the counter and break to the **inner batch loop** and also break out of the outer epoch loop.
 - Keep all other code unchanged — only add the CacheDataLoader import, wrapping, and step limit.
 - Do NOT remove or modify any existing instrumentation (e.g., TTFB logging).
+- **Iterator compatibility**: `CacheDataLoader` is iterable (`for batch in dl:`) but NOT an iterator (`next(dl)` fails). If the training loop uses `next(dataloader)`, you MUST change it to `data_iter = iter(dataloader)` before the loop, then `next(data_iter)` inside the loop. Or simply rewrite to `for batch in dataloader:`.
 
 **CRITICAL**: You MUST output the complete modified file content inside a single fenced code block with the `python` language tag. Do NOT output a diff, do NOT output partial snippets, do NOT describe the changes in prose. The output MUST contain exactly one block in this format:
 

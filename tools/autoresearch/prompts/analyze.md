@@ -35,7 +35,7 @@ __PIPELINE_CODE__
 
 ## Instructions
 
-1. **Extract key metrics**: SM utilization, CPU utilization, step time, TTFB, and data readiness at the sink. Compare to the baseline (first row in the master table).
+1. **Extract key metrics**: SM utilization, CPU utilization, step time, TTFB, available CPU cores, and data readiness at the sink. Compare to the baseline (first row in the master table).
 
 2. **Separate steady-state from initialization**: Short experiments have a high init-to-steady-state ratio. Raw averages are misleading.
    - **Steady-state step time**: If per-step data is available, take the median after discarding the first 20 steps. If only aggregate data is available, estimate from sink queue QPS (`1000 / sink_qps` = step time in ms).
@@ -45,6 +45,10 @@ __PIPELINE_CODE__
 3. **Evaluate the hypothesis**: Did the change produce the expected improvement? If not, explain why.
 
 4. **Identify remaining bottlenecks**: Even if this run improved, there may be new or remaining bottlenecks. Walk through the pipeline metrics to identify them.
+
+   **CPU utilization and data starvation**: Do NOT flag high CPU utilization as a "noisy neighbor" concern when the pipeline is data-starved. A pipeline is data-starved when the headspace is large (e.g., >50%) or when sink starvation / low data readiness is observed. In data-starved pipelines, the bottleneck is insufficient data processing throughput — the correct response is to use MORE CPU (increase decode/fetch concurrency, add threads), not less. The noisy-neighbor concern only applies when the pipeline is already keeping the GPU well-fed and additional CPU usage would not improve throughput.
+
+   **GPU video decode and SM utilization**: When the experiment uses GPU video decoding (NVDEC / `decode_packets_nvdec`), SM utilization may be lower than CPU-decode runs even though sample throughput is higher. This is expected — NVDEC uses dedicated hardware decoder engines, not SM (shader) cores. Do NOT interpret lower SM utilization as a regression for GPU decode experiments. Compare using **step time** (sample throughput) instead.
 
 5. **Compare to previous runs**: Compare using steady-state step time (or p50/p75 SM util as proxy). Note whether this is the best run so far.
 
