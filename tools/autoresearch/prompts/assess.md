@@ -41,6 +41,8 @@ __NOTES__
 
 2. **Identify the bottleneck**: Walk through the pipeline stages from source to sink. Look at queue occupancy transitions, execution times, and failure rates. Pinpoint which stage is the bottleneck and why.
 
+   **TorchTNT detection**: Check whether the code uses TorchTNT (`torchtnt.framework.fit`, `train`, `AutoUnit`, or a unit class with `compute_loss`). If so, note this in the assessment — it affects where instrumentation and code changes target. In TorchTNT scripts, the SPDL Pipeline is typically wrapped in a dataloader class with `__iter__`, and the training loop is managed by TorchTNT internally. Pipeline optimization changes still target the pipeline builder function and the wrapper, not TorchTNT internals.
+
 3. **Estimate headroom**: Based on the metrics, estimate how much improvement is possible. Even if SM utilization is already high, there are always optimizations to try — reducing variance, improving data readiness, eliminating GIL contention via MTP, etc. Never dismiss optimization opportunities just because one metric looks acceptable.
 
 4. **Propose 2-4 experiments** to run, ordered by expected impact. Always include best-practice structural changes that haven't been applied yet. For each experiment, specify:
@@ -49,7 +51,7 @@ __NOTES__
    - The exact launch command to use (use `$IMAGE` as placeholder for the job image)
 
 **Always recommend these best practices if not already applied:**
-- **Subprocess mode (MTP)**: Use the full MTP pattern from the knowledge base — `run_pipeline_in_subprocess()` with `embed_shuffle()`, `continuous=True`, and proper pickling. This eliminates GIL contention, isolates GC stalls, and removes epoch-boundary pipeline teardown.
+- **Subprocess mode (MTP)**: Use the full MTP pattern from the knowledge base — `run_pipeline_in_subprocess()` with `embed_shuffle()`, `continuous=True`, and proper pickling. This eliminates GIL contention, isolates GC stalls, and removes epoch-boundary pipeline teardown. For TorchTNT scripts, the MTP refactor changes the pipeline builder and the dataloader wrapper's `__iter__` — TorchTNT internals are not modified.
 - **Batch size tuning**: If GPU memory utilization has headroom, try larger batch sizes
 - **Concurrency tuning**: Adjust concurrency of CPU-bound stages (try at least 2 values)
 
