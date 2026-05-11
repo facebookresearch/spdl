@@ -20,12 +20,26 @@ from .state import read_config
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
-SCRIPT_DIR = Path(__file__).resolve().parent.parent
-PROMPTS_DIR = SCRIPT_DIR / "prompts"
+_SCRIPT_DIR = Path(__file__).resolve().parent.parent
+_PROMPTS_DIR = _SCRIPT_DIR / "prompts"
+
+SCRIPT_DIR = _SCRIPT_DIR
+PROMPTS_DIR = _PROMPTS_DIR
+
+__all__ = [
+    "_extract_json_block",
+    "_load_knowledge",
+    "_load_prompt",
+    "_run_claude",
+    "extract_json_block",
+    "load_knowledge",
+    "load_prompt",
+    "run_claude",
+]
 
 
-def load_prompt(name: str, **kwargs: str) -> str:
-    path = PROMPTS_DIR / f"{name}.md"
+def _load_prompt(name: str, **kwargs: str) -> str:
+    path = _PROMPTS_DIR / f"{name}.md"
     if not path.exists():
         print(f"Error: prompt template not found: {path}", file=sys.stderr)
         sys.exit(1)
@@ -33,6 +47,24 @@ def load_prompt(name: str, **kwargs: str) -> str:
     for key, value in kwargs.items():
         template = template.replace(f"__{key.upper()}__", str(value))
     return template
+
+
+load_prompt = _load_prompt
+
+
+def _load_knowledge() -> str:
+    """Load shared skill files and autoresearch-specific knowledge.
+
+    Reads symlinked skill files from prompts/ for shared pipeline
+    optimization knowledge, then appends autoresearch-specific knowledge.
+    """
+    parts: list[str] = []
+    for name in ["optimization_strategies.md", "how_to_interpret_pipeline_stats.md"]:
+        path = _PROMPTS_DIR / name
+        if path.exists():
+            parts.append(path.read_text())
+    parts.append(_load_prompt("knowledge"))
+    return "\n\n".join(parts)
 
 
 def load_knowledge() -> str:
@@ -44,22 +76,22 @@ def load_knowledge() -> str:
     """
     parts: list[str] = []
     for name in ["optimization_strategies.md", "how_to_interpret_pipeline_stats.md"]:
-        path = PROMPTS_DIR / name
+        path = _PROMPTS_DIR / name
         if path.exists():
             parts.append(path.read_text())
-    parts.append(load_prompt("knowledge"))
+    parts.append(_load_prompt("knowledge"))
     for name in [
         "fetching_pipeline_stats.md",
         "mast_job_lifecycle.md",
         "knowledge.md",
     ]:
-        path = PROMPTS_DIR / "fb" / name
+        path = _PROMPTS_DIR / "fb" / name
         if path.exists():
             parts.append(path.read_text())
     return "\n\n".join(parts)
 
 
-def run_claude(prompt: str, workdir: Path, phase: str) -> str:
+def _run_claude(prompt: str, workdir: Path, phase: str) -> str:
     """Run a stateless Claude session and return the text response.
 
     Uses --output-format json to get structured output, then extracts
@@ -129,11 +161,14 @@ def run_claude(prompt: str, workdir: Path, phase: str) -> str:
     return text
 
 
+run_claude = _run_claude
+
+
 def _extract_result_text(raw_stdout: str, phase: str) -> str:
     """Extract the result text from Claude's JSON output.
 
     The JSON line may be preceded by stderr-like banner lines on stdout
-    (e.g. "Claude Code at Meta ..."). We find the JSON object by looking
+    (for example, CLI banner lines). We find the JSON object by looking
     for the last line that starts with '{'.
     """
     json_line = ""
@@ -174,7 +209,7 @@ def _safe_get(raw_stdout: str, key: str, default: object = None) -> object:
     return default
 
 
-def extract_json_block(text: str) -> dict | None:
+def _extract_json_block(text: str) -> dict | None:
     """Extract a ```json ... ``` code block from Claude's text response."""
     matches = list(re.finditer(r"```json\s*\n(.*?)\n```", text, re.DOTALL))
     if not matches:
@@ -185,3 +220,6 @@ def extract_json_block(text: str) -> dict | None:
         except json.JSONDecodeError:
             continue
     return None
+
+
+extract_json_block = _extract_json_block
