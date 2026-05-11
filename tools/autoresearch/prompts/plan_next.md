@@ -21,7 +21,7 @@ __KNOWLEDGE__
 - **Already tried**: __BEST_PRACTICES_TRIED__
 - **Not yet tried**: __BEST_PRACTICES_REMAINING__
 
-Valid best practice tags: `subprocess_mtp`, `batch_size_tuning`, `concurrency_tuning`
+Valid best practice tags: `subprocess_mtp`, `batch_size_tuning`, `concurrency_tuning`, `gpu_video_decode`
 
 ### Master Table (all runs so far)
 
@@ -70,7 +70,10 @@ Do NOT compare experiments using raw average SM utilization — it is misleading
 
 Before you can consider stopping, ALL of the following must have been attempted (check the "Not yet tried" list above):
 
-1. **`subprocess_mtp`** — Apply the **full MTP pattern** from the knowledge base. This is the highest-impact optimization and includes continuous mode, subprocess isolation, and proper GPU transfer. It requires structural changes — set `"rebuild": true`. **Follow the MTP section in the knowledge base.** Key points:
+1. **`subprocess_mtp`** — Apply the **full MTP pattern** from the knowledge base. This is the highest-impact optimization and includes continuous mode, subprocess isolation, and proper GPU transfer. **Follow the MTP section in the knowledge base.** Key points:
+   - **Critical — understand the existing code first**: Inspect the pipeline builder function's return type and structure. If it calls `.build()` or `.get_iterator()` (returning a `Pipeline` or iterator), the MTP refactor must change it to return a `PipelineConfig` (via `.get_config()`) or an unbuilt `PipelineBuilder` instead. `run_pipeline_in_subprocess()` accepts ONLY `PipelineConfig` — NOT `Pipeline` objects or iterators. Check type annotations and return statements.
+   - **Separate CPU and GPU stages**: The backend pipeline (subprocess) must contain ONLY CPU-bound stages (fetch, decode, aggregate, collate). GPU stages like `transfer_tensor` require a CUDA context and MUST be in the frontend pipeline (main process). If the existing code includes `transfer_tensor` or similar GPU ops in the pipeline, exclude them from the backend config.
+   - **Write the `description` field to explicitly instruct the code modifier** about these structural requirements, e.g.: "Refactor `build_pipeline()` to NOT call `.build()`. Instead, build a `PipelineBuilder` with only CPU stages (no `transfer_tensor`), call `.get_config()`, pass the config to `run_pipeline_in_subprocess(config, num_threads=N)`, then create a frontend `PipelineBuilder` that takes the subprocess iterable as source and applies `transfer_tensor`."
    - Use the **two-tier approach** for pickling: first try module-level functions with `functools.partial` (Tier 1). If the subprocess crashes silently (0 batches), retry with picklable callable classes that pickle objects directly from the main process (Tier 2). See "Pickling Constraints" in the knowledge base.
    - **HuggingFace tokenizers are NOT thread-safe** — use thread-local storage (TLS) when tokenizing with concurrency > 1.
    - Wrap the sampler with **`spdl.source.utils.embed_shuffle()`** for correct sampling behavior.
@@ -85,7 +88,27 @@ Before you can consider stopping, ALL of the following must have been attempted 
 
 3. **`concurrency_tuning`** — Adjust concurrency of the bottleneck stage. Try at least 2 different values.
 
-If the "Not yet tried" list is non-empty, you MUST prioritize those practices. If a practice doesn't apply to this pipeline (e.g., already uses continuous mode), explain why in your reasoning and still tag it so the orchestrator knows it was considered.
+   **Important — threads vs concurrency**:
+   - `PipelineBuilder.build(num_threads=N)` sets the thread pool size for the entire pipeline. Set this mechanically to `num_CPU_cores / num_GPU_workers` (or the number of allocated CPU cores per rank). This is NOT a tuning knob — it's a resource budget.
+   - `.pipe(fn, concurrency=C)` controls how many concurrent tasks run in a specific stage. THIS is the value to tune. The sum of all stage concurrencies should stay within the `num_threads` budget.
+   - For MTP subprocess mode, `run_pipeline_in_subprocess(config, num_threads=N)` — same rule: set `N` to `num_CPU_cores / num_GPU_workers`.
+   - **`spdl.pipeline.PriorityThreadPoolExecutor`** should be tried as part of concurrency tuning. It shares a single thread pool across all pipeline stages but prioritizes downstream stages (closer to output) over upstream ones, reducing end-to-end latency with no expected downside. Try it in at least one standalone experiment (without other changes) to verify the improvement, then combine it with other verified improvements (MTP, torch.compile, etc.) in later experiments. Usage: create one pool (`pool = PriorityThreadPoolExecutor(max_workers=N)`), then pass `executor=pool.get_executor()` to each CPU-bound `.pipe()` call — executors created later automatically get higher priority. It supports pickle for use with `run_pipeline_in_subprocess()`.
+     **Critical PriorityThreadPoolExecutor rules:**
+     - Do NOT pass `executor=` to GPU stages like `transfer_tensor` — GPU transfer must run on the pipeline's own thread, not in the CPU pool.
+     - When using PriorityThreadPoolExecutor, set `.build(num_threads=1)` — the pool handles all CPU threading; the pipeline event loop only needs 1 thread. Using `build(num_threads=N)` with N>1 creates a redundant second thread pool.
+     - Only attach `executor=pool.get_executor()` to CPU-bound stages (fetch, decode, collate). Leave GPU-bound stages (transfer_tensor) without an executor.
+
+4. **`gpu_video_decode`** — If the pipeline decodes video using CPU FFmpeg (`decode_packets` / `decode_packets_ffmpeg` / FFmpeg-based decode functions) and the decode stage is a bottleneck, try replacing it with GPU video decoding via NVDEC (`spdl.io.decode_packets_nvdec`). This offloads decode to dedicated GPU hardware and eliminates the CPU decode bottleneck. **Follow the GPU Video Decoding section in the knowledge base.** Key points:
+   - This practice only applies when the pipeline is doing **video decoding** and the decode stage is identified as a bottleneck. If the pipeline processes images, text, or audio, mark this as "not applicable" and skip.
+   - Replace the CPU decode chain (`decode_packets → convert_frames → transfer_buffer`) with `decode_packets_nvdec(packets, device_config=cuda_cfg, pix_fmt="rgb")` followed by `to_torch()`. The result is already on GPU — no `transfer_buffer` needed.
+   - Create `CUDAConfig` with PyTorch allocator: `spdl.io.cuda_config(device_index=..., allocator=(torch.cuda.caching_allocator_alloc, torch.cuda.caching_allocator_delete))`.
+   - **GPU decoder concurrency** — H100/B100 have 7 NVDEC instances per GPU, so set decode concurrency around 7. For sparse decoding patterns (sampling a few frames per file, not sequential decode), concurrency can exceed 7. Older GPUs (A100, V100) have 3–5 slots.
+   - **Even dimensions required** — `scale_width` and `scale_height` must be even numbers.
+   - **NOT compatible with MTP (subprocess mode)** — `VideoPackets` are not picklable and cannot cross process boundaries. GPU video decode must run as a pure multithreaded pipeline in the main process (using `PipelineBuilder.build(num_threads=N)`). `gpu_video_decode` is an **independent optimization path** from `subprocess_mtp` — they are mutually exclusive alternatives, not stackable. The GPU decode experiment must apply its changes to the original instrumented pipeline (not on top of MTP changes). Do NOT set `goto` to an MTP commit.
+   - **Use a dedicated `ThreadPoolExecutor` for the NVDEC decode stage** — do NOT share the pipeline's default thread pool. Create `ThreadPoolExecutor(max_workers=C)` and pass it via `executor=` to the decode `.pipe()` call. This prevents NVDEC decode threads (which need their own CUDA contexts) from competing with CPU fetch threads.
+   - Write the `description` field with explicit instructions, e.g.: "Replace `spdl.io.decode_packets(packets)` + `convert_frames` + `transfer_buffer` with `spdl.io.decode_packets_nvdec(packets, device_config=cuda_cfg, pix_fmt='rgb')`. Remove the `transfer_buffer`/`transfer_tensor` stage since data is already on GPU. Set decode concurrency to 7. Use a dedicated `ThreadPoolExecutor(7)` for the decode stage via `executor=ThreadPoolExecutor(7)`. Create `cuda_cfg` using `spdl.io.cuda_config(device_index, allocator=(torch.cuda.caching_allocator_alloc, torch.cuda.caching_allocator_delete))`. Use pure multithreading (no subprocess MTP)."
+
+If the "Not yet tried" list is non-empty, you MUST prioritize those practices. If a practice doesn't apply to this pipeline (e.g., already uses continuous mode, or doesn't do video decoding for gpu_video_decode), explain why in your reasoning and still tag it so the orchestrator knows it was considered.
 
 ### Number of Experiments
 
@@ -114,17 +137,21 @@ Propose **2-3 experiments per iteration** to make efficient use of compute. The 
 
    State your conclusions explicitly in the reasoning before proposing experiments.
 
-4. **If all best practices are tried and results are still improving**: Continue with Bayesian optimization principles:
+4. **CPU utilization and data starvation**: Do NOT avoid increasing CPU usage out of "noisy neighbor" concerns when the pipeline is data-starved. A pipeline is data-starved when headspace is large (e.g., >50%) or sink starvation / low data readiness is observed. In data-starved pipelines, the bottleneck is insufficient data processing throughput — increasing concurrency, threads, or decode parallelism is the correct approach even if CPU utilization is already high. The noisy-neighbor concern only applies when the pipeline is already keeping the GPU well-fed and additional CPU usage would not improve throughput. Use the available CPU core count (from `[autoresearch] cpu_cores=N` logs) to set appropriate thread budgets.
+
+5. **If all best practices are tried and results are still improving**: Continue with Bayesian optimization principles:
    - Model the parameter → metric relationship from history
    - Pick values that maximize expected improvement
    - Balance exploration (untested regions) vs exploitation (near the current best)
-   - Respect constraints: CPU ≤ 40%, concurrency ≤ num_CPU_cores / 8
+   - **HARD CONSTRAINT**: Total threads per rank (num_fetch_threads + num_decode_threads) must not exceed the cap stated in Additional Context. Experiments exceeding this are rejected automatically.
 
-5. **If parameter tuning has plateaued** (diminishing returns across recent iterations): Propose a structural change — splitting stages, different I/O functions, different pipeline topology. The orchestrator can modify source code in-place. Describe the code changes in the experiment's `"description"` field and set `"rebuild": true`.
+6. **Combine independently verified improvements**: Scan the Master Table for experiments that each improved over baseline via *different, orthogonal* changes (e.g., MTP improved step time, PriorityThreadPoolExecutor improved scheduling, torch.compile improved compute). When two or more such improvements exist, propose a **combination experiment** that applies all of them together. The combined gain is often larger than the sum of individual gains because the improvements target different bottlenecks. Describe ALL changes in the `"description"` field. Prioritize combinations of the best-performing variant of each independent idea.
 
-6. **If results are noisy or contradictory**: Propose a repeat of the best configuration to confirm, plus one new exploration point.
+7. **If parameter tuning has plateaued** (diminishing returns across recent iterations): Propose a structural change — splitting stages, different I/O functions, different pipeline topology. The orchestrator can modify source code in-place. Describe the code changes in the experiment's `"description"` field.
 
-7. **Only stop** (`"action": "stop"`) when:
+8. **If results are noisy or contradictory**: Propose a repeat of the best configuration to confirm, plus one new exploration point.
+
+9. **Only stop** (`"action": "stop"`) when:
    - ALL best practices have been tried (the "Not yet tried" list is empty), AND
    - Metrics have plateaued for __PATIENCE__ consecutive iterations (the plateau count has reached __PATIENCE__)
    - If either condition is not met, you MUST continue with `"action": "launch"`.
@@ -137,14 +164,15 @@ Output your reasoning, then a JSON block:
 {
   "action": "launch|stop|manual",
   "reasoning": "<2-3 sentence summary of your decision>",
-  "revert_to": "<commit hash to revert to before applying changes, or null>",
+  "goto": "<commit hash to check out before applying changes, or null>",
   "experiments": [
     {
       "name": "<short_snake_case>",
+      "change_summary": "<2-5 word concise label for plots, e.g. raise fetch threads>",
       "description": "<what we are changing>",
       "hypothesis": "<why this should help>",
       "launch_command": "<full command; use $IMAGE for image>",
-      "rebuild": false,
+
       "best_practices_tags": ["<tag1>", "<tag2>"]
     }
   ]
@@ -154,8 +182,9 @@ Output your reasoning, then a JSON block:
 Rules:
 - **Do NOT propose experiments that are semantically identical to existing ones**, even under a different name. Before proposing, check the Master Table for any run that used the same launch parameters (batch_size, num_workers, etc.) and code changes. If a configuration has been tested — regardless of what it was named — do not re-test it. The orchestrator also rejects duplicates with matching launch commands.
 - Use `$IMAGE` as placeholder for the job image (the orchestrator substitutes it)
+- **`change_summary`** must be concise and operator-readable. Use 2-5 words describing the one change being tested. Do not put implementation detail here; keep that in `description`.
 - torchx entrypoint args use **underscores**, not dashes (e.g. `--num_threads`)
-- If `rebuild` is true, the orchestrator will call a separate Claude session to apply the code changes described in `description`, commit them, rebuild the image, and then launch. **Write the `description` field as precise instructions for what code to modify** — specify function names, SPDL API calls to add/change, and the exact transformation. Do not write vague descriptions like "enable MTP" — instead write "Refactor `build_pipeline()` to return a `PipelineBuilder` config (without `.build()`), wrap it with `spdl.pipeline.run_pipeline_in_subprocess(config, num_threads=16, mp_context='forkserver')`, and create an outer pipeline that takes the subprocess source and applies GPU transfer via `pipe(transfer_tensor, executor=ThreadPoolExecutor(1))`."
+- The orchestrator will call a separate Claude session to apply the code changes described in `description`, commit them, rebuild the image, and then launch. **Write the `description` field as precise instructions for what code to modify** — specify function names, SPDL API calls to add/change, and the exact transformation. Do not write vague descriptions like "enable MTP" — instead write "Refactor `build_pipeline()` to return a `PipelineBuilder` config (without `.build()`), wrap it with `spdl.pipeline.run_pipeline_in_subprocess(config, num_threads=16, mp_context='forkserver')`, and create an outer pipeline that takes the subprocess source and applies GPU transfer via `pipe(transfer_tensor, executor=ThreadPoolExecutor(1))`."
 - Each experiment should differ from the baseline in exactly one dimension (or a small, justified set of changes)
 - **`best_practices_tags`**: Tag each experiment with which best practices it covers from the valid tags list. This is how the orchestrator tracks progress. If an experiment covers multiple practices, include all relevant tags.
-- **`revert_to`**: Set this to the commit hash of the **best successful experiment** before applying new code changes. This prevents regressions from accumulating in the source tree. Check the experiment history for the commit hash of the current best run. If the current source has changes from a failed or regressed experiment, you MUST set `revert_to` to revert to a clean state. Set to `null` only if the current source is already at the desired state (no regressions applied).
+- **`goto`**: The orchestrator checks out the instrumentation (anchor) commit before applying each experiment's code changes by default. This ensures every experiment starts from a clean slate. Set `goto` to `null` in most cases. Only set it to a specific commit hash if you want to stack changes on top of a previous successful experiment (e.g., adding batch size tuning on top of an MTP experiment that already improved metrics). Never stack incompatible changes (e.g., GPU decode on top of MTP — they are mutually exclusive).
