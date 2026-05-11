@@ -1,6 +1,6 @@
 # Autoresearch: Automated SPDL Pipeline Optimization
 
-Automated experiment engine for optimizing SPDL data loading pipeline performance in AI training jobs. Uses Claude to analyze metrics, identify bottlenecks, propose parameter and code changes, and iterate to minimize steady-state step time.
+Automated experiment engine for optimizing SPDL data loading pipeline performance in AI training jobs. Uses a coding agent to analyze metrics, identify bottlenecks, propose parameter and code changes, and iterate to minimize steady-state step time.
 
 ## How It Works
 
@@ -23,8 +23,8 @@ Automated experiment engine for optimizing SPDL data loading pipeline performanc
 │     │  │                                   │ concurrent   │   │  │
 │     │  │  asyncio.wait(FIRST_COMPLETED) ◄──┘              │   │  │
 │     │  │                                                  │   │  │
-│     │  ├─ analyze (Claude) ──► update plots + summary     │   │  │
-│     │  ├─ plan follow-ups (Claude) ──► enqueue children   │   │  │
+│     │  ├─ analyze (agent) ──► update plots + summary      │   │  │
+│     │  ├─ plan follow-ups (agent) ──► enqueue children    │   │  │
 │     │  ├─ re-prioritize queue                             │   │  │
 │     │  └─ loop ◄──────────────────────────────────────────┘   │  │
 │     │                                                         │  │
@@ -34,10 +34,18 @@ Automated experiment engine for optimizing SPDL data loading pipeline performanc
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-Each Claude invocation is a **stateless session** via `claude --print --output-format json`. The engine carries all state and assembles self-contained prompts from:
+Each coding-agent invocation is **stateless**. The engine carries all state and assembles self-contained prompts from:
 - `prompts/knowledge.md` — compiled SPDL optimization knowledge
 - Experiment state — master table, history, previous analyses
 - Fetched metrics — system metrics, pipeline performance stats
+
+## Design Choices
+
+Autoresearch is built around a small runner and explicit persisted state. The runner only schedules coroutine work and checkpoints what is queued or running; the workflow owns experiment semantics such as applying code changes, launching jobs, analyzing results, and proposing follow-ups.
+
+This keeps runs inspectable and resumable. Coding-agent calls are stateless, deterministic workflow decisions are separated into testable helpers, and `engine/checkpoint.json` is the source of truth for recovery after interruption.
+
+The implementation is unusual in one important way: platform behavior is grouped behind explicit capability objects instead of injected as a flat callback bag. `AutoresearchPlatform` owns `workspace`, `artifacts`, `execution`, `evidence`, and `agent`, so the same workflow can run locally, through a remote executor, or with different coding agents without changing the runner.
 
 ## Architecture
 
@@ -45,17 +53,19 @@ Each Claude invocation is a **stateless session** via `claude --print --output-f
 Claude Code (interactive front-end via launch.sh)
   │ gathers config from user, starts engine, monitors progress
   ▼
-run.py ──► engine.py (generic async engine)
+run.py ──► runner.py (generic async scheduler)
   │              │
-  │  callbacks   │  manages: hypothesis tree, priority queue,
-  │              │  concurrent job slots, disk persistence,
-  ▼              │  SIGINT/SIGTERM handling, stuck detection
-callbacks.py     │
-  (analyze,      ▼
-   plan,     asyncio.wait(FIRST_COMPLETED)
-   prepare)     → immediate analysis on completion
-                → follow-up experiments enqueued as tree children
-                → dynamic re-prioritization after each analysis
+  │  adapter     │  manages: priority queue, concurrent coroutine slots,
+  │              │  checkpointing, and cancellation persistence
+  ▼              │
+workflow/      ▼
+adapter.py  asyncio.wait(FIRST_COMPLETED)
+  │             → immediate analysis on completion
+  │             → follow-up experiments returned as child WorkSpecs
+  ├─ workflow/store.py       durable state + monitoring views
+  ├─ workflow/policy.py      deterministic, testable decisions
+  ├─ workflow/*_ops.py       source/build/analysis/planning operations
+  └─ platform/               workspace/artifacts/execution/evidence/agent
 ```
 
 **Two ways to run:**
@@ -65,16 +75,23 @@ callbacks.py     │
 
 ### Engine Design
 
-The engine (`utils/engine.py`) is generic and domain-agnostic — it knows nothing about SPDL, Claude, or training jobs. All domain behavior is injected via async callbacks.
+The runner (`utils/runner.py`) is generic and domain-agnostic. It knows nothing about SPDL, coding agents, source control, local subprocesses, training jobs, metrics, or hypothesis planning. It only runs serializable `WorkSpec` objects as coroutines, checkpoints queued/running work, and persists an `interrupted` checkpoint when cancellation reaches the process.
 
-Each experiment node runs as an independent `asyncio.Task` through: prepare → launch → poll → analyze. The main loop uses `asyncio.wait(return_when=FIRST_COMPLETED)` so whichever job finishes first is immediately analyzed and its follow-ups enqueued.
+Autoresearch behavior belongs in the workflow side of the boundary:
+
+- `utils/workflow/adapter.py` orchestrates each experiment lifecycle: prepare source, build, launch, poll, analyze, update state, and return child `WorkSpec` objects.
+- `utils/workflow/store.py` owns durable workdir files such as `engine/checkpoint.json`, `tree.json`, per-node status, and monitoring views.
+- `utils/workflow/policy.py` owns deterministic decisions such as status normalization, duplicate filtering, planning gates, and stall policy. Keep predictable logic here so it can be unit-tested without a coding agent or infrastructure.
+- `utils/platform/` owns swappable capabilities for workspace, artifacts, execution, evidence collection, and coding-agent calls.
+
+Each experiment node runs as an independent `asyncio.Task` through prepare → launch → poll → analyze. The runner uses `asyncio.wait(return_when=FIRST_COMPLETED)` so whichever job finishes first is immediately analyzed and its follow-ups are enqueued.
 
 Key features:
 - **Configurable concurrency** — up to N jobs run simultaneously
 - **Tree-structured hypotheses** — experiments branch from parent commits, enabling exploration of multiple optimization paths
 - **Wall-clock stuck detection** — jobs exceeding `job_timeout_s` are killed immediately (no stall-counting delay)
-- **Thread-safe analysis** — concurrent completions are serialized via `_complete_lock` to prevent state corruption
-- **Graceful shutdown** — SIGINT/SIGTERM persists all state to disk; re-running resumes from where it left off
+- **Serialized state mutation** — workflow state updates are guarded so concurrent completions do not corrupt shared state
+- **Graceful shutdown** — SIGINT persists queued and running specs to disk; re-running resumes from where it left off
 
 ### Engine Disk Layout
 
@@ -82,10 +99,11 @@ All state is persisted to `{workdir}/engine/` for crash recovery and external ob
 
 ```
 engine/
+├── checkpoint.json        # Serialized queued/running WorkSpecs; resume source of truth
 ├── engine_state.json     # {status, timestamp, node counts}
 ├── tree.json             # Full hypothesis tree
-├── queue.json            # Priority-ordered pending node IDs
-├── active.json           # Currently running jobs
+├── queue.json            # Priority-ordered pending node IDs (monitoring view)
+├── active.json           # Currently running jobs (monitoring view)
 └── nodes/                # Per-node directories
     ├── 000_baseline/
     │   ├── spec.json     # Experiment specification
@@ -103,7 +121,7 @@ After each completed experiment, the engine updates:
 
 ### Stop and Resume
 
-Press **Ctrl+C** (or send SIGTERM) to stop the engine gracefully. The engine persists tree, queue, and active jobs to disk before exiting. Running jobs on the cluster continue independently.
+Press **Ctrl+C** to stop the engine gracefully. The runner persists queued and running `WorkSpec` objects to `engine/checkpoint.json` before exiting, and the workflow keeps the monitoring views under `engine/` up to date. Running jobs on the cluster continue independently.
 
 Re-run the same command to resume — the engine re-checks job status and picks up where it left off.
 
@@ -156,12 +174,15 @@ python cmd.py report /tmp/my_experiment
 | `--source-dir` | Source directory for in-place code modifications | — |
 | `--build-command` | Command to build the job image | — |
 | `--base-launch-command` | Job launch command; use `$IMAGE` as placeholder | — |
-| `--notes` | Free-form context included in Claude prompts | — |
+| `--notes` | Free-form context included in agent prompts | — |
 | `--max-iterations` | Maximum planning sessions (each produces 2-3 experiments) | 10 |
 | `--patience` | Stop after N non-improving planning sessions | 3 |
 | `--max-concurrency` | Maximum concurrent training jobs | 3 |
 | `--job-timeout` | Wall-clock timeout per job in seconds | 1800 |
 | `--poll-interval` | Seconds between job status polls | 120 |
+| `--platform` | Execution platform: `auto`, `remote`, or `local` | auto |
+| `--agent` | Coding agent: `claude` or `codex` | claude |
+| `--local-execution-mode` | Local launch mode: `full`, `dataloader_only`, or `dry_run` | full |
 | `--dangerously-skip-permissions` | Skip Claude permission prompts | off |
 | `--skip-instrument` | Skip TTFB/step-time auto-instrumentation | off |
 
@@ -196,7 +217,7 @@ The engine stops when **both** conditions are met:
 
 2. **Plateau detected** — steady-state metrics have not improved for `--patience` consecutive planning sessions.
 
-An "iteration" counts each time Claude is asked to plan, not each completed job. With `--max-iterations 40`, the engine runs up to 40 planning sessions, each producing 2-3 experiments.
+An "iteration" counts each time the coding agent is asked to plan, not each completed job. With `--max-iterations 40`, the engine runs up to 40 planning sessions, each producing 2-3 experiments.
 
 ## Source Control Integration
 
@@ -204,7 +225,7 @@ When `--source-dir` is provided, autoresearch integrates with source control (`s
 
 - **Anchor commit** recorded at init — the system never reverts beyond this point
 - **Code changes are committed** automatically with descriptive messages prefixed `[autoresearch]`
-- **Tree-structured commits** — experiments branch from parent commits, enabling multiple optimization paths. When Claude specifies `revert_to`, the engine goes to that commit before applying new changes.
+- **Tree-structured commits** — experiments branch from parent commits, enabling multiple optimization paths. When the coding agent specifies `revert_to`, the engine goes to that commit before applying new changes.
 - **Instrumentation commit** — TTFB/step-time logging is committed separately during init
 
 ## Workdir Structure
@@ -217,26 +238,32 @@ workdir/
 ├── summary.md               # Live progress summary (updated after each job)
 ├── progress.png             # Karpathy-style progress chart (updated live)
 ├── hypothesis_tree.png      # Tree visualization (updated live)
-├── engine/                  # Engine persistence (tree, queue, active jobs)
+├── engine/                  # Runner checkpoint + workflow monitoring files
+│   ├── checkpoint.json      # Resume source of truth
+│   ├── engine_state.json    # Engine status and counts
+│   ├── tree.json            # Full hypothesis tree
+│   ├── queue.json           # Pending experiments (monitoring view)
+│   ├── active.json          # Running jobs (monitoring view)
+│   └── nodes/               # Per-node spec/status/result files
 ├── runs/
 │   ├── 000_baseline/
 │   │   ├── meta.json           # Experiment specification
 │   │   ├── job_id.txt          # Cluster job ID
 │   │   ├── system_metrics.txt  # GPU/CPU metrics
 │   │   ├── metrics/            # Pipeline performance stats (TSV files)
-│   │   └── analysis.md         # Claude's analysis
+│   │   └── analysis.md         # Coding-agent analysis
 │   └── ...
 ├── logs/
 │   ├── autoresearch.log        # Full execution log
-│   ├── *_prompt.md             # Prompts sent to Claude
-│   ├── *_output.md             # Claude's responses
+│   ├── *_prompt.md             # Prompts sent to the coding agent
+│   ├── *_output.md             # Coding-agent responses
 │   └── *_raw.json              # Raw JSON (cost, duration, usage)
 └── report.md                   # Final report (from cmd.py report)
 ```
 
-## Claude's Decision Framework
+## Agent Decision Framework
 
-In each planning session, Claude chooses one of three actions:
+In each planning session, the coding agent chooses one of three actions:
 
 | Action | When | What Happens |
 |---|---|---|
@@ -250,27 +277,20 @@ In each planning session, Claude chooses one of three actions:
 autoresearch/
 ├── run.py                         # Single entry point (init + instrument + engine)
 ├── cmd.py                         # CLI tools (init, assess, status, report)
-├── launch.sh                      # Claude Code wrapper (interactive front-end)
+├── launch.sh                      # Interactive coding-agent front-end
 ├── plot_progress.py               # Progress chart + hypothesis tree visualization
 ├── BUCK                           # Build targets
 ├── utils/
-│   ├── __init__.py                # Re-exports; loads fb overrides if present
-│   ├── engine.py                  # Generic async execution engine (domain-agnostic)
-│   ├── callbacks.py               # Autoresearch callbacks (analyze, plan, prepare)
-│   ├── cmd_init.py                # init command
-│   ├── cmd_assess.py              # assess command (+ auto-instrumentation)
-│   ├── cmd_status.py              # status command
-│   ├── cmd_report.py              # report command
-│   ├── claude.py                  # Claude invocation (--output-format json)
-│   ├── jobs.py                    # Generic job launch/monitor/metrics stubs
+│   ├── runner.py                  # Generic async WorkSpec scheduler
+│   ├── workflow/                  # Experiment lifecycle, store, and policy
+│   ├── platform/                  # Workspace/artifacts/execution/evidence/agent
+│   ├── commands/                  # init, assess, status, report commands
+│   ├── infra/                     # Low-level generic helper functions
+│   ├── claude.py                  # Claude implementation for CodingAgent
 │   ├── state.py                   # Experiment state, config, master table
-│   ├── scm.py                     # Source control abstraction (sl / git)
 │   ├── log.py                     # Logging setup
-│   └── fb/                        # Infrastructure-specific (optional)
-│       ├── __init__.py
-│       └── backend.py             # MAST/torchx implementations
 ├── prompts/
-│   ├── launch.md                  # Claude Code system prompt
+│   ├── launch.md                  # Interactive launch prompt
 │   ├── knowledge.md               # SPDL optimization knowledge
 │   ├── how_to_interpret_pipeline_stats.md  # Pipeline metrics guide
 │   ├── instrument.md              # Auto-instrumentation prompt
@@ -281,11 +301,9 @@ autoresearch/
 │   ├── apply_changes.md           # Code modification prompt
 │   └── fb/                        # Infrastructure-specific prompts
 │       ├── knowledge.md
-│       └── launch.md              # Meta-specific launch instructions
+│       └── launch.md              # Platform-specific launch instructions
 └── README.md
 ```
-
-**Infrastructure adapters**: The `utils/fb/` and `prompts/fb/` directories contain infrastructure-specific code and knowledge. When `utils/fb/backend.py` is importable, its implementations automatically override the generic stubs. To adapt to a different infrastructure, create your own `fb/` directories or modify the generic stubs in `utils/jobs.py`.
 
 ### Headspace Analysis
 
@@ -295,7 +313,6 @@ Headspace results are excluded from the running best and plateau detection.
 
 ## Customization
 
-- **`config.json`**: edit `claude_flags` to pass additional flags to `claude --print` (e.g., `["--model", "claude-sonnet-4-6"]` for faster iterations)
-- **`prompts/`**: edit templates to adjust Claude's behavior or add domain-specific knowledge
+- **`config.json`**: edit agent-specific flags to pass additional CLI options
+- **`prompts/`**: edit templates to adjust agent behavior or add domain-specific knowledge
 - **`prompts/knowledge.md`**: add project-specific optimization context
-- **`utils/jobs.py`**: implement infrastructure-specific functions for your job scheduler

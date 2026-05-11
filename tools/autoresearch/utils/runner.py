@@ -6,8 +6,8 @@
 
 """Small generic async work scheduler.
 
-Design note for future agents
-=============================
+Design note
+===========
 
 Keep this module domain-neutral. It schedules bounded concurrent coroutine
 work, checkpoints queued/running specs, and handles local cancellation. Do not

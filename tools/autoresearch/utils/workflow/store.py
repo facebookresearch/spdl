@@ -6,8 +6,8 @@
 
 """Persistent autoresearch workflow state and monitoring views.
 
-Design note for future agents
-=============================
+Design note
+===========
 
 This module owns files under ``<workdir>/engine`` and the persistent
 ``state.json`` view written by ``state.py``. ``checkpoint.json`` is the resume

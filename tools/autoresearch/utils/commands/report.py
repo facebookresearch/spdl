@@ -7,14 +7,20 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 from pathlib import Path
 
-from .claude import run_claude
-from .log import setup_logging
-from .state import read_master_table, read_state
+from ..log import setup_logging
+from ..platform import create_platform
+from ..state import _read_master_table, read_config, read_state
 
 _LG: logging.Logger = logging.getLogger(__name__)
+
+__all__ = [
+    "_read_failures",
+    "_run",
+]
 
 
 def _parse_args(args: list[str]) -> argparse.Namespace:
@@ -23,15 +29,18 @@ def _parse_args(args: list[str]) -> argparse.Namespace:
     return parser.parse_args(args)
 
 
-def run(args: list[str]) -> None:
+def _run(args: list[str]) -> None:
     ns = _parse_args(args)
     workdir = Path(ns.workdir).resolve()
     setup_logging(workdir)
     _LG.info("Generating report for %s", workdir)
 
     state = read_state(workdir)
+    config = read_config(workdir)
+    platform = create_platform(config, workdir)
 
-    master_table = read_master_table(workdir)
+    master_table = _read_master_table(workdir)
+    failures = _read_failures(workdir)
 
     all_analyses = []
     for entry in state.get("history", []):
@@ -55,6 +64,9 @@ experiment that optimized SPDL data loading pipeline performance.
 ## Individual Analyses
 {"".join(all_analyses)}
 
+## Failures
+{failures}
+
 ## Task
 Write a comprehensive final report in clean markdown:
 1. Executive summary — what was tested, what worked, what didn't
@@ -68,9 +80,30 @@ End with a single JSON block containing the best configuration found:
 ```"""
 
     print("Generating report...")
-    output = run_claude(prompt, workdir, "report")
+    output = platform.agent.run(prompt, workdir, "report")
 
     report_path = workdir / "report.md"
     report_path.write_text(output)
     print(output)
     print(f"\nReport saved to {report_path}")
+
+
+def _read_failures(workdir: Path) -> str:
+    lines = []
+    tree = workdir / "engine" / "tree.json"
+    if tree.exists():
+        for raw in json.loads(tree.read_text()):
+            failure = raw.get("failure")
+            if failure:
+                lines.append(
+                    "- "
+                    f"{raw.get('node_id', '')}: {failure.get('kind', '')} - "
+                    f"{failure.get('message', '')}"
+                )
+    setup = workdir / "engine" / "setup_failures.json"
+    if setup.exists():
+        for failure in json.loads(setup.read_text()):
+            lines.append(
+                f"- setup: {failure.get('kind', '')} - {failure.get('message', '')}"
+            )
+    return "\n".join(lines) if lines else "(none)"

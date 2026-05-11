@@ -14,11 +14,13 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from .log import setup_logging
-from .scm import current_commit, detect_scm
-from .state import MASTER_TABLE_HEADERS, write_state
+from ..log import setup_logging
+from ..platform import create_platform
+from ..state import MASTER_TABLE_HEADERS, SCHEMA_VERSION, write_state
 
 _LG: logging.Logger = logging.getLogger(__name__)
+
+__all__ = ["_run"]
 
 
 def _parse_args(args: list[str]) -> argparse.Namespace:
@@ -70,10 +72,28 @@ def _parse_args(args: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Pass --dangerously-skip-permissions to claude invocations",
     )
+    parser.add_argument(
+        "--platform",
+        choices=("auto", "remote", "local"),
+        default="auto",
+        help="_Execution platform. 'auto' uses the best available implementation.",
+    )
+    parser.add_argument(
+        "--agent",
+        choices=("claude", "codex"),
+        default="claude",
+        help="Coding agent used for source changes, analysis, and planning.",
+    )
+    parser.add_argument(
+        "--local-execution-mode",
+        choices=("full", "dataloader_only", "dry_run"),
+        default="full",
+        help="How local platform launches experiment commands.",
+    )
     return parser.parse_args(args)
 
 
-def run(args: list[str]) -> None:
+def _run(args: list[str]) -> None:
     ns = _parse_args(args)
     workdir = Path(ns.workdir).resolve()
     workdir.mkdir(parents=True, exist_ok=True)
@@ -81,16 +101,25 @@ def run(args: list[str]) -> None:
     (workdir / "logs").mkdir(exist_ok=True)
     setup_logging(workdir)
     _LG.info("Initializing experiment at %s", workdir)
+    platform = create_platform(
+        {
+            "platform": ns.platform,
+            "agent": ns.agent,
+            "local_execution_mode": ns.local_execution_mode,
+        },
+        workdir,
+    )
 
     source_dir = os.path.abspath(ns.source_dir) if ns.source_dir else ""
     scm_type = ""
     anchor_commit = ""
     if source_dir:
-        scm_type = detect_scm(source_dir)
-        anchor_commit = current_commit(scm_type, source_dir)
+        scm_type = platform.workspace.detect(source_dir)
+        anchor_commit = platform.workspace.current(scm_type, source_dir)
         _LG.info("SCM: %s, anchor commit: %s", scm_type, anchor_commit[:12])
 
     config = {
+        "schema_version": SCHEMA_VERSION,
         "created_at": datetime.now().isoformat(),
         "pipeline_script": (
             os.path.abspath(ns.pipeline_script) if ns.pipeline_script else None
@@ -107,6 +136,11 @@ def run(args: list[str]) -> None:
         "max_concurrency": ns.max_concurrency,
         "job_timeout_s": ns.job_timeout,
         "poll_interval": ns.poll_interval,
+        "startup_failure_retries": 2,
+        "startup_retryable_experiments": ["subprocess_mtp"],
+        "platform": ns.platform,
+        "agent": ns.agent,
+        "local_execution_mode": ns.local_execution_mode,
         "claude_flags": (
             ["--dangerously-skip-permissions"]
             if ns.dangerously_skip_permissions
@@ -117,6 +151,7 @@ def run(args: list[str]) -> None:
     (workdir / "config.json").write_text(json.dumps(config, indent=2) + "\n")
 
     state = {
+        "schema_version": SCHEMA_VERSION,
         "iteration": 0,
         "status": "initialized",
         "baseline_job": None,

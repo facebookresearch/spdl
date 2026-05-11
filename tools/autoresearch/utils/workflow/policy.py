@@ -10,8 +10,8 @@ This module intentionally contains no coding-agent calls, subprocess execution,
 or filesystem writes. Keep predictable decisions here so they can be unit tested
 without infrastructure.
 
-Design note for future agents
-=============================
+Design note
+===========
 
 If a behavior is deterministic and can be expressed from specs, nodes, state,
 or metrics already in memory, prefer adding it here instead of burying it in
