@@ -1,0 +1,696 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+from __future__ import annotations
+
+import asyncio
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from spdl.tools.autoresearch.plot_progress import (
+    _edge_label,
+    _load_tsv,
+    _tree_font_sizes,
+)
+from spdl.tools.autoresearch.utils.commands.report import _read_failures
+from spdl.tools.autoresearch.utils.commands.status import _failure_summary
+from spdl.tools.autoresearch.utils.platform import _MetricsEvidence, create_platform
+from spdl.tools.autoresearch.utils.platform.agents import _MockAgent
+from spdl.tools.autoresearch.utils.platform.local import _summarize_error
+from spdl.tools.autoresearch.utils.runner import _WorkSpec
+from spdl.tools.autoresearch.utils.state import (
+    _append_master_row,
+    _normalize_config,
+    _normalize_state,
+    MASTER_TABLE_HEADERS,
+    SCHEMA_VERSION,
+    write_state,
+)
+from spdl.tools.autoresearch.utils.types import (
+    _AnalysisResult,
+    _HypothesisNode,
+    FailureKind,
+    FailurePhase,
+    FailureRecord,
+)
+from spdl.tools.autoresearch.utils.workflow import (
+    _AutoresearchStore,
+    AutoresearchAdapter,
+)
+from spdl.tools.autoresearch.utils.workflow.analysis_ops import _update_on_complete
+from spdl.tools.autoresearch.utils.workflow.failures import (
+    _classify_terminal_job_failure,
+    _FAILURE_POLICIES,
+    _make_failure,
+)
+from spdl.tools.autoresearch.utils.workflow.policy import (
+    _change_summary_for_spec,
+    _compare_metric_value,
+    _extract_total_threads,
+    _node_from_spec,
+    _retry_policy_for_failure,
+    _select_planning_node,
+    _spec_from_node,
+    _startup_retry_spec,
+    _validate_thread_budget,
+)
+from spdl.tools.autoresearch.utils.workflow.source_ops import _build_apply_prompt
+from spdl.tools.autoresearch.utils.workflow.store import _write_text_atomic
+
+__all__: list[str] = []
+
+
+def _config() -> dict:
+    return {
+        "pipeline_script": "",
+        "source_dir": "",
+        "scm": "",
+        "build_command": "",
+        "base_launch_command": "torchx run example --num-fetch-threads 8",
+        "stopping_criteria": {
+            "max_iterations": 20,
+            "patience": 5,
+        },
+        "max_concurrency": 4,
+        "job_timeout_s": 600,
+        "poll_interval": 0,
+    }
+
+
+def _state() -> dict:
+    return {
+        "iteration": 0,
+        "status": "looping",
+        "baseline_job": None,
+        "current_best": None,
+        "best_metric": None,
+        "plateau_count": 0,
+        "best_practices_tried": [],
+        "anchor_commit": "",
+        "history": [],
+    }
+
+
+class _AutoresearchWorkflowTest(unittest.TestCase):
+    def test_fresh_load_creates_initial_must_run_specs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            adapter = self._adapter(Path(tmp))
+
+            specs = adapter.load()
+
+            self.assertEqual(
+                ["000_baseline", "000_headspace", "001_subprocess_mtp"],
+                [spec.id for spec in specs],
+            )
+            self.assertEqual([-1000, -999, -998], [spec.priority for spec in specs])
+
+    def test_checkpoint_writes_compatibility_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            adapter = self._adapter(workdir)
+            specs = adapter.load()
+
+            adapter.checkpoint(queued=specs[1:], running=specs[:1], status="running")
+
+            engine_state = json.loads(
+                (workdir / "engine" / "engine_state.json").read_text()
+            )
+            queue = json.loads((workdir / "engine" / "queue.json").read_text())
+            active = json.loads((workdir / "engine" / "active.json").read_text())
+            baseline_status = (
+                workdir / "engine" / "nodes" / "000_baseline" / "status.txt"
+            ).read_text()
+
+            self.assertEqual("running", engine_state["status"])
+            self.assertEqual(2, engine_state["queued"])
+            self.assertEqual(1, engine_state["running"])
+            self.assertEqual(
+                ["000_headspace", "001_subprocess_mtp"], [q["node_id"] for q in queue]
+            )
+            self.assertEqual([], active)
+            self.assertEqual("queued\n", baseline_status)
+
+    def test_checkpoint_round_trips_specs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            adapter = self._adapter(workdir)
+            specs = adapter.load()
+            adapter.checkpoint(queued=specs[1:], running=specs[:1], status="running")
+
+            loaded = self._adapter(workdir).load()
+
+            self.assertEqual(
+                ["000_headspace", "001_subprocess_mtp", "000_baseline"],
+                [spec.id for spec in loaded],
+            )
+
+    def test_planning_is_blocked_until_must_run_experiments_finish(self) -> None:
+        baseline = _HypothesisNode(
+            node_id="000_baseline",
+            name="baseline",
+            status="completed",
+        )
+        headspace = _HypothesisNode(
+            node_id="000_headspace",
+            name="headspace_cache",
+            status="queued",
+        )
+        mtp = _HypothesisNode(
+            node_id="001_subprocess_mtp",
+            name="subprocess_mtp",
+            status="completed",
+        )
+
+        selected = _select_planning_node(
+            baseline,
+            {
+                baseline.node_id: baseline,
+                headspace.node_id: headspace,
+                mtp.node_id: mtp,
+            },
+        )
+
+        self.assertIsNone(selected)
+
+    def test_headspace_completion_selects_mtp_after_must_run_finish(self) -> None:
+        baseline = _HypothesisNode(
+            node_id="000_baseline",
+            name="baseline",
+            status="completed",
+        )
+        headspace = _HypothesisNode(
+            node_id="000_headspace",
+            name="headspace_cache",
+            status="completed",
+            spec={"_is_headspace": True},
+        )
+        mtp = _HypothesisNode(
+            node_id="001_subprocess_mtp",
+            name="subprocess_mtp",
+            status="completed",
+        )
+
+        selected = _select_planning_node(
+            headspace,
+            {
+                baseline.node_id: baseline,
+                headspace.node_id: headspace,
+                mtp.node_id: mtp,
+            },
+        )
+
+        self.assertEqual(mtp, selected)
+
+    def test_policy_helpers_cover_metric_and_thread_decisions(self) -> None:
+        self.assertEqual(
+            ("step_ms", 12.5),
+            _compare_metric_value({"steady_step_time_ms": 12.5, "duration_s": 100}),
+        )
+        self.assertEqual(
+            24,
+            _extract_total_threads("--num-fetch-threads 8 --num-decode-threads 16"),
+        )
+        self.assertEqual(
+            ["ok"],
+            [
+                spec["name"]
+                for spec in _validate_thread_budget(
+                    [
+                        {"name": "ok", "launch_command": "--num-threads 8"},
+                        {"name": "too_many", "launch_command": "--num-threads 64"},
+                    ],
+                    16,
+                )
+            ],
+        )
+
+    def test_store_update_spec_refreshes_checkpoint_and_active_view(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            self._write_base_files(workdir)
+            store = _AutoresearchStore(workdir, _state())
+            node = _HypothesisNode(
+                node_id="000_baseline",
+                name="baseline",
+                status="queued",
+            )
+            spec = _spec_from_node(node)
+            store.save_scheduler_state(queued=[], running=[spec], status="running")
+
+            node.status = "running"
+            node.job_id = "remote_job"
+            store.update_spec(spec, node)
+
+            checkpoint = json.loads(
+                (workdir / "engine" / "checkpoint.json").read_text()
+            )
+            active = json.loads((workdir / "engine" / "active.json").read_text())
+            running_node = _node_from_spec(
+                _WorkSpec.from_dict(checkpoint["running"][0])
+            )
+
+            self.assertEqual("remote_job", running_node.job_id)
+            self.assertEqual("000_baseline", active[0]["node_id"])
+            self.assertEqual("remote_job", active[0]["job_id"])
+            self.assertIn("launched_at_iso", active[0])
+
+    def test_queue_view_includes_retry_lineage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            self._write_base_files(workdir)
+            store = _AutoresearchStore(workdir, _state())
+            node = _HypothesisNode(
+                node_id="002_retry",
+                name="retry",
+                status="queued",
+                spec={
+                    "_startup_retry_of": "001_subprocess_mtp",
+                    "_startup_retry_attempt": 1,
+                },
+            )
+
+            store.save_scheduler_state(
+                queued=[_spec_from_node(node)],
+                running=[],
+                status="running",
+            )
+
+            queue = json.loads((workdir / "engine" / "queue.json").read_text())
+            self.assertEqual("001_subprocess_mtp", queue[0]["retry_of"])
+            self.assertEqual(1, queue[0]["retry_attempt"])
+
+    def test_store_rejects_malformed_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            self._write_base_files(workdir)
+            engine_dir = workdir / "engine"
+            engine_dir.mkdir()
+            (engine_dir / "checkpoint.json").write_text(
+                json.dumps({"queued": [{"id": "bad", "payload": {}}]}) + "\n"
+            )
+            store = _AutoresearchStore(workdir, _state())
+
+            with self.assertRaisesRegex(ValueError, "payload.node"):
+                store.load_checkpoint()
+
+    def test_failure_record_round_trips_with_node(self) -> None:
+        node = _HypothesisNode(
+            node_id="001_bad_mtp",
+            name="bad_mtp",
+            status="failed",
+            failure=FailureRecord(
+                kind=FailureKind.JOB_STARTUP_FAILED,
+                phase=FailurePhase.JOB,
+                message="MTP failed during initialization",
+                details={"component": "mtp"},
+                job_id="job123",
+                created_at="2026-01-01T00:00:00",
+            ),
+        )
+
+        loaded = _HypothesisNode.from_dict(node.to_dict())
+
+        loaded_failure = loaded.failure
+        self.assertIsNotNone(loaded_failure)
+        assert loaded_failure is not None
+        self.assertEqual(FailureKind.JOB_STARTUP_FAILED, loaded_failure.kind)
+        self.assertEqual({"component": "mtp"}, loaded_failure.details)
+
+    def test_store_persists_failure_view(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            self._write_base_files(workdir)
+            store = _AutoresearchStore(workdir, _state())
+            node = _HypothesisNode(
+                node_id="001_failed",
+                name="failed",
+                status="failed",
+                failure=_make_failure(
+                    FailureKind.BUILD_FAILED,
+                    FailurePhase.BUILD,
+                    "Build failed",
+                ),
+            )
+
+            store.upsert_node(node)
+            store.write_all()
+
+            failure = json.loads(
+                (
+                    workdir / "engine" / "nodes" / "001_failed" / "failure.json"
+                ).read_text()
+            )
+            engine_state = json.loads(
+                (workdir / "engine" / "engine_state.json").read_text()
+            )
+            self.assertEqual("build_failed", failure["kind"])
+            self.assertEqual({"build_failed": 1}, engine_state["failed_by_kind"])
+            self.assertIn("build_failed", _failure_summary(workdir))
+            self.assertIn("build_failed", _read_failures(workdir))
+
+    def test_adapter_records_structured_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            adapter = self._adapter(workdir)
+            node = _HypothesisNode(node_id="001_failed", name="failed")
+            spec = _spec_from_node(node)
+            failure = _make_failure(
+                FailureKind.LAUNCH_FAILED,
+                FailurePhase.LAUNCH,
+                "No launch command configured",
+            )
+
+            asyncio.run(adapter._record_failure(spec, node, failure))
+
+            stored = json.loads(
+                (
+                    workdir / "engine" / "nodes" / "001_failed" / "failure.json"
+                ).read_text()
+            )
+            master_table = (workdir / "master_table.tsv").read_text()
+            self.assertEqual("launch_failed", stored["kind"])
+            self.assertIn("launch_failed: No launch command configured", master_table)
+
+    def test_completed_failure_history_uses_structured_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            self._write_base_files(workdir)
+            state = _state()
+            node = _HypothesisNode(
+                node_id="001_failed",
+                name="failed",
+                status="failed",
+                spec={"name": "failed"},
+            )
+            result = _AnalysisResult(
+                structured={"metrics": {}, "findings": []},
+                failure=_make_failure(
+                    FailureKind.JOB_FAILED,
+                    FailurePhase.JOB,
+                    "Job failed",
+                ),
+            )
+
+            _update_on_complete(workdir, _config(), state, node, result)
+
+            entry = state["history"][0]
+            self.assertNotIn("failure", entry)
+            self.assertEqual("job_failed", entry["structured"]["failure"]["kind"])
+
+    def test_job_failure_classifier_splits_startup_runtime_and_unknown(self) -> None:
+        startup = _classify_terminal_job_failure(
+            _MetricsEvidence(
+                system_metrics="",
+                pipeline_stats_log="TypeError: cannot pickle local function for MTP",
+                metrics_summary="",
+            ),
+            job_id="job_startup",
+            progress_seen=False,
+        )
+        runtime = _classify_terminal_job_failure(
+            _MetricsEvidence(
+                system_metrics="",
+                pipeline_stats_log="[autoresearch] step=12\nCUDA out of memory",
+                metrics_summary="steady_step_time_ms: 12",
+            ),
+            job_id="job_runtime",
+            progress_seen=True,
+        )
+        unknown = _classify_terminal_job_failure(
+            _MetricsEvidence(
+                system_metrics="", pipeline_stats_log="", metrics_summary=""
+            ),
+            job_id="job_unknown",
+            progress_seen=False,
+        )
+
+        self.assertEqual(FailureKind.JOB_STARTUP_FAILED, startup.kind)
+        self.assertEqual(FailureKind.JOB_RUNTIME_FAILED, runtime.kind)
+        self.assertEqual(FailureKind.JOB_FAILED, unknown.kind)
+
+    def test_structured_metrics_evidence_guides_failure_classification(self) -> None:
+        startup = _classify_terminal_job_failure(
+            _MetricsEvidence(
+                system_metrics="",
+                pipeline_stats_log="",
+                metrics_summary="",
+                error_summary="TypeError: can't pickle tokenizer",
+                log_paths=["stderr.log"],
+            ),
+            job_id="job_startup",
+            progress_seen=False,
+        )
+        runtime = _classify_terminal_job_failure(
+            _MetricsEvidence(
+                system_metrics="",
+                pipeline_stats_log="",
+                metrics_summary="",
+                progress_seen=True,
+                exit_code=1,
+            ),
+            job_id="job_runtime",
+            progress_seen=False,
+        )
+
+        self.assertEqual(FailureKind.JOB_STARTUP_FAILED, startup.kind)
+        self.assertEqual(["stderr.log"], startup.details["log_paths"])
+        self.assertEqual(FailureKind.JOB_RUNTIME_FAILED, runtime.kind)
+        self.assertEqual(1, runtime.details["exit_code"])
+
+    def test_startup_failure_retry_is_bounded_for_mtp(self) -> None:
+        node = _HypothesisNode(
+            node_id="001_subprocess_mtp",
+            name="subprocess_mtp",
+            status="failed",
+            spec={
+                "name": "subprocess_mtp",
+                "description": "try MTP",
+                "best_practices_tags": ["subprocess_mtp"],
+            },
+            failure=_make_failure(
+                FailureKind.JOB_STARTUP_FAILED,
+                FailurePhase.JOB,
+                "Tokenizer cannot pickle",
+            ),
+        )
+
+        retry = _startup_retry_spec(node, _config())
+        self.assertIsNotNone(retry)
+        assert retry is not None
+        self.assertEqual("subprocess_mtp_startup_retry_1", retry["name"])
+        self.assertEqual(1, retry["_startup_retry_attempt"])
+        self.assertIn("pickling", retry["hypothesis"])
+
+        node.spec["_startup_retry_attempt"] = 2
+        self.assertIsNone(_startup_retry_spec(node, _config()))
+
+    def test_retry_policy_is_kind_specific(self) -> None:
+        node = _HypothesisNode(
+            node_id="001_subprocess_mtp",
+            name="subprocess_mtp",
+            spec={"best_practices_tags": ["subprocess_mtp"]},
+            failure=_make_failure(
+                FailureKind.JOB_STARTUP_FAILED,
+                FailurePhase.JOB,
+                "startup",
+            ),
+        )
+        policy = _retry_policy_for_failure(node, _config())
+        self.assertIsNotNone(policy)
+        assert policy is not None
+        self.assertEqual(2, policy["max_attempts"])
+
+        node.failure = _make_failure(
+            FailureKind.BUILD_FAILED,
+            FailurePhase.BUILD,
+            "build",
+        )
+        self.assertIsNone(_retry_policy_for_failure(node, _config()))
+
+    def test_planning_prefers_non_startup_failed_retry(self) -> None:
+        baseline = _HypothesisNode(
+            node_id="000_baseline",
+            name="baseline",
+            status="completed",
+        )
+        headspace = _HypothesisNode(
+            node_id="000_headspace",
+            name="headspace_cache",
+            status="completed",
+            spec={"_is_headspace": True},
+        )
+        mtp = _HypothesisNode(
+            node_id="001_subprocess_mtp",
+            name="subprocess_mtp",
+            status="failed",
+            failure=_make_failure(
+                FailureKind.JOB_STARTUP_FAILED,
+                FailurePhase.JOB,
+                "startup",
+            ),
+        )
+        retry = _HypothesisNode(
+            node_id="002_subprocess_mtp_startup_retry_1",
+            name="subprocess_mtp_startup_retry_1",
+            status="failed",
+            spec={"_startup_retry_of": "001_subprocess_mtp"},
+            failure=_make_failure(
+                FailureKind.JOB_STARTUP_FAILED,
+                FailurePhase.JOB,
+                "startup",
+            ),
+        )
+        better_candidate = _HypothesisNode(
+            node_id="003_threads",
+            name="threads",
+            status="completed",
+        )
+
+        selected = _select_planning_node(
+            retry,
+            {
+                node.node_id: node
+                for node in [baseline, headspace, mtp, retry, better_candidate]
+            },
+        )
+
+        self.assertEqual(better_candidate, selected)
+
+    def test_startup_retry_uses_repair_prompt(self) -> None:
+        platform = create_platform({"platform": "local", "agent": "mock"})
+        assert isinstance(platform.agent, _MockAgent)
+        platform.agent.responses["prompt:apply_startup_repair"] = (
+            "failed during job startup __STARTUP_FAILURE_JSON__"
+        )
+        prompt = _build_apply_prompt(
+            platform,
+            {
+                "name": "subprocess_mtp_startup_retry_1",
+                "description": "repair",
+                "hypothesis": "fix startup",
+                "_startup_retry_attempt": 1,
+                "_startup_failure": {"kind": "job_startup_failed"},
+            },
+            "002_subprocess_mtp_startup_retry_1",
+            "knowledge",
+            "/tmp/pipeline.py",
+            "def main():\n    pass\n",
+        )
+
+        self.assertIn("failed during job startup", prompt)
+        self.assertIn("job_startup_failed", prompt)
+
+    def test_tree_edge_label_describes_experiment_evolution(self) -> None:
+        parent = {"node_id": "001_parent", "name": "parent", "spec": {}}
+        child = {
+            "node_id": "002_child",
+            "name": "child",
+            "spec": {
+                "change_summary": "raise decode threads",
+                "description": "increase decode thread count",
+            },
+        }
+        retry = {
+            "node_id": "003_retry",
+            "name": "retry",
+            "spec": {"_startup_retry_attempt": 2, "description": "repair"},
+        }
+
+        self.assertEqual("raise decode threads", _edge_label(parent, child))
+        self.assertEqual("startup repair #2", _edge_label(parent, retry))
+
+    def test_change_summary_is_concise_and_persisted_in_master_table(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            (workdir / "master_table.tsv").write_text(
+                "\t".join(MASTER_TABLE_HEADERS) + "\n"
+            )
+
+            summary = _change_summary_for_spec(
+                {
+                    "description": (
+                        "Increase decode thread count while preserving the rest "
+                        "of the pipeline"
+                    )
+                }
+            )
+            _append_master_row(
+                workdir,
+                {
+                    "run_id": "001_threads",
+                    "name": "threads",
+                    "status": "completed",
+                    "change_summary": summary,
+                    "sm_util_pct": "50",
+                },
+            )
+
+            rows = _load_tsv(workdir / "master_table.tsv")
+
+            self.assertEqual("Increase decode thread count while", summary)
+            self.assertEqual(summary, rows[0]["change_summary"])
+
+    def test_tree_font_sizes_grow_with_tree_size(self) -> None:
+        small = _tree_font_sizes(4, 1)
+        large = _tree_font_sizes(120, 10)
+
+        self.assertGreater(large["title"], small["title"])
+        self.assertGreater(large["legend"], small["legend"])
+
+    def test_schema_normalizers_add_versions_and_defaults(self) -> None:
+        config = _normalize_config({})
+        state = _normalize_state({})
+
+        self.assertEqual(SCHEMA_VERSION, config["schema_version"])
+        self.assertEqual(SCHEMA_VERSION, state["schema_version"])
+        self.assertEqual("auto", config["platform"])
+        self.assertEqual([], state["history"])
+
+    def test_every_failure_kind_has_policy(self) -> None:
+        self.assertEqual(set(FailureKind.__members__.values()), set(_FAILURE_POLICIES))
+        self.assertTrue(_FAILURE_POLICIES[FailureKind.JOB_STARTUP_FAILED].retryable)
+
+    def test_error_summary_prefers_traceback_block(self) -> None:
+        summary = _summarize_error(
+            "before\n"
+            "Traceback (most recent call last):\n"
+            '  File "x.py", line 1, in <module>\n'
+            "TypeError: cannot pickle tokenizer\n"
+            "after\n"
+        )
+
+        self.assertIsNotNone(summary)
+        assert summary is not None
+        self.assertIn("Traceback", summary)
+        self.assertIn("cannot pickle", summary)
+
+    def test_atomic_write_replaces_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "data.json"
+
+            _write_text_atomic(path, '{"a": 1}\n')
+            _write_text_atomic(path, '{"a": 2}\n')
+
+            self.assertEqual({"a": 2}, json.loads(path.read_text()))
+
+    def _adapter(self, workdir: Path) -> AutoresearchAdapter:
+        self._write_base_files(workdir)
+        return AutoresearchAdapter(
+            workdir=workdir,
+            config=_config(),
+            state=_state(),
+            platform=create_platform({"platform": "auto", "agent": "mock"}, workdir),
+        )
+
+    def _write_base_files(self, workdir: Path) -> None:
+        workdir.mkdir(parents=True, exist_ok=True)
+        (workdir / "config.json").write_text(json.dumps(_config()) + "\n")
+        write_state(workdir, _state())
+        (workdir / "master_table.tsv").write_text(
+            "\t".join(MASTER_TABLE_HEADERS) + "\n"
+        )
