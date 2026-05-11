@@ -1,0 +1,14 @@
+.. _exhale_function_demuxing_8h_1a78b157beb45e215aad69f013831788ac:
+
+Function spdl::core::make_demuxer(const std::string&, const SourceAdaptorPtr&, const std::optional<DemuxConfig>&, const std::optional<std::string>&)
+====================================================================================================================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::make_demuxer(const std::string&, const SourceAdaptorPtr&, const std::optional<DemuxConfig>&, const std::optional<std::string>&)
+   :project: libspdl

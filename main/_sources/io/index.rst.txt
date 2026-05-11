@@ -9,6 +9,7 @@ into array format, and transferring it to GPU without interrupting the model com
 
 The module can decode images and videos into various color formats (RGB, YUV420p, NV12, etc.)
 to support different use cases and optimize memory usage for specific applications.
+See :doc:`color_space` for the supported pixel formats and how to select them.
 
 The following diagram illustrates this workflow:
 
@@ -42,8 +43,10 @@ This section provides detailed documentation on how to use these implementations
    decoding_overview
    packets_frames_concepts
    filtering
+   color_space
    advanced_filtering
    streaming_decoding
    gpu_decoding
    numpy_arrays
    encoding
+   ffmpeg_cheatsheet

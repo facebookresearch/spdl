@@ -11,6 +11,8 @@ spdl.io.VideoPackets
    .. autosummary::
       ~VideoPackets.clone
       ~VideoPackets.codec
+      ~VideoPackets.deserialize
+      ~VideoPackets.deserialize_view
       ~VideoPackets.frame_rate
       ~VideoPackets.get_timestamps
       ~VideoPackets.height

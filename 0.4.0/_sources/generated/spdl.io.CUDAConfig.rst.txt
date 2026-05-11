@@ -1,0 +1,7 @@
+spdl.io.CUDAConfig
+==================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: CUDAConfig
+   :members:

@@ -1,0 +1,6 @@
+spdl.pipeline.is\_epoch\_end
+============================
+
+.. currentmodule:: spdl.pipeline
+
+.. autofunction:: is_epoch_end

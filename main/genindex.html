@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#" /><link rel="search" title="Search" href="search.html" />
 
-    <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 --><title>Index - SPDL 0.4.0 documentation</title>
+    <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 --><title>Index - SPDL 0.5.0 documentation</title>
 <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -176,7 +176,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">SPDL 0.4.0 documentation</div></a>
+      <a href="index.html"><div class="brand">SPDL 0.5.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -200,7 +200,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.4.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.5.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -236,11 +236,13 @@
 <li class="toctree-l2"><a class="reference internal" href="io/decoding_overview.html">Decoding Process Overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="io/packets_frames_concepts.html">Packets and Frames</a></li>
 <li class="toctree-l2"><a class="reference internal" href="io/filtering.html">Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io/color_space.html">Video Color Space</a></li>
 <li class="toctree-l2"><a class="reference internal" href="io/advanced_filtering.html">Advanced Filter Graphs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="io/streaming_decoding.html">Streaming Decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="io/numpy_arrays.html">Loading NumPy Arrays</a></li>
 <li class="toctree-l2"><a class="reference internal" href="io/encoding.html">Media Encoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io/ffmpeg_cheatsheet.html">FFmpeg CLI Cheat Sheet</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -252,23 +254,30 @@
 <li class="toctree-l2"><a class="reference internal" href="optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
-<li class="toctree-l2"><a class="reference internal" href="optimization_guide/autoresearch.html">Autoresearch</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="case_studies/parallelism.html">Parallelism and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="case_studies/data_format.html">Data Format and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="case_studies/inference.html">Building Inference Pipeline</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="autoresearch/autoresearch.html">How It Works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoresearch/autoresearch_example.html">Example: Video Classification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoresearch/autoresearch_example_v2.html">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoresearch/autoresearch_architecture.html">Architecture</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="best_practice.html">Best Practices</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="generated/llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/video_dataloading.html">Video dataloading</a></li>
@@ -287,26 +296,29 @@
 <li class="toctree-l2"><a class="reference internal" href="generated/benchmark_tarfile.html">Benchmark tarfile</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul class="current">
-<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="generated/spdl.pipeline.html">spdl.pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/spdl.pipeline.config.html">spdl.pipeline.config</a></li>
-<li class="toctree-l2"><a class="reference internal" href="generated/spdl.dataloader.html">spdl.dataloader</a></li>
-<li class="toctree-l2"><a class="reference internal" href="generated/spdl.source.html">spdl.source</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/spdl.io.html">spdl.io</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/spdl.io.utils.html">spdl.io.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/spdl.autoresearch.html">spdl.autoresearch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/spdl.autoresearch.core.html">spdl.autoresearch.core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/spdl.dataloader.html">spdl.dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/spdl.source.html">spdl.source</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="generated/libspdl/libspdl_class.html">Class List</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/libspdl/libspdl_file.html">File List</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="generated/libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="generated/libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/namespace_spdl.html">Namespace spdl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
@@ -321,8 +333,6 @@
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/structspdl_1_1core_1_1Generator_1_1iterator.html">Struct Generator::iterator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/structspdl_1_1core_1_1Packets.html">Template Struct Packets</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/structspdl_1_1core_1_1RawPacketData.html">Struct RawPacketData</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/structspdl_1_1core_1_1SourceAdaptor.html">Struct SourceAdaptor</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/structspdl_1_1core_1_1Storage.html">Struct Storage</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/classspdl_1_1core_1_1BSF.html">Template Class BSF</a></li>
@@ -337,7 +347,6 @@
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/classspdl_1_1core_1_1Frames.html">Template Class Frames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html">Class PacketSeries</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
@@ -348,11 +357,9 @@
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa.html">Function spdl::core::cpu_buffer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_conversion_8h_1a295b42ad20d2569806d9a15009a44ca8.html">Function spdl::core::create_reference_audio_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_packets_8h_1a375c1c657bca786016f8a705e3f2a624.html">Template Function spdl::core::get_timestamps</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
@@ -370,7 +377,6 @@
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b.html">Typedef spdl::core::AnyPackets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html">Typedef spdl::core::AnyPacketsGenerator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
@@ -378,8 +384,6 @@
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_encoder_8h_1a0dfcc06d4bbea67c7f45399be8719fa6.html">Typedef spdl::core::AudioEncoderPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf.html">Typedef spdl::core::AudioFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62.html">Typedef spdl::core::AudioFramesPtr</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_packets_8h_1a9644f8aa13f0e4db02d8ab60673563a3.html">Typedef spdl::core::AudioPackets</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c.html">Typedef spdl::core::AudioPacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_buffer_8h_1ab6e5b43497adbd35e9fbc35cf5be7101.html">Typedef spdl::core::CPUBufferPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_adaptor_8h_1adcb670a31326eb24268b384396736cd6.html">Typedef spdl::core::DataInterfacePtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_decoder_8h_1a4b0502ea20d1dda958a67deeb582a74b.html">Typedef spdl::core::DecoderPtr</a></li>
@@ -390,12 +394,8 @@
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f.html">Typedef spdl::core::ImageCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a.html">Typedef spdl::core::ImageFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7.html">Typedef spdl::core::ImageFramesPtr</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_packets_8h_1af018ade1cd38831c342686abbcb787a8.html">Typedef spdl::core::ImagePackets</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1.html">Typedef spdl::core::ImagePacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_muxer_8h_1aaa76352d246819df02bc407729f69dda.html">Typedef spdl::core::MuxerPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20.html">Typedef spdl::core::OptionDict</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_packets_8h_1a331b599d0eceb00ebef166d64623c71a.html">Typedef spdl::core::PacketSeriesPtr</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html">Typedef spdl::core::PacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
@@ -405,8 +405,6 @@
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_encoder_8h_1a39ace4ea741767fa3d802040a9bc22e1.html">Typedef spdl::core::VideoEncoderPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_frames_8h_1af1892953097f3723455403752ef79fc5.html">Typedef spdl::core::VideoFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d.html">Typedef spdl::core::VideoFramesPtr</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_packets_8h_1a7be7c9faccc623d12fb33ec966f84b4c.html">Typedef spdl::core::VideoPackets</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/libspdl/typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691.html">Typedef spdl::core::VideoPacketsPtr</a></li>
 </ul>
 </li>
 </ul>
@@ -415,7 +413,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
@@ -442,6 +440,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.0">0.3.0</a></li>
@@ -497,7 +496,7 @@
           
 <section class="genindex-section">
   <h1 id="index">Index</h1>
-  <div class="genindex-jumpbox"><a href="#_"><strong>_</strong></a> | <a href="#A"><strong>A</strong></a> | <a href="#B"><strong>B</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#D"><strong>D</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#F"><strong>F</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#H"><strong>H</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#L"><strong>L</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#N"><strong>N</strong></a> | <a href="#O"><strong>O</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#Q"><strong>Q</strong></a> | <a href="#R"><strong>R</strong></a> | <a href="#S"><strong>S</strong></a> | <a href="#T"><strong>T</strong></a> | <a href="#U"><strong>U</strong></a> | <a href="#V"><strong>V</strong></a> | <a href="#W"><strong>W</strong></a></div>
+  <div class="genindex-jumpbox"><a href="#_"><strong>_</strong></a> | <a href="#A"><strong>A</strong></a> | <a href="#B"><strong>B</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#D"><strong>D</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#F"><strong>F</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#H"><strong>H</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#J"><strong>J</strong></a> | <a href="#K"><strong>K</strong></a> | <a href="#L"><strong>L</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#N"><strong>N</strong></a> | <a href="#O"><strong>O</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#Q"><strong>Q</strong></a> | <a href="#R"><strong>R</strong></a> | <a href="#S"><strong>S</strong></a> | <a href="#T"><strong>T</strong></a> | <a href="#U"><strong>U</strong></a> | <a href="#V"><strong>V</strong></a> | <a href="#W"><strong>W</strong></a></div>
 </section>
 <section id="_" class="genindex-section">
   <h2>_</h2>
@@ -625,14 +624,20 @@
 </li>
         <li><a href="generated/spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator">Aggregator (class in spdl.pipeline.defs)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.ANALYSIS">ANALYSIS (FailurePhase attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.ANALYSIS_FAILED">ANALYSIS_FAILED (FailureKind attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.AnalysisResult.html#spdl.autoresearch.core.AnalysisResult">AnalysisResult (class in spdl.autoresearch.core)</a>
+</li>
         <li><a href="generated/spdl.io.apply_bsf.html#spdl.io.apply_bsf">apply_bsf() (in module spdl.io)</a>
 </li>
         <li><a href="generated/spdl.io.ArrayInterface.html#spdl.io.ArrayInterface">ArrayInterface (class in spdl.io)</a>
 </li>
-        <li><a href="generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue">AsyncQueue (class in spdl.pipeline)</a>
-</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue">AsyncQueue (class in spdl.pipeline)</a>
+</li>
         <li><a href="generated/spdl.io.Demuxer.html#spdl.io.Demuxer.audio_codec">audio_codec (Demuxer property)</a>
 </li>
         <li><a href="generated/spdl.io.audio_encode_config.html#spdl.io.audio_encode_config">audio_encode_config() (in module spdl.io)</a>
@@ -652,6 +657,8 @@
         <li><a href="generated/spdl.io.AudioPackets.html#spdl.io.AudioPackets">AudioPackets (class in spdl.io)</a>
 </li>
         <li><a href="generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.auto_stop">auto_stop() (Pipeline method)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.AutoresearchError.html#spdl.autoresearch.core.AutoresearchError">AutoresearchError</a>
 </li>
         <li><a href="generated/spdl.pipeline.QueuePerfStats.html#spdl.pipeline.QueuePerfStats.ave_get_time">ave_get_time (QueuePerfStats attribute)</a>
 </li>
@@ -689,6 +696,13 @@
           <li><a href="generated/imagenet_classification.html#imagenet_classification.benchmark">(in module imagenet_classification)</a>
 </li>
           <li><a href="generated/video_dataloading.html#video_dataloading.benchmark">(in module video_dataloading)</a>
+</li>
+        </ul></li>
+        <li>
+    benchmark_arena_transport
+
+        <ul>
+          <li><a href="generated/benchmark_arena_transport.html#module-benchmark_arena_transport">module</a>
 </li>
         </ul></li>
         <li>
@@ -757,9 +771,13 @@
 </li>
         <li><a href="generated/spdl.pipeline.defs.SinkConfig.html#spdl.pipeline.defs.SinkConfig.buffer_size">buffer_size (SinkConfig attribute)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.BUILD">BUILD (FailurePhase attribute)</a>
+</li>
         <li><a href="generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.build">build() (PipelineBuilder method)</a>
 </li>
         <li><a href="generated/streaming_video_processing.html#streaming_video_processing.build_components">build_components() (in module streaming_video_processing)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.BUILD_FAILED">BUILD_FAILED (FailureKind attribute)</a>
 </li>
         <li><a href="generated/llm_finetune.llm_finetuning.html#llm_finetune.llm_finetuning.build_model">build_model() (in module llm_finetune.llm_finetuning)</a>
 </li>
@@ -774,6 +792,8 @@
         <li><a href="generated/llm_finetune.llm_finetuning.html#llm_finetune.llm_finetuning.build_pytorch_dataloader">build_pytorch_dataloader() (in module llm_finetune.llm_finetuning)</a>
 </li>
         <li><a href="generated/llm_finetune.llm_finetuning.html#llm_finetune.llm_finetuning.build_spdl_dataloader">build_spdl_dataloader() (in module llm_finetune.llm_finetuning)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowSpec.html#spdl.autoresearch.core.WorkflowSpec.build_workflow">build_workflow() (WorkflowSpec method)</a>
 </li>
         <li><a href="generated/spdl.io.utils.built_with_cuda.html#spdl.io.utils.built_with_cuda">built_with_cuda() (in module spdl.io.utils)</a>
 </li>
@@ -795,10 +815,20 @@
 </li>
         <li><a href="generated/spdl.dataloader.CacheDataLoader.html#spdl.dataloader.CacheDataLoader">CacheDataLoader (class in spdl.dataloader)</a>
 </li>
+        <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.capacity">capacity (SharedMemoryRingBuffer property)</a>
+</li>
         <li><a href="notes/pipeline_impl.html#spdl.pipeline._components._node._Node.cfg">cfg (_Node attribute)</a>
 </li>
         <li><a href="generated/spdl.io.AudioCodec.html#spdl.io.AudioCodec.channel_layout">channel_layout (AudioCodec property)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowProtocol.html#spdl.autoresearch.core.WorkflowProtocol.checkpoint">checkpoint() (WorkflowProtocol method)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.children">children (HypothesisNode attribute)</a>
+
+        <ul>
+          <li><a href="generated/spdl.autoresearch.core.TaskResult.html#spdl.autoresearch.core.TaskResult.children">(TaskResult attribute)</a>
+</li>
+        </ul></li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.ci_lower">ci_lower (BenchmarkResult attribute)</a>
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.ci_upper">ci_upper (BenchmarkResult attribute)</a>
@@ -820,6 +850,16 @@
 </li>
         </ul></li>
         <li><a href="generated/spdl.io.Muxer.html#spdl.io.Muxer.close">close() (Muxer method)</a>
+
+        <ul>
+          <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.close">(SharedMemoryRingBuffer method)</a>
+</li>
+          <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool.close">(SharedMemorySegmentPool method)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.CODE_CHANGE">CODE_CHANGE (FailurePhase attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.CODE_CHANGE_FAILED">CODE_CHANGE_FAILED (FailureKind attribute)</a>
 </li>
         <li><a href="generated/spdl.io.AudioPackets.html#spdl.io.AudioPackets.codec">codec (AudioPackets property)</a>
 
@@ -831,19 +871,23 @@
         </ul></li>
         <li><a href="generated/spdl.pipeline.defs.Collate.html#spdl.pipeline.defs.Collate">Collate (class in spdl.pipeline.defs)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.commit">commit (HypothesisNode attribute)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/benchmark_numpy.html#benchmark_numpy.BenchmarkConfig.compressed">compressed (BenchmarkConfig attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.StageInfo.html#spdl.pipeline.StageInfo.concurrency">concurrency (StageInfo attribute)</a>
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.config">config (BenchmarkResult attribute)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.pipeline.defs.SourceConfig.html#spdl.pipeline.defs.SourceConfig.continuous">continuous (SourceConfig attribute)</a>
 </li>
         <li><a href="generated/spdl.io.convert_array.html#spdl.io.convert_array">convert_array() (in module spdl.io)</a>
 </li>
         <li><a href="generated/spdl.io.convert_frames.html#spdl.io.convert_frames">convert_frames() (in module spdl.io)</a>
+</li>
+        <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool.count">count (SharedMemorySegmentPool property)</a>
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.cpu_percent">cpu_percent (BenchmarkResult attribute)</a>
 
@@ -851,6 +895,8 @@
           <li><a href="generated/spdl.pipeline.ProcessGroupResourceUsage.html#spdl.pipeline.ProcessGroupResourceUsage.cpu_percent">(ProcessGroupResourceUsage attribute)</a>
 </li>
         </ul></li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.cpu_sec">cpu_sec (Row attribute)</a>
+</li>
         <li><a href="generated/spdl.io.cpu_storage.html#spdl.io.cpu_storage">cpu_storage() (in module spdl.io)</a>
 </li>
         <li><a href="generated/spdl.io.CPUBuffer.html#spdl.io.CPUBuffer">CPUBuffer (class in spdl.io)</a>
@@ -873,9 +919,15 @@
 </li>
         <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.create_test_tar">create_test_tar() (in module benchmark_tarfile)</a>
 </li>
-        <li><a href="generated/benchmark_video.html#benchmark_video.create_video_data">create_video_data() (in module benchmark_video)</a>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.create_video_data">create_video_data() (in module benchmark_arena_transport)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_video.html#benchmark_video.create_video_data">(in module benchmark_video)</a>
 </li>
+        </ul></li>
         <li><a href="generated/benchmark_wav.html#benchmark_wav.create_wav_data">create_wav_data() (in module benchmark_wav)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.created_at">created_at (FailureRecord attribute)</a>
 </li>
         <li><a href="generated/spdl.io.cuda_config.html#spdl.io.cuda_config">cuda_config() (in module spdl.io)</a>
 </li>
@@ -933,8 +985,6 @@
         </ul></li>
         <li><a href="generated/spdl.io.demux_config.html#spdl.io.demux_config">demux_config() (in module spdl.io)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.io.Demuxer.html#spdl.io.Demuxer.demux_image">demux_image() (Demuxer method)</a>
 
         <ul>
@@ -949,7 +999,29 @@
         </ul></li>
         <li><a href="generated/spdl.io.DemuxConfig.html#spdl.io.DemuxConfig">DemuxConfig (class in spdl.io)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.io.Demuxer.html#spdl.io.Demuxer">Demuxer (class in spdl.io)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowSpec.html#spdl.autoresearch.core.WorkflowSpec.description">description() (WorkflowSpec method)</a>
+</li>
+        <li><a href="generated/spdl.io.AudioPackets.html#spdl.io.AudioPackets.deserialize">deserialize (AudioPackets attribute)</a>
+
+        <ul>
+          <li><a href="generated/spdl.io.ImagePackets.html#spdl.io.ImagePackets.deserialize">(ImagePackets attribute)</a>
+</li>
+          <li><a href="generated/spdl.io.VideoPackets.html#spdl.io.VideoPackets.deserialize">(VideoPackets attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/spdl.io.AudioPackets.html#spdl.io.AudioPackets.deserialize_view">deserialize_view (AudioPackets attribute)</a>
+
+        <ul>
+          <li><a href="generated/spdl.io.ImagePackets.html#spdl.io.ImagePackets.deserialize_view">(ImagePackets attribute)</a>
+</li>
+          <li><a href="generated/spdl.io.VideoPackets.html#spdl.io.VideoPackets.deserialize_view">(VideoPackets attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.details">details (FailureRecord attribute)</a>
 </li>
         <li><a href="generated/spdl.io.CUDABuffer.html#spdl.io.CUDABuffer.device_index">device_index (CUDABuffer property)</a>
 </li>
@@ -973,6 +1045,12 @@
 </li>
         <li><a href="generated/spdl.io.FilterGraph.html#spdl.io.FilterGraph.dump">dump (FilterGraph attribute)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.AnalysisResult.html#spdl.autoresearch.core.AnalysisResult.duration">duration (AnalysisResult attribute)</a>
+
+        <ul>
+          <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.duration">(HypothesisNode attribute)</a>
+</li>
+        </ul></li>
         <li><a href="generated/benchmark_video.html#benchmark_video.BenchmarkConfig.duration_seconds">duration_seconds (BenchmarkConfig attribute)</a>, <a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig.duration_seconds">[1]</a>
 </li>
     </ul></td>
@@ -999,6 +1077,8 @@
         </ul></li>
         <li><a href="generated/spdl.io.encode_image.html#spdl.io.encode_image">encode_image() (in module spdl.io)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowSpec.html#spdl.autoresearch.core.WorkflowSpec.engine_argv_tail">engine_argv_tail() (WorkflowSpec method)</a>
+</li>
         <li><a href="generated/image_dataloading.html#image_dataloading.entrypoint">entrypoint() (in module image_dataloading)</a>
 
         <ul>
@@ -1011,6 +1091,8 @@
         </ul></li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.exception_type">exception_type (FailureRecord attribute)</a>
+</li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.executor_type">executor_type (BenchmarkResult attribute)</a>
 
         <ul>
@@ -1031,6 +1113,18 @@
   <h2>F</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.autoresearch.core.AnalysisResult.html#spdl.autoresearch.core.AnalysisResult.failure">failure (AnalysisResult attribute)</a>
+
+        <ul>
+          <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.failure">(HypothesisNode attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind">FailureKind (class in spdl.autoresearch.core)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase">FailurePhase (class in spdl.autoresearch.core)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord">FailureRecord (class in spdl.autoresearch.core)</a>
+</li>
         <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.BenchmarkConfig.file_size">file_size (BenchmarkConfig attribute)</a>
 </li>
         <li><a href="generated/spdl.io.BSF.html#spdl.io.BSF.filter">filter() (BSF method)</a>
@@ -1081,6 +1175,14 @@
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.free_threaded">free_threaded (BenchmarkResult attribute)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.from_dict">from_dict() (FailureRecord class method)</a>
+
+        <ul>
+          <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.from_dict">(HypothesisNode class method)</a>
+</li>
+          <li><a href="generated/spdl.autoresearch.core.TaskSpec.html#spdl.autoresearch.core.TaskSpec.from_dict">(TaskSpec class method)</a>
+</li>
+        </ul></li>
         <li><a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig.function">function (BenchmarkConfig attribute)</a>
 </li>
         <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.BenchmarkConfig.function_name">function_name (BenchmarkConfig attribute)</a>, <a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig.function_name">[1]</a>
@@ -1177,6 +1279,8 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.io.Demuxer.html#spdl.io.Demuxer.has_audio">has_audio() (Demuxer method)</a>
 </li>
+        <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.head">head (SharedMemoryRingBuffer property)</a>
+</li>
         <li><a href="generated/benchmark_video.html#benchmark_video.BenchmarkConfig.height">height (BenchmarkConfig attribute)</a>
 
         <ul>
@@ -1202,6 +1306,8 @@
           <li><a href="generated/hydra_integration.html#module-hydra_integration">module</a>
 </li>
         </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode">HypothesisNode (class in spdl.autoresearch.core)</a>
+</li>
     </ul></td>
   </tr></table>
 </section>
@@ -1210,6 +1316,8 @@
   <h2>I</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.autoresearch.core.TaskSpec.html#spdl.autoresearch.core.TaskSpec.id">id (TaskSpec attribute)</a>
+</li>
         <li><a href="generated/spdl.io.Demuxer.html#spdl.io.Demuxer.image_codec">image_codec (Demuxer property)</a>
 </li>
         <li>
@@ -1236,6 +1344,8 @@
 </li>
         <li><a href="generated/benchmark_numpy.html#benchmark_numpy.BenchmarkConfig.impl">impl (BenchmarkConfig attribute)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.AnalysisResult.html#spdl.autoresearch.core.AnalysisResult.improved">improved (AnalysisResult attribute)</a>
+</li>
         <li><a href="generated/spdl.io.NvDecDecoder.html#spdl.io.NvDecDecoder.init_buffer">init_buffer (NvDecDecoder attribute)</a>
 </li>
         <li><a href="generated/spdl.io.NvDecDecoder.html#spdl.io.NvDecDecoder.init_decoder">init_decoder (NvDecDecoder attribute)</a>
@@ -1246,10 +1356,14 @@
 </li>
         <li><a href="notes/pipeline_impl.html#spdl.pipeline._components._node._Node.input_queue">input_queue (_Node attribute)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.INSTRUMENTATION">INSTRUMENTATION (FailurePhase attribute)</a>
+</li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.ExecutorType.INTERPRETER">INTERPRETER (ExecutorType attribute)</a>
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.INTERRUPTED">INTERRUPTED (FailureKind attribute)</a>
+</li>
         <li><a href="generated/spdl.pipeline.StatsQueue.html#spdl.pipeline.StatsQueue.interval_stats_callback">interval_stats_callback() (StatsQueue method)</a>
 
         <ul>
@@ -1265,6 +1379,8 @@
         <li><a href="generated/spdl.pipeline.is_eof.html#spdl.pipeline.is_eof">is_eof() (in module spdl.pipeline)</a>
 </li>
         <li><a href="generated/spdl.pipeline.is_epoch_end.html#spdl.pipeline.is_epoch_end">is_epoch_end() (in module spdl.pipeline)</a>
+</li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.items_per_s">items_per_s (Row attribute)</a>
 </li>
         <li><a href="generated/spdl.io.iter_tarfile.html#spdl.io.iter_tarfile">iter_tarfile() (in module spdl.io)</a>
 </li>
@@ -1290,11 +1406,59 @@
   </tr></table>
 </section>
 
+<section id="J" class="genindex-section">
+  <h2>J</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.JOB">JOB (FailurePhase attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.JOB_FAILED">JOB_FAILED (FailureKind attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.job_id">job_id (FailureRecord attribute)</a>
+
+        <ul>
+          <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.job_id">(HypothesisNode attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.JOB_RUNTIME_FAILED">JOB_RUNTIME_FAILED (FailureKind attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.JOB_STALLED">JOB_STALLED (FailureKind attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.JOB_STARTUP_FAILED">JOB_STARTUP_FAILED (FailureKind attribute)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="K" class="genindex-section">
+  <h2>K</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.kind">kind (FailureRecord attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.kind">(Row attribute)</a>
+</li>
+          <li><a href="generated/spdl.autoresearch.core.TaskSpec.html#spdl.autoresearch.core.TaskSpec.kind">(TaskSpec attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
 <section id="L" class="genindex-section">
   <h2>L</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/benchmark_thread_output_queue.html#benchmark_thread_output_queue.BenchResult.latencies_us">latencies_us (BenchResult attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.LAUNCH">LAUNCH (FailurePhase attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.LAUNCH_FAILED">LAUNCH_FAILED (FailureKind attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.launched_at">launched_at (HypothesisNode attribute)</a>
 </li>
         <li>
     llm_finetune.llm_finetuning
@@ -1303,6 +1467,8 @@
           <li><a href="generated/llm_finetune.llm_finetuning.html#module-llm_finetune.llm_finetuning">module</a>
 </li>
         </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowProtocol.html#spdl.autoresearch.core.WorkflowProtocol.load">load() (WorkflowProtocol method)</a>
+</li>
         <li><a href="generated/spdl.io.load_audio.html#spdl.io.load_audio">load_audio() (in module spdl.io)</a>
 </li>
         <li><a href="generated/llm_finetune.llm_finetuning.html#llm_finetune.llm_finetuning.load_data">load_data() (in module llm_finetune.llm_finetuning)</a>
@@ -1321,10 +1487,10 @@
           <li><a href="generated/spdl.io.load_npy.html#spdl.io.load_npy">(in module spdl.io)</a>
 </li>
         </ul></li>
-        <li><a href="generated/benchmark_numpy.html#benchmark_numpy.load_npy_spdl">load_npy_spdl() (in module benchmark_numpy)</a>
-</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_numpy.html#benchmark_numpy.load_npy_spdl">load_npy_spdl() (in module benchmark_numpy)</a>
+</li>
         <li><a href="generated/benchmark_numpy.html#benchmark_numpy.load_npz">load_npz() (in module benchmark_numpy)</a>
 
         <ul>
@@ -1332,6 +1498,8 @@
 </li>
         </ul></li>
         <li><a href="generated/benchmark_numpy.html#benchmark_numpy.load_npz_spdl">load_npz_spdl() (in module benchmark_numpy)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.load_or_init.html#spdl.autoresearch.core.load_or_init">load_or_init() (in module spdl.autoresearch.core)</a>
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.load_results_from_csv">load_results_from_csv() (in module benchmark_utils)</a>
 </li>
@@ -1359,9 +1527,11 @@
   <h2>M</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="generated/benchmark_numpy.html#benchmark_numpy.main">main() (in module benchmark_numpy)</a>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.main">main() (in module benchmark_arena_transport)</a>
 
         <ul>
+          <li><a href="generated/benchmark_numpy.html#benchmark_numpy.main">(in module benchmark_numpy)</a>
+</li>
           <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.main">(in module benchmark_tarfile)</a>
 </li>
           <li><a href="generated/benchmark_thread_output_queue.html#benchmark_thread_output_queue.main">(in module benchmark_thread_output_queue)</a>
@@ -1387,6 +1557,16 @@
           <li><a href="generated/streaming_video_processing.html#streaming_video_processing.main">(in module streaming_video_processing)</a>
 </li>
         </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowProtocol.html#spdl.autoresearch.core.WorkflowProtocol.make_coro">make_coro() (WorkflowProtocol method)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowSpec.html#spdl.autoresearch.core.WorkflowSpec.max_concurrency">max_concurrency (WorkflowSpec property)</a>
+</li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.mb_per_s">mb_per_s (Row attribute)</a>
+</li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.mb_per_s_hi">mb_per_s_hi (Row attribute)</a>
+</li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.mb_per_s_lo">mb_per_s_lo (Row attribute)</a>
+</li>
         <li><a href="generated/benchmark_thread_output_queue.html#benchmark_thread_output_queue.BenchResult.mean">mean (BenchResult property)</a>
 </li>
         <li><a href="generated/spdl.pipeline.defs.Merge.html#spdl.pipeline.defs.Merge">Merge() (in module spdl.pipeline.defs)</a>
@@ -1395,7 +1575,13 @@
 </li>
         <li><a href="generated/spdl.source.utils.MergeIterator.html#spdl.source.utils.MergeIterator">MergeIterator (class in spdl.source.utils)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.message">message (FailureRecord attribute)</a>
+</li>
         <li><a href="generated/spdl.io.ImageFrames.html#spdl.io.ImageFrames.metadata">metadata (ImageFrames property)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.METRICS">METRICS (FailurePhase attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.METRICS_COLLECTION_FAILED">METRICS_COLLECTION_FAILED (FailureKind attribute)</a>
 </li>
         <li><a href="generated/imagenet_classification.html#imagenet_classification.ModelBundle">ModelBundle (class in imagenet_classification)</a>
 </li>
@@ -1403,6 +1589,8 @@
     module
 
         <ul>
+          <li><a href="generated/benchmark_arena_transport.html#module-benchmark_arena_transport">benchmark_arena_transport</a>
+</li>
           <li><a href="generated/benchmark_numpy.html#module-benchmark_numpy">benchmark_numpy</a>
 </li>
           <li><a href="generated/benchmark_tarfile.html#module-benchmark_tarfile">benchmark_tarfile</a>
@@ -1432,6 +1620,10 @@
           <li><a href="generated/pipeline_definitions.html#module-pipeline_definitions">pipeline_definitions</a>
 </li>
           <li><a href="generated/pipeline_profiling.html#module-pipeline_profiling">pipeline_profiling</a>
+</li>
+          <li><a href="generated/spdl.autoresearch.html#module-spdl.autoresearch">spdl.autoresearch</a>
+</li>
+          <li><a href="generated/spdl.autoresearch.core.html#module-spdl.autoresearch.core">spdl.autoresearch.core</a>
 </li>
           <li><a href="generated/spdl.dataloader.html#module-spdl.dataloader">spdl.dataloader</a>
 </li>
@@ -1490,6 +1682,8 @@
 </li>
           <li><a href="generated/spdl.pipeline.defs.DisaggregateConfig.html#spdl.pipeline.defs.DisaggregateConfig.name">(DisaggregateConfig attribute)</a>
 </li>
+          <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.name">(HypothesisNode attribute)</a>
+</li>
           <li><a href="generated/spdl.io.ImageCodec.html#spdl.io.ImageCodec.name">(ImageCodec property)</a>
 </li>
           <li><a href="generated/spdl.pipeline.defs.PathVariantsConfig.html#spdl.pipeline.defs.PathVariantsConfig.name">(PathVariantsConfig attribute)</a>
@@ -1498,12 +1692,16 @@
 </li>
           <li><a href="generated/spdl.pipeline.ProfileResult.html#spdl.pipeline.ProfileResult.name">(ProfileResult attribute)</a>
 </li>
+          <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.name">(SharedMemoryRingBuffer property)</a>
+</li>
           <li><a href="generated/spdl.io.VideoCodec.html#spdl.io.VideoCodec.name">(VideoCodec property)</a>
 </li>
         </ul></li>
         <li><a href="generated/spdl.pipeline.ProcessGroupResourceUsage.html#spdl.pipeline.ProcessGroupResourceUsage.net_rx_bytes">net_rx_bytes (ProcessGroupResourceUsage attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.ProcessGroupResourceUsage.html#spdl.pipeline.ProcessGroupResourceUsage.net_tx_bytes">net_tx_bytes (ProcessGroupResourceUsage attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.node_id">node_id (HypothesisNode attribute)</a>
 </li>
         <li><a href="generated/pipeline_definitions.html#pipeline_definitions.normalize_to_lists">normalize_to_lists() (in module pipeline_definitions)</a>
 </li>
@@ -1573,17 +1771,33 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.pipeline.QueuePerfStats.html#spdl.pipeline.QueuePerfStats.occupancy_rate">occupancy_rate (QueuePerfStats attribute)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowProtocol.html#spdl.autoresearch.core.WorkflowProtocol.on_result">on_result() (WorkflowProtocol method)</a>
+</li>
         <li><a href="generated/spdl.pipeline.defs.AggregateConfig.html#spdl.pipeline.defs.AggregateConfig.op">op (AggregateConfig attribute)</a>
 
         <ul>
           <li><a href="generated/spdl.pipeline.defs.MergeConfig.html#spdl.pipeline.defs.MergeConfig.op">(MergeConfig attribute)</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/pipeline_profiling.html#pipeline_profiling.op_with_contention">op_with_contention() (in module pipeline_profiling)</a>
 </li>
         <li><a href="generated/spdl.io.Muxer.html#spdl.io.Muxer.open">open() (Muxer method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.open_reader">open_reader() (SharedMemoryRingBuffer method)</a>
+
+        <ul>
+          <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool.open_reader">(SharedMemorySegmentPool method)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.open_writer">open_writer() (SharedMemoryRingBuffer method)</a>
+
+        <ul>
+          <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool.open_writer">(SharedMemorySegmentPool method)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.Orchestrator.html#spdl.autoresearch.core.Orchestrator">Orchestrator (class in spdl.autoresearch.core)</a>
 </li>
         <li><a href="notes/pipeline_impl.html#spdl.pipeline._components._node._Node.output_queue">output_queue (_Node attribute)</a>
 </li>
@@ -1613,6 +1827,8 @@
 </li>
         <li><a href="generated/spdl.pipeline.TaskPerfStats.html#spdl.pipeline.TaskPerfStats.p99_time">p99_time (TaskPerfStats attribute)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.parent_id">parent_id (HypothesisNode attribute)</a>
+</li>
         <li><a href="generated/performance_analysis.html#performance_analysis.parse_args">parse_args() (in module performance_analysis)</a>
 
         <ul>
@@ -1637,6 +1853,10 @@
 </li>
         <li><a href="generated/spdl.pipeline.defs.PathVariantsConfig.html#spdl.pipeline.defs.PathVariantsConfig">PathVariantsConfig (class in spdl.pipeline.defs)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.TaskSpec.html#spdl.autoresearch.core.TaskSpec.payload">payload (TaskSpec attribute)</a>
+</li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.peak_rss_mb">peak_rss_mb (Row attribute)</a>
+</li>
         <li>
     performance_analysis
 
@@ -1659,6 +1879,8 @@
         </ul></li>
         <li><a href="generated/spdl.pipeline.ProcessGroupResourceUsage.html#spdl.pipeline.ProcessGroupResourceUsage.pgid">pgid (ProcessGroupResourceUsage attribute)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.phase">phase (FailureRecord attribute)</a>
+</li>
         <li><a href="generated/spdl.pipeline.ProcessGroupResourceUsage.html#spdl.pipeline.ProcessGroupResourceUsage.pid">pid (ProcessGroupResourceUsage attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.defs.Pipe.html#spdl.pipeline.defs.Pipe">Pipe() (in module spdl.pipeline.defs)</a>
@@ -1680,10 +1902,10 @@
         </ul></li>
         <li><a href="generated/spdl.pipeline.StageInfo.html#spdl.pipeline.StageInfo.pipeline_id">pipeline_id (StageInfo attribute)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.pipeline.ProfileHook.html#spdl.pipeline.ProfileHook.pipeline_profile_hook">pipeline_profile_hook() (ProfileHook method)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     pipeline_profiling
 
@@ -1713,12 +1935,24 @@
           <li><a href="generated/spdl.io.VideoPackets.html#spdl.io.VideoPackets.pix_fmt">(VideoPackets property)</a>
 </li>
         </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.PLANNING">PLANNING (FailurePhase attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.PLANNING_FAILED">PLANNING_FAILED (FailureKind attribute)</a>
+</li>
         <li><a href="generated/pipeline_profiling.html#pipeline_profiling.plot_profile_results">plot_profile_results() (in module pipeline_profiling)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.PREPARE">PREPARE (FailurePhase attribute)</a>
 </li>
         <li><a href="generated/imagenet_classification.html#imagenet_classification.Preprocessing">Preprocessing (class in imagenet_classification)</a>
 </li>
         <li><a href="generated/pipeline_profiling.html#pipeline_profiling.print_profile_result">print_profile_result() (in module pipeline_profiling)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.priority">priority (HypothesisNode attribute)</a>
+
+        <ul>
+          <li><a href="generated/spdl.autoresearch.core.TaskSpec.html#spdl.autoresearch.core.TaskSpec.priority">(TaskSpec attribute)</a>
+</li>
+        </ul></li>
         <li><a href="generated/spdl.pipeline.PriorityExecutorEntrypoint.html#spdl.pipeline.PriorityExecutorEntrypoint">PriorityExecutorEntrypoint (class in spdl.pipeline)</a>
 </li>
         <li><a href="generated/spdl.pipeline.PriorityInterpreterPoolExecutor.html#spdl.pipeline.PriorityInterpreterPoolExecutor">PriorityInterpreterPoolExecutor (class in spdl.pipeline)</a>
@@ -1753,6 +1987,8 @@
 </li>
         <li><a href="generated/spdl.io.ImageFrames.html#spdl.io.ImageFrames.pts">pts (ImageFrames property)</a>
 </li>
+        <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool.published">published (SharedMemorySegmentPool property)</a>
+</li>
         <li><a href="generated/spdl.pipeline.StatsQueue.html#spdl.pipeline.StatsQueue.put">put() (StatsQueue method)</a>
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.python_version">python_version (BenchmarkResult attribute)</a>
@@ -1785,11 +2021,23 @@
   <h2>R</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.read_csv">read_csv() (in module benchmark_arena_transport)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.read_engine_state.html#spdl.autoresearch.core.read_engine_state">read_engine_state() (in module spdl.autoresearch.core)</a>
+</li>
+        <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool.reclaimed">reclaimed (SharedMemorySegmentPool property)</a>
+</li>
         <li><a href="generated/spdl.source.utils.repeat_source.html#spdl.source.utils.repeat_source">repeat_source() (in module spdl.source.utils)</a>
 </li>
         <li><a href="generated/benchmark_video.html#benchmark_video.BenchmarkConfig.resolution">resolution (BenchmarkConfig attribute)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.result">result (HypothesisNode attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.retryable">retryable (FailureRecord attribute)</a>
+</li>
         <li><a href="generated/spdl.pipeline.defs.PathVariantsConfig.html#spdl.pipeline.defs.PathVariantsConfig.router">router (PathVariantsConfig attribute)</a>
+</li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row">Row (class in benchmark_arena_transport)</a>
 </li>
         <li><a href="generated/spdl.pipeline.ProcessGroupResourceUsage.html#spdl.pipeline.ProcessGroupResourceUsage.rss_bytes">rss_bytes (ProcessGroupResourceUsage attribute)</a>
 </li>
@@ -1799,6 +2047,8 @@
           <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkRunner.run">(BenchmarkRunner method)</a>
 </li>
           <li><a href="generated/streaming_nvdec_decoding.html#streaming_nvdec_decoding.run">(in module streaming_nvdec_decoding)</a>
+</li>
+          <li><a href="generated/spdl.autoresearch.core.Orchestrator.html#spdl.autoresearch.core.Orchestrator.run">(Orchestrator method)</a>
 </li>
           <li><a href="generated/spdl.pipeline.ProcessGroupStatsMonitor.html#spdl.pipeline.ProcessGroupStatsMonitor.run">(ProcessGroupStatsMonitor method)</a>
 </li>
@@ -1814,6 +2064,10 @@
         <li><a href="generated/spdl.pipeline.run_pipeline_in_subprocess.html#spdl.pipeline.run_pipeline_in_subprocess">run_pipeline_in_subprocess() (in module spdl.pipeline)</a>
 </li>
         <li><a href="generated/pipeline_profiling.html#pipeline_profiling.run_profiling_example">run_profiling_example() (in module pipeline_profiling)</a>
+</li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.run_transport">run_transport() (in module benchmark_arena_transport)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.RUNNER">RUNNER (FailurePhase attribute)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -1855,6 +2109,8 @@
 </li>
         <li><a href="generated/pipeline_profiling.html#pipeline_profiling.scalable_op2">scalable_op2() (in module pipeline_profiling)</a>
 </li>
+        <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool.segment_size">segment_size (SharedMemorySegmentPool property)</a>
+</li>
         <li><a href="generated/spdl.io.VideoDecoder.html#spdl.io.VideoDecoder.set_buffer_size">set_buffer_size (VideoDecoder attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.config.set_compact_log.html#spdl.pipeline.config.set_compact_log">set_compact_log() (in module spdl.pipeline.config)</a>
@@ -1872,6 +2128,18 @@
         <li><a href="generated/spdl.pipeline.config.set_default_queue_class.html#spdl.pipeline.config.set_default_queue_class">set_default_queue_class() (in module spdl.pipeline.config)</a>
 </li>
         <li><a href="generated/spdl.io.utils.set_ffmpeg_log_level.html#spdl.io.utils.set_ffmpeg_log_level">set_ffmpeg_log_level() (in module spdl.io.utils)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.SETUP">SETUP (FailurePhase attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowSpec.html#spdl.autoresearch.core.WorkflowSpec.setup">setup() (WorkflowSpec method)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.SETUP_INSTRUMENTATION_FAILED">SETUP_INSTRUMENTATION_FAILED (FailureKind attribute)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.SETUP_SOURCE_FAILED">SETUP_SOURCE_FAILED (FailureKind attribute)</a>
+</li>
+        <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer">SharedMemoryRingBuffer (class in spdl.pipeline)</a>
+</li>
+        <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool">SharedMemorySegmentPool (class in spdl.pipeline)</a>
 </li>
         <li><a href="generated/spdl.source.DistributedRandomSampler.html#spdl.source.DistributedRandomSampler.shuffle">shuffle() (DistributedRandomSampler method)</a>
 
@@ -1899,9 +2167,13 @@
 </li>
         <li><a href="generated/spdl.pipeline.defs.SinkConfig.html#spdl.pipeline.defs.SinkConfig">SinkConfig (class in spdl.pipeline.defs)</a>
 </li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.size_mb">size_mb (Row attribute)</a>
+</li>
         <li><a href="generated/spdl.source.SizedIterable.html#spdl.source.SizedIterable">SizedIterable (class in spdl.source)</a>
 </li>
         <li><a href="generated/spdl.source.SizedIterableWithShuffle.html#spdl.source.SizedIterableWithShuffle">SizedIterableWithShuffle (class in spdl.source)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.SOURCE">SOURCE (FailurePhase attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.defs.SourceConfig.html#spdl.pipeline.defs.SourceConfig.source">source (SourceConfig attribute)</a>
 </li>
@@ -1911,8 +2183,24 @@
           <li><a href="generated/video_dataloading.html#video_dataloading.source">(in module video_dataloading)</a>
 </li>
         </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.SOURCE_RESTORE_FAILED">SOURCE_RESTORE_FAILED (FailureKind attribute)</a>
+</li>
         <li><a href="generated/spdl.pipeline.defs.SourceConfig.html#spdl.pipeline.defs.SourceConfig">SourceConfig (class in spdl.pipeline.defs)</a>
 </li>
+        <li>
+    spdl.autoresearch
+
+        <ul>
+          <li><a href="generated/spdl.autoresearch.html#module-spdl.autoresearch">module</a>
+</li>
+        </ul></li>
+        <li>
+    spdl.autoresearch.core
+
+        <ul>
+          <li><a href="generated/spdl.autoresearch.core.html#module-spdl.autoresearch.core">module</a>
+</li>
+        </ul></li>
         <li>
     spdl.dataloader
 
@@ -1985,8 +2273,6 @@
         </ul></li>
         <li><a href="generated/libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html#_CPPv4N4spdl4core9AnyFramesE">spdl::core::AnyFrames (C++ type)</a>
 </li>
-        <li><a href="generated/libspdl/typedef_packets_8h_1ab96da01bb9cc9793e8ae2637e1dd610b.html#_CPPv4N4spdl4core10AnyPacketsE">spdl::core::AnyPackets (C++ type)</a>
-</li>
         <li><a href="generated/libspdl/typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html#_CPPv4N4spdl4core19AnyPacketsGeneratorE">spdl::core::AnyPacketsGenerator (C++ type)</a>
 </li>
         <li><a href="generated/libspdl/typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html#_CPPv4N4spdl4core10AudioCodecE">spdl::core::AudioCodec (C++ type)</a>
@@ -2000,10 +2286,6 @@
         <li><a href="generated/libspdl/typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf.html#_CPPv4N4spdl4core11AudioFramesE">spdl::core::AudioFrames (C++ type)</a>
 </li>
         <li><a href="generated/libspdl/typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62.html#_CPPv4N4spdl4core14AudioFramesPtrE">spdl::core::AudioFramesPtr (C++ type)</a>
-</li>
-        <li><a href="generated/libspdl/typedef_packets_8h_1a9644f8aa13f0e4db02d8ab60673563a3.html#_CPPv4N4spdl4core12AudioPacketsE">spdl::core::AudioPackets (C++ type)</a>
-</li>
-        <li><a href="generated/libspdl/typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c.html#_CPPv4N4spdl4core15AudioPacketsPtrE">spdl::core::AudioPacketsPtr (C++ type)</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1BSF.html#_CPPv4I_9MediaTypeEN4spdl4core3BSFE">spdl::core::BSF (C++ class)</a>
 </li>
@@ -2165,6 +2447,8 @@
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7DemuxerE">spdl::core::Demuxer (C++ class)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4I_9MediaTypeEN4spdl4core7Demuxer12demux_windowE10PacketsPtrI5mediaERKNSt8optionalI10TimeWindowEERKNSt8optionalINSt6stringEEE">spdl::core::Demuxer::demux_window (C++ function)</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer7DemuxerE16DataInterfacePtr">spdl::core::Demuxer::Demuxer (C++ function)</a>
@@ -2199,8 +2483,6 @@
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder6encodeERRK9FramesPtrI5mediaE">spdl::core::Encoder::encode (C++ function)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderEPN6detail11EncoderImplI5mediaEE">spdl::core::Encoder::Encoder (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderERK7EncoderI5mediaE">[1]</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderERR7EncoderI5mediaE">[2]</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder5flushEv">spdl::core::Encoder::flush (C++ function)</a>
@@ -2212,8 +2494,6 @@
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7EncoderD0Ev">spdl::core::Encoder::~Encoder (C++ function)</a>
 </li>
         <li><a href="generated/libspdl/typedef_encoder_8h_1aacfba556b86e2d663a004b8677567339.html#_CPPv4I_9MediaTypeEN4spdl4core10EncoderPtrE">spdl::core::EncoderPtr (C++ type)</a>
-</li>
-        <li><a href="generated/libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html#_CPPv4N4spdl4core26extract_packets_at_indicesERK15VideoPacketsPtrNSt6vectorI6size_tEE">spdl::core::extract_packets_at_indices (C++ function)</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1FilterGraph.html#_CPPv4N4spdl4core11FilterGraphE">spdl::core::FilterGraph (C++ class)</a>
 </li>
@@ -2303,17 +2583,11 @@
 </li>
         <li><a href="generated/libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html#_CPPv4N4spdl4core19get_ffmpeg_versionsEv">spdl::core::get_ffmpeg_versions (C++ function)</a>
 </li>
-        <li><a href="generated/libspdl/function_packets_8h_1a375c1c657bca786016f8a705e3f2a624.html#_CPPv4I_9MediaTypeEN4spdl4core14get_timestampsENSt6vectorIdEERK7PacketsI5mediaEb">spdl::core::get_timestamps (C++ function)</a>
-</li>
         <li><a href="generated/libspdl/typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f.html#_CPPv4N4spdl4core10ImageCodecE">spdl::core::ImageCodec (C++ type)</a>
 </li>
         <li><a href="generated/libspdl/typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a.html#_CPPv4N4spdl4core11ImageFramesE">spdl::core::ImageFrames (C++ type)</a>
 </li>
         <li><a href="generated/libspdl/typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7.html#_CPPv4N4spdl4core14ImageFramesPtrE">spdl::core::ImageFramesPtr (C++ type)</a>
-</li>
-        <li><a href="generated/libspdl/typedef_packets_8h_1af018ade1cd38831c342686abbcb787a8.html#_CPPv4N4spdl4core12ImagePacketsE">spdl::core::ImagePackets (C++ type)</a>
-</li>
-        <li><a href="generated/libspdl/typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1.html#_CPPv4N4spdl4core15ImagePacketsPtrE">spdl::core::ImagePacketsPtr (C++ type)</a>
 </li>
         <li><a href="generated/libspdl/function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html#_CPPv4N4spdl4core9init_glogEPKc">spdl::core::init_glog (C++ function)</a>
 </li>
@@ -2361,55 +2635,7 @@
 </li>
         <li><a href="generated/libspdl/typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20.html#_CPPv4N4spdl4core10OptionDictE">spdl::core::OptionDict (C++ type)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4I_9MediaTypeEN4spdl4core7PacketsE">spdl::core::Packets (C++ struct)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets5codecE">spdl::core::Packets::codec (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets2idE">spdl::core::Packets::id (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7PacketsaSERK7PacketsI5mediaE">spdl::core::Packets::operator= (C++ function)</a>, <a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7PacketsaSERR7PacketsI5mediaE">[1]</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets7PacketsE9uintptr_ti8Rational">spdl::core::Packets::Packets (C++ function)</a>, <a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets7PacketsERK7PacketsI5mediaE">[1]</a>, <a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets7PacketsERKNSt6stringEiRK8RationalRKNSt8optionalI10TimeWindowEE">[2]</a>, <a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets7PacketsERKNSt6stringEiRR5CodecI5mediaERKNSt8optionalI10TimeWindowEE">[3]</a>, <a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets7PacketsERR7PacketsI5mediaE">[4]</a>, <a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets7PacketsEv">[5]</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets4pktsE">spdl::core::Packets::pkts (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets3srcE">spdl::core::Packets::src (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets12stream_indexE">spdl::core::Packets::stream_index (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets9time_baseE">spdl::core::Packets::time_base (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7Packets9timestampE">spdl::core::Packets::timestamp (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1Packets.html#_CPPv4N4spdl4core7PacketsD0Ev">spdl::core::Packets::~Packets (C++ function)</a>
-</li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html#_CPPv4N4spdl4core12PacketSeriesE">spdl::core::PacketSeries (C++ class)</a>
-</li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html#_CPPv4NK4spdl4core12PacketSeries11get_packetsEv">spdl::core::PacketSeries::get_packets (C++ function)</a>
-</li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html#_CPPv4NK4spdl4core12PacketSeries9iter_dataEv">spdl::core::PacketSeries::iter_data (C++ function)</a>
-</li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html#_CPPv4N4spdl4core12PacketSeriesaSERK12PacketSeries">spdl::core::PacketSeries::operator= (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html#_CPPv4N4spdl4core12PacketSeriesaSERR12PacketSeries">[1]</a>
-</li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html#_CPPv4N4spdl4core12PacketSeries12PacketSeriesERK12PacketSeries">spdl::core::PacketSeries::PacketSeries (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html#_CPPv4N4spdl4core12PacketSeries12PacketSeriesERR12PacketSeries">[1]</a>, <a href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html#_CPPv4N4spdl4core12PacketSeries12PacketSeriesEv">[2]</a>
-</li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html#_CPPv4N4spdl4core12PacketSeries4pushEP8AVPacket">spdl::core::PacketSeries::push (C++ function)</a>
-</li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1PacketSeries.html#_CPPv4N4spdl4core12PacketSeriesD0Ev">spdl::core::PacketSeries::~PacketSeries (C++ function)</a>
-</li>
-        <li><a href="generated/libspdl/typedef_packets_8h_1a331b599d0eceb00ebef166d64623c71a.html#_CPPv4N4spdl4core15PacketSeriesPtrE">spdl::core::PacketSeriesPtr (C++ type)</a>
-</li>
-        <li><a href="generated/libspdl/typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html#_CPPv4I_9MediaTypeEN4spdl4core10PacketsPtrE">spdl::core::PacketsPtr (C++ type)</a>
-</li>
         <li><a href="generated/libspdl/typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html#_CPPv4N4spdl4core8RationalE">spdl::core::Rational (C++ type)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1RawPacketData.html#_CPPv4N4spdl4core13RawPacketDataE">spdl::core::RawPacketData (C++ struct)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1RawPacketData.html#_CPPv4N4spdl4core13RawPacketData4dataE">spdl::core::RawPacketData::data (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1RawPacketData.html#_CPPv4N4spdl4core13RawPacketData3ptsE">spdl::core::RawPacketData::pts (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1RawPacketData.html#_CPPv4N4spdl4core13RawPacketData4sizeE">spdl::core::RawPacketData::size (C++ member)</a>
 </li>
         <li><a href="generated/libspdl/function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html#_CPPv4N4spdl4core18register_avdevicesEv">spdl::core::register_avdevices (C++ function)</a>
 </li>
@@ -2469,11 +2695,11 @@
 </li>
         <li><a href="generated/libspdl/typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d.html#_CPPv4N4spdl4core14VideoFramesPtrE">spdl::core::VideoFramesPtr (C++ type)</a>
 </li>
-        <li><a href="generated/libspdl/typedef_packets_8h_1a7be7c9faccc623d12fb33ec966f84b4c.html#_CPPv4N4spdl4core12VideoPacketsE">spdl::core::VideoPackets (C++ type)</a>
-</li>
-        <li><a href="generated/libspdl/typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691.html#_CPPv4N4spdl4core15VideoPacketsPtrE">spdl::core::VideoPacketsPtr (C++ type)</a>
-</li>
         <li><a href="generated/libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html#c.SPDL_DEFAULT_BUFFER_SIZE">SPDL_DEFAULT_BUFFER_SIZE (C macro)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.spec">spec (HypothesisNode attribute)</a>
+</li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.speedup">speedup (Row attribute)</a>
 </li>
         <li><a href="generated/performance_analysis.html#performance_analysis.SQLiteStatsWriter">SQLiteStatsWriter (class in performance_analysis)</a>
 </li>
@@ -2513,6 +2739,8 @@
 </li>
         <li><a href="generated/performance_analysis.html#performance_analysis.StatsQueueWithLogging">StatsQueueWithLogging (class in performance_analysis)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.status">status (HypothesisNode attribute)</a>
+</li>
         <li><a href="generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.stop">stop() (Pipeline method)</a>
 </li>
         <li><a href="notes/remote_iterable_protocol.html#spdl.pipeline._iter_utils._Cmd.STOP_ITERATION">STOP_ITERATION (_Cmd attribute)</a>
@@ -2545,9 +2773,17 @@
           <li><a href="generated/streaming_video_processing.html#module-streaming_video_processing">module</a>
 </li>
         </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.AnalysisResult.html#spdl.autoresearch.core.AnalysisResult.structured">structured (AnalysisResult attribute)</a>
+</li>
         <li><a href="generated/spdl.pipeline.PriorityExecutorEntrypoint.html#spdl.pipeline.PriorityExecutorEntrypoint.submit">submit() (PriorityExecutorEntrypoint method)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowProtocol.html#spdl.autoresearch.core.WorkflowProtocol.summarize">summarize() (WorkflowProtocol method)</a>
+</li>
         <li><a href="generated/benchmark_thread_output_queue.html#benchmark_thread_output_queue.BenchResult.summary">summary() (BenchResult method)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowSpec.html#spdl.autoresearch.core.WorkflowSpec.supervisor_known_config">supervisor_known_config() (WorkflowSpec method)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowSpec.html#spdl.autoresearch.core.WorkflowSpec.supervisor_missing_config">supervisor_missing_config() (WorkflowSpec method)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -2557,6 +2793,8 @@
   <h2>T</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.tail">tail (SharedMemoryRingBuffer property)</a>
+</li>
         <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.BenchmarkConfig.tar_size">tar_size (BenchmarkConfig attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.TaskHook.html#spdl.pipeline.TaskHook.task_hook">task_hook() (TaskHook method)</a>
@@ -2569,9 +2807,15 @@
 </li>
         <li><a href="generated/spdl.pipeline.TaskPerfStats.html#spdl.pipeline.TaskPerfStats">TaskPerfStats (class in spdl.pipeline)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.TaskResult.html#spdl.autoresearch.core.TaskResult">TaskResult (class in spdl.autoresearch.core)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.TaskSpec.html#spdl.autoresearch.core.TaskSpec">TaskSpec (class in spdl.autoresearch.core)</a>
+</li>
         <li><a href="generated/spdl.pipeline.TaskStatsHook.html#spdl.pipeline.TaskStatsHook">TaskStatsHook (class in spdl.pipeline)</a>
 </li>
         <li><a href="generated/performance_analysis.html#performance_analysis.TaskStatsHookWithLogging">TaskStatsHookWithLogging (class in performance_analysis)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.TERMINAL_STATUSES.html#spdl.autoresearch.core.TERMINAL_STATUSES">TERMINAL_STATUSES (in module spdl.autoresearch.core)</a>
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.ExecutorType.THREAD">THREAD (ExecutorType attribute)</a>
 </li>
@@ -2593,6 +2837,14 @@
         </ul></li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.to_dict">to_dict() (FailureRecord method)</a>
+
+        <ul>
+          <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.to_dict">(HypothesisNode method)</a>
+</li>
+          <li><a href="generated/spdl.autoresearch.core.TaskSpec.html#spdl.autoresearch.core.TaskSpec.to_dict">(TaskSpec method)</a>
+</li>
+        </ul></li>
         <li><a href="generated/spdl.io.to_jax.html#spdl.io.to_jax">to_jax() (in module spdl.io)</a>
 </li>
         <li><a href="generated/spdl.io.to_numba.html#spdl.io.to_numba">to_numba() (in module spdl.io)</a>
@@ -2621,6 +2873,8 @@
 </li>
         <li><a href="generated/spdl.io.transfer_tensor.html#spdl.io.transfer_tensor">transfer_tensor() (in module spdl.io)</a>
 </li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.transport">transport (Row attribute)</a>
+</li>
     </ul></td>
   </tr></table>
 </section>
@@ -2631,8 +2885,16 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="notes/remote_iterable_protocol.html#spdl.pipeline._iter_utils._Status.UNEXPECTED_CMD_RECEIVED">UNEXPECTED_CMD_RECEIVED (_Status attribute)</a>
 </li>
+        <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.UNEXPECTED_EXCEPTION">UNEXPECTED_EXCEPTION (FailureKind attribute)</a>
+</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.unlink">unlink() (SharedMemoryRingBuffer method)</a>
+
+        <ul>
+          <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool.unlink">(SharedMemorySegmentPool method)</a>
+</li>
+        </ul></li>
         <li><a href="notes/pipeline_impl.html#spdl.pipeline._components._node._Node.upstream">upstream (_Node attribute)</a>
 </li>
     </ul></td>
@@ -2702,7 +2964,17 @@
           <li><a href="generated/video_dataloading.html#video_dataloading.worker_entrypoint">(in module video_dataloading)</a>
 </li>
         </ul></li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowFactory.html#spdl.autoresearch.core.WorkflowFactory">WorkflowFactory (in module spdl.autoresearch.core)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowProtocol.html#spdl.autoresearch.core.WorkflowProtocol">WorkflowProtocol (class in spdl.autoresearch.core)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.WorkflowSpec.html#spdl.autoresearch.core.WorkflowSpec">WorkflowSpec (class in spdl.autoresearch.core)</a>
+</li>
         <li><a href="generated/spdl.io.Muxer.html#spdl.io.Muxer.write">write() (Muxer method)</a>
+</li>
+        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.write_csv">write_csv() (in module benchmark_arena_transport)</a>
+</li>
+        <li><a href="generated/spdl.autoresearch.core.write_engine_state.html#spdl.autoresearch.core.write_engine_state">write_engine_state() (in module spdl.autoresearch.core)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -2741,7 +3013,7 @@
     </aside>
   </div>
 </div>
-    <script src="_static/js/custom.js"></script><script src="_static/documentation_options.js?v=1437fa6d"></script>
+    <script src="_static/js/custom.js"></script><script src="_static/documentation_options.js?v=70f82a29"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=5fa4622c"></script>

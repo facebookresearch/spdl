@@ -24,6 +24,7 @@ Program Listing for File packets.h
    #include <libspdl/core/generator.h>
    #include <libspdl/core/types.h>
    
+   #include <cstdint>
    #include <memory>
    #include <string>
    #include <tuple>
@@ -99,6 +100,8 @@ Program Listing for File packets.h
    
      std::optional<Codec<media>> codec;
    
+     bool is_view{false};
+   
      Packets() = default;
    
      Packets(
@@ -135,5 +138,19 @@ Program Listing for File packets.h
    std::vector<double> get_timestamps(
        const Packets<media>& packets,
        bool raw = false);
+   
+   // Serialization
+   
+   template <MediaType media>
+   std::vector<uint8_t> serialize_packets(const Packets<media>& packets);
+   
+   template <MediaType media>
+   std::unique_ptr<Packets<media>> deserialize_packets(
+       const std::vector<uint8_t>& data);
+   
+   template <MediaType media>
+   std::unique_ptr<Packets<media>> deserialize_packets_view(
+       const uint8_t* data,
+       size_t size);
    
    } // namespace spdl::core

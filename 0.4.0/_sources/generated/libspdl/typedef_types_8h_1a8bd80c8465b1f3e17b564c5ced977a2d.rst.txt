@@ -1,0 +1,14 @@
+.. _exhale_typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d:
+
+Typedef spdl::core::Rational
+============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::Rational
+   :project: libspdl

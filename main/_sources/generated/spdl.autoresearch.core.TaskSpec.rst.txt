@@ -1,0 +1,21 @@
+spdl.autoresearch.core.TaskSpec
+===============================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoclass:: TaskSpec
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~TaskSpec.from_dict
+      ~TaskSpec.to_dict
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~TaskSpec.kind
+      ~TaskSpec.priority
+      ~TaskSpec.id
+      ~TaskSpec.payload

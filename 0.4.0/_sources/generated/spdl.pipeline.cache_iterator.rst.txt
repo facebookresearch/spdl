@@ -1,0 +1,6 @@
+spdl.pipeline.cache\_iterator
+=============================
+
+.. currentmodule:: spdl.pipeline
+
+.. autofunction:: cache_iterator

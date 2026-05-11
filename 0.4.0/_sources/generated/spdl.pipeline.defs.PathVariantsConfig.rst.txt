@@ -1,0 +1,14 @@
+spdl.pipeline.defs.PathVariantsConfig
+=====================================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: PathVariantsConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~PathVariantsConfig.name
+      ~PathVariantsConfig.router
+      ~PathVariantsConfig.paths

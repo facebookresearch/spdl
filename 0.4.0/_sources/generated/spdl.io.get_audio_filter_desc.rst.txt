@@ -1,0 +1,6 @@
+spdl.io.get\_audio\_filter\_desc
+================================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: get_audio_filter_desc

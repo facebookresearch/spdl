@@ -359,6 +359,28 @@ PriorityProcessPoolExecutor
    PriorityProcessPoolExecutor
 
 
+SharedMemoryRingBuffer
+^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   SharedMemoryRingBuffer
+
+
+SharedMemorySegmentPool
+^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   SharedMemorySegmentPool
+
+
 
 
 
@@ -398,6 +420,8 @@ PipelineFailure
    ############################################################################
    Others
    ############################################################################
+
+
 
 
 

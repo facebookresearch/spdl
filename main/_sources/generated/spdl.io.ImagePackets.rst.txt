@@ -11,6 +11,8 @@ spdl.io.ImagePackets
    .. autosummary::
       ~ImagePackets.clone
       ~ImagePackets.codec
+      ~ImagePackets.deserialize
+      ~ImagePackets.deserialize_view
       ~ImagePackets.height
       ~ImagePackets.pix_fmt
       ~ImagePackets.width

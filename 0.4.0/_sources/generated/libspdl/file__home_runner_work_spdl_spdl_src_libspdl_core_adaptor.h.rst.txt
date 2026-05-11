@@ -1,0 +1,74 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_adaptor.h:
+
+File adaptor.h
+==============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/adaptor.h``)
+-----------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_adaptor.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``memory``
+
+- ``string``
+
+- ``string_view``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1BytesAdaptor`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1DataInterface`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1SourceAdaptor`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_adaptor_8h_1adcb670a31326eb24268b384396736cd6`
+
+- :ref:`exhale_typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7`
+
