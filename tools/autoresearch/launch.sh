@@ -10,13 +10,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROMPT="$(cat "$SCRIPT_DIR/prompts/launch.md")"
 
-FB_PROMPT="$SCRIPT_DIR/prompts/fb/launch.md"
-if [ -f "$FB_PROMPT" ]; then
-  PROMPT="$PROMPT
-
-$(cat "$FB_PROMPT")"
-fi
-
 if [ $# -gt 0 ]; then
   exec claude --system-prompt "$PROMPT" "$*"
 else

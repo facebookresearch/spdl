@@ -74,9 +74,11 @@ def _parse_args(args: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--platform",
-        choices=("auto", "remote", "local"),
         default="auto",
-        help="_Execution platform. 'auto' uses the best available implementation.",
+        help=(
+            "Job execution platform provider. 'auto' uses the best available "
+            "provider discovered in this environment."
+        ),
     )
     parser.add_argument(
         "--agent",

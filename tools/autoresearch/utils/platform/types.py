@@ -30,7 +30,7 @@ capability objects without learning any implementation-specific commands.
        _Evidence["_Evidence"]
        Agent["_CodingAgent"]
        Local["local implementations"]
-       Remote["optional fb implementations"]
+       Extension["optional provider implementations"]
 
        Workflow --> Platform
        Platform --> _Workspace
@@ -42,10 +42,10 @@ capability objects without learning any implementation-specific commands.
        _Artifacts --> Local
        _Execution --> Local
        _Evidence --> Local
-       _Workspace --> Remote
-       _Artifacts --> Remote
-       _Execution --> Remote
-       _Evidence --> Remote
+       _Workspace --> Extension
+       _Artifacts --> Extension
+       _Execution --> Extension
+       _Evidence --> Extension
 """
 
 from __future__ import annotations
