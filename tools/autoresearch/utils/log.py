@@ -11,6 +11,8 @@ from pathlib import Path
 
 _configured = False
 
+__all__ = ["setup_logging"]
+
 
 def setup_logging(workdir: Path) -> None:
     """Configure logging to stderr and workdir/logs/autoresearch.log."""
