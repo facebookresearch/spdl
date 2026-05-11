@@ -17,7 +17,9 @@ First run::
       --pipeline-script path/to/pipeline.py \\
       --source-dir path/to/source \\
       --build-command "fbpkg build ..." \\
-      --base-launch-command "torchx run ... --image \\$IMAGE ..."
+      --base-launch-command "torchx run ... --image \\$IMAGE ..." \\
+      --platform auto \\
+      --agent claude
 
 Resume after Ctrl+C::
 
@@ -40,38 +42,26 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from spdl.tools.autoresearch.utils.callbacks import (
-    analyze_job,
-    build_initial_nodes,
-    get_plan,
-    launch_node,
-    prepare_node,
-    should_stop,
-    update_on_complete,
-    update_summary_and_plot,
-)
-from spdl.tools.autoresearch.utils.claude import load_prompt, run_claude
-from spdl.tools.autoresearch.utils.engine import ExperimentEngine
-from spdl.tools.autoresearch.utils.jobs import (
-    _get_cancel_job,
-    _get_check_job_progress,
-    _get_check_job_status,
-)
 from spdl.tools.autoresearch.utils.log import setup_logging
-from spdl.tools.autoresearch.utils.scm import (
-    commit as scm_commit,
-    current_commit,
-    detect_scm,
-    has_pending_changes,
+from spdl.tools.autoresearch.utils.platform import (
+    AutoresearchPlatform,
+    create_platform,
 )
+from spdl.tools.autoresearch.utils.runner import AsyncWorkEngine
 from spdl.tools.autoresearch.utils.state import (
     MASTER_TABLE_HEADERS,
     read_config,
     read_state,
+    SCHEMA_VERSION,
     write_state,
 )
+from spdl.tools.autoresearch.utils.types import FailureKind, FailurePhase, FailureRecord
+from spdl.tools.autoresearch.utils.workflow import AutoresearchAdapter
+from spdl.tools.autoresearch.utils.workflow.failures import _make_failure
 
 _LG: logging.Logger = logging.getLogger(__name__)
+
+__all__ = ["main"]
 
 
 def _parse_args() -> argparse.Namespace:
@@ -98,6 +88,24 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--max-concurrency", type=int, default=3)
     parser.add_argument("--job-timeout", type=int, default=1800)
     parser.add_argument(
+        "--platform",
+        choices=("auto", "remote", "local"),
+        default="auto",
+        help="_Execution platform. 'auto' uses the best available implementation.",
+    )
+    parser.add_argument(
+        "--agent",
+        choices=("claude", "codex"),
+        default="claude",
+        help="Coding agent used for source changes, analysis, and planning.",
+    )
+    parser.add_argument(
+        "--local-execution-mode",
+        choices=("full", "dataloader_only", "dry_run"),
+        default="full",
+        help="How local platform launches experiment commands.",
+    )
+    parser.add_argument(
         "--dangerously-skip-permissions",
         action="store_true",
         help="Pass --dangerously-skip-permissions to claude invocations",
@@ -110,7 +118,24 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _init_workdir(ns: argparse.Namespace, workdir: Path) -> dict:
+def _record_setup_failure(
+    workdir: Path,
+    state: dict,
+    failure: FailureRecord,
+) -> None:
+    state.setdefault("_setup_failures", []).append(failure.to_dict())
+    engine_dir = workdir / "engine"
+    engine_dir.mkdir(parents=True, exist_ok=True)
+    setup_failures = engine_dir / "setup_failures.json"
+    setup_failures.write_text(json.dumps(state["_setup_failures"], indent=2) + "\n")
+    write_state(workdir, state)
+
+
+def _init_workdir(
+    ns: argparse.Namespace,
+    workdir: Path,
+    platform: AutoresearchPlatform,
+) -> dict:
     """Initialize the workdir with config and state. Returns config dict."""
     workdir.mkdir(parents=True, exist_ok=True)
     (workdir / "runs").mkdir(exist_ok=True)
@@ -119,12 +144,24 @@ def _init_workdir(ns: argparse.Namespace, workdir: Path) -> dict:
     source_dir = os.path.abspath(ns.source_dir) if ns.source_dir else ""
     scm_type = ""
     anchor_commit_hash = ""
+    setup_failures = []
     if source_dir:
-        scm_type = detect_scm(source_dir)
-        anchor_commit_hash = current_commit(scm_type, source_dir)
-        _LG.info("SCM: %s, anchor commit: %s", scm_type, anchor_commit_hash[:12])
+        try:
+            scm_type = platform.workspace.detect(source_dir)
+            anchor_commit_hash = platform.workspace.current(scm_type, source_dir)
+            _LG.info("SCM: %s, anchor commit: %s", scm_type, anchor_commit_hash[:12])
+        except Exception as error:
+            failure = _make_failure(
+                FailureKind.SETUP_SOURCE_FAILED,
+                FailurePhase.SETUP,
+                "Failed to inspect source control state during setup",
+                exception=error,
+            )
+            setup_failures.append(failure.to_dict())
+            _LG.warning("Continuing without source control anchor: %s", error)
 
     config = {
+        "schema_version": SCHEMA_VERSION,
         "created_at": datetime.now().isoformat(),
         "pipeline_script": (
             os.path.abspath(ns.pipeline_script) if ns.pipeline_script else None
@@ -141,6 +178,11 @@ def _init_workdir(ns: argparse.Namespace, workdir: Path) -> dict:
         "max_concurrency": ns.max_concurrency,
         "job_timeout_s": ns.job_timeout,
         "poll_interval": ns.poll_interval,
+        "startup_failure_retries": 2,
+        "startup_retryable_experiments": ["subprocess_mtp"],
+        "platform": ns.platform,
+        "agent": ns.agent,
+        "local_execution_mode": ns.local_execution_mode,
         "claude_flags": (
             ["--dangerously-skip-permissions"]
             if ns.dangerously_skip_permissions
@@ -151,6 +193,7 @@ def _init_workdir(ns: argparse.Namespace, workdir: Path) -> dict:
     (workdir / "config.json").write_text(json.dumps(config, indent=2) + "\n")
 
     state = {
+        "schema_version": SCHEMA_VERSION,
         "iteration": 0,
         "status": "initialized",
         "baseline_job": None,
@@ -158,11 +201,17 @@ def _init_workdir(ns: argparse.Namespace, workdir: Path) -> dict:
         "best_metric": None,
         "plateau_count": 0,
         "best_practices_tried": [],
-        "cached_image": None,
         "anchor_commit": anchor_commit_hash,
         "history": [],
+        "_setup_failures": setup_failures,
     }
     write_state(workdir, state)
+    if setup_failures:
+        engine_dir = workdir / "engine"
+        engine_dir.mkdir(parents=True, exist_ok=True)
+        (engine_dir / "setup_failures.json").write_text(
+            json.dumps(setup_failures, indent=2) + "\n"
+        )
 
     (workdir / "master_table.tsv").write_text("\t".join(MASTER_TABLE_HEADERS) + "\n")
 
@@ -173,7 +222,11 @@ def _init_workdir(ns: argparse.Namespace, workdir: Path) -> dict:
     return config
 
 
-def _instrument_pipeline(workdir: Path, config: dict) -> None:
+def _instrument_pipeline(
+    workdir: Path,
+    config: dict,
+    platform: AutoresearchPlatform,
+) -> None:
     """Add TTFB/step-time instrumentation to the pipeline script."""
     pipeline_script = config.get("pipeline_script", "")
     if not pipeline_script or not Path(pipeline_script).exists():
@@ -183,13 +236,26 @@ def _instrument_pipeline(workdir: Path, config: dict) -> None:
     _LG.info("Instrumenting %s with TTFB/step-time logging", pipeline_script)
     print("Instrumenting pipeline with TTFB/step-time logging...")
 
-    prompt = load_prompt(
+    prompt = platform.agent._load_prompt(
         "instrument",
         PIPELINE_SCRIPT=pipeline_script,
         PIPELINE_CODE=pipeline_code,
     )
 
-    output = run_claude(prompt, workdir, "instrument")
+    try:
+        output = platform.agent.run(prompt, workdir, "instrument")
+    except Exception as error:
+        _record_setup_failure(
+            workdir,
+            read_state(workdir),
+            _make_failure(
+                FailureKind.SETUP_INSTRUMENTATION_FAILED,
+                FailurePhase.INSTRUMENTATION,
+                "Coding agent failed while instrumenting the pipeline",
+                exception=error,
+            ),
+        )
+        return
 
     matches = list(re.finditer(r"```python\s*\n(.*?)\n```", output, re.DOTALL))
     modified_code = matches[-1].group(1) if matches else None
@@ -201,13 +267,35 @@ def _instrument_pipeline(workdir: Path, config: dict) -> None:
             "```python code block. Do NOT describe changes in prose. "
             "Output ONLY code.**\n"
         )
-        output = run_claude(retry_prompt, workdir, "instrument_retry")
+        try:
+            output = platform.agent.run(retry_prompt, workdir, "instrument_retry")
+        except Exception as error:
+            _record_setup_failure(
+                workdir,
+                read_state(workdir),
+                _make_failure(
+                    FailureKind.SETUP_INSTRUMENTATION_FAILED,
+                    FailurePhase.INSTRUMENTATION,
+                    "Coding agent failed while retrying pipeline instrumentation",
+                    exception=error,
+                ),
+            )
+            return
         matches = list(re.finditer(r"```python\s*\n(.*?)\n```", output, re.DOTALL))
         modified_code = matches[-1].group(1) if matches else None
 
     if not modified_code:
         _LG.warning("Instrumentation failed — no code block in response")
         print("  Warning: instrumentation failed")
+        _record_setup_failure(
+            workdir,
+            read_state(workdir),
+            _make_failure(
+                FailureKind.SETUP_INSTRUMENTATION_FAILED,
+                FailurePhase.INSTRUMENTATION,
+                "Coding agent did not return a Python code block for instrumentation",
+            ),
+        )
         return
 
     Path(pipeline_script).write_text(modified_code)
@@ -216,8 +304,8 @@ def _instrument_pipeline(workdir: Path, config: dict) -> None:
 
     scm = config.get("scm", "")
     source_dir = config.get("source_dir", "")
-    if scm and source_dir and has_pending_changes(scm, source_dir):
-        commit_hash = scm_commit(
+    if scm and source_dir and platform.workspace.has_changes(scm, source_dir):
+        commit_hash = platform.workspace.commit(
             scm, source_dir, "[autoresearch] Add TTFB/step-time instrumentation"
         )
         _LG.info("Committed instrumentation: %s", commit_hash[:12])
@@ -231,6 +319,21 @@ def main() -> None:
     config_file = workdir / "config.json"
     is_fresh = not config_file.exists()
 
+    platform_kind = ns.platform
+    if not is_fresh:
+        existing_config = read_config(workdir)
+        platform_kind = str(existing_config.get("platform", "auto"))
+        ns.agent = str(existing_config.get("agent", ns.agent))
+        ns.local_execution_mode = str(
+            existing_config.get("local_execution_mode", ns.local_execution_mode)
+        )
+    platform_config = {
+        "platform": platform_kind,
+        "agent": ns.agent,
+        "local_execution_mode": ns.local_execution_mode,
+    }
+    platform = create_platform(platform_config, workdir)
+
     if is_fresh:
         if not ns.base_launch_command:
             print(
@@ -238,7 +341,7 @@ def main() -> None:
                 file=sys.stderr,
             )
             sys.exit(1)
-        config = _init_workdir(ns, workdir)
+        config = _init_workdir(ns, workdir, platform)
     else:
         config = read_config(workdir)
 
@@ -248,7 +351,12 @@ def main() -> None:
     state = read_state(workdir)
 
     if is_fresh and not ns.skip_instrument:
-        _instrument_pipeline(workdir, config)
+        _instrument_pipeline(workdir, config, platform)
+        scm_type = config.get("scm", "")
+        source_dir = config.get("source_dir", "")
+        if scm_type and source_dir:
+            state["anchor_commit"] = platform.workspace.current(scm_type, source_dir)
+            write_state(workdir, state)
 
     if state["status"] == "initialized":
         state["status"] = "assessed"
@@ -257,85 +365,26 @@ def main() -> None:
     state["status"] = "looping"
     write_state(workdir, state)
 
-    check_fn_sync = _get_check_job_status()
-    cancel_fn_sync = _get_cancel_job()
-    progress_fn_sync = _get_check_job_progress()
-
-    async def launch(node):
-        return await asyncio.to_thread(launch_node, config, state, node, workdir)
-
-    async def check(job_id):
-        raw = await asyncio.to_thread(check_fn_sync, job_id)
-        if raw in ("SUCCEEDED", "COMPLETE"):
-            return "completed"
-        if raw == "FAILED":
-            return "failed"
-        return "running"
-
-    async def cancel(job_id):
-        return await asyncio.to_thread(cancel_fn_sync, job_id)
-
-    async def analyze(node, status):
-        return await asyncio.to_thread(
-            analyze_job, workdir, config, state, node, status
-        )
-
-    async def plan(parent, result, tree):
-        return await asyncio.to_thread(
-            get_plan, workdir, config, state, parent, result, tree
-        )
-
-    async def prepare(node, parent):
-        return await asyncio.to_thread(
-            prepare_node, workdir, config, state, node, parent
-        )
-
-    async def on_complete(node, result):
-        await asyncio.to_thread(
-            update_on_complete, workdir, config, state, node, result
-        )
-        await asyncio.to_thread(update_summary_and_plot, workdir, state)
-
-    async def stop(tree):
-        return should_stop(config, state, tree)
-
-    async def progress(job_id):
-        return await asyncio.to_thread(progress_fn_sync, job_id)
-
-    initial_nodes = build_initial_nodes(workdir, config, state)
-
-    engine = ExperimentEngine(
-        work_dir=str(workdir),
+    adapter = AutoresearchAdapter(
+        workdir=workdir,
+        config=config,
+        state=state,
+        platform=platform,
+    )
+    engine = AsyncWorkEngine(
+        adapter=adapter,
         max_concurrency=config.get("max_concurrency", 3),
-        poll_interval=config.get("poll_interval", 120),
-        job_timeout_s=config.get("job_timeout_s", 1800),
-        launch_fn=launch,
-        check_fn=check,
-        cancel_fn=cancel,
-        analyze_fn=analyze,
-        plan_fn=plan,
-        prepare_fn=prepare,
-        should_stop_fn=stop,
-        on_node_complete=on_complete,
-        progress_fn=progress,
     )
 
-    engine_tree = workdir / "engine" / "tree.json"
-    if engine_tree.exists():
+    checkpoint = workdir / "engine" / "checkpoint.json"
+    if checkpoint.exists():
         _LG.info("Resuming from persisted engine state")
         print("Resuming from previous engine state...")
-        asyncio.run(_resume_and_run(engine))
     else:
-        print(f"Starting engine with {len(initial_nodes)} initial node(s)...")
-        asyncio.run(engine.run(initial_nodes))
+        print("Starting engine...")
+    asyncio.run(engine.run())
 
     print(f"\nEngine finished. Results in {workdir}")
-
-
-async def _resume_and_run(engine: ExperimentEngine) -> None:
-    """Load persisted state and resume the engine."""
-    await engine.load_state()
-    await engine.run()
 
 
 if __name__ == "__main__":

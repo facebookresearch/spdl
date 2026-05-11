@@ -14,6 +14,7 @@ Usage:
     python cmd.py init <workdir> [options]
     python cmd.py assess <workdir> --baseline-job <JOB>
     python cmd.py status <workdir>
+    python cmd.py queue <workdir> list|remove|priority ...
     python cmd.py report <workdir>
 """
 
@@ -22,11 +23,14 @@ from __future__ import annotations
 import argparse
 from enum import StrEnum
 
+__all__ = ["main"]
+
 
 class _CMD(StrEnum):
     INIT = "init"
     ASSESS = "assess"
     STATUS = "status"
+    QUEUE = "queue"
     REPORT = "report"
 
 
@@ -55,24 +59,29 @@ def main() -> None:
 
     match args.command:
         case _CMD.INIT:
-            from utils.cmd_init import run
+            from utils.commands.init import _run
 
-            run(others)
+            _run(others)
 
         case _CMD.ASSESS:
-            from utils.cmd_assess import run
+            from utils.commands.assess import _run
 
-            run(others)
+            _run(others)
 
         case _CMD.STATUS:
-            from utils.cmd_status import run
+            from utils.commands.status import _run
 
-            run(others)
+            _run(others)
+
+        case _CMD.QUEUE:
+            from utils.commands.queue import _run
+
+            _run(others)
 
         case _CMD.REPORT:
-            from utils.cmd_report import run
+            from utils.commands.report import _run
 
-            run(others)
+            _run(others)
 
 
 if __name__ == "__main__":

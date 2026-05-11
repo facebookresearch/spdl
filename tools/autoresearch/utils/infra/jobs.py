@@ -9,8 +9,8 @@
 Generic stubs are defined here. Platform implementations can wrap these helpers
 or replace them behind ``utils/platform`` capabilities.
 
-Design note for future agents
-=============================
+Design note
+===========
 
 This module is an infrastructure helper, not part of the generic runner. Keep
 scheduler-neutral job helpers here and keep platform-specific details behind

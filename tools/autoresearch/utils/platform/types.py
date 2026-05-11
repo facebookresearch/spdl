@@ -6,8 +6,8 @@
 
 """Autoresearch platform capability boundary.
 
-Design note for future agents
-=============================
+Design note
+===========
 
 The runner is deliberately simple: it runs coroutine work and persists queued
 or running specs on cancellation. Autoresearch-specific behavior belongs in the

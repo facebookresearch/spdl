@@ -18,7 +18,7 @@ with minimal human intervention.
 Overview
 --------
 
-The engine operates in three phases:
+Autoresearch operates in three phases:
 
 1. **Initialization** -- Instrument the pipeline with metrics logging,
    establish a baseline, and measure headspace.
@@ -26,7 +26,7 @@ The engine operates in three phases:
    to be high-impact (subprocess pipeline, batch size tuning).
 3. **Iterative optimization** -- Claude analyzes results, proposes
    follow-up experiments, and the engine executes them concurrently
-   until metrics plateau.
+   until metrics plateau or all queued work is exhausted.
 
 The following diagram illustrates the overall flow.
 
@@ -43,7 +43,11 @@ The following diagram illustrates the overall flow.
        Stop{"Plateau\nreached?"}
        Report["Generate report"]
 
-       Init --> Baseline --> Headspace --> MTP
+       Init --> Baseline
+       Init --> Headspace
+       Init --> MTP
+       Baseline --> Launch
+       Headspace --> Launch
        MTP --> Launch
        Launch --> Analyze
        Analyze --> Plan
@@ -106,8 +110,8 @@ creating a clean baseline for subsequent experiments to branch from.
 Fixed Experiments
 ~~~~~~~~~~~~~~~~~
 
-The engine runs three fixed experiments before entering the iterative
-loop. Each addresses a known high-impact optimization area.
+Autoresearch schedules three fixed experiments before entering the
+iterative loop. Each addresses a known high-impact optimization area.
 
 **Baseline**
 
@@ -135,9 +139,9 @@ data loading threads no longer compete with PyTorch for the GIL.
 Iterative Optimization
 ~~~~~~~~~~~~~~~~~~~~~~
 
-After the fixed experiments, the engine enters an iterative loop:
+After the fixed experiments, autoresearch enters an iterative loop:
 
-1. **Analyze** -- When a job completes, the engine collects system
+1. **Analyze** -- When a job completes, the workflow collects system
    metrics (GPU SM utilization, CPU utilization) and SPDL pipeline
    statistics (per-stage execution time, queue occupancy, throughput).
    These are sent to Claude, which produces a structured analysis
@@ -149,7 +153,7 @@ After the fixed experiments, the engine enters an iterative loop:
    hypothesis, the specific changes to make, and whether the image
    needs rebuilding.
 
-3. **Execute** -- The engine applies code changes (if any), builds the
+3. **Execute** -- The workflow applies code changes (if any), builds the
    image, and launches jobs. Up to ``max_concurrency`` jobs run
    simultaneously. Each job is monitored for completion and timeout.
 
@@ -160,57 +164,85 @@ After the fixed experiments, the engine enters an iterative loop:
 .. mermaid::
 
    sequenceDiagram
-       participant Engine
+       participant Runner
+       participant Workflow
        participant Claude
        participant Cluster
 
-       Engine->>Cluster: Launch job
-       Cluster-->>Engine: Job completed
-       Engine->>Engine: Collect metrics
-       Engine->>Claude: Analyze (metrics + pipeline code)
-       Claude-->>Engine: Bottleneck analysis + structured metrics
-       Engine->>Claude: Plan (history + analysis + code)
-       Claude-->>Engine: 2-3 experiment proposals
-       Engine->>Engine: Apply code changes, build image
-       Engine->>Cluster: Launch next jobs
+       Runner->>Workflow: Start WorkSpec coroutine
+       Workflow->>Cluster: Launch job
+       Cluster-->>Workflow: Job completed
+       Workflow->>Workflow: Collect metrics
+       Workflow->>Claude: Analyze (metrics + pipeline code)
+       Claude-->>Workflow: Bottleneck analysis + structured metrics
+       Workflow->>Claude: Plan (history + analysis + code)
+       Claude-->>Workflow: 2-3 experiment proposals
+       Workflow-->>Runner: Return child WorkSpecs
+       Runner->>Workflow: Start next WorkSpec coroutines
 
 
-Engine Architecture
+Runner Architecture
 -------------------
 
-The engine is designed around two principles: **domain agnosticism**
-and **stateless AI invocations**.
+The implementation is split into a small generic runner and an
+autoresearch-specific workflow adapter. The split is intentional:
+the runner only schedules coroutine work, while the workflow owns
+all experiment semantics.
 
-Domain Agnosticism
-~~~~~~~~~~~~~~~~~~
+Generic Runner
+~~~~~~~~~~~~~~
 
-The core engine (``ExperimentEngine``) knows nothing about SPDL,
-training jobs, or Claude. All domain-specific behavior is injected
-as callback functions:
+The generic runner (``utils/runner.py``) knows nothing about SPDL,
+training jobs, source control, metrics, Claude, or hypothesis planning.
+It operates on serializable ``WorkSpec`` objects and is responsible only
+for:
 
-- ``prepare_fn`` -- Apply code changes and build images.
-- ``launch_fn`` -- Launch a training job and return a job ID.
-- ``check_fn`` -- Check whether a job has completed.
-- ``analyze_fn`` -- Collect metrics and produce an analysis.
-- ``plan_fn`` -- Propose follow-up experiments.
-- ``on_node_complete`` -- Update state after an experiment finishes.
-- ``should_stop_fn`` -- Determine whether to stop the loop.
+- Maintaining a priority queue of pending ``WorkSpec`` objects.
+- Starting up to ``max_concurrency`` coroutines.
+- Waiting for the first coroutine to complete.
+- Passing completed results back to the adapter.
+- Checkpointing queued and running specs.
+- Persisting an ``interrupted`` checkpoint on local cancellation.
 
-This separation makes the engine reusable for other optimization
-tasks beyond SPDL pipelines.
+The runner does not inspect experiment payloads. If a future change
+needs to know how a remote job is launched, how code is modified, how
+metrics are interpreted, or how follow-up experiments are generated,
+that change belongs in the autoresearch workflow layer rather than in
+the runner.
+
+Autoresearch Workflow Adapter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The autoresearch workflow (``utils/autoresearch_workflow.py``) is the
+domain side of the boundary. It turns an experiment ``WorkSpec`` into a
+coroutine that performs the full experiment lifecycle:
+
+- Restore or prepare the source tree.
+- Apply code changes when the experiment requires a rebuild.
+- Build the image.
+- Launch or resume the remote job.
+- Poll for completion and detect stalled jobs.
+- Collect metrics and run Claude analysis.
+- Record state, master-table rows, findings, and plots.
+- Ask Claude for follow-up experiments and return them as child
+  ``WorkSpec`` objects.
+
+The workflow also writes the user-facing compatibility files under
+``<workdir>/engine`` and ``<workdir>/runs``. This keeps monitoring and
+reporting stable while the runner remains simple.
 
 Stateless Claude Invocations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Each Claude call is fully stateless. The engine constructs a
+Each Claude call is fully stateless. The workflow constructs a
 self-contained prompt that includes everything Claude needs: the
 SPDL optimization knowledge base, the full experiment history,
 collected metrics, and the pipeline source code. There is no
 persistent conversation or session state.
 
-This design makes the system robust to interruptions. After a crash
-or ``Ctrl+C``, the engine can resume from the last persisted state
-without losing context.
+This design makes the system robust to interruptions. After ``Ctrl+C``,
+the runner can resume from the last persisted ``engine/checkpoint.json``
+without relying on a Claude session.
 
 Hypothesis Tree
 ~~~~~~~~~~~~~~~
@@ -235,8 +267,8 @@ planning.
 
 Each node tracks its status (queued, preparing, running, analyzing,
 completed, failed), the source control commit it was built from, and
-the analysis results. The tree is visualized as ``hypothesis_tree.png``
-after each experiment completes.
+the analysis results. The tree is owned by the workflow and visualized
+as ``hypothesis_tree.png`` after each experiment completes.
 
 
 Monitoring
@@ -248,6 +280,16 @@ useful for monitoring progress.
 ``engine/engine_state.json``
    Engine status (``running``, ``interrupted``, or ``stopped``) and
    experiment counts (queued, running, completed, failed).
+
+``engine/checkpoint.json``
+   Runner checkpoint containing the serialized queued and running
+   ``WorkSpec`` objects. This is the source of truth for resume.
+
+``engine/queue.json``
+   Compatibility view of pending experiments in priority order.
+
+``engine/active.json``
+   Compatibility view of currently running remote jobs.
 
 ``summary.md``
    Human-readable progress summary updated after each job completion.
@@ -285,10 +327,11 @@ to Claude for synthesis, and writes the output to ``report.md``.
 Stopping and Resuming
 ---------------------
 
-To stop the engine gracefully, send ``SIGINT`` (Ctrl+C) to the
-process. The engine will persist its state (tree, queue, active jobs)
-to disk before exiting. This may take 15-30 seconds if a Claude
-analysis is in progress.
+To stop autoresearch gracefully, send ``SIGINT`` (Ctrl+C) to the
+process. The runner cancels local coroutines and persists queued and
+running specs to ``engine/checkpoint.json`` with status
+``interrupted``. The workflow also keeps the monitoring files under
+``engine/`` up to date.
 
 .. warning::
 
@@ -296,9 +339,10 @@ analysis is in progress.
    This prevents state persistence and you may lose the queue and
    in-progress analysis.
 
-Running jobs on the cluster are **not** cancelled when the engine
-stops. They continue independently. When the engine resumes, it
-re-checks their status and collects results.
+Running jobs on the cluster are **not** cancelled when autoresearch
+stops. They continue independently. When autoresearch resumes from
+``engine/checkpoint.json``, the workflow re-checks their status and
+collects results.
 
 To resume, simply re-run with the workdir:
 
@@ -309,17 +353,27 @@ To resume, simply re-run with the workdir:
 Modifying the Queue
 ~~~~~~~~~~~~~~~~~~~
 
-To manually adjust the experiment queue, stop the engine, edit
-``engine/queue.json`` (remove entries or change ``priority`` values --
-lower values run first), then resume.
+To manually adjust the experiment queue, stop the engine and edit
+``engine/checkpoint.json``. The ``queued`` list contains serialized
+``WorkSpec`` objects; change their ``priority`` values or remove specs
+as needed. Lower values run first. ``engine/queue.json`` is a
+compatibility view for monitoring and should not be treated as the
+resume source of truth.
 
 .. code-block:: json
 
-   [
-     {"priority": -100, "node_id": "010_compile_fused_bs6"},
-     {"priority": 0, "node_id": "011_batch_size_16"},
-     {"priority": 100, "node_id": "012_concurrency_2"}
-   ]
+   {
+     "status": "interrupted",
+     "queued": [
+       {
+         "id": "010_compile_fused_bs6",
+         "priority": -100,
+         "kind": "experiment",
+         "payload": {"node": {"node_id": "010_compile_fused_bs6"}}
+       }
+     ],
+     "running": []
+   }
 
 
 Workdir Structure
@@ -335,10 +389,11 @@ Workdir Structure
    ├── progress.png                # Duration/SM scatter plot
    ├── hypothesis_tree.png         # Experiment tree visualization
    ├── engine/
+   │   ├── checkpoint.json         # Runner checkpoint for resume
    │   ├── engine_state.json       # Engine status and counts
    │   ├── tree.json               # Full hypothesis tree
-   │   ├── queue.json              # Pending experiments
-   │   ├── active.json             # Currently running jobs
+   │   ├── queue.json              # Pending experiments (compat view)
+   │   ├── active.json             # Currently running jobs (compat view)
    │   └── nodes/
    │       └── <node_id>/
    │           ├── spec.json       # Experiment specification

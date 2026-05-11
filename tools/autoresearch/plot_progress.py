@@ -27,12 +27,21 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
+__all__ = [
+    "_edge_label",
+    "_load_tsv",
+    "_plot_hypothesis_tree",
+    "_plot_progress",
+    "_tree_font_sizes",
+    "main",
+]
+
 
 def _unescape(value: str) -> str:
     return value.replace("\\n", "\n").replace("\\t", "\t").replace("\\\\", "\\")
 
 
-def load_tsv(tsv_path: Path) -> list[dict]:
+def _load_tsv(tsv_path: Path) -> list[dict]:
     experiments = []
     with open(tsv_path) as f:
         reader = csv.DictReader(f, delimiter="\t")
@@ -89,6 +98,7 @@ def load_tsv(tsv_path: Path) -> list[dict]:
                     "duration_s": duration,
                     "status": "HEADSPACE" if is_headspace else exp_status,
                     "description": _unescape(name).replace("_", " "),
+                    "change_summary": _unescape(row.get("change_summary", "")),
                 }
             )
     return experiments
@@ -302,7 +312,7 @@ def _plot_metric(
     _set_y_limits(ax, all_y, lower_is_better, bool(crashes))
 
 
-def plot_progress(
+def _plot_progress(
     experiments: list[dict],
     output_path: str,
     title_prefix: str = "",
@@ -449,7 +459,71 @@ def _find_best_path(nodes: dict[str, dict]) -> tuple[str | None, set[tuple[str, 
     return best_nid, edges
 
 
-def _draw_tree_edges(ax, nodes, x_pos, y_pos, best_path_edges):
+def _shorten(text: str, limit: int) -> str:
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
+
+def _edge_label(parent_node: dict, child_node: dict) -> str:
+    spec = child_node.get("spec") or {}
+    value = spec.get("change_summary")
+    if value:
+        return _short_change_label(str(value))
+    retry_attempt = spec.get("_startup_retry_attempt")
+    if retry_attempt:
+        return f"startup repair #{retry_attempt}"
+    tags = spec.get("best_practices_tags")
+    if isinstance(tags, list) and tags:
+        return _short_change_label(str(tags[0]))
+    return _short_change_label(
+        str(child_node.get("name", child_node.get("node_id", "")))
+    )
+
+
+def _short_change_label(text: str) -> str:
+    words = [word.strip(".,;:()[]{}") for word in text.replace("_", " ").split()]
+    words = [word for word in words if word]
+    if not words:
+        return "experiment"
+    label = " ".join(words[:5])
+    return _shorten(label, 34)
+
+
+def _tree_font_sizes(node_count: int, max_level: int) -> dict[str, float]:
+    scale = min(2.0, max(1.0, (node_count / 24) ** 0.35, (max_level + 1) / 6))
+    return {
+        "node": 8 * scale,
+        "edge": 6.5 * scale,
+        "legend": 9 * scale,
+        "title": 14 * scale,
+    }
+
+
+def _draw_edge_label(ax, label, x1, y1, x2, y2, fontsize):
+    ax.text(
+        (x1 + x2) / 2.0,
+        (y1 + y2) / 2.0,
+        label,
+        ha="center",
+        va="center",
+        fontsize=fontsize,
+        color="#586069",
+        bbox={
+            "boxstyle": "round,pad=0.18",
+            "facecolor": "white",
+            "edgecolor": "#d0d7de",
+            "alpha": 0.85,
+            "linewidth": 0.4,
+        },
+        zorder=4,
+    )
+
+
+def _draw_tree_edges(
+    ax, nodes, x_pos, y_pos, best_path_edges, show_edge_labels, edge_fontsize
+):
     for nid, n in nodes.items():
         for child_id in n.get("children", []):
             if child_id not in x_pos:
@@ -466,9 +540,19 @@ def _draw_tree_edges(ax, nodes, x_pos, y_pos, best_path_edges):
                     "connectionstyle": "arc3,rad=0.1",
                 },
             )
+            if show_edge_labels:
+                _draw_edge_label(
+                    ax,
+                    _edge_label(n, nodes[child_id]),
+                    x_pos[nid],
+                    y_pos[nid] - 0.6,
+                    x_pos[child_id],
+                    y_pos[child_id] + 0.6,
+                    edge_fontsize,
+                )
 
 
-def _draw_tree_node(ax, nid, n, x, y, best_nid):
+def _draw_tree_node(ax, nid, n, x, y, best_nid, fontsize):
     box_w, box_h = 2.4, 1.0
     status = n.get("status", "queued")
     color = "#27ae60" if nid == best_nid else _STATUS_COLORS.get(status, "#ecf0f1")
@@ -501,14 +585,14 @@ def _draw_tree_node(ax, nid, n, x, y, best_nid):
         f"{name}{metric_str}",
         ha="center",
         va="center",
-        fontsize=8,
+        fontsize=fontsize,
         fontweight="bold" if nid == best_nid else "normal",
         color=text_color,
         zorder=6,
     )
 
 
-def plot_hypothesis_tree(
+def _plot_hypothesis_tree(
     tree_data: list[dict],
     output_path: str,
     title: str = "",
@@ -528,12 +612,29 @@ def plot_hypothesis_tree(
     max_nodes_per_level = max(level_counts.values()) if level_counts else 1
     fig_w = max(12, max_nodes_per_level * 3.5)
     fig_h = max(8, (max_level + 1) * 3)
+    fonts = _tree_font_sizes(len(order), max_level)
     dpi = 150 if len(order) < 50 else 200 if len(order) < 200 else 300
     fig, ax = plt.subplots(figsize=(fig_w, fig_h))
 
-    _draw_tree_edges(ax, nodes, x_pos, y_pos, best_path_edges)
+    _draw_tree_edges(
+        ax,
+        nodes,
+        x_pos,
+        y_pos,
+        best_path_edges,
+        show_edge_labels=len(order) <= 80,
+        edge_fontsize=fonts["edge"],
+    )
     for nid in order:
-        _draw_tree_node(ax, nid, nodes[nid], x_pos[nid], y_pos[nid], best_nid)
+        _draw_tree_node(
+            ax,
+            nid,
+            nodes[nid],
+            x_pos[nid],
+            y_pos[nid],
+            best_nid,
+            fonts["node"],
+        )
 
     legend_items = [
         plt.Rectangle((0, 0), 1, 1, fc="#2ecc71", ec="black", label="Completed"),
@@ -544,7 +645,7 @@ def plot_hypothesis_tree(
         ),
         plt.Rectangle((0, 0), 1, 1, fc="#27ae60", ec="black", label="Best"),
     ]
-    ax.legend(handles=legend_items, loc="upper right", fontsize=9)
+    ax.legend(handles=legend_items, loc="upper right", fontsize=fonts["legend"])
 
     ax.set_xlim(min(x_pos.values()) - 2, max(x_pos.values()) + 2)
     ax.set_ylim(min(y_pos.values()) - 1.5, max(y_pos.values()) + 1.5)
@@ -555,7 +656,7 @@ def plot_hypothesis_tree(
     n_completed = sum(1 for n in nodes.values() if n.get("status") == "completed")
     ax.set_title(
         f"{title_text}: {len(nodes)} nodes, {n_completed} completed",
-        fontsize=14,
+        fontsize=fonts["title"],
     )
 
     plt.tight_layout()
@@ -582,8 +683,8 @@ def main() -> None:
         sys.exit(1)
 
     output = args.output or str(tsv_path.parent / "progress.png")
-    experiments = load_tsv(tsv_path)
-    plot_progress(experiments, output, args.title)
+    experiments = _load_tsv(tsv_path)
+    _plot_progress(experiments, output, args.title)
 
 
 if __name__ == "__main__":

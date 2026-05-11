@@ -37,9 +37,7 @@ __all__ = [
     "_normalize_config",
     "_normalize_state",
     "_read_master_table",
-    "append_master_row",
     "read_config",
-    "read_master_table",
     "read_state",
     "write_state",
 ]
@@ -62,9 +60,6 @@ def _read_master_table(workdir: Path) -> str:
     return (workdir / "master_table.tsv").read_text()
 
 
-read_master_table = _read_master_table
-
-
 def _escape_tsv(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
 
@@ -73,9 +68,6 @@ def _append_master_row(workdir: Path, row: dict) -> None:
     with open(workdir / "master_table.tsv", "a") as f:
         values = [_escape_tsv(str(row.get(h, ""))) for h in MASTER_TABLE_HEADERS]
         f.write("\t".join(values) + "\n")
-
-
-append_master_row = _append_master_row
 
 
 def _normalize_config(config: dict) -> dict:

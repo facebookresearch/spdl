@@ -6,8 +6,8 @@
 
 """Autoresearch workflow adapter for the generic async runner.
 
-Design note for future agents
-=============================
+Design note
+===========
 
 This module is the domain side of the runner/adapter boundary. It orchestrates
 experiment coroutines, but durable state lives in ``store.py`` and deterministic

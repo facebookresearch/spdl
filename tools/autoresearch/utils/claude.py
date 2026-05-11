@@ -23,18 +23,11 @@ _LG: logging.Logger = logging.getLogger(__name__)
 _SCRIPT_DIR = Path(__file__).resolve().parent.parent
 _PROMPTS_DIR = _SCRIPT_DIR / "prompts"
 
-SCRIPT_DIR = _SCRIPT_DIR
-PROMPTS_DIR = _PROMPTS_DIR
-
 __all__ = [
     "_extract_json_block",
     "_load_knowledge",
     "_load_prompt",
     "_run_claude",
-    "extract_json_block",
-    "load_knowledge",
-    "load_prompt",
-    "run_claude",
 ]
 
 
@@ -49,9 +42,6 @@ def _load_prompt(name: str, **kwargs: str) -> str:
     return template
 
 
-load_prompt = _load_prompt
-
-
 def _load_knowledge() -> str:
     """Load shared skill files and autoresearch-specific knowledge.
 
@@ -64,30 +54,6 @@ def _load_knowledge() -> str:
         if path.exists():
             parts.append(path.read_text())
     parts.append(_load_prompt("knowledge"))
-    return "\n\n".join(parts)
-
-
-def load_knowledge() -> str:
-    """Load shared skill files and autoresearch-specific knowledge.
-
-    Reads symlinked skill files from prompts/ for shared pipeline
-    optimization knowledge, then appends autoresearch-specific
-    knowledge from knowledge.md and fb/knowledge.md.
-    """
-    parts: list[str] = []
-    for name in ["optimization_strategies.md", "how_to_interpret_pipeline_stats.md"]:
-        path = _PROMPTS_DIR / name
-        if path.exists():
-            parts.append(path.read_text())
-    parts.append(_load_prompt("knowledge"))
-    for name in [
-        "fetching_pipeline_stats.md",
-        "mast_job_lifecycle.md",
-        "knowledge.md",
-    ]:
-        path = _PROMPTS_DIR / "fb" / name
-        if path.exists():
-            parts.append(path.read_text())
     return "\n\n".join(parts)
 
 
@@ -126,6 +92,7 @@ def _run_claude(prompt: str, workdir: Path, phase: str) -> str:
         capture_output=True,
         text=True,
         cwd=str(workdir),
+        timeout=900,
     )
 
     _LG.info(
@@ -159,9 +126,6 @@ def _run_claude(prompt: str, workdir: Path, phase: str) -> str:
     )
     _LG.debug("Output saved to %s", output_file)
     return text
-
-
-run_claude = _run_claude
 
 
 def _extract_result_text(raw_stdout: str, phase: str) -> str:
@@ -220,6 +184,3 @@ def _extract_json_block(text: str) -> dict | None:
         except json.JSONDecodeError:
             continue
     return None
-
-
-extract_json_block = _extract_json_block
