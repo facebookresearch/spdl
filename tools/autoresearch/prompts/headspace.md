@@ -18,7 +18,7 @@ The wrapping is:
 from spdl.dataloader import CacheDataLoader
 
 # After building the dataloader/pipeline but before the training loop:
-dataloader = CacheDataLoader(dataloader, num_caches=10, return_caches_after=100)
+dataloader = CacheDataLoader(dataloader, num_caches=10, return_caches_after=100, stop_after=NUM_SAMPLES_PAR_EPOCH)
 ```
 
 **Rules:**

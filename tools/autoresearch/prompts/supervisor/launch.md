@@ -25,7 +25,8 @@ Optional inputs (have sensible defaults):
 
 ## Step 2: Start the Engine
 
-Run the engine with the gathered config. The script is at `spdl/tools/autoresearch/run.py`.
+Run the engine with the gathered config. The autoresearch CLI appends a launch
+context below this prompt with the exact engine command template to use.
 
 ```bash
 python run.py <workdir> \
@@ -43,7 +44,9 @@ python run.py <workdir> \
   --agent claude
 ```
 
-Run this command in the background so you can monitor it. The engine handles everything: initialization, pipeline instrumentation, baseline job, headspace analysis, MTP experiment, and iterative optimization.
+Run the command from the launch context in the background so you can monitor it.
+The engine handles everything: initialization, pipeline instrumentation, baseline
+job, headspace analysis, MTP experiment, and iterative optimization.
 
 **On resume** (after Ctrl+C or crash), just re-run with the workdir only:
 

@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Claude invocation and prompt template loading."""
+"""Claude invocation for autoresearch."""
 
 from __future__ import annotations
 
@@ -12,16 +12,13 @@ import json
 import logging
 import re
 import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 
+from .prompts import _load_knowledge, _load_prompt
 from .state import read_config
 
 _LG: logging.Logger = logging.getLogger(__name__)
-
-_SCRIPT_DIR = Path(__file__).resolve().parent.parent
-_PROMPTS_DIR = _SCRIPT_DIR / "prompts"
 
 __all__ = [
     "_extract_json_block",
@@ -29,32 +26,6 @@ __all__ = [
     "_load_prompt",
     "_run_claude",
 ]
-
-
-def _load_prompt(name: str, **kwargs: str) -> str:
-    path = _PROMPTS_DIR / f"{name}.md"
-    if not path.exists():
-        print(f"Error: prompt template not found: {path}", file=sys.stderr)
-        sys.exit(1)
-    template = path.read_text()
-    for key, value in kwargs.items():
-        template = template.replace(f"__{key.upper()}__", str(value))
-    return template
-
-
-def _load_knowledge() -> str:
-    """Load shared skill files and autoresearch-specific knowledge.
-
-    Reads symlinked skill files from prompts/ for shared pipeline
-    optimization knowledge, then appends autoresearch-specific knowledge.
-    """
-    parts: list[str] = []
-    for name in ["optimization_strategies.md", "how_to_interpret_pipeline_stats.md"]:
-        path = _PROMPTS_DIR / name
-        if path.exists():
-            parts.append(path.read_text())
-    parts.append(_load_prompt("knowledge"))
-    return "\n\n".join(parts)
 
 
 def _run_claude(prompt: str, workdir: Path, phase: str) -> str:

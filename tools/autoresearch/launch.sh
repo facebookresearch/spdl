@@ -8,10 +8,4 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROMPT="$(cat "$SCRIPT_DIR/prompts/launch.md")"
-
-if [ $# -gt 0 ]; then
-  exec claude --system-prompt "$PROMPT" "$*"
-else
-  exec claude --system-prompt "$PROMPT"
-fi
+exec python "$SCRIPT_DIR/cli.py" "$@"

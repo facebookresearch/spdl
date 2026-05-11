@@ -6,11 +6,13 @@ Automated experiment engine for optimizing SPDL data loading pipeline performanc
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  run.py (single entry point)                                     │
+│  spdl autoresearch / launch.sh (interactive supervisor)          │
 │                                                                  │
-│  1. Initialize workdir + instrument pipeline (first run only)    │
-│  2. Seed initial experiments: baseline, headspace, MTP           │
-│  3. Start async engine ───────────────────────────────────────┐  │
+│  1. Start Claude/Codex supervisor for diagnostics + config       │
+│  2. Supervisor runs run.py engine command                        │
+│  3. Engine initializes + instruments pipeline (first run only)   │
+│  4. Seed initial experiments: baseline, headspace, MTP           │
+│  5. Start async engine ───────────────────────────────────────┐  │
 │                                                               │  │
 │     ┌─────────────────────────────────────────────────────┐   │  │
 │     │  Engine event loop (asyncio)                        │   │  │
@@ -35,7 +37,7 @@ Automated experiment engine for optimizing SPDL data loading pipeline performanc
 ```
 
 Each coding-agent invocation is **stateless**. The engine carries all state and assembles self-contained prompts from:
-- `prompts/knowledge.md` — compiled SPDL optimization knowledge
+- `prompts/knowledge/` — compiled SPDL optimization knowledge
 - Experiment state — master table, history, previous analyses
 - Fetched metrics — system metrics, pipeline performance stats
 
@@ -50,7 +52,10 @@ The implementation is unusual in one important way: platform behavior is grouped
 ## Architecture
 
 ```
-Claude Code (interactive front-end via launch.sh)
+spdl autoresearch / launch.sh
+  │ launches Claude or Codex as interactive supervisor
+  ▼
+Supervisor agent
   │ gathers config from user, starts engine, monitors progress
   ▼
 run.py ──► runner.py (generic async scheduler)
@@ -68,10 +73,10 @@ adapter.py  asyncio.wait(FIRST_COMPLETED)
   └─ platform/               workspace/artifacts/execution/evidence/agent
 ```
 
-**Two ways to run:**
+**Execution model:**
 
-1. **Claude Code wrapper** (`launch.sh`) — interactive. Claude Code gathers config from the user, starts the engine, monitors progress, and intervenes on errors.
-2. **Direct** (`run.py`) — non-interactive. Pass all config as CLI flags.
+1. **Public CLI** (`spdl autoresearch`, or `launch.sh` in this source tree) — always interactive. The selected supervisor agent gathers missing config, starts the engine, monitors progress, and intervenes on errors.
+2. **Engine command** (`run.py`) — non-interactive implementation detail. The supervisor invokes it with complete config, and tests can call it directly.
 
 ### Engine Design
 
@@ -127,20 +132,27 @@ Re-run the same command to resume — the engine re-checks job status and picks 
 
 ## Quick Start
 
-### Option 1: Claude Code (interactive)
+### Option 1: Supervised CLI
 
 ```bash
 ./launch.sh
 ```
 
-Claude Code asks for your pipeline script, build command, launch command, etc., then starts and monitors the engine.
+The CLI starts Claude or Codex as a supervisor. The supervisor asks for your
+pipeline script, build command, launch command, etc., then starts and monitors
+the engine.
 
 For a pre-configured use case:
 ```bash
-./launch.sh "Run autoresearch on pipeline at /path/to/pipeline.py ..."
+./launch.sh /tmp/my_experiment \
+  --agent claude \
+  --pipeline-script path/to/pipeline.py \
+  --source-dir path/to/source \
+  --build-command "docker build -t my_image ." \
+  --base-launch-command "torchx run -s local entry.py:main --image \$IMAGE --num_workers 8"
 ```
 
-### Option 2: Direct CLI
+### Option 2: Engine Command
 
 ```bash
 # First run — provide all config
@@ -290,18 +302,15 @@ autoresearch/
 │   ├── state.py                   # Experiment state, config, master table
 │   ├── log.py                     # Logging setup
 ├── prompts/
-│   ├── launch.md                  # Interactive launch prompt
-│   ├── knowledge.md               # SPDL optimization knowledge
-│   ├── how_to_interpret_pipeline_stats.md  # Pipeline metrics guide
+│   ├── supervisor/                # Recursive supervisor prompt fragments
+│   ├── platform/                  # Recursive execution-environment guidance
+│   ├── knowledge/                 # Recursive workflow-agent knowledge
 │   ├── instrument.md              # Auto-instrumentation prompt
 │   ├── headspace.md               # CacheDataLoader headspace prompt
 │   ├── assess.md                  # Baseline assessment prompt
 │   ├── plan_next.md               # Planning prompt
 │   ├── analyze.md                 # Post-job analysis prompt
-│   ├── apply_changes.md           # Code modification prompt
-│   └── fb/                        # Infrastructure-specific prompts
-│       ├── knowledge.md
-│       └── launch.md              # Platform-specific launch instructions
+│   └── apply_changes.md           # Code modification prompt
 └── README.md
 ```
 
@@ -315,4 +324,6 @@ Headspace results are excluded from the running best and plateau detection.
 
 - **`config.json`**: edit agent-specific flags to pass additional CLI options
 - **`prompts/`**: edit templates to adjust agent behavior or add domain-specific knowledge
-- **`prompts/knowledge.md`**: add project-specific optimization context
+- **`prompts/knowledge/`**: add project-specific optimization context
+- **`prompts/platform/`**: add execution-environment guidance
+- **`prompts/supervisor/`**: add top-level supervisor guidance
