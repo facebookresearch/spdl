@@ -49,6 +49,10 @@ __PIPELINE_CODE__
    - `decode_packets_nvdec` auto-applies bitstream filtering — remove any manual `apply_bsf()` calls.
    - **Use a dedicated `ThreadPoolExecutor` for the NVDEC decode stage.** Do NOT rely on the pipeline's default shared thread pool. Create a separate `ThreadPoolExecutor(max_workers=C)` and pass it as `executor=` to the `.pipe()` call for the decode stage. This prevents NVDEC decode threads from competing with fetch/other CPU threads for the same pool, which is critical because NVDEC decode needs its own CUDA contexts per thread. Example: `.pipe(decode_fn, concurrency=7, executor=ThreadPoolExecutor(7))`.
    - **NOT compatible with MTP (subprocess mode)** — `VideoPackets` are not picklable. GPU video decode must run as a pure multithreaded pipeline in the main process. Do NOT wrap the pipeline with `run_pipeline_in_subprocess` when using NVDEC. If the existing code uses MTP, remove the subprocess wrapper and use `PipelineBuilder.build(num_threads=N)` instead.
+10. **TorchTNT scripts**: If the code uses TorchTNT (`torchtnt.framework.fit`, `train`, `AutoUnit`), the SPDL `Pipeline` is passed directly to TorchTNT as the `train_dataloader` (Pipeline is iterable — no wrapper class is required unless instrumentation was added). When applying changes:
+   - **Pipeline construction changes** (concurrency, MTP, batch size): Modify the function that builds the `PipelineBuilder`, same as non-TorchTNT code. The `Pipeline` abstracts MTP vs pure multithreading, so the code passing Pipeline to TorchTNT does not change.
+   - **Do NOT modify TorchTNT internals** (`fit()`, `train()`, `AutoUnit.train_step`). Only modify the pipeline construction.
+   - The pipeline is built once and iterated many times. There is no need for `auto_stop()` or rebuilding per epoch.
 
 Output the modified file:
 

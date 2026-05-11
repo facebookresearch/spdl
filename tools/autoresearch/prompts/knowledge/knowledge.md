@@ -93,3 +93,50 @@ Use pure multithreading in the main process instead:
 ### Headspace Analysis in the Loop
 
 The autoresearch loop runs CacheDataLoader analysis automatically as part of the first iteration, alongside other experiments like MTP. CacheDataLoader results must NOT be treated as a real training run — they are excluded from the running best and plateau detection.
+
+### TorchTNT Integration Pattern
+
+Many training scripts use TorchTNT (via `torchtnt.framework`) to manage the training loop. In TorchTNT-based code, the training loop is NOT a simple `for batch in pipeline:` — it is managed by `torchtnt.framework.fit()` or `torchtnt.framework.train()`, which call `iter(dataloader)` per epoch and `next(data_iter)` per step internally.
+
+**How SPDL Pipeline integrates with TorchTNT:**
+
+The recommended pattern is a wrapper class that builds the pipeline in its constructor and exposes `__iter__` and `__len__`:
+
+1. Create a function that builds the pipeline (returns a `Pipeline` object).
+2. In the wrapper class constructor, call the function and assign the pipeline to an instance attribute.
+3. Add `__iter__` which calls `self.pipeline.get_iterator(timeout=...)`.
+4. Add `__len__` which refers to the source object used when building the pipeline.
+
+```python
+class SPDLDataLoader:
+    def __init__(self, source, batch_size, ...):
+        self.source = source
+        self.pipeline = build_pipeline(source, batch_size, ...)
+
+    def __iter__(self):
+        return self.pipeline.get_iterator(timeout=30)
+
+    def __len__(self):
+        return len(self.source) // self.batch_size
+```
+
+This wrapper is passed to TorchTNT's `fit()` or `train()` as the `train_dataloader` argument.
+
+**Key facts about Pipeline:**
+- `Pipeline` is both iterable and iterator. It can technically be directly iterated, but the wrapper pattern above is recommended because it provides `get_iterator(timeout=...)` for timeout handling and `__len__` for epoch length.
+- **Preferred iteration**: Always use `pipeline.get_iterator(timeout=<seconds>)` to obtain an iterator with a timeout, so that jobs do not get stuck. Directly iterating with `for batch in pipeline:` or `iter(pipeline)` is discouraged because it lacks timeout handling.
+- The pipeline is built once and iterated many times. There is no need for `auto_stop()` or rebuilding per epoch.
+- The `Pipeline` abstracts away whether it uses MTP (subprocess) or pure multithreading internally, so switching between them does not affect how the Pipeline is consumed.
+- TorchTNT calls `iter(dataloader)` at the start of each epoch, then `next(data_iter)` per step until `StopIteration`.
+- The pipeline's source controls how many items are produced per epoch. When the source is exhausted, the iterator raises `StopIteration`, ending the epoch in TorchTNT.
+
+**Detecting TorchTNT usage in code:**
+- Imports from `torchtnt.framework` (`fit`, `train`, `AutoUnit`, `TrainUnit`)
+- A unit class extending `AutoUnit` or implementing `TrainUnit` with a `compute_loss()` or `train_step()` method
+- A wrapper class with `__iter__` that calls `pipeline.get_iterator(timeout=...)`
+- The `fit()` or `train()` call with `train_dataloader=` argument
+
+**Where code changes target in TorchTNT scripts:**
+- **Pipeline construction**: Inside the function that builds the `PipelineBuilder` and calls `.build()`. Same as non-TorchTNT scripts. The `Pipeline` abstracts MTP vs pure multithreading, so the wrapper class and TorchTNT internals do not change when switching backends.
+- **Training step**: Inside the unit's `compute_loss()` or `train_step()` — equivalent to the training step in a simple loop.
+- **Instrumentation**: Add TTFB timing inside the wrapper's `__iter__` using `enumerate` to detect the first batch and log init-to-steady-state transition, and/or use TorchTNT callbacks for step/fetch timing.
