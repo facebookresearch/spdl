@@ -10,6 +10,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from spdl.tools.autoresearch.utils.commands import queue as cmd_queue
 from spdl.tools.autoresearch.utils.platform import (
@@ -28,7 +29,11 @@ __all__: list[str] = []
 class _PlatformTest(unittest.TestCase):
     def test_default_platform_has_capability_parts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            platform = create_platform("auto", Path(tmp))
+            with patch.dict(
+                "os.environ",
+                {"SPDL_AUTORESEARCH_PLATFORM_PROVIDERS": ""},
+            ):
+                platform = create_platform("auto", Path(tmp))
 
             self.assertIsInstance(platform, AutoresearchPlatform)
             self.assertTrue(hasattr(platform, "workspace"))
@@ -124,6 +129,20 @@ class _PlatformTest(unittest.TestCase):
                     {"platform": "local", "local_execution_mode": "unknown"},
                     Path(tmp),
                 )
+
+    def test_unknown_remote_provider_is_explicit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(
+                "os.environ",
+                {"SPDL_AUTORESEARCH_PLATFORM_PROVIDERS": ""},
+            ):
+                with self.assertRaisesRegex(
+                    ValueError, "Unknown autoresearch platform"
+                ):
+                    create_platform(
+                        {"platform": "unknown_remote", "agent": "mock"},
+                        Path(tmp),
+                    )
 
     def test_agent_result_reports_parse_errors_without_llm(self) -> None:
         agent = _MockAgent()

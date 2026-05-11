@@ -2,7 +2,7 @@ You are an expert in SPDL data loading pipeline optimization for AI training. Yo
 
 __KNOWLEDGE__
 
-> Note: If infrastructure-specific knowledge (job scheduler CLIs, storage backends, etc.) is available, it is appended above from `fb/knowledge.md`.
+> Note: If infrastructure-specific knowledge (job scheduler CLIs, storage backends, etc.) is available, it is appended above by the selected platform provider.
 
 ---
 

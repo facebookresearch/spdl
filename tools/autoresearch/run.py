@@ -16,7 +16,7 @@ First run::
     fbpython run.py <workdir> \\
       --pipeline-script path/to/pipeline.py \\
       --source-dir path/to/source \\
-      --build-command "fbpkg build ..." \\
+      --build-command "docker build -t my_image ." \\
       --base-launch-command "torchx run ... --image \\$IMAGE ..." \\
       --platform auto \\
       --agent claude
@@ -89,9 +89,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--job-timeout", type=int, default=1800)
     parser.add_argument(
         "--platform",
-        choices=("auto", "remote", "local"),
         default="auto",
-        help="_Execution platform. 'auto' uses the best available implementation.",
+        help=(
+            "Job execution platform provider. 'auto' uses the best available "
+            "provider discovered in this environment."
+        ),
     )
     parser.add_argument(
         "--agent",
