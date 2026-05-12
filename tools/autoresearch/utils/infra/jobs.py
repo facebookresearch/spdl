@@ -23,8 +23,6 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
-import sys
-import time
 from pathlib import Path
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -40,7 +38,6 @@ __all__ = [
     "_fetch_system_metrics",
     "_get_job_duration",
     "_launch_job",
-    "_wait_for_jobs",
 ]
 
 
@@ -121,121 +118,6 @@ def _launch_job(command: str, workdir: Path) -> str | None:
             return job_id
     _LG.error("Could not extract job ID from output:\n%s", combined[:500])
     return None
-
-
-def _get_check_job_status():
-    """Get the active _check_job_status implementation.
-
-    Platform implementations should call their status capability directly.
-    This lookup remains for older helper-only callers.
-    """
-    pkg = sys.modules.get(__package__)
-    if pkg is not None:
-        fn = getattr(pkg, "_check_job_status", None)
-        if fn is not None:
-            return fn
-    return _check_job_status
-
-
-def _get_check_job_progress():
-    """Get the active _check_job_progress implementation."""
-    pkg = sys.modules.get(__package__)
-    if pkg is not None:
-        fn = getattr(pkg, "_check_job_progress", None)
-        if fn is not None:
-            return fn
-    return _check_job_progress
-
-
-def _get_cancel_job():
-    """Get the active _cancel_job implementation."""
-    pkg = sys.modules.get(__package__)
-    if pkg is not None:
-        fn = getattr(pkg, "_cancel_job", None)
-        if fn is not None:
-            return fn
-    return _cancel_job
-
-
-def _wait_for_jobs(
-    job_ids: list[str],
-    poll_interval: int = 120,
-    max_unknown_polls: int = 5,
-    max_stall_polls: int = 15,
-) -> dict[str, dict[str, object]]:
-    """Wait for jobs to complete. Returns {job_id: {"status": str, "elapsed_s": int}}.
-
-    Kills stuck jobs (no progress for max_stall_polls consecutive polls).
-    """
-    results: dict[str, dict[str, object]] = {}
-    pending = set(job_ids)
-    start_time = time.monotonic()
-    job_start: dict[str, float] = {j: start_time for j in job_ids}
-    unknown_counts: dict[str, int] = dict.fromkeys(job_ids, int())
-    stall_counts: dict[str, int] = dict.fromkeys(job_ids, int())
-    last_progress: dict[str, str | None] = dict.fromkeys(job_ids, None)
-    _check = _get_check_job_status()
-    _progress = _get_check_job_progress()
-    _cancel = _get_cancel_job()
-
-    def _finish(job_id: str, status: str) -> None:
-        elapsed_s = int(time.monotonic() - job_start[job_id])
-        results[job_id] = {"status": status, "elapsed_s": elapsed_s}
-        pending.discard(job_id)
-
-    while pending:
-        for job_id in list(pending):
-            status = _check(job_id)
-            if status in ("SUCCEEDED", "COMPLETE"):
-                _finish(job_id, "completed")
-                print(f"  [{job_id}] COMPLETED")
-            elif status == "FAILED":
-                _finish(job_id, "failed")
-                print(f"  [{job_id}] FAILED")
-            elif status == "UNKNOWN":
-                unknown_counts[job_id] = unknown_counts.get(job_id, 0) + 1
-                if unknown_counts[job_id] >= max_unknown_polls:
-                    _cancel(job_id)
-                    _finish(job_id, "failed")
-                    print(
-                        f"  [{job_id}] UNKNOWN after {max_unknown_polls} polls, killed"
-                    )
-                else:
-                    print(
-                        f"  [{job_id}] UNKNOWN "
-                        f"({unknown_counts[job_id]}/{max_unknown_polls})"
-                    )
-            else:
-                unknown_counts[job_id] = 0
-                progress = _progress(job_id)
-                if progress is not None:
-                    prev = last_progress.get(job_id)
-                    if prev is not None and progress == prev:
-                        stall_counts[job_id] = stall_counts.get(job_id, 0) + 1
-                        if stall_counts[job_id] >= max_stall_polls:
-                            _cancel(job_id)
-                            _finish(job_id, "failed")
-                            print(
-                                f"  [{job_id}] STUCK — no progress for "
-                                f"{max_stall_polls} polls, killed"
-                            )
-                            continue
-                        print(
-                            f"  [{job_id}] {status} "
-                            f"(no progress {stall_counts[job_id]}/{max_stall_polls})"
-                        )
-                    else:
-                        stall_counts[job_id] = 0
-                        last_progress[job_id] = progress
-                        print(f"  [{job_id}] {status}")
-                else:
-                    print(f"  [{job_id}] {status}")
-
-        if pending:
-            print(f"  Waiting {poll_interval}s... ({len(pending)} job(s) pending)")
-            time.sleep(poll_interval)
-
-    return results
 
 
 def _build_image(build_command: str, workdir: Path, cwd: str = "") -> str | None:

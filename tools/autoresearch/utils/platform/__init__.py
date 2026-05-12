@@ -13,7 +13,6 @@ from .types import (
     _Evidence,
     _Execution,
     _MetricsEvidence,
-    _PlatformError,
     _Workspace,
     AutoresearchPlatform,
 )
@@ -26,6 +25,5 @@ __all__ = [
     "_Evidence",
     "_Execution",
     "_MetricsEvidence",
-    "_PlatformError",
     "_Workspace",
 ]

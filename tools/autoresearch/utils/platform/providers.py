@@ -19,7 +19,6 @@ import importlib
 import importlib.metadata
 import os
 import pkgutil
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast, Protocol
@@ -39,7 +38,6 @@ from .types import _CodingAgent, AutoresearchPlatform
 __all__ = [
     "_AutoresearchPlatformProvider",
     "_ProviderAvailability",
-    "_ProviderFactory",
     "_builtin_providers",
     "_discover_convention_providers",
     "_discover_extension_providers",
@@ -74,9 +72,6 @@ class _AutoresearchPlatformProvider(Protocol):
         workdir: Path | None,
         agent: _CodingAgent,
     ) -> AutoresearchPlatform: ...
-
-
-_ProviderFactory = Callable[[], _AutoresearchPlatformProvider]
 
 
 class _LocalProvider:

@@ -62,7 +62,6 @@ __all__ = [
     "_Evidence",
     "_Execution",
     "_MetricsEvidence",
-    "_PlatformError",
     "_Workspace",
 ]
 
@@ -92,23 +91,6 @@ class _MetricsEvidence:
     exit_code: int | None = None
     error_summary: str | None = None
     progress_seen: bool | None = None
-
-
-@dataclass(frozen=True)
-class _PlatformError(RuntimeError):
-    """Structured platform failure before workflow classification."""
-
-    capability: str
-    operation: str
-    message: str
-    command: str | None = None
-    returncode: int | None = None
-    stderr_tail: str | None = None
-    log_path: str | None = None
-    retryable: bool = False
-
-    def __str__(self) -> str:
-        return f"{self.capability}.{self.operation}: {self.message}"
 
 
 class _Workspace(Protocol):

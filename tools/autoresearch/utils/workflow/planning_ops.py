@@ -275,14 +275,6 @@ def _plan_followups(
     return experiments
 
 
-def _should_stop(config: dict, state: dict, tree: dict) -> bool:
-    max_iter = config["stopping_criteria"]["max_iterations"]
-    patience = config["stopping_criteria"].get("patience", 3)
-    return state.get("iteration", 0) >= max_iter or (
-        state.get("plateau_count", 0) >= patience and not _untried_best_practices(state)
-    )
-
-
 def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
     """Create initial _HypothesisNode objects for baseline, headspace, and MTP."""
     nodes: list[_HypothesisNode] = []
@@ -358,4 +350,4 @@ def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
     return nodes
 
 
-__all__ = ["_build_initial_nodes", "_plan_followups", "_should_stop"]
+__all__ = ["_build_initial_nodes", "_plan_followups"]
