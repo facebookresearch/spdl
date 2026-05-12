@@ -69,14 +69,12 @@ __all__ = [
 ]
 
 _KIND_EXPERIMENT = "experiment"
-_REQUIRED_INITIAL_EXPERIMENTS = frozenset(
-    {"baseline", "headspace_cache", "subprocess_mtp"}
-)
+_REQUIRED_INITIAL_EXPERIMENTS = frozenset({"baseline", "headspace_cache", "mtp"})
 _STRUCTURAL_ATTEMPT_THRESHOLD = 3
 _MAX_THREADS_PER_RANK_DEFAULT = 16
 _MAX_THREADS_PER_RANK_EXTENDED = 32
 _STARTUP_FAILURE_RETRIES_DEFAULT = 2
-_STARTUP_RETRYABLE_EXPERIMENTS_DEFAULT = ("subprocess_mtp",)
+_STARTUP_RETRYABLE_EXPERIMENTS_DEFAULT = ("mtp",)
 _NON_RETRYABLE_FAILURES = frozenset(
     {
         FailureKind.JOB_RUNTIME_FAILED,
@@ -390,7 +388,7 @@ def _record_failed_best_practice_attempt(state: dict, node: _HypothesisNode) -> 
     tried = set(state.get("best_practices_tried", []))
     attempts: dict[str, int] = state.get("_structural_attempts", {})
     for tag in tags:
-        if tag == "subprocess_mtp":
+        if tag == "mtp":
             attempts[tag] = attempts.get(tag, 0) + 1
             if attempts[tag] >= _STRUCTURAL_ATTEMPT_THRESHOLD:
                 tried.add(tag)

@@ -139,7 +139,7 @@ def _run(args: list[str]) -> None:
         "job_timeout_s": ns.job_timeout,
         "poll_interval": ns.poll_interval,
         "startup_failure_retries": 2,
-        "startup_retryable_experiments": ["subprocess_mtp"],
+        "startup_retryable_experiments": ["mtp"],
         "platform": ns.platform,
         "agent": ns.agent,
         "local_execution_mode": ns.local_execution_mode,

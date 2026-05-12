@@ -28,11 +28,11 @@ from .policy import (
 _LG: logging.Logger = logging.getLogger(__name__)
 
 _BEST_PRACTICES = [
-    "subprocess_mtp",
+    "mtp",
     "batch_size_tuning",
     "concurrency_tuning",
 ]
-_STRUCTURAL_PRACTICES = {"subprocess_mtp"}
+_STRUCTURAL_PRACTICES = {"mtp"}
 _MAX_THREADS_PER_RANK_DEFAULT = 16
 _MAX_THREADS_PER_RANK_EXTENDED = 32
 _HISTORY_JSON_MAX_CHARS = 12000
@@ -353,14 +353,14 @@ def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
             )
         )
 
-    if "subprocess_mtp" not in tried_practices:
+    if "mtp" not in tried_practices:
         nodes.append(
             _HypothesisNode(
-                node_id="001_subprocess_mtp",
-                name="subprocess_mtp",
+                node_id="001_mtp",
+                name="mtp",
                 spec={
-                    "name": "subprocess_mtp",
-                    "changes": ["subprocess_mtp"],
+                    "name": "mtp",
+                    "changes": ["mtp"],
                     "description": (
                         "Run pipeline in subprocess to avoid background data "
                         "loading threads interfering with CUDA kernel launches"
@@ -372,7 +372,7 @@ def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
                         "CUDA kernel launch scheduling"
                     ),
                     "launch_command": base_launch,
-                    "best_practices_tags": ["subprocess_mtp"],
+                    "best_practices_tags": ["mtp"],
                 },
                 priority=-998,
             )

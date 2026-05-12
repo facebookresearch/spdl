@@ -21,7 +21,7 @@ __KNOWLEDGE__
 - **Already tried**: __BEST_PRACTICES_TRIED__
 - **Not yet tried**: __BEST_PRACTICES_REMAINING__
 
-Valid best practice tags: `subprocess_mtp`, `batch_size_tuning`, `concurrency_tuning`, `gpu_video_decode`
+Valid best practice tags: `mtp`, `batch_size_tuning`, `concurrency_tuning`, `gpu_video_decode`
 
 ### Master Table (all runs so far)
 
@@ -70,7 +70,7 @@ Do NOT compare experiments using raw average SM utilization — it is misleading
 
 Before you can consider stopping, ALL of the following must have been attempted (check the "Not yet tried" list above):
 
-1. **`subprocess_mtp`** — Apply the **full MTP pattern** from the knowledge base. This is the highest-impact optimization and includes continuous mode, subprocess isolation, and proper GPU transfer. **Follow the MTP section in the knowledge base.** Key points:
+1. **`mtp`** — Apply the **full MTP pattern** from the knowledge base. This is the highest-impact optimization and includes continuous mode, subprocess isolation, and proper GPU transfer. **Follow the MTP section in the knowledge base.** Key points:
    - **Critical — understand the existing code first**: Inspect the pipeline builder function's return type and structure. If it calls `.build()` or `.get_iterator()` (returning a `Pipeline` or iterator), the MTP refactor must change it to return a `PipelineConfig` (via `.get_config()`) or an unbuilt `PipelineBuilder` instead. `run_pipeline_in_subprocess()` accepts ONLY `PipelineConfig` — NOT `Pipeline` objects or iterators. Check type annotations and return statements.
    - **Separate CPU and GPU stages**: The backend pipeline (subprocess) must contain ONLY CPU-bound stages (fetch, decode, aggregate, collate). GPU stages like `transfer_tensor` require a CUDA context and MUST be in the frontend pipeline (main process). If the existing code includes `transfer_tensor` or similar GPU ops in the pipeline, exclude them from the backend config.
    - **Write the `description` field to explicitly instruct the code modifier** about these structural requirements, e.g.: "Refactor `build_pipeline()` to NOT call `.build()`. Instead, build a `PipelineBuilder` with only CPU stages (no `transfer_tensor`), call `.get_config()`, pass the config to `run_pipeline_in_subprocess(config, num_threads=N)`, then create a frontend `PipelineBuilder` that takes the subprocess iterable as source and applies `transfer_tensor`."
@@ -106,7 +106,7 @@ Before you can consider stopping, ALL of the following must have been attempted 
    - Create `CUDAConfig` with PyTorch allocator: `spdl.io.cuda_config(device_index=..., allocator=(torch.cuda.caching_allocator_alloc, torch.cuda.caching_allocator_delete))`.
    - **GPU decoder concurrency** — H100/B100 have 7 NVDEC instances per GPU, so set decode concurrency around 7. For sparse decoding patterns (sampling a few frames per file, not sequential decode), concurrency can exceed 7. Older GPUs (A100, V100) have 3–5 slots.
    - **Even dimensions required** — `scale_width` and `scale_height` must be even numbers.
-   - **NOT compatible with MTP (subprocess mode)** — `VideoPackets` are not picklable and cannot cross process boundaries. GPU video decode must run as a pure multithreaded pipeline in the main process (using `PipelineBuilder.build(num_threads=N)`). `gpu_video_decode` is an **independent optimization path** from `subprocess_mtp` — they are mutually exclusive alternatives, not stackable. The GPU decode experiment must apply its changes to the original instrumented pipeline (not on top of MTP changes). Do NOT set `goto` to an MTP commit.
+   - **NOT compatible with MTP (subprocess mode)** — `VideoPackets` are not picklable and cannot cross process boundaries. GPU video decode must run as a pure multithreaded pipeline in the main process (using `PipelineBuilder.build(num_threads=N)`). `gpu_video_decode` is an **independent optimization path** from `mtp` — they are mutually exclusive alternatives, not stackable. The GPU decode experiment must apply its changes to the original instrumented pipeline (not on top of MTP changes). Do NOT set `goto` to an MTP commit.
    - **Use a dedicated `ThreadPoolExecutor` for the NVDEC decode stage** — do NOT share the pipeline's default thread pool. Create `ThreadPoolExecutor(max_workers=C)` and pass it via `executor=` to the decode `.pipe()` call. This prevents NVDEC decode threads (which need their own CUDA contexts) from competing with CPU fetch threads.
    - Write the `description` field with explicit instructions, e.g.: "Replace `spdl.io.decode_packets(packets)` + `convert_frames` + `transfer_buffer` with `spdl.io.decode_packets_nvdec(packets, device_config=cuda_cfg, pix_fmt='rgb')`. Remove the `transfer_buffer`/`transfer_tensor` stage since data is already on GPU. Set decode concurrency to 7. Use a dedicated `ThreadPoolExecutor(7)` for the decode stage via `executor=ThreadPoolExecutor(7)`. Create `cuda_cfg` using `spdl.io.cuda_config(device_index, allocator=(torch.cuda.caching_allocator_alloc, torch.cuda.caching_allocator_delete))`. Use pure multithreading (no subprocess MTP)."
 
@@ -120,9 +120,9 @@ Propose **2-3 experiments per iteration** to make efficient use of compute. The 
 
 1. **If best practices remain untried**: Propose experiments that cover them. Prioritize structural changes (MTP) over parameter tuning.
 
-   **MTP retry logic**: If a previous `subprocess_mtp` experiment failed (subprocess crash, 0 batches, silent death), check the experiment history to understand what approach was used. The knowledge base describes a two-tier approach:
+   **MTP retry logic**: If a previous `mtp` experiment failed (subprocess crash, 0 batches, silent death), check the experiment history to understand what approach was used. The knowledge base describes a two-tier approach:
    - If Tier 1 was tried (module-level functions with `functools.partial`, re-creating objects in subprocess) and failed, retry with Tier 2 (picklable callable classes that pickle objects directly from the main process, avoiding subprocess imports). Write the `description` field to explicitly specify "Use Tier 2 pickling approach — pickle tokenizer/data objects directly instead of re-creating them in the subprocess."
-   - Do NOT mark `subprocess_mtp` as tried until at least one MTP attempt has succeeded or both tiers have been tried.
+   - Do NOT mark `mtp` as tried until at least one MTP attempt has succeeded or both tiers have been tried.
 
 2. **Use headspace to guide priorities**: Look at the headspace result in the Master Table (the `headspace_cache` row). If headspace is **less than 10%**, data loading is NOT the bottleneck — pivot immediately to model-side optimizations:
    - `torch.compile` — often the single biggest win (20-40% step time reduction)
@@ -183,7 +183,7 @@ Output your reasoning, then a JSON block:
 ```
 
 Rules:
-- **`changes`** is the experiment's identity for dedup. List every modification as a short, canonical, snake_case identifier. For code changes use identifiers like `"torch_compile"`, `"fused_adamw"`, `"subprocess_mtp"`, `"priority_executor"`, `"cache_dataloader"`. For parameter changes use `"param_name=value"` format like `"batch_size=48"`, `"num_workers=16"`. Combination experiments list all changes (e.g. `["subprocess_mtp", "torch_compile"]`). Parameter changes are also auto-detected from launch command diffs, but code changes **must** be listed explicitly. The orchestrator rejects experiments whose change set matches a non-failed existing node.
+- **`changes`** is the experiment's identity for dedup. List every modification as a short, canonical, snake_case identifier. For code changes use identifiers like `"torch_compile"`, `"fused_adamw"`, `"mtp"`, `"priority_executor"`, `"cache_dataloader"`. For parameter changes use `"param_name=value"` format like `"batch_size=48"`, `"num_workers=16"`. Combination experiments list all changes (e.g. `["mtp", "torch_compile"]`). Parameter changes are also auto-detected from launch command diffs, but code changes **must** be listed explicitly. The orchestrator rejects experiments whose change set matches a non-failed existing node.
 - **Do NOT propose experiments that are semantically identical to existing ones**, even under a different name. Before proposing, check the Master Table for any run that used the same launch parameters (batch_size, num_workers, etc.) and code changes. If a configuration has been tested — regardless of what it was named — do not re-test it.
 - Use `$IMAGE` as placeholder for the job image (the orchestrator substitutes it)
 - **`change_summary`** must be concise and operator-readable. Use 2-5 words describing the one change being tested. Do not put implementation detail here; keep that in `description`.

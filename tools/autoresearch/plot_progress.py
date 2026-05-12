@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import sys
 from pathlib import Path
 
@@ -468,15 +469,15 @@ def _shorten(text: str, limit: int) -> str:
 
 def _edge_label(parent_node: dict, child_node: dict) -> str:
     spec = child_node.get("spec") or {}
-    value = spec.get("change_summary")
-    if value:
-        return _short_change_label(str(value))
     retry_attempt = spec.get("_startup_retry_attempt")
     if retry_attempt:
         return f"startup repair #{retry_attempt}"
-    tags = spec.get("best_practices_tags")
-    if isinstance(tags, list) and tags:
-        return _short_change_label(str(tags[0]))
+    changes = spec.get("changes")
+    if isinstance(changes, list) and changes:
+        return _short_change_label(", ".join(str(c) for c in changes))
+    value = spec.get("change_summary")
+    if value:
+        return _short_change_label(str(value))
     return _short_change_label(
         str(child_node.get("name", child_node.get("node_id", "")))
     )
@@ -552,7 +553,7 @@ def _draw_tree_edges(
                 )
 
 
-def _draw_tree_node(ax, nid, n, x, y, best_nid, fontsize):
+def _draw_tree_node(ax, nid, n, x, y, best_nid, fontsize, launch_order=None):
     box_w, box_h = 2.4, 1.0
     status = n.get("status", "queued")
     color = "#27ae60" if nid == best_nid else _STATUS_COLORS.get(status, "#ecf0f1")
@@ -574,6 +575,8 @@ def _draw_tree_node(ax, nid, n, x, y, best_nid, fontsize):
     name = n.get("name", nid)
     if len(name) > 20:
         name = name[:17] + "..."
+    if launch_order is not None:
+        name = f"#{launch_order} {name}"
     dur = n.get("duration")
     metric_str = f"\n{dur:.0f}s" if dur and dur > 0 else ""
     text_color = (
@@ -602,6 +605,11 @@ def _plot_hypothesis_tree(
         return
 
     nodes = {n["node_id"]: n for n in tree_data}
+    launched = sorted(
+        (n["node_id"] for n in tree_data if n.get("launched_at") is not None),
+        key=lambda nid: nodes[nid]["launched_at"],
+    )
+    launch_order = {nid: i for i, nid in enumerate(launched)}
     order, levels = _tree_bfs_order(nodes)
     x_pos, y_pos, level_counts = _compute_positions(order, levels)
     if not order:
@@ -634,6 +642,7 @@ def _plot_hypothesis_tree(
             y_pos[nid],
             best_nid,
             fonts["node"],
+            launch_order=launch_order.get(nid),
         )
 
     legend_items = [
@@ -685,6 +694,12 @@ def main() -> None:
     output = args.output or str(tsv_path.parent / "progress.png")
     experiments = _load_tsv(tsv_path)
     _plot_progress(experiments, output, args.title)
+
+    tree_file = tsv_path.parent / "engine" / "tree.json"
+    if tree_file.exists():
+        tree_output = str(tsv_path.parent / "hypothesis_tree.png")
+        tree_data = json.loads(tree_file.read_text())
+        _plot_hypothesis_tree(tree_data, tree_output, args.title)
 
 
 if __name__ == "__main__":

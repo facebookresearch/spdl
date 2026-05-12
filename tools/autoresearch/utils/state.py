@@ -80,7 +80,7 @@ def _normalize_config(config: dict) -> dict:
     normalized.setdefault("agent", "claude")
     normalized.setdefault("local_execution_mode", "full")
     normalized.setdefault("startup_failure_retries", 2)
-    normalized.setdefault("startup_retryable_experiments", ["subprocess_mtp"])
+    normalized.setdefault("startup_retryable_experiments", ["mtp"])
     return normalized
 
 

@@ -94,7 +94,7 @@ Use pure multithreading in the main process instead:
 - Set decode stage concurrency to match GPU hardware decoder slots (7 for H100/B100; higher for sparse decoding patterns)
 - **Use a dedicated `ThreadPoolExecutor` for the decode stage** — do NOT share the pipeline's default thread pool. Create `ThreadPoolExecutor(max_workers=C)` and pass it via `executor=` to the decode `.pipe()` call. This avoids contention between NVDEC decode threads (which need their own CUDA contexts) and CPU fetch/processing threads
 
-`gpu_video_decode` and `subprocess_mtp` are **independent, mutually exclusive** optimization paths. They cannot be combined. GPU decode experiments must apply changes to the original instrumented pipeline, not on top of MTP changes. Compare their results independently to determine which approach yields better throughput.
+`gpu_video_decode` and `mtp` are **independent, mutually exclusive** optimization paths. They cannot be combined. GPU decode experiments must apply changes to the original instrumented pipeline, not on top of MTP changes. Compare their results independently to determine which approach yields better throughput.
 
 ### Headspace Analysis in the Loop
 
