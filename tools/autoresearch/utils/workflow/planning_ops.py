@@ -342,11 +342,15 @@ def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
                 name="subprocess_mtp",
                 spec={
                     "name": "subprocess_mtp",
-                    "description": "Run pipeline in subprocess to avoid GIL contention",
+                    "description": (
+                        "Run pipeline in subprocess to avoid background data "
+                        "loading threads interfering with CUDA kernel launches"
+                    ),
                     "change_summary": "subprocess MTP",
                     "hypothesis": (
-                        "Subprocess isolation eliminates "
-                        "GIL contention and improves throughput"
+                        "Subprocess isolation keeps CPU data loading work out "
+                        "of the training process, reducing interference with "
+                        "CUDA kernel launch scheduling"
                     ),
                     "launch_command": base_launch,
                     "best_practices_tags": ["subprocess_mtp"],

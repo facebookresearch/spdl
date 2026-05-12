@@ -70,7 +70,7 @@ The engine runs these fixed initial experiments (skipping any already done):
 
 1. **Baseline** — unmodified pipeline, establishes baseline metrics
 2. **Headspace** — wraps pipeline with CacheDataLoader to measure data loading overhead ceiling
-3. **MTP** — runs pipeline in subprocess to test GIL contention elimination
+3. **MTP** — runs pipeline in subprocess to isolate data loading threads from the training process and reduce CUDA kernel launch interference
 
 After the fixed experiments, the coding agent proposes follow-up experiments based on analysis results. The engine:
 
