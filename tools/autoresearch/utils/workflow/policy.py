@@ -115,17 +115,25 @@ def _select_planning_node(
     completed_node: _HypothesisNode,
     tree: Mapping[str, _HypothesisNode],
 ) -> _HypothesisNode | None:
-    """Pick the non-headspace completed node that should trigger planning."""
+    """Pick the non-headspace completed node that should trigger planning.
+
+    Only successfully completed nodes can be planning parents.  Failed nodes
+    only get startup-retry children (handled earlier in the call chain), never
+    derived exploratory work that would inherit the broken code.
+    """
     if not _initial_experiments_finished(tree):
         return None
-    if not _is_headspace_node(completed_node):
-        if not _is_startup_failed_retry(completed_node):
-            return completed_node
+    if (
+        completed_node.status == "completed"
+        and not _is_headspace_node(completed_node)
+        and not _is_startup_failed_retry(completed_node)
+    ):
+        return completed_node
 
     candidates = [
         node
         for node in tree.values()
-        if node.status in _TERMINAL_STATUSES and not _is_headspace_node(node)
+        if node.status == "completed" and not _is_headspace_node(node)
     ]
     if not candidates:
         return None
