@@ -153,7 +153,17 @@ def _apply_code_changes(
     scm = config.get("scm", "")
     if scm and source_dir and platform.workspace.has_changes(scm, source_dir):
         msg = f"[autoresearch] {run_id}: {exp.get('description', exp['name'])}"
-        commit_hash = platform.workspace.commit(scm, source_dir, msg)
+        try:
+            commit_hash = platform.workspace.commit(scm, source_dir, msg)
+        except Exception as error:
+            raise _AutoresearchError(
+                _make_failure(
+                    FailureKind.CODE_CHANGE_FAILED,
+                    FailurePhase.CODE_CHANGE,
+                    "Failed to commit code changes to source control",
+                    exception=error,
+                )
+            ) from error
         exp["commit"] = commit_hash
         run_dir = workdir / "runs" / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -209,7 +219,17 @@ def _prepare_node(
 
     if scm and source_dir and platform.workspace.has_changes(scm, source_dir):
         msg = f"[autoresearch] {run_id} changes"
-        platform.workspace.commit(scm, source_dir, msg)
+        try:
+            platform.workspace.commit(scm, source_dir, msg)
+        except Exception as error:
+            raise _AutoresearchError(
+                _make_failure(
+                    FailureKind.CODE_CHANGE_FAILED,
+                    FailurePhase.CODE_CHANGE,
+                    "Failed to commit code changes to source control",
+                    exception=error,
+                )
+            ) from error
 
     build_cmd = config.get("build_command", "")
     if build_cmd:
