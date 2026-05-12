@@ -145,11 +145,25 @@ def _get_plan(
     findings_file = workdir / "findings.md"
     findings = findings_file.read_text() if findings_file.exists() else "(none yet)"
     cap = _thread_cap_for_experiment(state, config)
-    notes = config.get("notes", "") + (
+    base_cmd = config.get("base_launch_command", "")
+    base_threads = _extract_total_threads(base_cmd)
+    thread_note = (
         f"\n\n**CPU THREAD BUDGET (HARD LIMIT):** Total threads per rank "
-        f"(num_fetch_threads + num_decode_threads) must not exceed {cap}. "
-        f"Experiments exceeding this will be rejected automatically."
+        f"must not exceed {cap}. This is enforced via `--num_threads`, or the "
+        f"sum of `--num_fetch_threads` + `--num_decode_threads` in the launch "
+        f"command. Experiments exceeding this will be rejected automatically."
     )
+    if base_threads is not None:
+        thread_note += (
+            f" The base launch command currently uses {base_threads} threads."
+        )
+    else:
+        thread_note += (
+            " The base launch command does not set explicit thread flags, so "
+            "thread budget validation is skipped for commands that also omit "
+            "them. If you add thread flags, keep the total within the cap."
+        )
+    notes = config.get("notes", "") + thread_note
 
     prompt = platform.agent._load_prompt(
         "plan_next",

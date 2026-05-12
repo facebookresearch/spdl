@@ -42,6 +42,13 @@ def _build_apply_prompt(
     pipeline_script: str,
     pipeline_code: str,
 ) -> str:
+    if exp.get("_is_headspace"):
+        return platform.agent._load_prompt(
+            "headspace",
+            KNOWLEDGE=knowledge,
+            PIPELINE_SCRIPT=pipeline_script,
+            PIPELINE_CODE=pipeline_code,
+        )
     if exp.get("_startup_retry_attempt"):
         return platform.agent._load_prompt(
             "apply_startup_repair",

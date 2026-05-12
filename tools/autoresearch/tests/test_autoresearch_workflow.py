@@ -17,6 +17,7 @@ from spdl.tools.autoresearch.plot_progress import (
     _load_tsv,
     _tree_font_sizes,
 )
+from spdl.tools.autoresearch.utils import prompts
 from spdl.tools.autoresearch.utils.commands.report import _read_failures
 from spdl.tools.autoresearch.utils.commands.status import _failure_summary
 from spdl.tools.autoresearch.utils.platform import _MetricsEvidence, create_platform
@@ -211,9 +212,31 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             ("step_ms", 12.5),
             _compare_metric_value({"steady_step_time_ms": 12.5, "duration_s": 100}),
         )
+        # Both fetch and decode flags present → sum them.
         self.assertEqual(
             24,
             _extract_total_threads("--num-fetch-threads 8 --num-decode-threads 16"),
+        )
+        # Only --num-threads → use it directly.
+        self.assertEqual(
+            12,
+            _extract_total_threads("--num-threads 12"),
+        )
+        # Only one of fetch/decode → default the other half.
+        self.assertEqual(
+            24,
+            _extract_total_threads("--num-fetch-threads 8"),
+        )
+        self.assertEqual(
+            24,
+            _extract_total_threads("--num-decode-threads 16"),
+        )
+        # No thread flags at all → None (unknown, not 24).
+        self.assertIsNone(
+            _extract_total_threads("--num_workers 8 --num_epochs 3"),
+        )
+        self.assertIsNone(
+            _extract_total_threads(""),
         )
         self.assertEqual(
             ["ok"],
@@ -223,6 +246,19 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                     [
                         {"name": "ok", "launch_command": "--num-threads 8"},
                         {"name": "too_many", "launch_command": "--num-threads 64"},
+                    ],
+                    16,
+                )
+            ],
+        )
+        # Commands with no thread flags pass validation (unknown budget).
+        self.assertEqual(
+            ["pass_through"],
+            [
+                spec["name"]
+                for spec in _validate_thread_budget(
+                    [
+                        {"name": "pass_through", "launch_command": "--num_workers 8"},
                     ],
                     16,
                 )
@@ -584,6 +620,41 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
         self.assertIn("failed during job startup", prompt)
         self.assertIn("job_startup_failed", prompt)
+
+    def test_headspace_node_uses_dedicated_prompt_with_knowledge(self) -> None:
+        platform = create_platform({"platform": "local", "agent": "mock"})
+        assert isinstance(platform.agent, _MockAgent)
+        platform.agent.responses["prompt:headspace"] = (
+            "headspace prompt __KNOWLEDGE__ __PIPELINE_CODE__"
+        )
+
+        prompt = _build_apply_prompt(
+            platform,
+            {
+                "name": "headspace_cache",
+                "description": "Wrap with CacheDataLoader for headspace analysis",
+                "_is_headspace": True,
+            },
+            "000_headspace",
+            "knowledge",
+            "/tmp/pipeline.py",
+            "def main():\n    pass\n",
+        )
+
+        self.assertIn("headspace prompt", prompt)
+        self.assertIn("knowledge", prompt)
+        self.assertIn("def main", prompt)
+
+    def test_headspace_prompt_requires_stop_after(self) -> None:
+        prompt = prompts._load_prompt(
+            "headspace",
+            KNOWLEDGE="",
+            PIPELINE_SCRIPT="/tmp/pipeline.py",
+            PIPELINE_CODE="def main():\n    pass\n",
+        )
+
+        self.assertIn("stop_after=500", prompt)
+        self.assertIn("must include `stop_after=500`", prompt)
 
     def test_tree_edge_label_describes_experiment_evolution(self) -> None:
         parent = {"node_id": "001_parent", "name": "parent", "spec": {}}
