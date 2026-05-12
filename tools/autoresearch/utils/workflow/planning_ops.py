@@ -289,6 +289,8 @@ def _plan_followups(
         _thread_cap_for_experiment(state, config),
     )
     for experiment in experiments:
+        if "changes" not in experiment:
+            experiment["changes"] = []
         experiment["change_summary"] = _change_summary_for_spec(experiment)
     _record_best_practices(state, {"experiments": experiments})
     state["_stop_overrides"] = 0
@@ -311,6 +313,7 @@ def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
                 name="baseline",
                 spec={
                     "name": "baseline",
+                    "changes": [],
                     "description": "Run the unchanged pipeline to establish baseline metrics",
                     "change_summary": "baseline",
                     "hypothesis": "Baseline measurement",
@@ -335,6 +338,7 @@ def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
                 name="headspace_cache",
                 spec={
                     "name": "headspace_cache",
+                    "changes": ["cache_dataloader"],
                     "description": "Wrap with CacheDataLoader for headspace analysis",
                     "change_summary": "headspace",
                     "hypothesis": (
@@ -356,6 +360,7 @@ def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
                 name="subprocess_mtp",
                 spec={
                     "name": "subprocess_mtp",
+                    "changes": ["subprocess_mtp"],
                     "description": (
                         "Run pipeline in subprocess to avoid background data "
                         "loading threads interfering with CUDA kernel launches"

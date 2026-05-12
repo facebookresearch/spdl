@@ -38,16 +38,19 @@ or LLM calls.
 from __future__ import annotations
 
 import re
+import shlex
 from collections.abc import Iterable, Mapping
 
 from ..runner import _WorkSpec
 from ..types import _HypothesisNode, _TERMINAL_STATUSES, FailureKind
 
 __all__ = [
+    "_build_change_set",
     "_change_summary_for_spec",
     "_compare_metric_value",
     "_extract_counter",
     "_extract_default_executor_concurrency",
+    "_extract_param_changes",
     "_extract_total_threads",
     "_initial_experiments_finished",
     "_is_duplicate_spec",
@@ -130,16 +133,119 @@ def _select_planning_node(
     return max(preferred or candidates, key=lambda node: _extract_counter(node.node_id))
 
 
-def _is_duplicate_spec(spec: dict, nodes: Iterable[_HypothesisNode]) -> bool:
-    name = spec.get("name", "")
-    launch_cmd = spec.get("launch_command", "")
+def _parse_flags(command: str) -> dict[str, str]:
+    """Parse ``--flag value`` pairs from a launch command into a dict.
+
+    Flag names are normalized: leading dashes are stripped, remaining dashes
+    become underscores, and the name is lowercased.  Both ``--flag value``
+    and ``--flag=value`` forms are supported.
+    """
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        tokens = command.split()
+    flags: dict[str, str] = {}
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        if token.startswith("--"):
+            if "=" in token:
+                key, _, val = token.partition("=")
+                key = key.lstrip("-").replace("-", "_").lower()
+                flags[key] = val
+            elif i + 1 < len(tokens) and _is_flag_value(tokens[i + 1]):
+                key = token.lstrip("-").replace("-", "_").lower()
+                flags[key] = tokens[i + 1]
+                i += 1
+            else:
+                key = token.lstrip("-").replace("-", "_").lower()
+                flags[key] = ""
+        i += 1
+    return flags
+
+
+def _is_flag_value(token: str) -> bool:
+    if not token.startswith("-"):
+        return True
+    if token.startswith("--"):
+        return False
+    try:
+        float(token)
+    except ValueError:
+        return False
+    return True
+
+
+def _extract_param_changes(
+    launch_command: str,
+    base_launch_command: str,
+) -> list[str]:
+    """Return canonical ``flag=value`` identifiers for every flag that differs
+    between *launch_command* and *base_launch_command*.
+
+    Flags present in the experiment but absent from (or with a different value
+    in) the base command are included.  Flags removed from the base are also
+    included.
+    """
+    if not launch_command or not base_launch_command:
+        return []
+    exp_flags = _parse_flags(launch_command)
+    base_flags = _parse_flags(base_launch_command)
+    changes: list[str] = []
+    all_keys = sorted(set(exp_flags) | set(base_flags))
+    for key in all_keys:
+        exp_val = exp_flags.get(key)
+        base_val = base_flags.get(key)
+        if exp_val != base_val:
+            if exp_val is not None:
+                changes.append(f"{key}={exp_val}")
+            else:
+                changes.append(f"{key}=<removed>")
+    return changes
+
+
+def _build_change_set(
+    spec: dict,
+    base_launch_command: str = "",
+) -> frozenset[str]:
+    """Build the canonical set of change identifiers for an experiment spec.
+
+    Merges the explicit ``changes`` list with parameter diffs auto-extracted
+    from the launch command.  Each identifier is stripped and lowercased so
+    that ``"Torch_Compile"`` and ``"torch_compile"`` compare equal.
+    """
+    explicit = [
+        c.strip().lower() for c in spec.get("changes", []) if isinstance(c, str)
+    ]
+    param = _extract_param_changes(
+        spec.get("launch_command", ""),
+        base_launch_command,
+    )
+    return frozenset(explicit) | frozenset(p.lower() for p in param)
+
+
+def _is_duplicate_spec(
+    spec: dict,
+    nodes: Iterable[_HypothesisNode],
+    base_launch_command: str = "",
+) -> bool:
+    """Check whether *spec* duplicates a non-failed node in *nodes*.
+
+    Two experiments are duplicates when their change sets are equal.  The
+    change set is the union of the explicit ``changes`` list and the parameter
+    diffs auto-extracted by comparing each spec's ``launch_command`` against
+    *base_launch_command*.
+
+    Name and description are **not** used for dedup — they are labels, not
+    experiment identity.  Failed nodes are skipped so that a failed experiment
+    can be retried.
+    """
+    proposed = _build_change_set(spec, base_launch_command)
     for node in nodes:
         if node.status == "failed":
             continue
-        if name and node.name == name:
-            return True
-        existing = node.spec
-        if launch_cmd and existing.get("launch_command") == launch_cmd:
+        existing = _build_change_set(node.spec, base_launch_command)
+        if proposed == existing:
             return True
     return False
 
@@ -342,6 +448,7 @@ def _startup_retry_spec(node: _HypothesisNode, config: dict) -> dict | None:
 
     next_attempt = attempt + 1
     retry = dict(node.spec)
+    retry["changes"] = list(node.spec.get("changes", []))
     retry["name"] = f"{node.name}_startup_retry_{next_attempt}"
     retry["_startup_retry_attempt"] = next_attempt
     retry["_startup_retry_of"] = node.spec.get("_startup_retry_of", node.node_id)
