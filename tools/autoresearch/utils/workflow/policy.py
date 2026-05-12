@@ -47,6 +47,7 @@ __all__ = [
     "_change_summary_for_spec",
     "_compare_metric_value",
     "_extract_counter",
+    "_extract_default_executor_concurrency",
     "_extract_total_threads",
     "_initial_experiments_finished",
     "_is_duplicate_spec",
@@ -169,35 +170,51 @@ def _compare_metric_value(metrics: Mapping[str, object]) -> tuple[str, float]:
 
 
 def _extract_total_threads(launch_cmd: str) -> int | None:
-    """Extract the total CPU thread count from a launch command.
+    """Extract the explicit pipeline CPU thread budget from a launch command.
 
-    Returns ``None`` when no recognised thread flag is present, so callers
-    can distinguish "unknown" from "explicitly set".
+    ``num_threads`` is the available CPU-core budget per rank. It is not the
+    sum of stage concurrencies such as fetch/decode concurrency. Returns
+    ``None`` when no explicit thread budget is present.
     """
-    fetch: int | None = None
-    decode: int | None = None
-    match = re.search(r"--num[_-]fetch[_-]threads?\s+(\d+)", launch_cmd)
-    if match:
-        fetch = int(match.group(1))
-    match = re.search(r"--num[_-]decode[_-]threads?\s+(\d+)", launch_cmd)
-    if match:
-        decode = int(match.group(1))
     match = re.search(r"--num[_-]threads?\s+(\d+)", launch_cmd)
     if match:
         return int(match.group(1))
-    # If at least one of fetch/decode was explicitly set, use defaults for the
-    # missing half so the budget estimate is meaningful.
-    if fetch is not None or decode is not None:
-        return (fetch or 8) + (decode or 16)
     return None
+
+
+def _extract_default_executor_concurrency(launch_cmd: str) -> int | None:
+    """Extract the max visible stage concurrency using the default executor.
+
+    Some entrypoints expose stage concurrency as launch flags. Those values are
+    not additive thread budgets; the requirement is ``num_threads >= max(C)``
+    for stages that use the pipeline's default executor.
+    """
+
+    values = [
+        int(match.group(1))
+        for match in re.finditer(
+            r"--num[_-](?:fetch|decode)[_-]threads?\s+(\d+)",
+            launch_cmd,
+        )
+    ]
+    return max(values) if values else None
 
 
 def _validate_thread_budget(experiments: list[dict], cap: int) -> list[dict]:
     valid = []
     for experiment in experiments:
         command = experiment.get("launch_command", "")
-        total = _extract_total_threads(command) if command else None
-        if total is not None and total > cap:
+        num_threads = _extract_total_threads(command) if command else None
+        if num_threads is not None and num_threads > cap:
+            continue
+        concurrency = (
+            _extract_default_executor_concurrency(command) if command else None
+        )
+        if (
+            num_threads is not None
+            and concurrency is not None
+            and num_threads < concurrency
+        ):
             continue
         valid.append(experiment)
     return valid

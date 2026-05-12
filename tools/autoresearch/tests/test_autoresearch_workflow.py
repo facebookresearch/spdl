@@ -52,6 +52,7 @@ from spdl.tools.autoresearch.utils.workflow.failures import (
 from spdl.tools.autoresearch.utils.workflow.policy import (
     _change_summary_for_spec,
     _compare_metric_value,
+    _extract_default_executor_concurrency,
     _extract_total_threads,
     _node_from_spec,
     _retry_policy_for_failure,
@@ -212,26 +213,30 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             ("step_ms", 12.5),
             _compare_metric_value({"steady_step_time_ms": 12.5, "duration_s": 100}),
         )
-        # Both fetch and decode flags present → sum them.
-        self.assertEqual(
-            24,
-            _extract_total_threads("--num-fetch-threads 8 --num-decode-threads 16"),
-        )
         # Only --num-threads → use it directly.
         self.assertEqual(
             12,
             _extract_total_threads("--num-threads 12"),
         )
-        # Only one of fetch/decode → default the other half.
-        self.assertEqual(
-            24,
-            _extract_total_threads("--num-fetch-threads 8"),
+        # Stage concurrency flags are not additive thread budgets.
+        self.assertIsNone(
+            _extract_total_threads("--num-fetch-threads 8 --num-decode-threads 16"),
         )
         self.assertEqual(
-            24,
-            _extract_total_threads("--num-decode-threads 16"),
+            16,
+            _extract_default_executor_concurrency(
+                "--num-fetch-threads 8 --num-decode-threads 16"
+            ),
         )
-        # No thread flags at all → None (unknown, not 24).
+        self.assertEqual(
+            8,
+            _extract_default_executor_concurrency("--num-fetch-threads 8"),
+        )
+        self.assertEqual(
+            16,
+            _extract_default_executor_concurrency("--num-decode-threads 16"),
+        )
+        # No num_threads flag at all → None (unknown budget).
         self.assertIsNone(
             _extract_total_threads("--num_workers 8 --num_epochs 3"),
         )
@@ -239,13 +244,25 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             _extract_total_threads(""),
         )
         self.assertEqual(
-            ["ok"],
+            ["ok", "fits_concurrency"],
             [
                 spec["name"]
                 for spec in _validate_thread_budget(
                     [
                         {"name": "ok", "launch_command": "--num-threads 8"},
                         {"name": "too_many", "launch_command": "--num-threads 64"},
+                        {
+                            "name": "too_small",
+                            "launch_command": (
+                                "--num-threads 8 --num-decode-threads 16"
+                            ),
+                        },
+                        {
+                            "name": "fits_concurrency",
+                            "launch_command": (
+                                "--num-threads 16 --num-decode-threads 16"
+                            ),
+                        },
                     ],
                     16,
                 )
