@@ -50,10 +50,13 @@ from spdl.tools.autoresearch.utils.workflow.failures import (
     _make_failure,
 )
 from spdl.tools.autoresearch.utils.workflow.policy import (
+    _build_change_set,
     _change_summary_for_spec,
     _compare_metric_value,
     _extract_default_executor_concurrency,
+    _extract_param_changes,
     _extract_total_threads,
+    _is_duplicate_spec,
     _node_from_spec,
     _retry_policy_for_failure,
     _select_planning_node,
@@ -281,6 +284,257 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                 )
             ],
         )
+
+    # -- _extract_param_changes / _build_change_set / _is_duplicate_spec ------
+
+    def test_extract_param_changes_detects_flag_diffs(self) -> None:
+        base = "torchx run app --image $IMAGE --num_workers 8 --num_epochs 3"
+
+        # New flag added.
+        self.assertEqual(
+            ["batch_size=48"],
+            _extract_param_changes(base + " --batch_size 48", base),
+        )
+
+        # Flag value changed.
+        self.assertEqual(
+            ["num_workers=16"],
+            _extract_param_changes(
+                "torchx run app --image $IMAGE --num_workers 16 --num_epochs 3",
+                base,
+            ),
+        )
+
+        # No diff when identical.
+        self.assertEqual([], _extract_param_changes(base, base))
+
+        # Empty commands return nothing.
+        self.assertEqual([], _extract_param_changes("", base))
+        self.assertEqual([], _extract_param_changes(base, ""))
+
+    def test_extract_param_changes_normalizes_dashes(self) -> None:
+        base = "torchx run app --num-fetch-threads 8"
+        exp = "torchx run app --num-fetch-threads 16"
+        changes = _extract_param_changes(exp, base)
+        self.assertEqual(["num_fetch_threads=16"], changes)
+
+    def test_extract_param_changes_handles_negative_values(self) -> None:
+        base = "torchx run app --max_steps -1"
+        exp = "torchx run app --max_steps -2"
+        changes = _extract_param_changes(exp, base)
+        self.assertEqual(["max_steps=-2"], changes)
+
+    def test_build_change_set_merges_explicit_and_param_changes(self) -> None:
+        base = "torchx run --image $IMAGE --num_workers 8"
+        spec = {
+            "changes": ["torch_compile"],
+            "launch_command": base + " --batch_size 48",
+        }
+        result = _build_change_set(spec, base)
+        self.assertEqual(frozenset({"torch_compile", "batch_size=48"}), result)
+
+    def test_build_change_set_empty_for_baseline(self) -> None:
+        base = "torchx run --image $IMAGE --num_workers 8"
+        spec = {"changes": [], "launch_command": base}
+        self.assertEqual(frozenset(), _build_change_set(spec, base))
+
+    def test_build_change_set_normalizes_case(self) -> None:
+        spec = {"changes": ["Torch_Compile", " FUSED_ADAMW "]}
+        result = _build_change_set(spec, "")
+        self.assertEqual(frozenset({"torch_compile", "fused_adamw"}), result)
+
+    def test_duplicate_requires_matching_change_sets(self) -> None:
+        base = "torchx run --image $IMAGE --num_workers 8"
+        baseline = _HypothesisNode(
+            node_id="000_baseline",
+            name="baseline",
+            status="completed",
+            spec={"changes": [], "launch_command": base},
+        )
+        mtp = _HypothesisNode(
+            node_id="001_mtp",
+            name="subprocess_mtp",
+            status="completed",
+            spec={"changes": ["subprocess_mtp"], "launch_command": base},
+        )
+        nodes = [baseline, mtp]
+
+        # torch_compile: different code changes, same launch → NOT duplicate.
+        self.assertFalse(
+            _is_duplicate_spec(
+                {"changes": ["torch_compile"], "launch_command": base},
+                nodes,
+                base,
+            )
+        )
+
+        # fused_adamw: different code changes, same launch → NOT duplicate.
+        self.assertFalse(
+            _is_duplicate_spec(
+                {"changes": ["fused_adamw"], "launch_command": base},
+                nodes,
+                base,
+            )
+        )
+
+        # Exact same change set as baseline → IS duplicate.
+        self.assertTrue(
+            _is_duplicate_spec(
+                {"changes": [], "launch_command": base},
+                nodes,
+                base,
+            )
+        )
+
+        # Exact same change set as MTP → IS duplicate.
+        self.assertTrue(
+            _is_duplicate_spec(
+                {"changes": ["subprocess_mtp"], "launch_command": base},
+                nodes,
+                base,
+            )
+        )
+
+    def test_duplicate_distinguishes_param_only_experiments(self) -> None:
+        base = "torchx run --image $IMAGE --num_workers 8"
+        batch_48 = _HypothesisNode(
+            node_id="002_batch48",
+            name="batch_size_48",
+            status="completed",
+            spec={
+                "changes": [],
+                "launch_command": base + " --batch_size 48",
+            },
+        )
+        nodes = [batch_48]
+
+        # batch_size=64 has different param → NOT duplicate.
+        self.assertFalse(
+            _is_duplicate_spec(
+                {"changes": [], "launch_command": base + " --batch_size 64"},
+                nodes,
+                base,
+            )
+        )
+
+        # batch_size=48 again → IS duplicate.
+        self.assertTrue(
+            _is_duplicate_spec(
+                {"changes": [], "launch_command": base + " --batch_size 48"},
+                nodes,
+                base,
+            )
+        )
+
+    def test_duplicate_skips_failed_nodes(self) -> None:
+        base = "torchx run --image $IMAGE"
+        failed = _HypothesisNode(
+            node_id="003_oom",
+            name="batch_64",
+            status="failed",
+            spec={
+                "changes": [],
+                "launch_command": base + " --batch_size 64",
+            },
+        )
+        # Exact match of a failed node → NOT duplicate (allow retry).
+        self.assertFalse(
+            _is_duplicate_spec(
+                {"changes": [], "launch_command": base + " --batch_size 64"},
+                [failed],
+                base,
+            )
+        )
+
+    def test_duplicate_combination_vs_individual(self) -> None:
+        base = "torchx run --image $IMAGE"
+        mtp_only = _HypothesisNode(
+            node_id="001_mtp",
+            name="subprocess_mtp",
+            status="completed",
+            spec={"changes": ["subprocess_mtp"], "launch_command": base},
+        )
+        # Combination is not a dup of individual.
+        self.assertFalse(
+            _is_duplicate_spec(
+                {
+                    "changes": ["subprocess_mtp", "torch_compile"],
+                    "launch_command": base,
+                },
+                [mtp_only],
+                base,
+            )
+        )
+
+    def test_duplicate_backward_compat_no_changes_field(self) -> None:
+        base = "torchx run --image $IMAGE --num_workers 8"
+        # Old spec without changes field — change set is derived purely from
+        # launch command diffs.
+        old_node = _HypothesisNode(
+            node_id="002_batch48",
+            name="batch_size_48",
+            status="completed",
+            spec={"launch_command": base + " --batch_size 48"},
+        )
+
+        # Same param diff → duplicate.
+        self.assertTrue(
+            _is_duplicate_spec(
+                {"launch_command": base + " --batch_size 48"},
+                [old_node],
+                base,
+            )
+        )
+
+        # Different param → not duplicate.
+        self.assertFalse(
+            _is_duplicate_spec(
+                {"launch_command": base + " --batch_size 64"},
+                [old_node],
+                base,
+            )
+        )
+
+    def test_startup_retry_inherits_changes(self) -> None:
+        node = _HypothesisNode(
+            node_id="001_subprocess_mtp",
+            name="subprocess_mtp",
+            status="failed",
+            spec={
+                "name": "subprocess_mtp",
+                "changes": ["subprocess_mtp"],
+                "description": "try MTP",
+                "best_practices_tags": ["subprocess_mtp"],
+            },
+            failure=_make_failure(
+                FailureKind.JOB_STARTUP_FAILED,
+                FailurePhase.JOB,
+                "Tokenizer cannot pickle",
+            ),
+        )
+        retry = _startup_retry_spec(node, _config())
+        self.assertIsNotNone(retry)
+        assert retry is not None
+        self.assertEqual(["subprocess_mtp"], retry["changes"])
+
+    def test_initial_nodes_have_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            adapter = self._adapter(Path(tmp))
+            specs = adapter.load()
+            nodes = []
+            for spec in specs:
+                node_data = spec.payload["node"]
+                assert isinstance(node_data, dict)
+                nodes.append(_HypothesisNode.from_dict(node_data))
+
+            by_name = {node.name: node for node in nodes}
+            self.assertEqual([], by_name["baseline"].spec["changes"])
+            self.assertEqual(
+                ["cache_dataloader"], by_name["headspace_cache"].spec["changes"]
+            )
+            self.assertEqual(
+                ["subprocess_mtp"], by_name["subprocess_mtp"].spec["changes"]
+            )
 
     def test_store_update_spec_refreshes_checkpoint_and_active_view(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

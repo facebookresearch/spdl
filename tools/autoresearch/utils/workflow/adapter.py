@@ -169,7 +169,11 @@ class AutoresearchAdapter:
         children = []
         for child in result.children:
             node = _node_from_spec(child)
-            if _is_duplicate_spec(node.spec, self._store.tree.values()):
+            if _is_duplicate_spec(
+                node.spec,
+                self._store.tree.values(),
+                base_launch_command=self.config.get("base_launch_command", ""),
+            ):
                 _LG.info("Skipping duplicate experiment: %s", node.name)
                 continue
             parent = self._store.tree.get(node.parent_id) if node.parent_id else None

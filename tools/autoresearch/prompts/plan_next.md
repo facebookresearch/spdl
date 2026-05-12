@@ -170,6 +170,7 @@ Output your reasoning, then a JSON block:
   "experiments": [
     {
       "name": "<short_snake_case>",
+      "changes": ["<canonical_id_1>", "<canonical_id_2>"],
       "change_summary": "<2-5 word concise label for plots, e.g. raise fetch threads>",
       "description": "<what we are changing>",
       "hypothesis": "<why this should help>",
@@ -182,7 +183,8 @@ Output your reasoning, then a JSON block:
 ```
 
 Rules:
-- **Do NOT propose experiments that are semantically identical to existing ones**, even under a different name. Before proposing, check the Master Table for any run that used the same launch parameters (batch_size, num_workers, etc.) and code changes. If a configuration has been tested — regardless of what it was named — do not re-test it. The orchestrator also rejects duplicates with matching launch commands.
+- **`changes`** is the experiment's identity for dedup. List every modification as a short, canonical, snake_case identifier. For code changes use identifiers like `"torch_compile"`, `"fused_adamw"`, `"subprocess_mtp"`, `"priority_executor"`, `"cache_dataloader"`. For parameter changes use `"param_name=value"` format like `"batch_size=48"`, `"num_workers=16"`. Combination experiments list all changes (e.g. `["subprocess_mtp", "torch_compile"]`). Parameter changes are also auto-detected from launch command diffs, but code changes **must** be listed explicitly. The orchestrator rejects experiments whose change set matches a non-failed existing node.
+- **Do NOT propose experiments that are semantically identical to existing ones**, even under a different name. Before proposing, check the Master Table for any run that used the same launch parameters (batch_size, num_workers, etc.) and code changes. If a configuration has been tested — regardless of what it was named — do not re-test it.
 - Use `$IMAGE` as placeholder for the job image (the orchestrator substitutes it)
 - **`change_summary`** must be concise and operator-readable. Use 2-5 words describing the one change being tested. Do not put implementation detail here; keep that in `description`.
 - torchx entrypoint args use **underscores**, not dashes (e.g. `--num_threads`)
