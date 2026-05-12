@@ -6,6 +6,12 @@ This knowledge is assembled from shared skill files. The canonical sources are i
 
 ### MTP — PipelineBuilder vs Pipeline vs PipelineConfig
 
+MTP's main performance goal is to move CPU data loading work into a separate
+process so background data loading threads do not interfere with CUDA kernel
+launch scheduling in the training process. Avoiding GIL/GC interference is
+another benefit. Even in free-threaded Python, which does not have GIL contention,
+isolating CPU contention is still benefitial.
+
 The SPDL pipeline API has three distinct types:
 
 - **`PipelineBuilder`** — accumulates pipeline configuration in a monad pattern. Chain `.add_source()`, `.pipe()`, `.aggregate()`, `.add_sink()` on it. It does NOT run anything — it only builds up the config.
