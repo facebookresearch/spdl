@@ -199,7 +199,13 @@ def _prepare_node(
     scm = config.get("scm", "")
     source_dir = config.get("source_dir", "")
     anchor = state.get("anchor_commit", "")
-    target_commit = exp.get("goto") or anchor
+    parent_ok = (
+        isinstance(parent, _HypothesisNode)
+        and parent.status == "completed"
+        and not parent.spec.get("_is_headspace")
+    )
+    parent_commit = node.commit if parent_ok else None
+    target_commit = exp.get("goto") or parent_commit or anchor
     if target_commit and scm and source_dir:
         try:
             platform.workspace.goto(scm, source_dir, target_commit, anchor)
