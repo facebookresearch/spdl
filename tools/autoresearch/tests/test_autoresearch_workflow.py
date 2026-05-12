@@ -109,7 +109,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             specs = adapter.load()
 
             self.assertEqual(
-                ["000_baseline", "000_headspace", "001_subprocess_mtp"],
+                ["000_baseline", "000_headspace", "001_mtp"],
                 [spec.id for spec in specs],
             )
             self.assertEqual([-1000, -999, -998], [spec.priority for spec in specs])
@@ -135,7 +135,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             self.assertEqual(2, engine_state["queued"])
             self.assertEqual(1, engine_state["running"])
             self.assertEqual(
-                ["000_headspace", "001_subprocess_mtp"], [q["node_id"] for q in queue]
+                ["000_headspace", "001_mtp"], [q["node_id"] for q in queue]
             )
             self.assertEqual([], active)
             self.assertEqual("queued\n", baseline_status)
@@ -150,7 +150,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             loaded = self._adapter(workdir).load()
 
             self.assertEqual(
-                ["000_headspace", "001_subprocess_mtp", "000_baseline"],
+                ["000_headspace", "001_mtp", "000_baseline"],
                 [spec.id for spec in loaded],
             )
 
@@ -166,8 +166,8 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             status="queued",
         )
         mtp = _HypothesisNode(
-            node_id="001_subprocess_mtp",
-            name="subprocess_mtp",
+            node_id="001_mtp",
+            name="mtp",
             status="completed",
         )
 
@@ -195,8 +195,8 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             spec={"_is_headspace": True},
         )
         mtp = _HypothesisNode(
-            node_id="001_subprocess_mtp",
-            name="subprocess_mtp",
+            node_id="001_mtp",
+            name="mtp",
             status="completed",
         )
 
@@ -353,9 +353,9 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         )
         mtp = _HypothesisNode(
             node_id="001_mtp",
-            name="subprocess_mtp",
+            name="mtp",
             status="completed",
-            spec={"changes": ["subprocess_mtp"], "launch_command": base},
+            spec={"changes": ["mtp"], "launch_command": base},
         )
         nodes = [baseline, mtp]
 
@@ -389,7 +389,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         # Exact same change set as MTP → IS duplicate.
         self.assertTrue(
             _is_duplicate_spec(
-                {"changes": ["subprocess_mtp"], "launch_command": base},
+                {"changes": ["mtp"], "launch_command": base},
                 nodes,
                 base,
             )
@@ -450,15 +450,15 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         base = "torchx run --image $IMAGE"
         mtp_only = _HypothesisNode(
             node_id="001_mtp",
-            name="subprocess_mtp",
+            name="mtp",
             status="completed",
-            spec={"changes": ["subprocess_mtp"], "launch_command": base},
+            spec={"changes": ["mtp"], "launch_command": base},
         )
         # Combination is not a dup of individual.
         self.assertFalse(
             _is_duplicate_spec(
                 {
-                    "changes": ["subprocess_mtp", "torch_compile"],
+                    "changes": ["mtp", "torch_compile"],
                     "launch_command": base,
                 },
                 [mtp_only],
@@ -497,14 +497,14 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
     def test_startup_retry_inherits_changes(self) -> None:
         node = _HypothesisNode(
-            node_id="001_subprocess_mtp",
-            name="subprocess_mtp",
+            node_id="001_mtp",
+            name="mtp",
             status="failed",
             spec={
-                "name": "subprocess_mtp",
-                "changes": ["subprocess_mtp"],
+                "name": "mtp",
+                "changes": ["mtp"],
                 "description": "try MTP",
-                "best_practices_tags": ["subprocess_mtp"],
+                "best_practices_tags": ["mtp"],
             },
             failure=_make_failure(
                 FailureKind.JOB_STARTUP_FAILED,
@@ -515,7 +515,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         retry = _startup_retry_spec(node, _config())
         self.assertIsNotNone(retry)
         assert retry is not None
-        self.assertEqual(["subprocess_mtp"], retry["changes"])
+        self.assertEqual(["mtp"], retry["changes"])
 
     def test_initial_nodes_have_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -532,9 +532,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             self.assertEqual(
                 ["cache_dataloader"], by_name["headspace_cache"].spec["changes"]
             )
-            self.assertEqual(
-                ["subprocess_mtp"], by_name["subprocess_mtp"].spec["changes"]
-            )
+            self.assertEqual(["mtp"], by_name["mtp"].spec["changes"])
 
     def test_store_update_spec_refreshes_checkpoint_and_active_view(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -576,7 +574,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                 name="retry",
                 status="queued",
                 spec={
-                    "_startup_retry_of": "001_subprocess_mtp",
+                    "_startup_retry_of": "001_mtp",
                     "_startup_retry_attempt": 1,
                 },
             )
@@ -588,7 +586,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             )
 
             queue = json.loads((workdir / "engine" / "queue.json").read_text())
-            self.assertEqual("001_subprocess_mtp", queue[0]["retry_of"])
+            self.assertEqual("001_mtp", queue[0]["retry_of"])
             self.assertEqual(1, queue[0]["retry_attempt"])
 
     def test_store_rejects_malformed_checkpoint(self) -> None:
@@ -771,13 +769,13 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
     def test_startup_failure_retry_is_bounded_for_mtp(self) -> None:
         node = _HypothesisNode(
-            node_id="001_subprocess_mtp",
-            name="subprocess_mtp",
+            node_id="001_mtp",
+            name="mtp",
             status="failed",
             spec={
-                "name": "subprocess_mtp",
+                "name": "mtp",
                 "description": "try MTP",
-                "best_practices_tags": ["subprocess_mtp"],
+                "best_practices_tags": ["mtp"],
             },
             failure=_make_failure(
                 FailureKind.JOB_STARTUP_FAILED,
@@ -789,7 +787,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         retry = _startup_retry_spec(node, _config())
         self.assertIsNotNone(retry)
         assert retry is not None
-        self.assertEqual("subprocess_mtp_startup_retry_1", retry["name"])
+        self.assertEqual("mtp_startup_retry_1", retry["name"])
         self.assertEqual(1, retry["_startup_retry_attempt"])
         self.assertIn("pickling", retry["hypothesis"])
 
@@ -798,9 +796,9 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
     def test_retry_policy_is_kind_specific(self) -> None:
         node = _HypothesisNode(
-            node_id="001_subprocess_mtp",
-            name="subprocess_mtp",
-            spec={"best_practices_tags": ["subprocess_mtp"]},
+            node_id="001_mtp",
+            name="mtp",
+            spec={"best_practices_tags": ["mtp"]},
             failure=_make_failure(
                 FailureKind.JOB_STARTUP_FAILED,
                 FailurePhase.JOB,
@@ -832,8 +830,8 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             spec={"_is_headspace": True},
         )
         mtp = _HypothesisNode(
-            node_id="001_subprocess_mtp",
-            name="subprocess_mtp",
+            node_id="001_mtp",
+            name="mtp",
             status="failed",
             failure=_make_failure(
                 FailureKind.JOB_STARTUP_FAILED,
@@ -842,10 +840,10 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             ),
         )
         retry = _HypothesisNode(
-            node_id="002_subprocess_mtp_startup_retry_1",
-            name="subprocess_mtp_startup_retry_1",
+            node_id="002_mtp_startup_retry_1",
+            name="mtp_startup_retry_1",
             status="failed",
-            spec={"_startup_retry_of": "001_subprocess_mtp"},
+            spec={"_startup_retry_of": "001_mtp"},
             failure=_make_failure(
                 FailureKind.JOB_STARTUP_FAILED,
                 FailurePhase.JOB,
@@ -877,13 +875,13 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         prompt = _build_apply_prompt(
             platform,
             {
-                "name": "subprocess_mtp_startup_retry_1",
+                "name": "mtp_startup_retry_1",
                 "description": "repair",
                 "hypothesis": "fix startup",
                 "_startup_retry_attempt": 1,
                 "_startup_failure": {"kind": "job_startup_failed"},
             },
-            "002_subprocess_mtp_startup_retry_1",
+            "002_mtp_startup_retry_1",
             "knowledge",
             "/tmp/pipeline.py",
             "def main():\n    pass\n",

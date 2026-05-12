@@ -40,7 +40,7 @@ from .policy import _change_summary_for_spec
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
-_STRUCTURAL_PRACTICES = {"subprocess_mtp"}
+_STRUCTURAL_PRACTICES = {"mtp"}
 _STRUCTURAL_ATTEMPT_THRESHOLD = 3
 
 
