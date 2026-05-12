@@ -2,6 +2,8 @@ You are adding CacheDataLoader instrumentation to a data loading pipeline for he
 
 **Important context:** With CacheDataLoader, the pipeline configuration (concurrency, MTP, batch size, etc.) does not affect the result — all batches come from cache after the initial fill. The result shows pure model compute time without any data loading. This is NOT a real training run — it is only used to estimate the upper bound of data loading optimization headroom.
 
+__KNOWLEDGE__
+
 ## Pipeline Source Code (`__PIPELINE_SCRIPT__`)
 
 ```python
@@ -26,6 +28,7 @@ dataloader = CacheDataLoader(dataloader, num_caches=10, return_caches_after=100,
 - If the pipeline is built inside a function that returns it, add the wrapping at the **call site** where the return value is used, or wrap it inside the function right before returning. Prefer the call site if it is clear.
 - If the pipeline uses `run_pipeline_in_subprocess`, wrap the **final outer pipeline** after `.build()`.
 - Add the `from spdl.dataloader import CacheDataLoader` import at the top of the file with the other imports.
+- The `CacheDataLoader(...)` call **must include `stop_after=500`**. Do not omit it and do not replace it with an unbounded cache wrapper.
 - **Step limit**: The `stop_after=500` parameter makes `CacheDataLoader` yield at most 500 batches then stop, so the training loop terminates naturally. No manual step counter is needed.
 - Keep all other code unchanged — only add the CacheDataLoader import and wrapping.
 - Do NOT remove or modify any existing instrumentation (e.g., TTFB logging).

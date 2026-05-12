@@ -322,6 +322,7 @@ def main() -> None:
     is_fresh = not config_file.exists()
 
     platform_kind = ns.platform
+    source_dir = ns.source_dir or ""
     if not is_fresh:
         existing_config = read_config(workdir)
         platform_kind = str(existing_config.get("platform", "auto"))
@@ -329,10 +330,12 @@ def main() -> None:
         ns.local_execution_mode = str(
             existing_config.get("local_execution_mode", ns.local_execution_mode)
         )
+        source_dir = str(existing_config.get("source_dir", source_dir))
     platform_config = {
         "platform": platform_kind,
         "agent": ns.agent,
         "local_execution_mode": ns.local_execution_mode,
+        "source_dir": source_dir,
     }
     platform = create_platform(platform_config, workdir)
 

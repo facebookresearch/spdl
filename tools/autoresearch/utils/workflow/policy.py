@@ -169,8 +169,13 @@ def _compare_metric_value(metrics: Mapping[str, object]) -> tuple[str, float]:
 
 
 def _extract_total_threads(launch_cmd: str) -> int | None:
-    fetch = 8
-    decode = 16
+    """Extract the total CPU thread count from a launch command.
+
+    Returns ``None`` when no recognised thread flag is present, so callers
+    can distinguish "unknown" from "explicitly set".
+    """
+    fetch: int | None = None
+    decode: int | None = None
     match = re.search(r"--num[_-]fetch[_-]threads?\s+(\d+)", launch_cmd)
     if match:
         fetch = int(match.group(1))
@@ -180,7 +185,11 @@ def _extract_total_threads(launch_cmd: str) -> int | None:
     match = re.search(r"--num[_-]threads?\s+(\d+)", launch_cmd)
     if match:
         return int(match.group(1))
-    return fetch + decode
+    # If at least one of fetch/decode was explicitly set, use defaults for the
+    # missing half so the budget estimate is meaningful.
+    if fetch is not None or decode is not None:
+        return (fetch or 8) + (decode or 16)
+    return None
 
 
 def _validate_thread_budget(experiments: list[dict], cap: int) -> list[dict]:
