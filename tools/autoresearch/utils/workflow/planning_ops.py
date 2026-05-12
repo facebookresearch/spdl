@@ -288,9 +288,13 @@ def _plan_followups(
         plan.get("experiments", []),
         _thread_cap_for_experiment(state, config),
     )
+    plan_goto = plan.get("goto")
     for experiment in experiments:
         if "changes" not in experiment:
             experiment["changes"] = []
+        # Propagate plan-level goto to experiments that don't specify their own.
+        if "goto" not in experiment:
+            experiment["goto"] = plan_goto
         experiment["change_summary"] = _change_summary_for_spec(experiment)
     _record_best_practices(state, {"experiments": experiments})
     state["_stop_overrides"] = 0

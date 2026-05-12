@@ -166,7 +166,6 @@ Output your reasoning, then a JSON block:
 {
   "action": "launch|stop|manual",
   "reasoning": "<2-3 sentence summary of your decision>",
-  "goto": "<commit hash to check out before applying changes, or null>",
   "experiments": [
     {
       "name": "<short_snake_case>",
@@ -175,6 +174,7 @@ Output your reasoning, then a JSON block:
       "description": "<what we are changing>",
       "hypothesis": "<why this should help>",
       "launch_command": "<full command; use $IMAGE for image>",
+      "goto": "<commit hash to check out before applying changes, or null>",
 
       "best_practices_tags": ["<tag1>", "<tag2>"]
     }
@@ -192,4 +192,4 @@ Rules:
 - Each experiment should differ from the baseline in exactly one dimension (or a small, justified set of changes)
 - **TorchTNT scripts**: When writing `description` for rebuild experiments in TorchTNT code, specify changes to the pipeline builder function only. The `Pipeline` abstracts away MTP vs pure multithreading, so the wrapper class (which calls `get_iterator(timeout=...)`) and TorchTNT internals (`fit()`, `train()`, `AutoUnit`) do not change. Do NOT use `auto_stop()` — Pipeline supports multiple iterations without it.
 - **`best_practices_tags`**: Tag each experiment with which best practices it covers from the valid tags list. This is how the orchestrator tracks progress. If an experiment covers multiple practices, include all relevant tags.
-- **`goto`**: The orchestrator checks out the instrumentation (anchor) commit before applying each experiment's code changes by default. This ensures every experiment starts from a clean slate. Set `goto` to `null` in most cases. Only set it to a specific commit hash if you want to stack changes on top of a previous successful experiment (e.g., adding batch size tuning on top of an MTP experiment that already improved metrics). Never stack incompatible changes (e.g., GPU decode on top of MTP — they are mutually exclusive).
+- **`goto`** (per-experiment): The orchestrator checks out the instrumentation (anchor) commit before applying each experiment's code changes by default. This ensures every experiment starts from a clean slate. Set `goto` to `null` in most cases. Only set it to a specific commit hash if you want to stack changes on top of a previous successful experiment (e.g., adding batch size tuning on top of an MTP experiment that already improved metrics). Never stack incompatible changes (e.g., GPU decode on top of MTP — they are mutually exclusive). **The `goto` field also determines the experiment's parent in the hypothesis tree**: `null` means the experiment branches from baseline; a specific commit means it branches from the experiment that produced that commit. This allows a single planning round to propose experiments with different parents (e.g., NVDEC from baseline + batch_size from a successful MTP experiment).
