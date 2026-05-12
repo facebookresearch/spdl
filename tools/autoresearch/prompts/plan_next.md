@@ -90,9 +90,10 @@ Before you can consider stopping, ALL of the following must have been attempted 
 3. **`concurrency_tuning`** — Adjust concurrency of the bottleneck stage. Try at least 2 different values.
 
    **Important — threads vs concurrency**:
-   - `PipelineBuilder.build(num_threads=N)` sets the thread pool size for the entire pipeline. Set this mechanically to `num_CPU_cores / num_GPU_workers` (or the number of allocated CPU cores per rank). This is NOT a tuning knob — it's a resource budget.
-   - `.pipe(fn, concurrency=C)` controls how many concurrent tasks run in a specific stage. THIS is the value to tune. The sum of all stage concurrencies should stay within the `num_threads` budget.
-   - For MTP subprocess mode, `run_pipeline_in_subprocess(config, num_threads=N)` — same rule: set `N` to `num_CPU_cores / num_GPU_workers`.
+   - `PipelineBuilder.build(num_threads=N)` sets the default executor thread pool size for the pipeline. Set this mechanically from the CPU cores available to each rank. If instrumentation reports the assigned CPU core count per rank, use that exact value. Otherwise use roughly 16-20 as the maximum practical value. This is NOT a tuning knob — it is the CPU resource budget.
+   - `.pipe(fn, concurrency=C)` controls how many concurrent tasks run in a specific stage. THIS is the value to tune. Do NOT set `num_threads` to the sum of all stage concurrencies.
+   - Requirement: `num_threads >= max(concurrency)` for stages that use the pipeline's default executor. Stages that use a dedicated `executor=` are governed by that executor's worker count instead.
+   - For MTP subprocess mode, `run_pipeline_in_subprocess(config, num_threads=N)` follows the same rule: `N` is the CPU-core budget per rank and must be at least the max default-executor stage concurrency.
    - **`spdl.pipeline.PriorityThreadPoolExecutor`** should be tried as part of concurrency tuning. It shares a single thread pool across all pipeline stages but prioritizes downstream stages (closer to output) over upstream ones, reducing end-to-end latency with no expected downside. Try it in at least one standalone experiment (without other changes) to verify the improvement, then combine it with other verified improvements (MTP, torch.compile, etc.) in later experiments. Usage: create one pool (`pool = PriorityThreadPoolExecutor(max_workers=N)`), then pass `executor=pool.get_executor()` to each CPU-bound `.pipe()` call — executors created later automatically get higher priority. It supports pickle for use with `run_pipeline_in_subprocess()`.
      **Critical PriorityThreadPoolExecutor rules:**
      - Do NOT pass `executor=` to GPU stages like `transfer_tensor` — GPU transfer must run on the pipeline's own thread, not in the CPU pool.
@@ -144,7 +145,7 @@ Propose **2-3 experiments per iteration** to make efficient use of compute. The 
    - Model the parameter → metric relationship from history
    - Pick values that maximize expected improvement
    - Balance exploration (untested regions) vs exploitation (near the current best)
-   - **HARD CONSTRAINT**: Total threads per rank (num_fetch_threads + num_decode_threads) must not exceed the cap stated in Additional Context. Experiments exceeding this are rejected automatically.
+   - **HARD CONSTRAINT**: `num_threads` must not exceed the cap stated in Additional Context, and must be at least the max default-executor stage concurrency. Do not add stage concurrencies together to derive `num_threads`.
 
 6. **Combine independently verified improvements**: Scan the Master Table for experiments that each improved over baseline via *different, orthogonal* changes (e.g., MTP improved step time, PriorityThreadPoolExecutor improved scheduling, torch.compile improved compute). When two or more such improvements exist, propose a **combination experiment** that applies all of them together. The combined gain is often larger than the sum of individual gains because the improvements target different bottlenecks. Describe ALL changes in the `"description"` field. Prioritize combinations of the best-performing variant of each independent idea.
 

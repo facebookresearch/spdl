@@ -20,6 +20,7 @@ from ..types import _AnalysisResult, _HypothesisNode
 from .common import _current_best_metric, _read_pipeline_code
 from .policy import (
     _change_summary_for_spec,
+    _extract_default_executor_concurrency,
     _extract_total_threads,
     _validate_thread_budget as _policy_validate_thread_budget,
 )
@@ -96,11 +97,14 @@ def _validate_thread_budget(experiments: list[dict], cap: int) -> list[dict]:
     valid_ids = {id(exp) for exp in valid}
     for exp in experiments:
         if id(exp) not in valid_ids:
-            total = _extract_total_threads(exp.get("launch_command", ""))
+            command = exp.get("launch_command", "")
+            total = _extract_total_threads(command)
+            concurrency = _extract_default_executor_concurrency(command)
             _LG.warning(
-                "Rejecting %s: %d threads exceeds cap of %d",
+                "Rejecting %s: num_threads=%s concurrency=%s cap=%d",
                 exp.get("name", "?"),
-                total or 0,
+                total,
+                concurrency,
                 cap,
             )
     return valid
@@ -149,9 +153,12 @@ def _get_plan(
     base_threads = _extract_total_threads(base_cmd)
     thread_note = (
         f"\n\n**CPU THREAD BUDGET (HARD LIMIT):** Total threads per rank "
-        f"must not exceed {cap}. This is enforced via `--num_threads`, or the "
-        f"sum of `--num_fetch_threads` + `--num_decode_threads` in the launch "
-        f"command. Experiments exceeding this will be rejected automatically."
+        f"must not exceed {cap}. Use the CPU cores assigned per rank when "
+        f"instrumentation reports it; otherwise use roughly 16-20 as the "
+        f"maximum practical value. This is enforced via `--num_threads`. "
+        f"For stages using the default executor, `num_threads` must be at "
+        f"least the maximum stage concurrency, not the sum of all stage "
+        f"concurrencies."
     )
     if base_threads is not None:
         thread_note += (
@@ -159,9 +166,10 @@ def _get_plan(
         )
     else:
         thread_note += (
-            " The base launch command does not set explicit thread flags, so "
+            " The base launch command does not set explicit `num_threads`, so "
             "thread budget validation is skipped for commands that also omit "
-            "them. If you add thread flags, keep the total within the cap."
+            "it. If you add `num_threads`, keep it within the cap and at least "
+            "as large as the max default-executor stage concurrency."
         )
     notes = config.get("notes", "") + thread_note
 
