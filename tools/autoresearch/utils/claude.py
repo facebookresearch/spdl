@@ -10,20 +10,15 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from .prompts import _load_knowledge, _load_prompt
 from .state import read_config
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
-    "_extract_json_block",
-    "_load_knowledge",
-    "_load_prompt",
     "_run_claude",
 ]
 
@@ -142,16 +137,3 @@ def _safe_get(raw_stdout: str, key: str, default: object = None) -> object:
             except json.JSONDecodeError:
                 pass
     return default
-
-
-def _extract_json_block(text: str) -> dict | None:
-    """Extract a ```json ... ``` code block from Claude's text response."""
-    matches = list(re.finditer(r"```json\s*\n(.*?)\n```", text, re.DOTALL))
-    if not matches:
-        return None
-    for match in reversed(matches):
-        try:
-            return json.loads(match.group(1))
-        except json.JSONDecodeError:
-            continue
-    return None

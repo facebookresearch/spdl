@@ -11,7 +11,6 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import NotRequired, TypedDict
 
 _TERMINAL_STATUSES = frozenset({"completed", "failed"})
 
@@ -20,11 +19,8 @@ __all__ = [
     "FailurePhase",
     "FailureRecord",
     "_AnalysisResult",
-    "_AutoresearchConfig",
     "_AutoresearchError",
-    "_AutoresearchState",
     "_HypothesisNode",
-    "_StoppingCriteriaConfig",
     "_TERMINAL_STATUSES",
 ]
 
@@ -123,45 +119,6 @@ class _AutoresearchError(RuntimeError):
     def __init__(self, failure: FailureRecord) -> None:
         super().__init__(failure.message)
         self.failure = failure
-
-
-class _StoppingCriteriaConfig(TypedDict, total=False):
-    max_iterations: int
-    patience: int
-
-
-class _AutoresearchConfig(TypedDict, total=False):
-    schema_version: int
-    pipeline_script: str | None
-    source_dir: str
-    scm: str
-    build_command: str
-    base_launch_command: str
-    notes: str
-    platform: str
-    agent: str
-    local_execution_mode: str
-    stopping_criteria: _StoppingCriteriaConfig
-    max_concurrency: int
-    job_timeout_s: int
-    poll_interval: int
-    startup_failure_retries: int
-    startup_retryable_experiments: list[str]
-    claude_flags: list[str]
-
-
-class _AutoresearchState(TypedDict):
-    schema_version: int
-    iteration: int
-    status: str
-    baseline_job: str | None
-    current_best: str | None
-    best_metric: float | None
-    plateau_count: int
-    best_practices_tried: list[str]
-    anchor_commit: str
-    history: list[dict]
-    cached_image: NotRequired[str]
 
 
 @dataclass

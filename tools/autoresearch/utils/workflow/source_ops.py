@@ -195,7 +195,7 @@ def _prepare_node(
             )
 
     pipeline_code = _read_pipeline_code(config, workdir)
-    success = _apply_code_changes(
+    _apply_code_changes(
         workdir,
         config,
         state,
@@ -205,12 +205,6 @@ def _prepare_node(
         knowledge,
         pipeline_code,
     )
-    if not success:
-        _raise_failure(
-            FailureKind.CODE_CHANGE_FAILED,
-            FailurePhase.CODE_CHANGE,
-            "Failed to apply experiment source changes",
-        )
     node.commit = exp.get("commit")
 
     if scm and source_dir and platform.workspace.has_changes(scm, source_dir):

@@ -235,17 +235,6 @@ class AutoresearchAdapter:
             node,
             self.workdir,
         )
-        if not node.job_id:
-            await self._record_failure(
-                spec,
-                node,
-                _make_failure(
-                    FailureKind.LAUNCH_FAILED,
-                    FailurePhase.LAUNCH,
-                    "Launch step returned no job id",
-                ),
-            )
-            return _WorkResult()
 
         node.status = "running"
         node.launched_at = time.monotonic()
