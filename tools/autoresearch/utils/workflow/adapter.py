@@ -465,17 +465,59 @@ class AutoresearchAdapter:
     ) -> _WorkSpec:
         name = child_spec.get("name", f"exp_{self._store.node_counter}")
         child_spec["change_summary"] = _change_summary_for_spec(child_spec)
+        actual_parent = self._resolve_parent(parent, child_spec)
         node = _HypothesisNode(
             node_id=f"{self._store.node_counter:03d}_{name}",
             name=name,
-            parent_id=parent.node_id,
-            commit=parent.commit,
+            parent_id=actual_parent.node_id,
+            commit=actual_parent.commit,
             spec=child_spec,
             status="queued",
             priority=child_spec.get("priority", 0.0),
         )
         self._store.node_counter += 1
         return _spec_from_node(node)
+
+    def _resolve_parent(
+        self,
+        default_parent: _HypothesisNode,
+        child_spec: dict,
+    ) -> _HypothesisNode:
+        """Resolve the actual parent node for a child experiment.
+
+        When ``goto`` is absent or null (experiment starts from the anchor
+        commit, i.e. the baseline), the parent should be the baseline node —
+        not whichever node triggered the planning round.  When ``goto`` points
+        to a specific commit, find the node that produced it.
+
+        This prevents mutually-exclusive experiments (e.g. NVDEC GPU decode)
+        from being incorrectly parented under incompatible experiments
+        (e.g. MTP subprocess).
+        """
+        goto = child_spec.get("goto")
+        if goto is None:
+            # Experiment starts from anchor (baseline).  Find the baseline
+            # node so the hypothesis tree reflects the true lineage.
+            baseline = self._store.tree.get("000_baseline")
+            if baseline is not None:
+                return baseline
+            _LG.warning(
+                "Baseline node 000_baseline not found in tree; "
+                "falling back to planning node %s",
+                default_parent.node_id,
+            )
+        else:
+            # goto points to a specific commit — find the node that owns it.
+            for node in self._store.tree.values():
+                if node.commit and node.commit == goto:
+                    return node
+            _LG.warning(
+                "goto commit %s does not match any node; "
+                "falling back to planning node %s",
+                goto,
+                default_parent.node_id,
+            )
+        return default_parent
 
 
 def _timestamp() -> str:

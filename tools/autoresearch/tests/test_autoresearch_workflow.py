@@ -182,6 +182,95 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
         self.assertIsNone(selected)
 
+    def _load_node(self, spec: _WorkSpec) -> _HypothesisNode:
+        """Extract node from a WorkSpec with a safe dict cast for Pyre."""
+        node_data = spec.payload["node"]
+        assert isinstance(node_data, dict)
+        return _HypothesisNode.from_dict(node_data)
+
+    def test_child_spec_parents_under_baseline_when_goto_is_null(self) -> None:
+        """Experiments that start from anchor (goto=null) should be parented
+        under the baseline node, not whichever node triggered planning."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            adapter = self._adapter(workdir)
+            specs = adapter.load()
+            # Simulate baseline completed with a commit.
+            baseline_node = self._load_node(specs[0])
+            baseline_node.status = "completed"
+            baseline_node.commit = "baseline_commit_abc"
+            adapter._store.upsert_node(baseline_node)
+
+            # Simulate MTP completed with a different commit.
+            mtp_node = self._load_node(specs[2])
+            mtp_node.status = "completed"
+            mtp_node.commit = "mtp_commit_xyz"
+            adapter._store.upsert_node(mtp_node)
+
+            # Create a child with goto=None (should parent under baseline).
+            child_spec = adapter._create_child_spec(
+                mtp_node,
+                {"name": "nvdec_decode", "goto": None},
+            )
+            child_node = self._load_node(child_spec)
+
+            self.assertEqual("000_baseline", child_node.parent_id)
+            self.assertEqual("baseline_commit_abc", child_node.commit)
+
+    def test_child_spec_parents_under_goto_commit_owner(self) -> None:
+        """Experiments with a goto commit should be parented under the node
+        that produced that commit."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            adapter = self._adapter(workdir)
+            specs = adapter.load()
+
+            baseline_node = self._load_node(specs[0])
+            baseline_node.status = "completed"
+            baseline_node.commit = "baseline_commit_abc"
+            adapter._store.upsert_node(baseline_node)
+
+            mtp_node = self._load_node(specs[2])
+            mtp_node.status = "completed"
+            mtp_node.commit = "mtp_commit_xyz"
+            adapter._store.upsert_node(mtp_node)
+
+            # Create a child with goto pointing to MTP's commit.
+            child_spec = adapter._create_child_spec(
+                baseline_node,  # default parent is baseline
+                {"name": "batch_on_mtp", "goto": "mtp_commit_xyz"},
+            )
+            child_node = self._load_node(child_spec)
+
+            self.assertEqual(mtp_node.node_id, child_node.parent_id)
+            self.assertEqual("mtp_commit_xyz", child_node.commit)
+
+    def test_child_spec_parents_under_baseline_without_goto(self) -> None:
+        """When goto is absent, the spec defaults to anchor (baseline)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            adapter = self._adapter(workdir)
+            specs = adapter.load()
+
+            mtp_node = self._load_node(specs[2])
+            mtp_node.status = "completed"
+            mtp_node.commit = "mtp_commit_xyz"
+            adapter._store.upsert_node(mtp_node)
+
+            # Ensure baseline exists so _resolve_parent can find it.
+            baseline_node = self._load_node(specs[0])
+            baseline_node.status = "completed"
+            adapter._store.upsert_node(baseline_node)
+
+            # No goto key at all — .get("goto") returns None, which means
+            # "start from anchor".  Parent should be baseline.
+            child_spec = adapter._create_child_spec(
+                mtp_node,
+                {"name": "some_exp"},
+            )
+            child_node = self._load_node(child_spec)
+            self.assertEqual("000_baseline", child_node.parent_id)
+
     def test_headspace_completion_selects_mtp_after_must_run_finish(self) -> None:
         baseline = _HypothesisNode(
             node_id="000_baseline",
