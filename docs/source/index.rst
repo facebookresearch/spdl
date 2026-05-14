@@ -48,6 +48,7 @@ Please use the following BibTex for citing our project if you find it useful.
    io/index
    optimization_guide/index
    case_studies/index
+   autoresearch/index
    migration/index
    best_practice
    examples
