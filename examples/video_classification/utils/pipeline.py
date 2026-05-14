@@ -8,22 +8,26 @@
 
 """SPDL pipeline construction for video classification.
 
-Provides the pipeline callables (Decode, collate) and ``build_pipeline``
-which assembles the full SPDL pipeline.  The pipeline is dataset-agnostic:
-any dataset whose ``__getitem__`` returns
+Provides ``build_pipeline`` which assembles a GPU NVDEC-accelerated SPDL
+pipeline with a split demux/decode architecture::
+
+    sample → fetch → disaggregate → demux (CPU) → decode (NVDEC) → aggregate → collate
+
+The pipeline is dataset-agnostic: any dataset whose ``__getitem__`` returns
 ``list[{"video_bytes": bytes, "label": str}]`` can be used.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from typing import Protocol
 
 import spdl.io
 import spdl.source.utils
 import torch
-from spdl.io import transfer_tensor
 from spdl.pipeline import PipelineBuilder
 from spdl.source import DistributedRandomSampler
 
@@ -35,48 +39,77 @@ class VideoDataset(Protocol):
     def __getitem__(self, index: int) -> list[dict[str, object]]: ...
 
 
-class Decode:
-    """Decode video bytes into a CPU tensor of sampled frames (FFmpeg)."""
+class Demux:
+    """Demux video bytes into packets and resolve label to index."""
+
+    def __init__(
+        self, label_to_index: dict[str, int], subclip_duration: float | None = None
+    ) -> None:
+        self.label_to_index = label_to_index
+        self.subclip_duration = subclip_duration
+
+    def __call__(self, sample: dict[str, object]) -> dict[str, object] | None:
+        video_bytes = sample["video_bytes"]
+        try:
+            timestamp = (0.0, self.subclip_duration) if self.subclip_duration else None
+            packets = spdl.io.demux_video(video_bytes, timestamp=timestamp)
+        except RuntimeError:
+            return None
+        label = self.label_to_index[sample["label"]]  # pyre-ignore[6]
+        return {"packets": packets, "label": label}
+
+
+class NvdecDecode:
+    """Decode pre-demuxed video packets using GPU NVDEC hardware decoder."""
 
     def __init__(
         self,
         num_frames: int,
-        filter_desc: str | None,
-        label_to_index: dict[str, int],
+        cuda_cfg: object,
+        width: int,
+        height: int,
+        device: torch.device,
     ) -> None:
         self.num_frames = num_frames
-        self.filter_desc = filter_desc
-        self.label_to_index = label_to_index
+        self.cuda_cfg = cuda_cfg
+        self.width = width
+        self.height = height
+        self.device = device
 
-    def __call__(self, item: dict[str, object]) -> dict[str, torch.Tensor] | None:
-        video_bytes = item["video_bytes"]
-        label_str = item["label"]
-        assert isinstance(video_bytes, (bytes, memoryview))
-        assert isinstance(label_str, str)
+    def __call__(
+        self, sample: dict[str, object] | None
+    ) -> dict[str, torch.Tensor] | None:
+        if sample is None:
+            return None
 
+        packets = sample["packets"]
         try:
-            packets = spdl.io.demux_video(video_bytes)
-            frames = spdl.io.decode_packets(packets, filter_desc=self.filter_desc)
-            buffer = spdl.io.convert_frames(frames)
-            tensor = spdl.io.to_torch(buffer)  # [N, H, W, C]
+            buffer = spdl.io.decode_packets_nvdec(
+                packets,
+                device_config=self.cuda_cfg,
+                scale_width=self.width,
+                scale_height=self.height,
+                pix_fmt="rgb",
+            )
+            tensor = spdl.io.to_torch(buffer)  # [T, C, H, W], already on GPU
         except RuntimeError:
             return None
 
-        total = tensor.shape[0]
-        if total >= self.num_frames:
-            indices = torch.linspace(0, total - 1, self.num_frames).long()
+        # Frame sampling
+        if len(tensor) >= self.num_frames:
+            indices = torch.linspace(0, len(tensor) - 1, self.num_frames).long()
             tensor = tensor[indices]
         else:
-            pad = tensor[-1:].expand(self.num_frames - total, -1, -1, -1)
-            tensor = torch.cat([tensor, pad], dim=0)
+            padding = tensor[-1:].expand(self.num_frames - len(tensor), -1, -1, -1)
+            tensor = torch.cat([tensor, padding], dim=0)
 
-        # [T, H, W, C] -> [C, T, H, W] for video models
-        tensor = tensor.permute(3, 0, 1, 2).float() / 255.0
+        # [T, C, H, W] -> [C, T, H, W], normalize
+        tensor = tensor.permute(1, 0, 2, 3).float() / 255.0
 
-        label_index = self.label_to_index[label_str]
+        label = sample["label"]  # pyre-ignore[6]
         return {
             "video": tensor,
-            "label": torch.tensor(label_index),
+            "label": torch.tensor(label, dtype=torch.long, device=self.device),
         }
 
 
@@ -97,28 +130,20 @@ def build_pipeline(
     rank: int,
     world_size: int,
 ) -> Iterator[_TBatch]:
-    """Build a multithreaded SPDL pipeline for video classification.
+    """Build a multithreaded SPDL pipeline with GPU NVDEC video decoding.
 
-    Constructs the following pipeline stages::
+    Uses the GPU's dedicated NVDEC hardware decoders instead of CPU FFmpeg,
+    with a split demux/decode architecture. Each stage runs on a dedicated
+    thread executor to eliminate pool contention.
 
-        sample → fetch → disaggregate → decode → aggregate → collate → transfer
+    Pipeline stages::
 
-    1. **Sample**: ``DistributedRandomSampler`` produces shuffled indices,
-       partitioned across ranks.  The source is continuous (auto-resets
-       each epoch).
-    2. **Fetch** (``num_fetch_threads``): ``dataset.__getitem__`` returns
-       a list of ``{"video_bytes": bytes, "label": str}`` dicts.
-       For local files this is a single-element list; for remote bulk
-       storage each call may return many items.
-    3. **Disaggregate**: Splits each list into individual items.
-    4. **Decode** (``num_decode_threads``): Decodes video bytes with FFmpeg,
-       samples ``num_frames`` evenly, and produces ``[C, T, H, W]`` tensors.
-    5. **Aggregate / collate**: Groups into batches and stacks tensors.
-    6. **Transfer**: Async copy to GPU via ``spdl.io.transfer_tensor``.
+        sample → fetch → disaggregate → demux (CPU) → decode (NVDEC) → aggregate → collate
 
     Args:
         args: CLI args providing ``num_fetch_threads``, ``num_decode_threads``,
-            ``num_frames``, ``frame_width``, ``frame_height``, ``batch_size``.
+            ``num_frames``, ``frame_width``, ``frame_height``, ``batch_size``,
+            and ``subclip_duration``.
         dataset: Any object implementing the ``VideoDataset`` protocol.
         label_to_index: Mapping from label string to class index.
         rank: Current distributed rank.
@@ -127,36 +152,61 @@ def build_pipeline(
     Returns:
         An iterator yielding ``{"video": Tensor, "label": Tensor}`` batches.
     """
-    num_fetch_threads: int = args.num_fetch_threads
-    num_decode_threads: int = args.num_decode_threads
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    device = torch.device(f"cuda:{local_rank}")
 
-    filter_desc: str | None = spdl.io.get_video_filter_desc(
-        scale_width=args.frame_width,
-        scale_height=args.frame_height,
-        pix_fmt="rgb24",
+    cuda_cfg = spdl.io.cuda_config(
+        device_index=local_rank,
+        allocator=(
+            torch.cuda.caching_allocator_alloc,
+            torch.cuda.caching_allocator_delete,
+        ),
     )
+
+    num_fetch_threads = args.num_fetch_threads
+    num_decode_threads = args.num_decode_threads
 
     source = spdl.source.utils.embed_shuffle(
         DistributedRandomSampler(
-            len(dataset),
-            rank=rank,
-            world_size=world_size,
-        )
+            len(dataset), rank=rank, world_size=world_size
+        )  # pyre-ignore[6]
+    )
+
+    fetch_executor = ThreadPoolExecutor(max_workers=num_fetch_threads)
+    demux_executor = ThreadPoolExecutor(max_workers=8)
+    decode_executor = ThreadPoolExecutor(max_workers=num_decode_threads)
+
+    nvdec_decode = NvdecDecode(
+        num_frames=args.num_frames,
+        cuda_cfg=cuda_cfg,
+        width=args.frame_width,
+        height=args.frame_height,
+        device=device,
     )
 
     pipeline = (
         PipelineBuilder()
         .add_source(source, continuous=True)
-        .pipe(dataset.__getitem__, concurrency=num_fetch_threads)
+        .pipe(
+            dataset.__getitem__,
+            concurrency=num_fetch_threads,
+            executor=fetch_executor,
+        )  # pyre-ignore[6]
         .disaggregate()
         .pipe(
-            Decode(args.num_frames, filter_desc, label_to_index),
+            Demux(label_to_index, subclip_duration=args.subclip_duration),
+            concurrency=8,
+            executor=demux_executor,
+        )
+        .pipe(
+            nvdec_decode,
             concurrency=num_decode_threads,
+            executor=decode_executor,
         )
         .aggregate(args.batch_size, drop_last=True)
         .pipe(collate)
-        .pipe(transfer_tensor)
         .add_sink(buffer_size=3)
-        .build(num_threads=num_fetch_threads + num_decode_threads)
+        .build(num_threads=2)
     )
+
     return pipeline.get_iterator(timeout=300)
