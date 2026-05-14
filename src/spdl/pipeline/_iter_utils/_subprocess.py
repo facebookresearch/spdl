@@ -92,6 +92,8 @@ class _SubprocessIterable(Iterable[T]):
             # pyre-ignore[6]
             _enter_iteration_mode(if_.cmd_q, if_.data_q, if_.timeout, "subprocess")
             yield from _iterate_results(if_.data_q, if_.timeout, "subprocess")
+        except GeneratorExit:
+            return
         except BaseException:
             self._shutdown()
             raise
