@@ -15,9 +15,9 @@ transfer.
 SPDL Data Pipeline
 ^^^^^^^^^^^^^^^^^^
 
-Uses a multithreaded pipeline with SPDL PipelineBuilder:
+Uses GPU NVDEC hardware decoding in a multithreaded pipeline:
 
-  Sampling → fetch → decode (FFmpeg) → aggregate → collate → GPU transfer.
+  Sampling → fetch → demux → GPU decode (NVDEC) → aggregate → collate.
 
 The data source is pluggable: local video files (OSS) or WarmStorage
 via BulkDataset (Meta-internal), selected automatically via the
@@ -103,7 +103,7 @@ def train(
         ddp_model.parameters(),
         lr=lr,
         weight_decay=weight_decay,
-        foreach=True,
+        fused=True,
     )
 
     if rank == 0 and progress_fn is not None:
@@ -123,8 +123,9 @@ def train(
             if max_steps is not None and num_batches >= max_steps:
                 break
 
-            outputs = ddp_model(batch["video"])
-            loss = torch.nn.functional.cross_entropy(outputs, batch["label"])
+            with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+                outputs = ddp_model(batch["video"])
+                loss = torch.nn.functional.cross_entropy(outputs, batch["label"])
 
             loss.backward()
             torch.nn.utils.clip_grad_norm_(ddp_model.parameters(), max_grad_norm)
@@ -175,8 +176,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--frame-height", type=int, default=112)
     parser.add_argument("--frame-width", type=int, default=112)
+    parser.add_argument(
+        "--subclip-duration",
+        type=float,
+        default=None,
+        help="Temporal subclip duration in seconds. If set, only the first N seconds of each video are demuxed and decoded.",
+    )
     # Training
-    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--num-epochs", type=int, default=1)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=0.01)
