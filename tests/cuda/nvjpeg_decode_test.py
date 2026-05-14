@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-strict
+
 import unittest
 from random import randbytes
 
@@ -13,7 +15,7 @@ import torch
 
 from ..fixture import FFMPEG_CLI, get_sample, get_samples
 
-DEFAULT_CUDA = 0
+DEFAULT_CUDA: int = 0
 
 
 if not spdl.io.utils.built_with_nvjpeg():
@@ -26,7 +28,7 @@ class TestNvjpegDecode(unittest.TestCase):
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
         sample = get_sample(cmd)
 
-        def _test(data, pix_fmt):
+        def _test(data: str, pix_fmt: str) -> torch.Tensor:
             buffer = spdl.io.decode_image_nvjpeg(
                 data,
                 device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
