@@ -55,7 +55,9 @@ Results
 
 The best configuration (run ``101_optimal_consolidated``) achieved
 **153ms/step**, a **64.1% reduction** from baseline. The result was
-independently confirmed by a reproduction run.
+independently confirmed by a reproduction run. The optimized pipeline
+is available in the repository at `commit b1d98c5
+<https://github.com/facebookresearch/spdl/commit/b1d98c5688608d25319a4c827c25d645e69c704a>`_.
 
 .. list-table:: Optimization Breakdown
    :header-rows: 1
