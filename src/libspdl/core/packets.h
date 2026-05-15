@@ -12,6 +12,7 @@
 #include <libspdl/core/generator.h>
 #include <libspdl/core/types.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -217,5 +218,29 @@ template <MediaType media>
 std::vector<double> get_timestamps(
     const Packets<media>& packets,
     bool raw = false);
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+////////////////////////////////////////////////////////////////////////////////
+
+/// Serialize Packets to a byte vector for IPC (e.g., multiprocessing).
+///
+/// Throws std::runtime_error if any non-serializable pointer field
+/// (AVPacket::opaque, AVPacket::opaque_ref) is non-NULL.
+///
+/// @tparam media Media type (Audio, Video, or Image).
+/// @param packets Packets to serialize.
+/// @return Serialized byte vector.
+template <MediaType media>
+std::vector<uint8_t> serialize_packets(const Packets<media>& packets);
+
+/// Deserialize byte vector back to Packets.
+///
+/// @tparam media Media type (Audio, Video, or Image).
+/// @param data Serialized byte vector.
+/// @return Deserialized Packets.
+template <MediaType media>
+std::unique_ptr<Packets<media>> deserialize_packets(
+    const std::vector<uint8_t>& data);
 
 } // namespace spdl::core

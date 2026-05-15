@@ -67,6 +67,14 @@ struct AVBSFContextDeleter {
 
 using AVBSFContextPtr = std::unique_ptr<AVBSFContext, AVBSFContextDeleter>;
 
+// AVCodecParameters
+struct AVCodecParametersDeleter {
+  void operator()(AVCodecParameters* p);
+};
+
+using AVCodecParametersPtr =
+    std::unique_ptr<AVCodecParameters, AVCodecParametersDeleter>;
+
 // AVPacket
 // Assumption: AVPacket is reference counted and the counter is always 1.
 struct AVPacketDeleter {
