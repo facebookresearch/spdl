@@ -27,8 +27,13 @@ The following screenshot shows the supervisor agent reporting on an
 active autoresearch run — experiment table, running jobs, findings,
 and diagnostics are all visible in one status query:
 
-.. image:: /_static/data/autoresearch_supervisor.png
-   :alt: Supervisor agent reporting status of an autoresearch run
+.. image:: /_static/data/autoresearch_supervisor_2.png
+   :alt: Supervisor agent reporting status after the initialization
+   :width: 100%
+
+
+.. image:: /_static/data/autoresearch_supervisor_3.png
+   :alt: Supervisor agent reporting status responding to user inquery
    :width: 100%
 
 
