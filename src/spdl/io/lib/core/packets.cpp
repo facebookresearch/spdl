@@ -78,6 +78,17 @@ void register_packets(nb::module_& m) {
       "Packets object containing audio samples.\n\n"
       "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.")
       .def(
+          "__getstate__",
+          [](const AudioPackets& self) {
+            std::vector<uint8_t> bytes;
+            {
+              nb::gil_scoped_release g;
+              bytes = serialize_packets(self);
+            }
+            return nb::bytes(
+                reinterpret_cast<const char*>(bytes.data()), bytes.size());
+          })
+      .def(
           "__repr__",
           [](const AudioPackets& self) {
             std::vector<std::string> parts{
@@ -154,6 +165,17 @@ void register_packets(nb::module_& m) {
       "VideoPackets",
       "Packets object containing video frames.\n\n"
       "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.")
+      .def(
+          "__getstate__",
+          [](const VideoPackets& self) {
+            std::vector<uint8_t> bytes;
+            {
+              nb::gil_scoped_release g;
+              bytes = serialize_packets(self);
+            }
+            return nb::bytes(
+                reinterpret_cast<const char*>(bytes.data()), bytes.size());
+          })
       .def(
           "get_timestamps",
           [](const VideoPackets& self, bool raw) -> std::vector<double> {
@@ -268,11 +290,49 @@ void register_packets(nb::module_& m) {
       nb::arg("packets"),
       nb::arg("indices"));
 
+  m.def(
+      "_deserialize_audio_packets",
+      [](const nb::bytes& state) -> AudioPacketsPtr {
+        std::vector<uint8_t> data(state.c_str(), state.c_str() + state.size());
+        nb::gil_scoped_release g;
+        return deserialize_packets<MediaType::Audio>(data);
+      },
+      nb::arg("data"));
+
+  m.def(
+      "_deserialize_video_packets",
+      [](const nb::bytes& state) -> VideoPacketsPtr {
+        std::vector<uint8_t> data(state.c_str(), state.c_str() + state.size());
+        nb::gil_scoped_release g;
+        return deserialize_packets<MediaType::Video>(data);
+      },
+      nb::arg("data"));
+
+  m.def(
+      "_deserialize_image_packets",
+      [](const nb::bytes& state) -> ImagePacketsPtr {
+        std::vector<uint8_t> data(state.c_str(), state.c_str() + state.size());
+        nb::gil_scoped_release g;
+        return deserialize_packets<MediaType::Image>(data);
+      },
+      nb::arg("data"));
+
   nb::class_<ImagePackets>(
       m,
       "ImagePackets",
       "Packets object contain an image frame.\n\n"
       "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.")
+      .def(
+          "__getstate__",
+          [](const ImagePackets& self) {
+            std::vector<uint8_t> bytes;
+            {
+              nb::gil_scoped_release g;
+              bytes = serialize_packets(self);
+            }
+            return nb::bytes(
+                reinterpret_cast<const char*>(bytes.data()), bytes.size());
+          })
       .def_prop_ro(
           "pix_fmt",
           [](const ImagePackets& self) {

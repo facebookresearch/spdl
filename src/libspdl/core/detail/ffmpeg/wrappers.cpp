@@ -41,6 +41,10 @@ void AVBSFContextDeleter::operator()(AVBSFContext* p) {
   av_bsf_free(&p);
 }
 
+void AVCodecParametersDeleter::operator()(AVCodecParameters* p) {
+  avcodec_parameters_free(&p);
+}
+
 void AVPacketDeleter::operator()(AVPacket* p) {
   if (p) {
     av_packet_unref(p);

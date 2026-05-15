@@ -46,6 +46,8 @@ class AudioPackets:
     See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.
     """
 
+    def __getstate__(self) -> bytes: ...
+
     def __repr__(self) -> str: ...
 
     def __len__(self) -> int: ...
@@ -84,6 +86,8 @@ class VideoPackets:
 
     See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.
     """
+
+    def __getstate__(self) -> bytes: ...
 
     def get_timestamps(self, *, raw: bool = False) -> list[float]:
         """
@@ -158,6 +162,8 @@ class ImagePackets:
 
     See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.
     """
+
+    def __getstate__(self) -> bytes: ...
 
     @property
     def pix_fmt(self) -> str:

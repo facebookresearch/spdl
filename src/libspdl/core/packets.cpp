@@ -10,13 +10,17 @@
 
 #include <libspdl/core/rational_utils.h>
 
+#include "libspdl/core/detail/ffmpeg/compat.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
+#include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
 
 #include <algorithm>
 #include <cassert>
+#include <cstring>
+#include <stdexcept>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -334,5 +338,469 @@ std::vector<double> get_timestamps(const Packets<media>& packets, bool raw) {
 template std::vector<double> get_timestamps(const AudioPackets&, bool);
 template std::vector<double> get_timestamps(const VideoPackets&, bool);
 template std::vector<double> get_timestamps(const ImagePackets&, bool);
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization helpers
+////////////////////////////////////////////////////////////////////////////////
+
+namespace {
+
+constexpr uint32_t SERIALIZATION_MAGIC = 0x53504B54; // "SPKT"
+constexpr uint8_t SERIALIZATION_VERSION = 1;
+
+class ByteWriter {
+  std::vector<uint8_t>& buf_;
+
+ public:
+  explicit ByteWriter(std::vector<uint8_t>& buf) : buf_(buf) {}
+
+  void write_raw(const void* data, size_t size) {
+    auto* p = reinterpret_cast<const uint8_t*>(data);
+    buf_.insert(buf_.end(), p, p + size);
+  }
+
+  template <typename T>
+  void write(T val) {
+    write_raw(&val, sizeof(T));
+  }
+
+  void write_bytes(const uint8_t* data, size_t size) {
+    if (!data) {
+      write<int32_t>(0);
+      return;
+    }
+    write<int32_t>(static_cast<int32_t>(size));
+    if (size > 0) {
+      write_raw(data, size);
+    }
+  }
+
+  void write_string(const std::string& s) {
+    write<int32_t>(static_cast<int32_t>(s.size()));
+    if (!s.empty()) {
+      write_raw(s.data(), s.size());
+    }
+  }
+};
+
+class ByteReader {
+  const uint8_t* data_;
+  size_t size_;
+  size_t offset_ = 0;
+
+ public:
+  ByteReader(const uint8_t* data, size_t size) : data_(data), size_(size) {}
+
+  void read_raw(void* dst, size_t size) {
+    if (offset_ + size > size_) {
+      throw std::runtime_error("Deserialization buffer underflow");
+    }
+    std::memcpy(dst, data_ + offset_, size);
+    offset_ += size;
+  }
+
+  template <typename T>
+  T read() {
+    T val;
+    read_raw(&val, sizeof(T));
+    return val;
+  }
+
+  std::vector<uint8_t> read_bytes() {
+    auto size = read<int32_t>();
+    if (size < 0) {
+      throw std::runtime_error("Deserialization error: negative size");
+    }
+    std::vector<uint8_t> result(size);
+    if (size > 0) {
+      read_raw(result.data(), size);
+    }
+    return result;
+  }
+
+  std::string read_string() {
+    auto size = read<int32_t>();
+    if (size < 0) {
+      throw std::runtime_error("Deserialization error: negative size");
+    }
+    std::string result(size, '\0');
+    if (size > 0) {
+      read_raw(result.data(), size);
+    }
+    return result;
+  }
+};
+
+void serialize_packet(ByteWriter& w, const AVPacket* pkt) {
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  if (pkt->opaque) {
+    throw std::runtime_error(
+        "Cannot serialize AVPacket with non-NULL opaque pointer");
+  }
+  if (pkt->opaque_ref) {
+    throw std::runtime_error(
+        "Cannot serialize AVPacket with non-NULL opaque_ref");
+  }
+#endif
+
+  w.write<int64_t>(pkt->pts);
+  w.write<int64_t>(pkt->dts);
+  w.write<int32_t>(pkt->flags);
+  w.write<int64_t>(pkt->duration);
+  w.write_bytes(pkt->data, pkt->size);
+
+  w.write<int32_t>(pkt->side_data_elems);
+  for (int i = 0; i < pkt->side_data_elems; ++i) {
+    w.write<int32_t>(static_cast<int32_t>(pkt->side_data[i].type));
+    w.write_bytes(pkt->side_data[i].data, pkt->side_data[i].size);
+  }
+}
+
+AVPacket* deserialize_packet(ByteReader& r) {
+  detail::AVPacketPtr pkt(av_packet_alloc());
+  if (!pkt) {
+    throw std::runtime_error("Failed to allocate AVPacket");
+  }
+
+  auto pts = r.read<int64_t>();
+  auto dts = r.read<int64_t>();
+  auto flags = r.read<int32_t>();
+  auto duration = r.read<int64_t>();
+
+  auto data = r.read_bytes();
+  if (!data.empty()) {
+    if (av_new_packet(pkt.get(), static_cast<int>(data.size())) < 0) {
+      throw std::runtime_error("Failed to allocate packet data");
+    }
+    std::memcpy(pkt->data, data.data(), data.size());
+  }
+
+  pkt->pts = pts;
+  pkt->dts = dts;
+  pkt->flags = flags;
+  pkt->duration = duration;
+
+  auto num_side_data = r.read<int32_t>();
+  for (int32_t i = 0; i < num_side_data; ++i) {
+    auto type = static_cast<AVPacketSideDataType>(r.read<int32_t>());
+    auto sd_data = r.read_bytes();
+    auto* sd = av_packet_new_side_data(
+        pkt.get(), type, static_cast<int>(sd_data.size()));
+    if (!sd) {
+      throw std::runtime_error("Failed to allocate packet side data");
+    }
+    std::memcpy(sd, sd_data.data(), sd_data.size());
+  }
+
+  return pkt.release();
+}
+
+void serialize_codec_parameters(ByteWriter& w, const AVCodecParameters* par) {
+  w.write<int32_t>(static_cast<int32_t>(par->codec_type));
+  w.write<int32_t>(static_cast<int32_t>(par->codec_id));
+  w.write<uint32_t>(par->codec_tag);
+  w.write<int32_t>(par->format);
+  w.write<int64_t>(par->bit_rate);
+  w.write<int32_t>(par->bits_per_coded_sample);
+  w.write<int32_t>(par->bits_per_raw_sample);
+  w.write<int32_t>(par->profile);
+  w.write<int32_t>(par->level);
+  w.write<int32_t>(par->width);
+  w.write<int32_t>(par->height);
+  w.write<int32_t>(par->sample_aspect_ratio.num);
+  w.write<int32_t>(par->sample_aspect_ratio.den);
+#if LIBAVCODEC_VERSION_MAJOR >= 60
+  w.write<int32_t>(par->framerate.num);
+  w.write<int32_t>(par->framerate.den);
+#else
+  w.write<int32_t>(0);
+  w.write<int32_t>(1);
+#endif
+  w.write<int32_t>(par->field_order);
+  w.write<int32_t>(par->color_range);
+  w.write<int32_t>(par->color_primaries);
+  w.write<int32_t>(par->color_trc);
+  w.write<int32_t>(par->color_space);
+  w.write<int32_t>(par->chroma_location);
+  w.write<int32_t>(par->video_delay);
+  w.write<int32_t>(par->sample_rate);
+  w.write<int32_t>(par->block_align);
+  w.write<int32_t>(par->frame_size);
+  w.write<int32_t>(par->initial_padding);
+  w.write<int32_t>(par->trailing_padding);
+  w.write<int32_t>(par->seek_preroll);
+
+  // Channel layout
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 17, 100)
+  w.write<int32_t>(static_cast<int32_t>(par->ch_layout.order));
+  w.write<int32_t>(par->ch_layout.nb_channels);
+  if (par->ch_layout.order == AV_CHANNEL_ORDER_NATIVE ||
+      par->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC) {
+    w.write<uint64_t>(par->ch_layout.u.mask);
+  } else if (par->ch_layout.order == AV_CHANNEL_ORDER_CUSTOM) {
+    for (int i = 0; i < par->ch_layout.nb_channels; ++i) {
+      if (par->ch_layout.u.map[i].opaque) {
+        throw std::runtime_error(
+            "Cannot serialize AVChannelCustom with non-NULL opaque pointer");
+      }
+      w.write<int32_t>(static_cast<int32_t>(par->ch_layout.u.map[i].id));
+      w.write_raw(par->ch_layout.u.map[i].name, 16);
+    }
+  }
+#else
+  w.write<int32_t>(par->channels);
+  w.write<uint64_t>(par->channel_layout);
+#endif
+
+  // Extradata
+  w.write_bytes(par->extradata, par->extradata_size);
+
+  // Coded side data (available in FFmpeg 6.1+ / libavcodec 60.31+)
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(60, 31, 102)
+  w.write<int32_t>(par->nb_coded_side_data);
+  for (int i = 0; i < par->nb_coded_side_data; ++i) {
+    w.write<int32_t>(static_cast<int32_t>(par->coded_side_data[i].type));
+    w.write_bytes(par->coded_side_data[i].data, par->coded_side_data[i].size);
+  }
+#else
+  w.write<int32_t>(0);
+#endif
+}
+
+AVCodecParameters* deserialize_codec_parameters(ByteReader& r) {
+  detail::AVCodecParametersPtr par(avcodec_parameters_alloc());
+  if (!par) {
+    throw std::runtime_error("Failed to allocate AVCodecParameters");
+  }
+
+  par->codec_type = static_cast<AVMediaType>(r.read<int32_t>());
+  par->codec_id = static_cast<AVCodecID>(r.read<int32_t>());
+  par->codec_tag = r.read<uint32_t>();
+  par->format = r.read<int32_t>();
+  par->bit_rate = r.read<int64_t>();
+  par->bits_per_coded_sample = r.read<int32_t>();
+  par->bits_per_raw_sample = r.read<int32_t>();
+  par->profile = r.read<int32_t>();
+  par->level = r.read<int32_t>();
+  par->width = r.read<int32_t>();
+  par->height = r.read<int32_t>();
+  par->sample_aspect_ratio.num = r.read<int32_t>();
+  par->sample_aspect_ratio.den = r.read<int32_t>();
+#if LIBAVCODEC_VERSION_MAJOR >= 60
+  par->framerate.num = r.read<int32_t>();
+  par->framerate.den = r.read<int32_t>();
+#else
+  r.read<int32_t>(); // framerate.num (not available in this version)
+  r.read<int32_t>(); // framerate.den
+#endif
+  par->field_order = static_cast<AVFieldOrder>(r.read<int32_t>());
+  par->color_range = static_cast<AVColorRange>(r.read<int32_t>());
+  par->color_primaries = static_cast<AVColorPrimaries>(r.read<int32_t>());
+  par->color_trc =
+      static_cast<AVColorTransferCharacteristic>(r.read<int32_t>());
+  par->color_space = static_cast<AVColorSpace>(r.read<int32_t>());
+  par->chroma_location = static_cast<AVChromaLocation>(r.read<int32_t>());
+  par->video_delay = r.read<int32_t>();
+  par->sample_rate = r.read<int32_t>();
+  par->block_align = r.read<int32_t>();
+  par->frame_size = r.read<int32_t>();
+  par->initial_padding = r.read<int32_t>();
+  par->trailing_padding = r.read<int32_t>();
+  par->seek_preroll = r.read<int32_t>();
+
+  // Channel layout
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 17, 100)
+  par->ch_layout.order = static_cast<AVChannelOrder>(r.read<int32_t>());
+  par->ch_layout.nb_channels = r.read<int32_t>();
+  if (par->ch_layout.order == AV_CHANNEL_ORDER_NATIVE ||
+      par->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC) {
+    par->ch_layout.u.mask = r.read<uint64_t>();
+  } else if (par->ch_layout.order == AV_CHANNEL_ORDER_CUSTOM) {
+    par->ch_layout.u.map = static_cast<AVChannelCustom*>(
+        av_calloc(par->ch_layout.nb_channels, sizeof(AVChannelCustom)));
+    if (!par->ch_layout.u.map) {
+      throw std::runtime_error("Failed to allocate channel map");
+    }
+    for (int i = 0; i < par->ch_layout.nb_channels; ++i) {
+      par->ch_layout.u.map[i].id = static_cast<AVChannel>(r.read<int32_t>());
+      r.read_raw(par->ch_layout.u.map[i].name, 16);
+      par->ch_layout.u.map[i].opaque = nullptr;
+    }
+  }
+#else
+  par->channels = r.read<int32_t>();
+  par->channel_layout = r.read<uint64_t>();
+#endif
+
+  // Extradata
+  auto extradata = r.read_bytes();
+  if (!extradata.empty()) {
+    par->extradata = static_cast<uint8_t*>(
+        av_mallocz(extradata.size() + AV_INPUT_BUFFER_PADDING_SIZE));
+    if (!par->extradata) {
+      throw std::runtime_error("Failed to allocate extradata");
+    }
+    std::memcpy(par->extradata, extradata.data(), extradata.size());
+    par->extradata_size = static_cast<int>(extradata.size());
+  }
+
+  // Coded side data (available in FFmpeg 6.1+ / libavcodec 60.31+)
+  auto nb_coded_side_data = r.read<int32_t>();
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(60, 31, 102)
+  par->nb_coded_side_data = nb_coded_side_data;
+  if (nb_coded_side_data > 0) {
+    par->coded_side_data = static_cast<AVPacketSideData*>(
+        av_calloc(nb_coded_side_data, sizeof(AVPacketSideData)));
+    if (!par->coded_side_data) {
+      throw std::runtime_error("Failed to allocate coded side data");
+    }
+    for (int32_t i = 0; i < nb_coded_side_data; ++i) {
+      par->coded_side_data[i].type =
+          static_cast<AVPacketSideDataType>(r.read<int32_t>());
+      auto sd_data = r.read_bytes();
+      par->coded_side_data[i].size = sd_data.size();
+      par->coded_side_data[i].data =
+          static_cast<uint8_t*>(av_malloc(sd_data.size()));
+      if (!par->coded_side_data[i].data) {
+        throw std::runtime_error("Failed to allocate coded side data payload");
+      }
+      std::memcpy(par->coded_side_data[i].data, sd_data.data(), sd_data.size());
+    }
+  }
+#else
+  // Older FFmpeg versions don't have coded_side_data on AVCodecParameters.
+  // Just consume the data from the stream.
+  for (int32_t i = 0; i < nb_coded_side_data; ++i) {
+    r.read<int32_t>(); // type
+    r.read_bytes(); // data
+  }
+#endif
+
+  return par.release();
+}
+
+} // namespace
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization implementation
+////////////////////////////////////////////////////////////////////////////////
+
+template <MediaType media>
+std::vector<uint8_t> serialize_packets(const Packets<media>& packets) {
+  std::vector<uint8_t> buf;
+  ByteWriter w(buf);
+
+  w.write<uint32_t>(SERIALIZATION_MAGIC);
+  w.write<uint8_t>(SERIALIZATION_VERSION);
+  w.write<uint8_t>(static_cast<uint8_t>(media));
+
+  w.write_string(packets.src);
+  w.write<int32_t>(packets.stream_index);
+  w.write<int32_t>(packets.time_base.num);
+  w.write<int32_t>(packets.time_base.den);
+
+  // Timestamp
+  w.write<uint8_t>(packets.timestamp.has_value() ? 1 : 0);
+  if (packets.timestamp) {
+    auto [start, end] = *packets.timestamp;
+    w.write<int32_t>(start.num);
+    w.write<int32_t>(start.den);
+    w.write<int32_t>(end.num);
+    w.write<int32_t>(end.den);
+  }
+
+  // Codec
+  w.write<uint8_t>(packets.codec.has_value() ? 1 : 0);
+  if (packets.codec) {
+    auto tb = packets.codec->get_time_base();
+    auto fr = packets.codec->get_frame_rate();
+    w.write<int32_t>(tb.num);
+    w.write<int32_t>(tb.den);
+    w.write<int32_t>(fr.num);
+    w.write<int32_t>(fr.den);
+    serialize_codec_parameters(w, packets.codec->get_parameters());
+  }
+
+  // Packets
+  const auto& pkts = packets.pkts.get_packets();
+  w.write<int32_t>(static_cast<int32_t>(pkts.size()));
+  for (const auto* pkt : pkts) {
+    serialize_packet(w, pkt);
+  }
+
+  return buf;
+}
+
+template <MediaType media>
+std::unique_ptr<Packets<media>> deserialize_packets(
+    const std::vector<uint8_t>& data) {
+  ByteReader r(data.data(), data.size());
+
+  auto magic = r.read<uint32_t>();
+  if (magic != SERIALIZATION_MAGIC) {
+    throw std::runtime_error("Invalid serialization magic number");
+  }
+  auto version = r.read<uint8_t>();
+  if (version != SERIALIZATION_VERSION) {
+    throw std::runtime_error(
+        fmt::format(
+            "Unsupported serialization version: {}",
+            static_cast<int>(version)));
+  }
+  auto media_type = static_cast<MediaType>(r.read<uint8_t>());
+  if (media_type != media) {
+    throw std::runtime_error("Media type mismatch during deserialization");
+  }
+
+  auto result = std::make_unique<Packets<media>>();
+  result->id = 0;
+  result->src = r.read_string();
+  result->stream_index = r.read<int32_t>();
+  result->time_base.num = r.read<int32_t>();
+  result->time_base.den = r.read<int32_t>();
+
+  // Timestamp
+  auto has_timestamp = r.read<uint8_t>();
+  if (has_timestamp) {
+    Rational start, end;
+    start.num = r.read<int32_t>();
+    start.den = r.read<int32_t>();
+    end.num = r.read<int32_t>();
+    end.den = r.read<int32_t>();
+    result->timestamp = TimeWindow{start, end};
+  }
+
+  // Codec
+  auto has_codec = r.read<uint8_t>();
+  if (has_codec) {
+    Rational tb, fr;
+    tb.num = r.read<int32_t>();
+    tb.den = r.read<int32_t>();
+    fr.num = r.read<int32_t>();
+    fr.den = r.read<int32_t>();
+    auto* par = deserialize_codec_parameters(r);
+    result->codec.emplace(Codec<media>(par, tb, fr));
+    avcodec_parameters_free(&par);
+  }
+
+  // Packets
+  auto num_packets = r.read<int32_t>();
+  for (int32_t i = 0; i < num_packets; ++i) {
+    result->pkts.push(deserialize_packet(r));
+  }
+
+  return result;
+}
+
+template std::vector<uint8_t> serialize_packets(const AudioPackets&);
+template std::vector<uint8_t> serialize_packets(const VideoPackets&);
+template std::vector<uint8_t> serialize_packets(const ImagePackets&);
+
+template std::unique_ptr<AudioPackets> deserialize_packets<MediaType::Audio>(
+    const std::vector<uint8_t>&);
+template std::unique_ptr<VideoPackets> deserialize_packets<MediaType::Video>(
+    const std::vector<uint8_t>&);
+template std::unique_ptr<ImagePackets> deserialize_packets<MediaType::Image>(
+    const std::vector<uint8_t>&);
 
 } // namespace spdl::core

@@ -13,6 +13,7 @@ it's used by user code.
 
 # pyre-strict
 
+import copyreg
 import importlib
 import importlib.resources
 import logging
@@ -92,6 +93,7 @@ def _import_libspdl() -> ModuleType:
         except Exception:
             _LG.debug("Failed to register avdevices.", exc_info=True)
 
+        _register_pickle(ext)
         return ext
 
     msg = ", ".join(f'"{k}: {v}"' for k, v in err_msgs.items())
@@ -100,6 +102,36 @@ def _import_libspdl() -> ModuleType:
         "Enable DEBUG logging to see details about the failure. "
     )
     raise RuntimeError(msg)
+
+
+def _deserialize_audio_packets(data: bytes):  # type: ignore[no-untyped-def]
+    ext = _import_libspdl()
+    return ext._deserialize_audio_packets(data)
+
+
+def _deserialize_video_packets(data: bytes):  # type: ignore[no-untyped-def]
+    ext = _import_libspdl()
+    return ext._deserialize_video_packets(data)
+
+
+def _deserialize_image_packets(data: bytes):  # type: ignore[no-untyped-def]
+    ext = _import_libspdl()
+    return ext._deserialize_image_packets(data)
+
+
+def _register_pickle(ext: ModuleType) -> None:
+    def _reduce_audio(obj):  # type: ignore[no-untyped-def]
+        return _deserialize_audio_packets, (obj.__getstate__(),)
+
+    def _reduce_video(obj):  # type: ignore[no-untyped-def]
+        return _deserialize_video_packets, (obj.__getstate__(),)
+
+    def _reduce_image(obj):  # type: ignore[no-untyped-def]
+        return _deserialize_image_packets, (obj.__getstate__(),)
+
+    copyreg.pickle(ext.AudioPackets, _reduce_audio)
+    copyreg.pickle(ext.VideoPackets, _reduce_video)
+    copyreg.pickle(ext.ImagePackets, _reduce_image)
 
 
 @cache
