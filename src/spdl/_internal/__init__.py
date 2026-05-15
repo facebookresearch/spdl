@@ -10,5 +10,5 @@ try:
     from .fb import log_api_usage_once
 except ImportError:
 
-    def log_api_usage_once(_: str) -> None:
+    def log_api_usage_once(_: str, *, metadata: str | None = None) -> None:
         pass
