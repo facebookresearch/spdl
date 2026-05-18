@@ -22,6 +22,8 @@ __all__ = [
     "decode_image_nvjpeg",
     "NvDecDecoder",
     "nvdec_decoder",
+    # MEMORY ARENA
+    "FrameArena",
     # FRAME CONVERSION
     "convert_array",
     "convert_frames",
@@ -90,6 +92,8 @@ if TYPE_CHECKING:
     VideoEncoder = _libspdl.VideoEncoder
     VideoFrames = _libspdl.VideoFrames
     VideoPackets = _libspdl.VideoPackets
+
+    FrameArena = _libspdl.FrameArena
 
     CUDABuffer = _libspdl_cuda.CUDABuffer
     CUDAConfig = _libspdl_cuda.CUDAConfig
@@ -638,6 +642,7 @@ def decode_packets(
     decode_config: "DecodeConfig | None" = None,
     *,
     num_frames: int = -1,
+    arena: "FrameArena | None" = None,
 ) -> "AudioFrames": ...
 @overload
 def decode_packets(
@@ -646,6 +651,7 @@ def decode_packets(
     decode_config: "DecodeConfig | None" = None,
     *,
     num_frames: int = -1,
+    arena: "FrameArena | None" = None,
 ) -> "VideoFrames": ...
 @overload
 def decode_packets(
@@ -654,6 +660,7 @@ def decode_packets(
     decode_config: "DecodeConfig | None" = None,
     *,
     num_frames: int = -1,
+    arena: "FrameArena | None" = None,
 ) -> "ImageFrames": ...
 
 
@@ -663,6 +670,7 @@ def decode_packets(
     decode_config: "DecodeConfig | None" = None,
     *,
     num_frames: int = -1,
+    arena: "FrameArena | None" = None,
 ) -> "AudioFrames | VideoFrames | ImageFrames":
     """Decode packets.
 
@@ -721,6 +729,7 @@ def decode_packets(
         filter_desc=filter_desc,
         decode_config=decode_config,
         num_frames=num_frames,
+        arena=arena,
     )
 
 

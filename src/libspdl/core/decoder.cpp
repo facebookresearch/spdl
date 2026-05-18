@@ -18,8 +18,9 @@ template <MediaType media>
 Decoder<media>::Decoder(
     const Codec<media>& codec,
     const std::optional<DecodeConfig>& cfg,
-    const std::optional<std::string>& filter_desc)
-    : pImpl_(new detail::DecoderImpl<media>(codec, cfg, filter_desc)) {}
+    const std::optional<std::string>& filter_desc,
+    FrameArena* arena)
+    : pImpl_(new detail::DecoderImpl<media>(codec, cfg, filter_desc, arena)) {}
 
 template <MediaType media>
 Decoder<media>::~Decoder() {

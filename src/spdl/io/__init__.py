@@ -61,6 +61,8 @@ _LIBSPDL_ITEMS = [
     "AudioDecoder",
     "VideoDecoder",
     "FilterGraph",
+    "FrameArena",
+    "FrameArenaConfig",
     "DemuxConfig",
     "DecodeConfig",
     "VideoEncodeConfig",

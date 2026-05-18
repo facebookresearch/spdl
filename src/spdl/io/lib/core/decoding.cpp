@@ -9,6 +9,7 @@
 #include "register_spdl_core_extensions.h"
 
 #include <libspdl/core/decoder.h>
+#include <libspdl/core/frame_arena.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/function.h>
@@ -37,16 +38,35 @@ FramesPtr<media> decode_packets(
     PacketsPtr<media> packets,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc,
-    int num_frames) {
+    int num_frames,
+    FrameArena* arena) {
   if (!packets->codec) {
     throw std::runtime_error("Packets does not have codec info.");
   }
-  Decoder<media> decoder{*packets->codec, cfg, filter_desc};
+  Decoder<media> decoder{*packets->codec, cfg, filter_desc, arena};
   return decoder.decode_packets(std::move(packets), num_frames);
 }
 } // namespace
 
 void register_decoding(nb::module_& m) {
+  ////////////////////////////////////////////////////////////////////////////////
+  // FrameArena
+  ////////////////////////////////////////////////////////////////////////////////
+  nb::class_<FrameArena::Config>(m, "FrameArenaConfig")
+      .def(
+          nb::init<size_t, size_t, size_t, size_t>(),
+          nb::arg("initial_size") = 128 * 1024 * 1024,
+          nb::arg("max_size") = 1024 * 1024 * 1024,
+          nb::arg("granularity") = 64 * 1024,
+          nb::arg("max_free_per_bucket") = 8);
+
+  nb::class_<FrameArena>(m, "FrameArena")
+      .def(
+          nb::init<FrameArena::Config>(),
+          nb::arg("config") = FrameArena::Config{})
+      .def_prop_ro("total_allocated", &FrameArena::total_allocated)
+      .def_prop_ro("total_pooled", &FrameArena::total_pooled);
+
   ////////////////////////////////////////////////////////////////////////////////
   // Decoder
   ////////////////////////////////////////////////////////////////////////////////
@@ -182,7 +202,8 @@ void register_decoding(nb::module_& m) {
       nb::kw_only(),
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = nb::none(),
-      nb::arg("num_frames") = -1);
+      nb::arg("num_frames") = -1,
+      nb::arg("arena") = nullptr);
 
   m.def(
       "decode_packets",
@@ -192,7 +213,8 @@ void register_decoding(nb::module_& m) {
       nb::kw_only(),
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = nb::none(),
-      nb::arg("num_frames") = -1);
+      nb::arg("num_frames") = -1,
+      nb::arg("arena") = nullptr);
 
   m.def(
       "decode_packets",
@@ -202,6 +224,7 @@ void register_decoding(nb::module_& m) {
       nb::kw_only(),
       nb::arg("decode_config") = nb::none(),
       nb::arg("filter_desc") = nb::none(),
-      nb::arg("num_frames") = -1);
+      nb::arg("num_frames") = -1,
+      nb::arg("arena") = nullptr);
 }
 } // namespace spdl::core

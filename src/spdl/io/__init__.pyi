@@ -30,6 +30,7 @@ from spdl.io._config import (
     cuda_config as cuda_config,
     decode_config as decode_config,
     demux_config as demux_config,
+    frame_arena as frame_arena,
     video_encode_config as video_encode_config,
 )
 from spdl.io._convert import (
@@ -56,6 +57,7 @@ from spdl.io._core import (
     demux_video as demux_video,
     Demuxer as Demuxer,
     encode_image as encode_image,
+    FrameArena as FrameArena,
     Muxer as Muxer,
     nv12_to_bgr as nv12_to_bgr,
     nv12_to_rgb as nv12_to_rgb,
@@ -88,6 +90,8 @@ from spdl.io.lib._libspdl import (
     DecodeConfig as DecodeConfig,
     DemuxConfig as DemuxConfig,
     FilterGraph as FilterGraph,
+    FrameArena as FrameArena,
+    FrameArenaConfig as FrameArenaConfig,
     ImageCodec as ImageCodec,
     ImageFrames as ImageFrames,
     ImagePackets as ImagePackets,

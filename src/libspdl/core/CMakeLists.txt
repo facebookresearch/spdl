@@ -20,6 +20,7 @@ endif()
 set(defs GLOG_NEWER_THAN_FIVE)
 set(deps fmt::fmt glog::glog)
 set(srcs
+  detail/ffmpeg/arena_buffer.cpp
   detail/ffmpeg/conversion.cpp
   detail/ffmpeg/ctx_utils.cpp
   detail/ffmpeg/bsf.cpp
@@ -34,6 +35,7 @@ set(srcs
   adaptor/bytes.cpp
   encoder.cpp
   bsf.cpp
+  frame_arena.cpp
   frames.cpp
   filter_graph.cpp
   buffer.cpp

@@ -9,6 +9,7 @@
 #pragma once
 
 #include <libspdl/core/codec.h>
+#include <libspdl/core/frame_arena.h>
 #include <libspdl/core/frames.h>
 #include <libspdl/core/generator.h>
 #include <libspdl/core/packets.h>
@@ -33,7 +34,8 @@ class DecoderImpl {
   DecoderImpl(
       const Codec<media>& codec,
       const std::optional<DecodeConfig>& cfg,
-      const std::optional<std::string>& filter_desc);
+      const std::optional<std::string>& filter_desc,
+      FrameArena* arena = nullptr);
   ~DecoderImpl() = default;
 
   DecoderImpl(const DecoderImpl&) = delete;

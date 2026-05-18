@@ -11,6 +11,7 @@
 #include <libspdl/core/rational_utils.h>
 #include <libspdl/core/utils.h>
 
+#include "libspdl/core/detail/ffmpeg/arena_buffer.h"
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
@@ -121,7 +122,8 @@ template <MediaType media>
 DecoderImpl<media>::DecoderImpl(
     const Codec<media>& codec,
     const std::optional<DecodeConfig>& cfg,
-    const std::optional<std::string>& filter_desc)
+    const std::optional<std::string>& filter_desc,
+    FrameArena* arena)
     : codec_ctx_([&codec, &cfg]() {
         static const std::optional<std::string> default_decoder = std::nullopt;
         static const std::optional<OptionDict> empty_option = std::nullopt;
@@ -131,7 +133,11 @@ DecoderImpl<media>::DecoderImpl(
             cfg ? cfg->decoder : default_decoder,
             cfg ? cfg->decoder_options : empty_option);
       }()),
-      filter_graph_(filter_desc) {}
+      filter_graph_(filter_desc) {
+  if (arena) {
+    detail::install_arena(codec_ctx_.get(), arena);
+  }
+}
 
 template <MediaType media>
 Rational DecoderImpl<media>::get_output_time_base() const {

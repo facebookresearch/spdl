@@ -10,6 +10,7 @@
 __all__ = [
     "demux_config",
     "decode_config",
+    "frame_arena",
     "video_encode_config",
     "audio_encode_config",
     "cuda_config",
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
     CPUStorage = _libspdl.CPUStorage
     DecodeConfig = _libspdl.DecodeConfig
     DemuxConfig = _libspdl.DemuxConfig
+    FrameArena = _libspdl.FrameArena
     VideoEncodeConfig = _libspdl.VideoEncodeConfig
 
     CUDAConfig = _libspdl_cuda.CUDAConfig
@@ -290,6 +292,36 @@ def audio_encode_config(
         bit_rate=bit_rate,
         compression_level=compression_level,
         qscale=qscale,
+    )
+
+
+def frame_arena(
+    initial_size: int = 128 * 1024 * 1024,
+    max_size: int = 1024 * 1024 * 1024,
+    granularity: int = 64 * 1024,
+    max_free_per_bucket: int = 8,
+) -> "FrameArena":
+    """Create a memory arena for decoded frame buffers.
+
+    The arena pools FFmpeg decoded frame buffers via the get_buffer2 callback,
+    reducing allocation churn in high-throughput concurrent decoding pipelines.
+
+    Args:
+        initial_size: Initial slab size in bytes. Default 128MB.
+        max_size: Maximum total memory the arena can use. Default 1GB.
+        granularity: Allocation size granularity. Default 64KB.
+        max_free_per_bucket: Maximum cached buffers per size class per thread.
+
+    Returns:
+        A FrameArena instance.
+    """
+    return _libspdl.FrameArena(
+        _libspdl.FrameArenaConfig(
+            initial_size=initial_size,
+            max_size=max_size,
+            granularity=granularity,
+            max_free_per_bucket=max_free_per_bucket,
+        )
     )
 
 
