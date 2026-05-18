@@ -83,18 +83,51 @@ Note: `decode_packets_nvdec` automatically applies bitstream filtering (h264_mp4
 - **Decoder creation is expensive** (~300ms) — SPDL uses thread-local caching to amortize this. Avoid passing crop parameters unless needed (they bypass the cache).
 - **SM utilization may appear lower** — GPU video decode uses dedicated NVDEC hardware engines, not SM (shader) cores. A pipeline using NVDEC may show lower SM utilization than a CPU-decode pipeline even though sample throughput is higher. Do NOT interpret lower SM utilization as a regression when using GPU decode — compare sample throughput (step time) instead.
 
-#### Pipeline integration — multithreading only, no MTP
+#### Pipeline integration
 
-**GPU video decode is NOT compatible with MTP (subprocess mode)** because `VideoPackets` (the output of `demux_video`) are not picklable and cannot be passed across process boundaries.
+GPU video decode supports two integration modes:
 
-Use pure multithreading in the main process instead:
-- Build the entire pipeline (demux → decode_packets_nvdec → to_torch) in the main process using `PipelineBuilder`
+##### Option A: MTP + GPU decode (recommended for video pipelines)
+
+`VideoPackets` are now picklable, so **MTP and GPU decode can be combined**. Demux in a subprocess and decode with NVDEC in the main process:
+
+```python
+# Backend (subprocess) — fetch + demux only
+backend = (
+    PipelineBuilder()
+    .add_source(source, continuous=True)
+    .pipe(fetch_fn, concurrency=16)
+    .pipe(demux_fn, concurrency=8)
+    .add_sink(buffer_size=3)
+)
+
+source2 = spdl.pipeline.run_pipeline_in_subprocess(
+    backend.get_config(),
+    num_threads=8,
+    mp_context="forkserver",
+)
+
+# Frontend (main process) — GPU decode + to_torch
+frontend = (
+    PipelineBuilder()
+    .add_source(source2, continuous=True)
+    .pipe(decode_nvdec_fn, concurrency=7)  # match GPU decoder slots
+    .pipe(spdl.io.to_torch)
+    .add_sink(buffer_size=3)
+)
+pipeline = frontend.build(num_threads=8)
+```
+
+This combines the CPU-isolation benefits of MTP (no noisy-neighbour effect from demux threads) with the decode throughput of GPU hardware decoders.
+
+##### Option B: Pure multithreading (no MTP)
+
+Build the entire pipeline (demux → decode_packets_nvdec → to_torch) in the main process using `PipelineBuilder`:
 - Use `.build(num_threads=N)` with appropriate thread count
 - GPU decode releases the GIL during hardware decode, so multithreading works well
 - Set decode stage concurrency to match GPU hardware decoder slots (7 for H100/B100; higher for sparse decoding patterns)
 - **Use a dedicated `ThreadPoolExecutor` for the decode stage** — do NOT share the pipeline's default thread pool. Create `ThreadPoolExecutor(max_workers=C)` and pass it via `executor=` to the decode `.pipe()` call. This avoids contention between NVDEC decode threads (which need their own CUDA contexts) and CPU fetch/processing threads
 
-`gpu_video_decode` and `mtp` are **independent, mutually exclusive** optimization paths. They cannot be combined. GPU decode experiments must apply changes to the original instrumented pipeline, not on top of MTP changes. Compare their results independently to determine which approach yields better throughput.
 
 ### Headspace Analysis in the Loop
 
