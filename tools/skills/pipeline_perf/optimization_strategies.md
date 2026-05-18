@@ -166,6 +166,7 @@ This is a key reason to use MTP (subprocess mode) — it eliminates GIL contenti
 3. **Move to subprocess**: Use `run_pipeline_in_subprocess()` to isolate CPU work.
 4. **Profile the function**: Look for GIL contention (use `spdl.io.load_npz` instead of numpy NPZ), unnecessary `asyncio.run()` wrappers (pass async functions directly), or expensive serialization.
 5. **Use coalesced data access**: Batching I/O requests (reading multiple samples per call) can be significantly faster than single-sample access.
+6. **Combine MTP with GPU decode**: `VideoPackets` are now picklable, so you can demux in a subprocess and decode with NVDEC in the main process. This combines the CPU-isolation benefits of MTP with the decode throughput of GPU hardware decoders. See the "GPU Video Decoding" section for details.
 
 ## Pickling Constraints (Subprocess Mode)
 
