@@ -17,6 +17,9 @@ on:
   #   branches:
   #     - main
 
+permissions:
+  contents: read
+
 jobs:
   manylinux_2_28:
     strategy:
