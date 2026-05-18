@@ -1,3 +1,4 @@
+
 .. _autoresearch:
 
 How It Works
@@ -34,6 +35,10 @@ and diagnostics are all visible in one status query:
 
 .. image:: /_static/data/autoresearch_supervisor_3.png
    :alt: Supervisor agent reporting status responding to user inquery
+   :width: 100%
+
+.. image:: /_static/data/autoresearch_supervisor_4.png
+   :alt: Supervisor agent reporting status at the end.
    :width: 100%
 
 
