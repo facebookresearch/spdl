@@ -168,6 +168,48 @@ This is a key reason to use MTP (subprocess mode) — it eliminates GIL contenti
 5. **Use coalesced data access**: Batching I/O requests (reading multiple samples per call) can be significantly faster than single-sample access.
 6. **Combine MTP with GPU decode**: `VideoPackets` are now picklable, so you can demux in a subprocess and decode with NVDEC in the main process. This combines the CPU-isolation benefits of MTP with the decode throughput of GPU hardware decoders. See the "GPU Video Decoding" section for details.
 
+## Video Decoder Thread Tuning
+
+When the pipeline decodes video with `spdl.io.load_video` / `spdl.io.decode_packets`, the underlying FFmpeg decoder uses **a single thread by default**. This is a deliberate SPDL design choice — concurrency is expected to come from running many decoders in parallel at the pipeline level — but for some workloads (high-resolution video, low pipeline concurrency, or CPU headroom available) raising the per-decoder thread count is faster overall.
+
+### How to set it
+
+Pass `decoder_options={"threads": "X"}` via `spdl.io.decode_config`:
+
+```python
+decode_config = spdl.io.decode_config(decoder_options={"threads": "2"})
+frames = spdl.io.load_video(video_data, decode_config=decode_config)
+```
+
+Valid values for `X` (passed as a string):
+- `"1"` — default. One decoder thread per call. Lowest CPU per video, best when pipeline concurrency is already saturating CPU.
+- `"2"`, `"4"`, `"8"`, ... — fixed thread count per decoder. Higher = faster single-video decode at the cost of more CPU.
+- `"0"` — let FFmpeg choose automatically. Often gives the **fastest** single-video decode but uses **the most CPU** (may grab many cores per decode).
+
+### The Trade-Off
+
+Decoder threads multiply with pipeline concurrency for total CPU pressure:
+
+```
+effective_CPU_load ≈ pipe_concurrency × decoder_threads
+```
+
+- More decoder threads → lower per-video latency, higher per-video CPU.
+- `"0"` is tempting because it benchmarks fastest in isolation, but in a real pipeline it can blow past the 40% CPU budget, trigger the noisy-neighbour effect, and slow training overall.
+- The right value depends on resolution (4K benefits more from threads than SD), codec, pipeline `concurrency`, and total CPU budget.
+
+### Search Space for Autoresearch
+
+When the pipeline contains a video decode stage, treat decoder threads as a tunable parameter alongside `concurrency`:
+
+1. **Always try** `decoder_options={"threads": "1"}` (default) and `{"threads": "2"}` — frequently 2 threads is the sweet spot for H.264 at HD/4K.
+2. **Explore** `{"threads": "4"}` and `{"threads": "0"}` (auto) when there is CPU headroom (CPU utilization well below 40%) or when pipeline concurrency is low.
+3. **Co-tune** with pipe `concurrency`: when raising decoder threads, lower pipe `concurrency` proportionally to keep `concurrency × decoder_threads` within the CPU budget.
+4. **Reject** configurations that push CPU utilization above 40% even if isolated throughput looks better — the noisy-neighbour effect will cancel the gains.
+5. **Optimize for end-to-end metric** (step time / SM utilization / total throughput), not for single-decode latency. `"0"` often wins microbenchmarks and loses real pipelines.
+
+See `examples/benchmark_video.py` (`load_video_with_config`) for a reference benchmark harness that sweeps decoder threads × worker counts × resolutions.
+
 ## Pickling Constraints (Subprocess Mode)
 
 When using `run_pipeline_in_subprocess()`, all pipeline stage functions must be picklable because they are serialized and sent to the subprocess.
