@@ -257,6 +257,79 @@ def _is_ffmpeg4():
     return vers["libavutil"][0] < 57
 
 
+class TestNvdecStateIsolation(unittest.TestCase):
+    def test_decoder_state_isolation_crop_resize(self) -> None:
+        """Test that decoder state is properly reset between uses.
+
+        This test verifies that crop/resize parameters from one decoding
+        operation don't leak into subsequent operations when using the
+        cached thread-local decoder.
+
+        Without proper reset(), running a decode with crop+resize followed
+        by a decode with only crop would incorrectly apply the previous
+        resize parameters.
+
+        See https://github.com/facebookresearch/spdl/issues/1159
+        """
+        h264 = _get_h264_sample()
+
+        # First decode: crop + resize
+        top1, bottom1, left1, right1 = 40, 80, 100, 60
+        h1 = (240 - top1 - bottom1) // 2
+        w1 = (320 - left1 - right1) // 2
+
+        array1 = _decode_video(
+            h264.path,
+            timestamp=(0.0, 1.0),
+            crop_top=top1,
+            crop_bottom=bottom1,
+            crop_left=left1,
+            crop_right=right1,
+            width=w1,
+            height=h1,
+        )
+
+        self.assertEqual(array1.shape, (25, 3, h1, w1))
+
+        # Second decode: only crop (no resize)
+        # This should NOT be affected by the previous resize parameters
+        top2, bottom2, left2, right2 = 40, 80, 100, 50
+        h2 = 240 - top2 - bottom2
+        w2 = 320 - left2 - right2
+
+        array2 = _decode_video(
+            h264.path,
+            timestamp=(0.0, 1.0),
+            crop_top=top2,
+            crop_bottom=bottom2,
+            crop_left=left2,
+            crop_right=right2,
+        )
+
+        # Verify the second decode has the correct dimensions
+        # (not affected by the first decode's resize)
+        self.assertEqual(
+            array2.shape,
+            (25, 3, h2, w2),
+            f"Expected shape (25, 3, {h2}, {w2}) but got {array2.shape}. "
+            "This indicates state leakage from previous decode operation.",
+        )
+
+        # Also verify against a reference decode with the same crop parameters
+        array_ref = _decode_video(
+            h264.path,
+            timestamp=(0.0, 1.0),
+        )
+
+        for i in range(3):
+            torch.testing.assert_close(
+                array2[:, i],
+                array_ref[:, i, top2 : top2 + h2, left2 : left2 + w2],
+                msg=f"Channel {i} content mismatch. "
+                "This indicates incorrect crop/resize was applied.",
+            )
+
+
 class TestColorConversion(unittest.TestCase):
     @unittest.skipIf(_is_ffmpeg4(), "FFmpeg4 is known to return a different result.")
     def test_color_conversion_rgba(self) -> None:
