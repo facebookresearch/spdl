@@ -22,7 +22,7 @@ import shlex
 import sys
 from pathlib import Path
 
-from spdl.tools.autoresearch.utils import prompts
+from spdl.autoresearch import load_prompt_directory
 from spdl.tools.autoresearch.utils.supervisor import (
     _resolve_supervisor_agent,
     _SupervisorAgent,
@@ -232,8 +232,8 @@ def _build_supervisor_prompt(
     workdir: str | None,
     supervisor: _SupervisorAgent,
 ) -> str:
-    supervisor_prompt = prompts._load_prompt_directory("supervisor")
-    platform_prompt = prompts._load_prompt_directory("platform")
+    supervisor_prompt = load_prompt_directory("supervisor")
+    platform_prompt = load_prompt_directory("platform")
     context = _build_supervisor_context(ns, workdir, supervisor)
     sections = [supervisor_prompt, platform_prompt, context]
     sections = [section for section in sections if section]

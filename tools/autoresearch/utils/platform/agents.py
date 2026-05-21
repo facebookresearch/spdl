@@ -16,7 +16,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .. import claude, prompts
+from spdl.autoresearch import load_knowledge, load_prompt
+
+from .. import claude
 from .types import _AgentResult
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -35,10 +37,10 @@ class _ClaudeAgent:
     """Stateless Claude-backed coding agent."""
 
     def _load_prompt(self, name: str, **kwargs: str) -> str:
-        return prompts._load_prompt(name, **kwargs)
+        return load_prompt(name, **kwargs)
 
     def _load_knowledge(self) -> str:
-        return prompts._load_knowledge()
+        return load_knowledge()
 
     def run(self, prompt: str, workdir: Path, phase: str) -> str:
         return claude._run_claude(prompt, workdir, phase)
@@ -60,10 +62,10 @@ class _CodexAgent:
         self._command = command or ["codex", "exec", "-"]
 
     def _load_prompt(self, name: str, **kwargs: str) -> str:
-        return prompts._load_prompt(name, **kwargs)
+        return load_prompt(name, **kwargs)
 
     def _load_knowledge(self) -> str:
-        return prompts._load_knowledge()
+        return load_knowledge()
 
     def run(self, prompt: str, workdir: Path, phase: str) -> str:
         log_dir = workdir / "logs"
