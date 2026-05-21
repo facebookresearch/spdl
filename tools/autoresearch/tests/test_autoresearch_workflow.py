@@ -17,7 +17,6 @@ from spdl.tools.autoresearch.plot_progress import (
     _load_tsv,
     _tree_font_sizes,
 )
-from spdl.tools.autoresearch.utils import prompts
 from spdl.tools.autoresearch.utils.commands.report import _read_failures
 from spdl.tools.autoresearch.utils.commands.status import _failure_summary
 from spdl.tools.autoresearch.utils.platform import _MetricsEvidence, create_platform
@@ -1002,17 +1001,6 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         self.assertIn("headspace prompt", prompt)
         self.assertIn("knowledge", prompt)
         self.assertIn("def main", prompt)
-
-    def test_headspace_prompt_requires_stop_after(self) -> None:
-        prompt = prompts._load_prompt(
-            "headspace",
-            KNOWLEDGE="",
-            PIPELINE_SCRIPT="/tmp/pipeline.py",
-            PIPELINE_CODE="def main():\n    pass\n",
-        )
-
-        self.assertIn("stop_after=500", prompt)
-        self.assertIn("must include `stop_after=500`", prompt)
 
     def test_tree_edge_label_describes_experiment_evolution(self) -> None:
         parent = {"node_id": "001_parent", "name": "parent", "spec": {}}

@@ -10,8 +10,9 @@ API Reference
    spdl.pipeline
    spdl.pipeline.defs
    spdl.pipeline.config
-   spdl.dataloader
-   spdl.source
-
    spdl.io
    spdl.io.utils
+   spdl.autoresearch
+
+   spdl.dataloader
+   spdl.source
