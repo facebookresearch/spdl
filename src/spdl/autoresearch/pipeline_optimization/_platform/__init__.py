@@ -6,8 +6,8 @@
 
 """Autoresearch platform boundary."""
 
-from .factory import create_platform
-from .types import (
+from ._factory import create_platform
+from ._types import (
     _Artifacts,
     _CodingAgent,
     _Evidence,

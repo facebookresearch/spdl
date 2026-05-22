@@ -29,8 +29,8 @@ should not record durable failures as bare strings.
    flowchart TB
        Run["run.py"]
        Runner["Orchestrator"]
-       Adapter["AutoresearchAdapter"]
-       Store["_AutoresearchStore"]
+       Adapter["PipelineOptimizationWorkflow"]
+       Store["_WorkflowStateStore"]
        Policy["autoresearch_policy"]
        Platform["AutoresearchPlatform"]
        Agent["_CodingAgent"]
@@ -67,15 +67,15 @@ from spdl.autoresearch.core import (
     TERMINAL_STATUSES,
 )
 
-from ..platform import AutoresearchPlatform
-from .analysis_ops import (
+from .._platform import AutoresearchPlatform
+from ._analysis_ops import (
     _analyze_job,
     _update_on_complete,
     _update_summary_and_plot,
 )
-from .failures import _failure_note, _make_failure, _unexpected_failure
-from .planning_ops import _build_initial_nodes, _plan_followups
-from .policy import (
+from ._failures import _failure_note, _make_failure, _unexpected_failure
+from ._planning_ops import _build_initial_nodes, _plan_followups
+from ._policy import (
     _change_summary_for_spec,
     _is_duplicate_spec,
     _node_from_spec,
@@ -86,15 +86,15 @@ from .policy import (
     _spec_from_node,
     _startup_retry_spec,
 )
-from .source_ops import _launch_node, _prepare_node
-from .store import _AutoresearchStore
+from ._source_ops import _launch_node, _prepare_node
+from ._store import _WorkflowStateStore
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
-__all__ = ["AutoresearchAdapter"]
+__all__ = ["PipelineOptimizationWorkflow"]
 
 
-class AutoresearchAdapter:
+class PipelineOptimizationWorkflow:
     """Bridge autoresearch domain logic into the simple work scheduler.
 
     The adapter contract is intentionally small: load specs, checkpoint specs,
@@ -143,7 +143,7 @@ class AutoresearchAdapter:
         self.job_timeout_s = float(config.get("job_timeout_s", 1800))
 
         self._state_lock = asyncio.Lock()
-        self._store = _AutoresearchStore(workdir, state)
+        self._store = _WorkflowStateStore(workdir, state)
 
     def load(self) -> list[TaskSpec]:
         specs = self._store.load_checkpoint()

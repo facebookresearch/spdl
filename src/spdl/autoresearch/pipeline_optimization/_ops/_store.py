@@ -24,7 +24,7 @@ future failure categories remain durable and queryable.
 .. mermaid::
 
    flowchart TB
-       Store["_AutoresearchStore"]
+       Store["_WorkflowStateStore"]
        Checkpoint["engine/checkpoint.json\nresume source of truth"]
        Tree["engine/tree.json"]
        Queue["engine/queue.json\nmonitoring view"]
@@ -52,26 +52,26 @@ from pathlib import Path
 from spdl.autoresearch._common._state import SCHEMA_VERSION, write_state
 from spdl.autoresearch.core import HypothesisNode, TaskSpec
 
-from .policy import (
+from ._policy import (
     _extract_counter,
     _node_from_spec,
     _update_spec_from_node,
 )
 
 __all__ = [
-    "_AutoresearchStore",
+    "_WorkflowStateStore",
     "_write_text_atomic",
 ]
 
 
-class _AutoresearchStore:
+class _WorkflowStateStore:
     """Own durable runner checkpoints and autoresearch monitoring files.
 
     .. mermaid::
 
        sequenceDiagram
-           participant Adapter as AutoresearchAdapter
-           participant Store as _AutoresearchStore
+           participant Adapter as PipelineOptimizationWorkflow
+           participant Store as _WorkflowStateStore
            participant Disk as workdir/engine
 
            Adapter->>Store: save_scheduler_state(queued, running, status)

@@ -56,12 +56,12 @@ from spdl.autoresearch.core import (
     FailureRecord,
     Orchestrator,
 )
-from spdl.tools.autoresearch.utils.platform import (
+from spdl.autoresearch.pipeline_optimization._ops import PipelineOptimizationWorkflow
+from spdl.autoresearch.pipeline_optimization._ops._failures import _make_failure
+from spdl.autoresearch.pipeline_optimization._platform import (
     AutoresearchPlatform,
     create_platform,
 )
-from spdl.tools.autoresearch.utils.workflow import AutoresearchAdapter
-from spdl.tools.autoresearch.utils.workflow.failures import _make_failure
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -374,7 +374,7 @@ def main() -> None:
     state["status"] = "looping"
     write_state(workdir, state)
 
-    adapter = AutoresearchAdapter(
+    adapter = PipelineOptimizationWorkflow(
         workdir=workdir,
         config=config,
         state=state,

@@ -12,16 +12,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from spdl.tools.autoresearch.utils.commands import queue as cmd_queue
-from spdl.tools.autoresearch.utils.platform import (
+from spdl.autoresearch.pipeline_optimization._platform import (
     _MetricsEvidence,
     AutoresearchPlatform,
     create_platform,
 )
-from spdl.tools.autoresearch.utils.platform.agents import (
+from spdl.autoresearch.pipeline_optimization._platform._agents import (
     _MockAgent,
     _parse_agent_result,
 )
+from spdl.tools.autoresearch.utils.commands import queue as cmd_queue
 
 __all__: list[str] = []
 

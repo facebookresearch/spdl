@@ -11,13 +11,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .providers import (
+from ._providers import (
     _create_agent_for_config,
     _find_provider,
     _resolve_providers,
     _validate_common_config,
 )
-from .types import AutoresearchPlatform
+from ._types import AutoresearchPlatform
 
 __all__ = ["create_platform"]
 

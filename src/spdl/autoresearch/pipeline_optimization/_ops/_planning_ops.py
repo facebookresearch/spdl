@@ -16,10 +16,10 @@ from pathlib import Path
 from spdl.autoresearch._common._state import _read_master_table, write_state
 from spdl.autoresearch.core import AnalysisResult, HypothesisNode
 
-from ..platform import AutoresearchPlatform
-from ..platform.agents import _parse_agent_result
-from .common import _current_best_metric, _read_pipeline_code
-from .policy import (
+from .._platform import AutoresearchPlatform
+from .._platform._agents import _parse_agent_result
+from ._common import _current_best_metric, _read_pipeline_code
+from ._policy import (
     _change_summary_for_spec,
     _extract_default_executor_concurrency,
     _extract_total_threads,

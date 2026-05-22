@@ -22,7 +22,7 @@ capability objects without learning any implementation-specific commands.
 .. mermaid::
 
    flowchart LR
-       Workflow["AutoresearchAdapter"]
+       Workflow["PipelineOptimizationWorkflow"]
        Platform["AutoresearchPlatform"]
        _Workspace["_Workspace"]
        _Artifacts["_Artifacts"]
@@ -177,7 +177,7 @@ class AutoresearchPlatform:
     .. mermaid::
 
        flowchart TB
-           Adapter["AutoresearchAdapter"]
+           Adapter["PipelineOptimizationWorkflow"]
            Platform["AutoresearchPlatform"]
            _Workspace["workspace"]
            _Artifacts["artifacts"]
