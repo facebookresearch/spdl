@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import unittest
 
-from spdl.autoresearch import load_knowledge, load_prompt, load_prompt_directory
+from spdl.autoresearch.pipeline_optimization._prompts import (
+    load_knowledge,
+    load_prompt,
+    load_prompt_directory,
+)
 
 
 class LoadPromptTest(unittest.TestCase):

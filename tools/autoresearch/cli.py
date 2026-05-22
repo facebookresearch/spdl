@@ -22,7 +22,7 @@ import shlex
 import sys
 from pathlib import Path
 
-from spdl.autoresearch import load_prompt_directory
+from spdl.autoresearch.pipeline_optimization._prompts import load_prompt_directory
 from spdl.tools.autoresearch.utils.supervisor import (
     _resolve_supervisor_agent,
     _SupervisorAgent,
