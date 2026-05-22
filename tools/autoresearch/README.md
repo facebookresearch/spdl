@@ -80,7 +80,7 @@ adapter.py  asyncio.wait(FIRST_COMPLETED)
 
 ### Engine Design
 
-The runner (`utils/runner.py`) is generic and domain-agnostic. It knows nothing about SPDL, coding agents, source control, local subprocesses, training jobs, metrics, or hypothesis planning. It only runs serializable `WorkSpec` objects as coroutines, checkpoints queued/running work, and persists an `interrupted` checkpoint when cancellation reaches the process.
+The runner (`core/_orchestrator.py`) is generic and domain-agnostic. It knows nothing about SPDL, coding agents, source control, local subprocesses, training jobs, metrics, or hypothesis planning. It only runs serializable `WorkSpec` objects as coroutines, checkpoints queued/running work, and persists an `interrupted` checkpoint when cancellation reaches the process.
 
 Autoresearch behavior belongs in the workflow side of the boundary:
 

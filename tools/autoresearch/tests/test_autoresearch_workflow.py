@@ -12,6 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from spdl.autoresearch.core import TaskSpec
 from spdl.tools.autoresearch.plot_progress import (
     _edge_label,
     _load_tsv,
@@ -22,7 +23,6 @@ from spdl.tools.autoresearch.utils.commands.status import _failure_summary
 from spdl.tools.autoresearch.utils.platform import _MetricsEvidence, create_platform
 from spdl.tools.autoresearch.utils.platform.agents import _MockAgent
 from spdl.tools.autoresearch.utils.platform.local import _summarize_error
-from spdl.tools.autoresearch.utils.runner import _WorkSpec
 from spdl.tools.autoresearch.utils.state import (
     _append_master_row,
     _normalize_config,
@@ -181,8 +181,8 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
         self.assertIsNone(selected)
 
-    def _load_node(self, spec: _WorkSpec) -> _HypothesisNode:
-        """Extract node from a WorkSpec with a safe dict cast for Pyre."""
+    def _load_node(self, spec: TaskSpec) -> _HypothesisNode:
+        """Extract node from a TaskSpec with a safe dict cast for Pyre."""
         node_data = spec.payload["node"]
         assert isinstance(node_data, dict)
         return _HypothesisNode.from_dict(node_data)
@@ -643,9 +643,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                 (workdir / "engine" / "checkpoint.json").read_text()
             )
             active = json.loads((workdir / "engine" / "active.json").read_text())
-            running_node = _node_from_spec(
-                _WorkSpec.from_dict(checkpoint["running"][0])
-            )
+            running_node = _node_from_spec(TaskSpec.from_dict(checkpoint["running"][0]))
 
             self.assertEqual("remote_job", running_node.job_id)
             self.assertEqual("000_baseline", active[0]["node_id"])

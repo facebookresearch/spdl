@@ -18,7 +18,7 @@ testable, and infrastructure swappable.
    flowchart TB
        CLI["python cli.py"]
        Supervisor["Supervisor agent<br>(interactive)"]
-       Engine["AsyncWorkEngine<br>(runner.py)"]
+       Engine["Orchestrator<br>(runner.py)"]
        Adapter["AutoresearchAdapter<br>(workflow/)"]
        Policy["policy.py"]
        Store["store.py"]
@@ -78,15 +78,15 @@ remote job.
 Async Work Engine
 -----------------
 
-The generic runner (``utils/runner.py``) knows nothing about SPDL,
+The generic runner (``core/_orchestrator.py``) knows nothing about SPDL,
 training jobs, source control, metrics, or hypothesis planning. It
-operates on serializable ``_WorkSpec`` objects and a ``_WorkAdapter``
+operates on serializable ``TaskSpec`` objects and a ``WorkflowProtocol``
 protocol:
 
-- Maintains a priority queue of pending ``_WorkSpec`` objects.
+- Maintains a priority queue of pending ``TaskSpec`` objects.
 - Starts up to ``max_concurrency`` coroutines via the adapter.
 - Waits for the first coroutine to complete.
-- Passes completed ``_WorkResult`` objects (which may contain child
+- Passes completed ``TaskResult`` objects (which may contain child
   specs) back to the adapter and re-queues children.
 - Checkpoints queued and running specs on cancellation.
 
@@ -99,7 +99,7 @@ Workflow
 --------
 
 The autoresearch workflow (``utils/workflow/``) is the domain side of
-the boundary. It turns an experiment ``_WorkSpec`` into a coroutine
+the boundary. It turns an experiment ``TaskSpec`` into a coroutine
 that performs the full experiment lifecycle:
 
 - Restore or prepare the source tree.
@@ -109,12 +109,12 @@ that performs the full experiment lifecycle:
 - Collect metrics and run coding agent analysis.
 - Record state, master-table rows, findings, and plots.
 - Ask the coding agent for follow-up experiments and return them as
-  child ``_WorkSpec`` objects.
+  child ``TaskSpec`` objects.
 
 The workflow is split into focused modules:
 
 - **adapter.py** -- the ``AutoresearchAdapter`` that implements
-  ``_WorkAdapter`` and orchestrates the experiment coroutine.
+  ``WorkflowProtocol`` and orchestrates the experiment coroutine.
 - **policy.py** -- deterministic decisions (planning gates, duplicate
   filtering, stall detection) expressed as pure functions that can be
   unit tested without infrastructure.

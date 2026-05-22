@@ -9,78 +9,77 @@ from __future__ import annotations
 import asyncio
 import unittest
 
-from spdl.tools.autoresearch.utils.runner import (
-    _WorkResult,
-    _WorkSpec,
-    AsyncWorkEngine,
-)
+from spdl.autoresearch.core import Orchestrator, TaskResult, TaskSpec
 
 __all__: list[str] = []
 
 
 class _FakeAdapter:
-    def __init__(self, specs: list[_WorkSpec]) -> None:
+    def __init__(self, specs: list[TaskSpec]) -> None:
         self.specs = specs
         self.started: list[str] = []
         self.checkpoints: list[tuple[list[str], list[str], str]] = []
-        self.children: dict[str, list[_WorkSpec]] = {}
+        self.children: dict[str, list[TaskSpec]] = {}
         self.block = False
 
-    def load(self) -> list[_WorkSpec]:
+    def load(self) -> list[TaskSpec]:
         return self.specs
 
     def checkpoint(
         self,
-        queued: list[_WorkSpec],
-        running: list[_WorkSpec],
+        queued: list[TaskSpec],
+        running: list[TaskSpec],
         status: str,
     ) -> None:
         self.checkpoints.append(
             ([spec.id for spec in queued], [spec.id for spec in running], status)
         )
 
-    async def make_coro(self, spec: _WorkSpec) -> _WorkResult:
+    async def make_coro(self, spec: TaskSpec) -> TaskResult:
         self.started.append(spec.id)
         if self.block:
             await asyncio.sleep(60)
-        return _WorkResult(children=self.children.get(spec.id, []))
+        return TaskResult(children=self.children.get(spec.id, []))
 
-    async def on_result(self, spec: _WorkSpec, result: _WorkResult) -> list[_WorkSpec]:
+    async def on_result(self, spec: TaskSpec, result: TaskResult) -> list[TaskSpec]:
         return result.children
 
 
-class _SimpleEngineTest(unittest.IsolatedAsyncioTestCase):
+class OrchestratorTest(unittest.IsolatedAsyncioTestCase):
     async def test_priority_order_lowest_first(self) -> None:
+        """Specs are executed in ascending priority order (lowest value first)."""
         adapter = _FakeAdapter(
             [
-                _WorkSpec(id="slow", priority=10),
-                _WorkSpec(id="first", priority=-1),
-                _WorkSpec(id="middle", priority=5),
+                TaskSpec(id="slow", priority=10),
+                TaskSpec(id="first", priority=-1),
+                TaskSpec(id="middle", priority=5),
             ]
         )
 
-        await AsyncWorkEngine(adapter=adapter, max_concurrency=1).run()
+        await Orchestrator(workflow=adapter, max_concurrency=1).run()
 
         self.assertEqual(["first", "middle", "slow"], adapter.started)
         self.assertEqual(([], [], "stopped"), adapter.checkpoints[-1])
 
     async def test_completion_enqueues_children(self) -> None:
-        adapter = _FakeAdapter([_WorkSpec(id="root", priority=0)])
+        """Child specs returned by a completed item are enqueued and executed."""
+        adapter = _FakeAdapter([TaskSpec(id="root", priority=0)])
         adapter.children["root"] = [
-            _WorkSpec(id="child_a", priority=1),
-            _WorkSpec(id="child_b", priority=2),
+            TaskSpec(id="child_a", priority=1),
+            TaskSpec(id="child_b", priority=2),
         ]
 
-        await AsyncWorkEngine(adapter=adapter, max_concurrency=1).run()
+        await Orchestrator(workflow=adapter, max_concurrency=1).run()
 
         self.assertEqual(["root", "child_a", "child_b"], adapter.started)
         self.assertEqual(([], [], "stopped"), adapter.checkpoints[-1])
 
     async def test_cancelled_error_persists_interrupted_state(self) -> None:
-        adapter = _FakeAdapter([_WorkSpec(id="running", priority=0)])
+        """Cancellation checkpoints running specs with 'interrupted' status."""
+        adapter = _FakeAdapter([TaskSpec(id="running", priority=0)])
         adapter.block = True
         task = asyncio.create_task(
-            AsyncWorkEngine(adapter=adapter, max_concurrency=1).run()
+            Orchestrator(workflow=adapter, max_concurrency=1).run()
         )
 
         while not adapter.checkpoints:
@@ -91,15 +90,16 @@ class _SimpleEngineTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(([], ["running"], "interrupted"), adapter.checkpoints[-1])
 
     async def test_checkpoint_resume_golden_lifecycle(self) -> None:
+        """An interrupted engine can resume from checkpointed state and complete."""
         first = _FakeAdapter(
             [
-                _WorkSpec(id="running", priority=0),
-                _WorkSpec(id="queued", priority=1),
+                TaskSpec(id="running", priority=0),
+                TaskSpec(id="queued", priority=1),
             ]
         )
         first.block = True
         task = asyncio.create_task(
-            AsyncWorkEngine(adapter=first, max_concurrency=1).run()
+            Orchestrator(workflow=first, max_concurrency=1).run()
         )
 
         while not first.checkpoints:
@@ -113,11 +113,11 @@ class _SimpleEngineTest(unittest.IsolatedAsyncioTestCase):
         )
 
         resumed_specs = [
-            _WorkSpec(id=spec_id, priority=0 if spec_id == "running" else 1)
+            TaskSpec(id=spec_id, priority=0 if spec_id == "running" else 1)
             for spec_id in running_ids + queued_ids
         ]
         resumed = _FakeAdapter(resumed_specs)
-        await AsyncWorkEngine(adapter=resumed, max_concurrency=1).run()
+        await Orchestrator(workflow=resumed, max_concurrency=1).run()
 
         self.assertEqual("interrupted", status)
         self.assertEqual(["running", "queued"], resumed.started)

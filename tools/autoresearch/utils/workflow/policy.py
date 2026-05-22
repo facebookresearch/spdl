@@ -22,7 +22,7 @@ or LLM calls.
 .. mermaid::
 
    flowchart LR
-       Inputs["_WorkSpec / _HypothesisNode / state"]
+       Inputs["TaskSpec / _HypothesisNode / state"]
        Policy["pure policy helpers"]
        Decisions["workflow decisions"]
        Tests["unit tests"]
@@ -41,7 +41,8 @@ import re
 import shlex
 from collections.abc import Iterable, Mapping
 
-from ..runner import _WorkSpec
+from spdl.autoresearch.core import TaskSpec
+
 from ..types import _HypothesisNode, _TERMINAL_STATUSES, FailureKind
 
 __all__ = [
@@ -473,9 +474,9 @@ def _startup_retry_spec(node: _HypothesisNode, config: dict) -> dict | None:
     return retry
 
 
-def _spec_from_node(node: _HypothesisNode) -> _WorkSpec:
+def _spec_from_node(node: _HypothesisNode) -> TaskSpec:
     node.spec["change_summary"] = _change_summary_for_spec(node.spec)
-    return _WorkSpec(
+    return TaskSpec(
         id=node.node_id,
         priority=node.priority,
         kind=_KIND_EXPERIMENT,
@@ -483,14 +484,14 @@ def _spec_from_node(node: _HypothesisNode) -> _WorkSpec:
     )
 
 
-def _node_from_spec(spec: _WorkSpec) -> _HypothesisNode:
+def _node_from_spec(spec: TaskSpec) -> _HypothesisNode:
     node_data = spec.payload.get("node", {})
     if not isinstance(node_data, dict):
         raise ValueError(f"Work spec {spec.id} has no node payload")
     return _HypothesisNode.from_dict(node_data)
 
 
-def _update_spec_from_node(spec: _WorkSpec, node: _HypothesisNode) -> None:
+def _update_spec_from_node(spec: TaskSpec, node: _HypothesisNode) -> None:
     spec.id = node.node_id
     spec.priority = node.priority
     spec.kind = _KIND_EXPERIMENT

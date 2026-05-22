@@ -11,7 +11,7 @@ Design note
 
 This module owns files under ``<workdir>/engine`` and the persistent
 ``state.json`` view written by ``state.py``. ``checkpoint.json`` is the resume
-source of truth for queued and running ``_WorkSpec`` objects; ``queue.json`` and
+source of truth for queued and running ``TaskSpec`` objects; ``queue.json`` and
 ``active.json`` are compatibility views for humans and monitoring tools.
 
 Keep persistence details here instead of spreading JSON writes across the
@@ -50,7 +50,8 @@ import os
 import time
 from pathlib import Path
 
-from ..runner import _WorkSpec
+from spdl.autoresearch.core import TaskSpec
+
 from ..state import SCHEMA_VERSION, write_state
 from ..types import _HypothesisNode
 from .policy import (
@@ -89,19 +90,19 @@ class _AutoresearchStore:
         self.engine_dir = workdir / "engine"
         self.nodes_dir = self.engine_dir / "nodes"
         self.tree: dict[str, _HypothesisNode] = {}
-        self.queued: list[_WorkSpec] = []
-        self.running: list[_WorkSpec] = []
+        self.queued: list[TaskSpec] = []
+        self.running: list[TaskSpec] = []
         self.status = "running"
         self.node_counter = 0
 
-    def load_checkpoint(self) -> list[_WorkSpec] | None:
+    def load_checkpoint(self) -> list[TaskSpec] | None:
         checkpoint = self.engine_dir / "checkpoint.json"
         if not checkpoint.exists():
             return None
         data = json.loads(checkpoint.read_text())
         self._validate_checkpoint(data)
-        self.queued = [_WorkSpec.from_dict(spec) for spec in data.get("queued", [])]
-        self.running = [_WorkSpec.from_dict(spec) for spec in data.get("running", [])]
+        self.queued = [TaskSpec.from_dict(spec) for spec in data.get("queued", [])]
+        self.running = [TaskSpec.from_dict(spec) for spec in data.get("running", [])]
         specs = self.queued + self.running
         self.status = str(data.get("status", "running"))
         for spec in specs:
@@ -118,12 +119,12 @@ class _AutoresearchStore:
             seen = set()
             for index, raw_spec in enumerate(specs):
                 if not isinstance(raw_spec, dict):
-                    raise ValueError(f"{key}[{index}] must be a _WorkSpec object")
+                    raise ValueError(f"{key}[{index}] must be a TaskSpec object")
                 spec_id = raw_spec.get("id")
                 if not isinstance(spec_id, str) or not spec_id:
                     raise ValueError(f"{key}[{index}] must have a non-empty string id")
                 if spec_id in seen:
-                    raise ValueError(f"Duplicate _WorkSpec id in {key}: {spec_id}")
+                    raise ValueError(f"Duplicate TaskSpec id in {key}: {spec_id}")
                 seen.add(spec_id)
                 payload = raw_spec.get("payload")
                 if not isinstance(payload, dict) or not isinstance(
@@ -134,8 +135,8 @@ class _AutoresearchStore:
 
     def save_scheduler_state(
         self,
-        queued: list[_WorkSpec],
-        running: list[_WorkSpec],
+        queued: list[TaskSpec],
+        running: list[TaskSpec],
         status: str,
     ) -> None:
         self.queued = queued
@@ -145,7 +146,7 @@ class _AutoresearchStore:
             self.upsert_node(_node_from_spec(spec))
         self.write_all()
 
-    def update_spec(self, spec: _WorkSpec, node: _HypothesisNode) -> None:
+    def update_spec(self, spec: TaskSpec, node: _HypothesisNode) -> None:
         _update_spec_from_node(spec, node)
         self.upsert_node(node)
         self._replace_spec(spec, self.queued)
@@ -159,7 +160,7 @@ class _AutoresearchStore:
         self.tree[node.node_id] = node
         self.node_counter = max(self.node_counter, _extract_counter(node.node_id) + 1)
 
-    def add_child(self, parent: _HypothesisNode, spec: _WorkSpec) -> None:
+    def add_child(self, parent: _HypothesisNode, spec: TaskSpec) -> None:
         node = _node_from_spec(spec)
         self.upsert_node(node)
         stored_parent = self.tree.get(parent.node_id)
@@ -182,7 +183,7 @@ class _AutoresearchStore:
         self.state["status"] = self.status
         write_state(self.workdir, self.state)
 
-    def _replace_spec(self, spec: _WorkSpec, specs: list[_WorkSpec]) -> None:
+    def _replace_spec(self, spec: TaskSpec, specs: list[TaskSpec]) -> None:
         for index, existing in enumerate(specs):
             if existing.id == spec.id:
                 specs[index] = spec

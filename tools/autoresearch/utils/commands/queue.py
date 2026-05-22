@@ -10,7 +10,7 @@ import argparse
 import json
 from pathlib import Path
 
-from ..runner import _WorkSpec
+from spdl.autoresearch.core import TaskSpec
 
 __all__ = ["_run"]
 
@@ -32,7 +32,7 @@ def _run(args: list[str]) -> None:
     ns = _parse_args(args)
     checkpoint = Path(ns.workdir).resolve() / "engine" / "checkpoint.json"
     data = _read_checkpoint(checkpoint)
-    queued = [_WorkSpec.from_dict(spec) for spec in data.get("queued", [])]
+    queued = [TaskSpec.from_dict(spec) for spec in data.get("queued", [])]
 
     if ns.action == "list":
         for spec in sorted(queued, key=lambda item: item.priority):

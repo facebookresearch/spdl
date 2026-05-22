@@ -16,7 +16,7 @@ and hypothesis-planning decisions out of ``runner.py``.
 
 The workflow is the right place to sequence domain operations: restore source,
 apply experiment changes, build, launch, poll, collect metrics, analyze, update
-state, and produce child ``_WorkSpec`` objects. Infrastructure-specific work
+state, and produce child ``TaskSpec`` objects. Infrastructure-specific work
 should sit behind ``AutoresearchPlatform`` capability objects. Do not turn the
 runner adapter boundary back into a large flat callback interface.
 
@@ -29,7 +29,7 @@ should not record durable failures as bare strings.
 
    flowchart TB
        Run["run.py"]
-       Runner["AsyncWorkEngine"]
+       Runner["Orchestrator"]
        Adapter["AutoresearchAdapter"]
        Store["_AutoresearchStore"]
        Policy["autoresearch_policy"]
@@ -38,12 +38,12 @@ should not record durable failures as bare strings.
 
        Run --> Runner
        Run --> Adapter
-       Runner -->|"_WorkSpec coroutine"| Adapter
+       Runner -->|"TaskSpec coroutine"| Adapter
        Adapter --> Store
        Adapter --> Policy
        Adapter --> Platform
        Platform --> Agent
-       Adapter -->|"_WorkResult(children)"| Runner
+       Adapter -->|"TaskResult(children)"| Runner
 """
 
 from __future__ import annotations
@@ -55,8 +55,9 @@ from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any
 
+from spdl.autoresearch.core import TaskResult, TaskSpec
+
 from ..platform import AutoresearchPlatform
-from ..runner import _WorkResult, _WorkSpec
 from ..state import _append_master_row
 from ..types import (
     _AnalysisResult,
@@ -105,7 +106,7 @@ class AutoresearchAdapter:
     .. mermaid::
 
        flowchart LR
-           Spec["_WorkSpec"]
+           Spec["TaskSpec"]
            Node["_HypothesisNode"]
            Prepare["prepare source/build"]
            Launch["launch or resume job"]
@@ -113,7 +114,7 @@ class AutoresearchAdapter:
            Failure["FailureRecord"]
            Analyze["collect metrics + analyze"]
            Store["update store/views"]
-           Children["child WorkSpecs"]
+           Children["child TaskSpecs"]
 
            Spec --> Node
            Node --> Prepare
@@ -144,7 +145,7 @@ class AutoresearchAdapter:
         self._state_lock = asyncio.Lock()
         self._store = _AutoresearchStore(workdir, state)
 
-    def load(self) -> list[_WorkSpec]:
+    def load(self) -> list[TaskSpec]:
         specs = self._store.load_checkpoint()
         if specs is not None:
             _LG.info("Loaded %d work specs from checkpoint", len(specs))
@@ -156,16 +157,16 @@ class AutoresearchAdapter:
 
     def checkpoint(
         self,
-        queued: list[_WorkSpec],
-        running: list[_WorkSpec],
+        queued: list[TaskSpec],
+        running: list[TaskSpec],
         status: str,
     ) -> None:
         self._store.save_scheduler_state(queued, running, status)
 
-    def make_coro(self, spec: _WorkSpec) -> Coroutine[Any, Any, _WorkResult]:
+    def make_coro(self, spec: TaskSpec) -> Coroutine[Any, Any, TaskResult]:
         return self.run_experiment(spec)
 
-    async def on_result(self, spec: _WorkSpec, result: _WorkResult) -> list[_WorkSpec]:
+    async def on_result(self, spec: TaskSpec, result: TaskResult) -> list[TaskSpec]:
         children = []
         for child in result.children:
             node = _node_from_spec(child)
@@ -185,7 +186,7 @@ class AutoresearchAdapter:
             children.append(child)
         return children
 
-    async def run_experiment(self, spec: _WorkSpec) -> _WorkResult:
+    async def run_experiment(self, spec: TaskSpec) -> TaskResult:
         node = _node_from_spec(spec)
         self._store.upsert_node(node)
         try:
@@ -195,7 +196,7 @@ class AutoresearchAdapter:
             raise
         except _AutoresearchError as error:
             await self._record_failure(spec, node, error.failure)
-            return _WorkResult()
+            return TaskResult()
         except Exception as error:
             _LG.exception("Experiment %s failed unexpectedly", node.node_id)
             await self._record_failure(
@@ -203,13 +204,13 @@ class AutoresearchAdapter:
                 node,
                 _unexpected_failure(error, job_id=node.job_id),
             )
-            return _WorkResult()
+            return TaskResult()
 
     async def _run_experiment_inner(
         self,
-        spec: _WorkSpec,
+        spec: TaskSpec,
         node: _HypothesisNode,
-    ) -> _WorkResult:
+    ) -> TaskResult:
         if node.status == "analyzing" and node.job_id:
             status = str(spec.payload.get("terminal_status", "completed"))
             return await self._analyze_record_and_plan(spec, node, status)
@@ -229,7 +230,7 @@ class AutoresearchAdapter:
                     "Prepare step failed",
                 ),
             )
-            return _WorkResult()
+            return TaskResult()
 
         node.job_id = await asyncio.to_thread(
             _launch_node,
@@ -247,7 +248,7 @@ class AutoresearchAdapter:
         status = await self._poll_until_terminal(spec, node)
         return await self._analyze_record_and_plan(spec, node, status)
 
-    async def _prepare(self, spec: _WorkSpec, node: _HypothesisNode) -> bool:
+    async def _prepare(self, spec: TaskSpec, node: _HypothesisNode) -> bool:
         async with self._state_lock:
             node.status = "preparing"
             self._store.update_spec(spec, node)
@@ -264,7 +265,7 @@ class AutoresearchAdapter:
             self._store.update_spec(spec, node)
             return prepared
 
-    async def _poll_until_terminal(self, spec: _WorkSpec, node: _HypothesisNode) -> str:
+    async def _poll_until_terminal(self, spec: TaskSpec, node: _HypothesisNode) -> str:
         if node.launched_at is None:
             node.launched_at = time.monotonic()
 
@@ -332,10 +333,10 @@ class AutoresearchAdapter:
 
     async def _analyze_record_and_plan(
         self,
-        spec: _WorkSpec,
+        spec: TaskSpec,
         node: _HypothesisNode,
         status: str,
-    ) -> _WorkResult:
+    ) -> TaskResult:
         async with self._state_lock:
             node.status = "analyzing"
             self._store.update_spec(spec, node)
@@ -373,11 +374,11 @@ class AutoresearchAdapter:
             retry_spec = _startup_retry_spec(node, self.config)
             if retry_spec is not None:
                 self._store.write_all()
-                return _WorkResult(children=[self._create_child_spec(node, retry_spec)])
+                return TaskResult(children=[self._create_child_spec(node, retry_spec)])
 
             planning_node = _select_planning_node(node, self._store.tree)
             if planning_node is None:
-                return _WorkResult()
+                return TaskResult()
 
             planning_result = result
             if planning_node.node_id != node.node_id:
@@ -409,11 +410,11 @@ class AutoresearchAdapter:
                 self._create_child_spec(planning_node, child) for child in followups
             ]
             self._store.write_all()
-            return _WorkResult(children=children)
+            return TaskResult(children=children)
 
     async def _record_failure(
         self,
-        spec: _WorkSpec,
+        spec: TaskSpec,
         node: _HypothesisNode,
         failure: FailureRecord,
     ) -> None:
@@ -460,9 +461,7 @@ class AutoresearchAdapter:
         self._store.write_all()
         return nodes
 
-    def _create_child_spec(
-        self, parent: _HypothesisNode, child_spec: dict
-    ) -> _WorkSpec:
+    def _create_child_spec(self, parent: _HypothesisNode, child_spec: dict) -> TaskSpec:
         name = child_spec.get("name", f"exp_{self._store.node_counter}")
         child_spec["change_summary"] = _change_summary_for_spec(child_spec)
         actual_parent = self._resolve_parent(parent, child_spec)

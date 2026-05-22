@@ -4,6 +4,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Automated experiment engine for optimizing SPDL data loading pipelines."""
+"""Framework for automated, LLM-driven experiment workflows.
+
+Provides reusable infrastructure for running automated research loops:
+
+- :py:mod:`~spdl.autoresearch.core`: a domain-neutral async work scheduler.
+"""
 
 __all__: list[str] = []
