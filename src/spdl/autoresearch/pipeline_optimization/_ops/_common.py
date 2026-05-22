@@ -39,22 +39,28 @@ def _is_headspace_entry(entry: dict) -> bool:
 
 
 def _current_best_metric(state: dict) -> tuple[str, float]:
-    best_step = float("inf")
-    best_dur = float("inf")
+    """Scan history and return the best metric seen so far.
+
+    Higher values are always better (throughput is positive,
+    step_time/duration are negated by ``_compare_metric_value``).
+    """
+    best_type: str = "none"
+    best_val: float = float("-inf")
     for entry in state.get("history", []):
         if _is_headspace_entry(entry):
             continue
         structured = entry.get("structured") or {}
         metrics = structured.get("metrics", {})
-        step = metrics.get("steady_step_time_ms")
-        if isinstance(step, (int, float)) and step > 0:
-            best_step = min(best_step, float(step))
-        dur = metrics.get("duration_s")
-        if isinstance(dur, (int, float)) and dur > 0:
-            best_dur = min(best_dur, float(dur))
-
-    if best_step < float("inf"):
-        return ("step_ms", best_step)
-    if best_dur < float("inf"):
-        return ("duration_s", best_dur)
-    return ("none", float("inf"))
+        cur_type, cur_val = _compare_metric_value(metrics)
+        if cur_type == "none":
+            continue
+        # Prefer throughput over step_ms over duration_s.
+        # If types match, take the higher value (= better).
+        if best_type == "none" or (cur_type == best_type and cur_val > best_val):
+            best_type = cur_type
+            best_val = cur_val
+        elif cur_type == "throughput" and best_type != "throughput":
+            # Throughput always wins over fallback metrics.
+            best_type = cur_type
+            best_val = cur_val
+    return (best_type, best_val)

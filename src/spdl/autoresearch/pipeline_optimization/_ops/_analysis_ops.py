@@ -40,7 +40,7 @@ from ._common import (
     _read_pipeline_code,
 )
 from ._failures import _classify_terminal_job_failure, _failure_note, _make_failure
-from ._policy import _change_summary_for_spec
+from ._policy import _change_summary_for_spec, _format_best_metric
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -137,7 +137,7 @@ def _analyze_job(
     )
     best_type, best_val = _current_best_metric(state)
     improved = cur_type != "none" and (
-        best_type == "none" or (cur_type == best_type and cur_val < best_val)
+        best_type == "none" or (cur_type == best_type and cur_val > best_val)
     )
 
     return AnalysisResult(
@@ -218,7 +218,7 @@ def _update_on_complete(
     if (
         not _is_headspace_entry({"name": node.name})
         and cur_type != "none"
-        and (best_type == "none" or (cur_type == best_type and cur_val < best_val))
+        and (best_type == "none" or (cur_type == best_type and cur_val > best_val))
     ):
         state["current_best"] = node.node_id
 
@@ -283,20 +283,24 @@ def _update_summary_and_plot(workdir: Path, state: dict) -> None:
     best_metric = state.get("best_metric")
     plateau = state.get("plateau_count", 0)
 
-    best_str = f"{best_metric:.0f}ms" if best_metric else "N/A"
+    best_type, best_val = _current_best_metric(state)
+    best_str = _format_best_metric(best_type, best_val)
     lines = [
         "# Autoresearch Progress\n",
         f"**Total experiments**: {len(history)}",
         f"**Current best**: {best}",
-        f"**Best steady step time**: {best_str}",
+        f"**Best metric**: {best_str}",
         f"**Plateau count**: {plateau}\n",
         "## Recent Results\n",
     ]
     for entry in history[-5:]:
         metrics = (entry.get("structured") or {}).get("metrics", {})
+        tput = metrics.get("throughput_samples_per_s")
         step = metrics.get("steady_step_time_ms") or metrics.get("step_time_ms")
         dur = metrics.get("duration_s")
         metric_parts = []
+        if tput is not None:
+            metric_parts.append(f"throughput={tput:.1f} samples/s")
         if step is not None:
             metric_parts.append(f"step={step}ms")
         if dur is not None:

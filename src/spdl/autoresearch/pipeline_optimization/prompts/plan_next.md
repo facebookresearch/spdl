@@ -14,7 +14,7 @@ __KNOWLEDGE__
 **Cached image**: `__CACHED_IMAGE__`
 
 ### Progress
-- **Best steady step time so far**: __BEST_METRIC__ (lower is better; may be in ms or seconds depending on source)
+- **Best metric so far**: __BEST_METRIC__ (higher is better — throughput in samples/s when available, otherwise negated step time)
 - **Plateau count**: __PLATEAU_COUNT__ of __PATIENCE__ (consecutive iterations without improvement based on steady-state metrics)
 
 ### Best Practices Checklist
@@ -57,12 +57,15 @@ __NOTES__
 
 ## Instructions
 
-Based on the results so far, decide the next action. **Your goal is to minimize steady-state step time** (which directly determines production training throughput).
+Based on the results so far, decide the next action. **Your goal is to maximize sample throughput** (`throughput_samples_per_s`), which is the true measure of training speed.
+
+**IMPORTANT**: Do NOT optimize step time alone — reducing batch size lowers step time but may reduce total sample throughput. Always compare experiments by `throughput_samples_per_s`. A configuration with higher step time but higher throughput is BETTER.
 
 **Metric priority for comparing experiments:**
-1. **Steady-state step time** (`steady_step_time_ms`) — the most reliable metric. Median step time after discarding warmup steps.
-2. **Steady-state SM utilization** (`steady_sm_utilization_pct`) — proxy when step time is unavailable. Use p50/p75 from system metrics, NOT the raw average (which is diluted by the zero-utilization init phase).
-3. **Raw job duration** — least reliable for short experiments due to variable init times. Only use when neither of the above is available.
+1. **Sample throughput** (`throughput_samples_per_s`) — the primary metric. Total samples processed per second across all ranks. Higher is better.
+2. **Steady-state step time** (`steady_step_time_ms`) — secondary metric, only useful when comparing runs with the same batch size. Lower is better.
+3. **Steady-state SM utilization** (`steady_sm_utilization_pct`) — proxy when neither of the above is available.
+4. **Raw job duration** — least reliable for short experiments due to variable init times.
 
 Do NOT compare experiments using raw average SM utilization — it is misleading for short experiments where the initialization phase (zero GPU activity) significantly dilutes the average.
 

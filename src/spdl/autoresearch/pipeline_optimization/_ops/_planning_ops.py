@@ -21,8 +21,10 @@ from .._platform._agents import _parse_agent_result
 from ._common import _current_best_metric, _read_pipeline_code
 from ._policy import (
     _change_summary_for_spec,
+    _compare_metric_value,
     _extract_default_executor_concurrency,
     _extract_total_threads,
+    _format_best_metric,
     _validate_thread_budget as _policy_validate_thread_budget,
 )
 
@@ -65,8 +67,8 @@ def _thread_cap_for_experiment(state: dict, config: dict) -> int:
     results_below_cap = []
     for entry in state.get("history", []):
         metrics = (entry.get("structured") or {}).get("metrics", {})
-        step = metrics.get("steady_step_time_ms")
-        if not isinstance(step, (int, float)) or step <= 0:
+        metric_type, metric_val = _compare_metric_value(metrics)
+        if metric_type == "none":
             continue
         run_id = entry.get("run_id", "")
         name = entry.get("name", "")
@@ -81,14 +83,14 @@ def _thread_cap_for_experiment(state: dict, config: dict) -> int:
         if total is None:
             continue
         if total >= _MAX_THREADS_PER_RANK_DEFAULT:
-            results_at_cap.append(step)
+            results_at_cap.append(metric_val)
         else:
-            results_below_cap.append(step)
+            results_below_cap.append(metric_val)
 
     if not results_at_cap:
         return _MAX_THREADS_PER_RANK_DEFAULT
-    best_at_cap = min(results_at_cap)
-    if results_below_cap and best_at_cap < min(results_below_cap):
+    best_at_cap = max(results_at_cap)  # higher is better
+    if results_below_cap and best_at_cap > max(results_below_cap):
         return _MAX_THREADS_PER_RANK_EXTENDED
     return _MAX_THREADS_PER_RANK_DEFAULT
 
@@ -184,7 +186,7 @@ def _get_plan(
         MAX_ITERATIONS=str(max_iter),
         PATIENCE=str(patience),
         PLATEAU_COUNT=str(plateau_count),
-        BEST_METRIC=str(state.get("best_metric") or "N/A"),
+        BEST_METRIC=_format_best_metric(*_current_best_metric(state)),
         BEST_PRACTICES_TRIED=", ".join(state.get("best_practices_tried", [])) or "none",
         BEST_PRACTICES_REMAINING=", ".join(untried) or "none",
         BASE_LAUNCH_COMMAND=config.get("base_launch_command", ""),
@@ -271,8 +273,8 @@ def _plan_followups(
     iteration = state.get("iteration", 0) + 1
 
     _, cur_best = _current_best_metric(state)
-    prev_best_at_last_plan = state.get("_best_at_last_plan", float("inf"))
-    if cur_best < prev_best_at_last_plan:
+    prev_best_at_last_plan = state.get("_best_at_last_plan", float("-inf"))
+    if cur_best > prev_best_at_last_plan:
         state["plateau_count"] = 0
         state["best_metric"] = cur_best
     else:
