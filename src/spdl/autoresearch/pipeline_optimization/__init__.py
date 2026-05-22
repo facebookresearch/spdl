@@ -4,6 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Automated experiment engine for optimizing SPDL data loading pipelines."""
+"""SPDL pipeline optimization workflow for autoresearch."""
 
 __all__: list[str] = []

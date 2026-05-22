@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from spdl.autoresearch import load_knowledge, load_prompt
+from spdl.autoresearch.pipeline_optimization._prompts import load_knowledge, load_prompt
 
 from .. import claude
 from .types import _AgentResult
