@@ -14,6 +14,7 @@ API Reference
    spdl.io.utils
    spdl.autoresearch
    spdl.autoresearch.core
+   spdl.autoresearch.pipeline_optimization
 
    spdl.dataloader
    spdl.source

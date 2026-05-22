@@ -23,8 +23,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast, Protocol
 
-from .agents import _create_agent
-from .local import (
+from ._agents import _create_agent
+from ._local import (
     _DefaultArtifacts,
     _DefaultEvidence,
     _DefaultExecution,
@@ -33,7 +33,7 @@ from .local import (
     _LocalExecution,
     _LocalWorkspace,
 )
-from .types import _CodingAgent, AutoresearchPlatform
+from ._types import _CodingAgent, AutoresearchPlatform
 
 __all__ = [
     "_AutoresearchPlatformProvider",

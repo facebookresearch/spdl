@@ -13,8 +13,7 @@ from pathlib import Path
 
 from spdl.autoresearch._common._log import setup_logging
 from spdl.autoresearch._common._state import _read_master_table, read_config, read_state
-
-from ..platform import create_platform
+from spdl.autoresearch.pipeline_optimization._platform import create_platform
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

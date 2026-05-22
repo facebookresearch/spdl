@@ -20,9 +20,9 @@ from spdl.autoresearch.core import (
     HypothesisNode,
 )
 
-from ..platform import AutoresearchPlatform
-from .common import _read_pipeline_code
-from .failures import _make_failure, _raise_failure
+from .._platform import AutoresearchPlatform
+from ._common import _read_pipeline_code
+from ._failures import _make_failure, _raise_failure
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

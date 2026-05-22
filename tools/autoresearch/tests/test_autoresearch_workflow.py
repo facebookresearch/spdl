@@ -25,22 +25,19 @@ from spdl.autoresearch.core import (
     HypothesisNode,
     TaskSpec,
 )
-from spdl.tools.autoresearch.utils.commands.report import _read_failures
-from spdl.tools.autoresearch.utils.commands.status import _failure_summary
-from spdl.tools.autoresearch.utils.platform import _MetricsEvidence, create_platform
-from spdl.tools.autoresearch.utils.platform.agents import _MockAgent
-from spdl.tools.autoresearch.utils.platform.local import _summarize_error
-from spdl.tools.autoresearch.utils.workflow import (
-    _AutoresearchStore,
-    AutoresearchAdapter,
+from spdl.autoresearch.pipeline_optimization._ops import (
+    _WorkflowStateStore,
+    PipelineOptimizationWorkflow,
 )
-from spdl.tools.autoresearch.utils.workflow.analysis_ops import _update_on_complete
-from spdl.tools.autoresearch.utils.workflow.failures import (
+from spdl.autoresearch.pipeline_optimization._ops._analysis_ops import (
+    _update_on_complete,
+)
+from spdl.autoresearch.pipeline_optimization._ops._failures import (
     _classify_terminal_job_failure,
     _FAILURE_POLICIES,
     _make_failure,
 )
-from spdl.tools.autoresearch.utils.workflow.policy import (
+from spdl.autoresearch.pipeline_optimization._ops._policy import (
     _build_change_set,
     _change_summary_for_spec,
     _compare_metric_value,
@@ -55,8 +52,16 @@ from spdl.tools.autoresearch.utils.workflow.policy import (
     _startup_retry_spec,
     _validate_thread_budget,
 )
-from spdl.tools.autoresearch.utils.workflow.source_ops import _build_apply_prompt
-from spdl.tools.autoresearch.utils.workflow.store import _write_text_atomic
+from spdl.autoresearch.pipeline_optimization._ops._source_ops import _build_apply_prompt
+from spdl.autoresearch.pipeline_optimization._ops._store import _write_text_atomic
+from spdl.autoresearch.pipeline_optimization._platform import (
+    _MetricsEvidence,
+    create_platform,
+)
+from spdl.autoresearch.pipeline_optimization._platform._agents import _MockAgent
+from spdl.autoresearch.pipeline_optimization._platform._local import _summarize_error
+from spdl.tools.autoresearch.utils.commands.report import _read_failures
+from spdl.tools.autoresearch.utils.commands.status import _failure_summary
 
 __all__: list[str] = []
 
@@ -618,7 +623,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp)
             self._write_base_files(workdir)
-            store = _AutoresearchStore(workdir, _state())
+            store = _WorkflowStateStore(workdir, _state())
             node = HypothesisNode(
                 node_id="000_baseline",
                 name="baseline",
@@ -646,7 +651,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp)
             self._write_base_files(workdir)
-            store = _AutoresearchStore(workdir, _state())
+            store = _WorkflowStateStore(workdir, _state())
             node = HypothesisNode(
                 node_id="002_retry",
                 name="retry",
@@ -676,7 +681,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             (engine_dir / "checkpoint.json").write_text(
                 json.dumps({"queued": [{"id": "bad", "payload": {}}]}) + "\n"
             )
-            store = _AutoresearchStore(workdir, _state())
+            store = _WorkflowStateStore(workdir, _state())
 
             with self.assertRaisesRegex(ValueError, "payload.node"):
                 store.load_checkpoint()
@@ -685,7 +690,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp)
             self._write_base_files(workdir)
-            store = _AutoresearchStore(workdir, _state())
+            store = _WorkflowStateStore(workdir, _state())
             node = HypothesisNode(
                 node_id="001_failed",
                 name="failed",
@@ -1027,9 +1032,9 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
             self.assertEqual({"a": 2}, json.loads(path.read_text()))
 
-    def _adapter(self, workdir: Path) -> AutoresearchAdapter:
+    def _adapter(self, workdir: Path) -> PipelineOptimizationWorkflow:
         self._write_base_files(workdir)
-        return AutoresearchAdapter(
+        return PipelineOptimizationWorkflow(
             workdir=workdir,
             config=_config(),
             state=_state(),

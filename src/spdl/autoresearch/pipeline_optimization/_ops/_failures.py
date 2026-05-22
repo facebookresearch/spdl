@@ -17,7 +17,7 @@ resulting ``FailureRecord`` on the node.
    flowchart LR
        Operation["workflow operation"]
        Error["AutoresearchError"]
-       Adapter["AutoresearchAdapter"]
+       Adapter["PipelineOptimizationWorkflow"]
        Node["HypothesisNode.failure"]
        Store["failure.json / history"]
 
@@ -41,7 +41,7 @@ from spdl.autoresearch.core import (
     FailureRecord,
 )
 
-from ..platform import _MetricsEvidence
+from .._platform import _MetricsEvidence
 
 __all__ = [
     "_FAILURE_POLICIES",

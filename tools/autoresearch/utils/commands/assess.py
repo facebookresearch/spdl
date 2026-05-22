@@ -18,8 +18,10 @@ from spdl.autoresearch._common._state import (
     read_state,
     write_state,
 )
-
-from ..platform import AutoresearchPlatform, create_platform
+from spdl.autoresearch.pipeline_optimization._platform import (
+    AutoresearchPlatform,
+    create_platform,
+)
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .policy import _compare_metric_value
+from ._policy import _compare_metric_value
 
 __all__ = [
     "_compare_value",

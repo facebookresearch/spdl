@@ -19,7 +19,7 @@ from pathlib import Path
 
 from spdl.autoresearch._common import _jobs as jobs, _scm as scm
 
-from .types import _MetricsEvidence
+from ._types import _MetricsEvidence
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

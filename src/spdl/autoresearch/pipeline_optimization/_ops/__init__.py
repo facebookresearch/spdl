@@ -6,10 +6,10 @@
 
 """Autoresearch workflow layer."""
 
-from .adapter import AutoresearchAdapter
-from .store import _AutoresearchStore
+from ._adapter import PipelineOptimizationWorkflow
+from ._store import _WorkflowStateStore
 
 __all__ = [
-    "AutoresearchAdapter",
-    "_AutoresearchStore",
+    "PipelineOptimizationWorkflow",
+    "_WorkflowStateStore",
 ]

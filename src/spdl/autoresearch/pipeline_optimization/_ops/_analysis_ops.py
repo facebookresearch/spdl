@@ -31,16 +31,16 @@ from spdl.autoresearch.core import (
     HypothesisNode,
 )
 
-from ..platform import AutoresearchPlatform
-from ..platform.agents import _parse_agent_result
-from .common import (
+from .._platform import AutoresearchPlatform
+from .._platform._agents import _parse_agent_result
+from ._common import (
     _compare_value,
     _current_best_metric,
     _is_headspace_entry,
     _read_pipeline_code,
 )
-from .failures import _classify_terminal_job_failure, _failure_note, _make_failure
-from .policy import _change_summary_for_spec
+from ._failures import _classify_terminal_job_failure, _failure_note, _make_failure
+from ._policy import _change_summary_for_spec
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

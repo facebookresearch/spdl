@@ -9,6 +9,8 @@
 Provides reusable infrastructure for running automated research loops:
 
 - :py:mod:`~spdl.autoresearch.core`: a domain-neutral async work scheduler.
+- :py:mod:`~spdl.autoresearch.pipeline_optimization`:
+  concrete workflow implementation for SPDL data loading pipeline optimization.
 """
 
 __all__: list[str] = []
