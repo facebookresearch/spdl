@@ -7,7 +7,6 @@
 """Persistent autoresearch workflow state and monitoring views.
 
 Design note
-===========
 
 This module owns files under ``<workdir>/engine`` and the persistent
 ``state.json`` view written by ``state.py``. ``checkpoint.json`` is the resume
@@ -50,10 +49,9 @@ import os
 import time
 from pathlib import Path
 
-from spdl.autoresearch.core import TaskSpec
+from spdl.autoresearch.core import HypothesisNode, TaskSpec
 
 from ..state import SCHEMA_VERSION, write_state
-from ..types import _HypothesisNode
 from .policy import (
     _extract_counter,
     _node_from_spec,
@@ -89,7 +87,7 @@ class _AutoresearchStore:
         self.state = state
         self.engine_dir = workdir / "engine"
         self.nodes_dir = self.engine_dir / "nodes"
-        self.tree: dict[str, _HypothesisNode] = {}
+        self.tree: dict[str, HypothesisNode] = {}
         self.queued: list[TaskSpec] = []
         self.running: list[TaskSpec] = []
         self.status = "running"
@@ -146,21 +144,21 @@ class _AutoresearchStore:
             self.upsert_node(_node_from_spec(spec))
         self.write_all()
 
-    def update_spec(self, spec: TaskSpec, node: _HypothesisNode) -> None:
+    def update_spec(self, spec: TaskSpec, node: HypothesisNode) -> None:
         _update_spec_from_node(spec, node)
         self.upsert_node(node)
         self._replace_spec(spec, self.queued)
         self._replace_spec(spec, self.running)
         self.write_all()
 
-    def upsert_node(self, node: _HypothesisNode) -> None:
+    def upsert_node(self, node: HypothesisNode) -> None:
         existing = self.tree.get(node.node_id)
         if existing is not None and existing.children and not node.children:
             node.children = existing.children
         self.tree[node.node_id] = node
         self.node_counter = max(self.node_counter, _extract_counter(node.node_id) + 1)
 
-    def add_child(self, parent: _HypothesisNode, spec: TaskSpec) -> None:
+    def add_child(self, parent: HypothesisNode, spec: TaskSpec) -> None:
         node = _node_from_spec(spec)
         self.upsert_node(node)
         stored_parent = self.tree.get(parent.node_id)
@@ -265,7 +263,7 @@ class _AutoresearchStore:
             + "\n",
         )
 
-    def _persist_node(self, node: _HypothesisNode) -> None:
+    def _persist_node(self, node: HypothesisNode) -> None:
         node_dir = self.nodes_dir / node.node_id
         node_dir.mkdir(parents=True, exist_ok=True)
         (node_dir / "spec.json").write_text(json.dumps(node.spec, indent=2) + "\n")

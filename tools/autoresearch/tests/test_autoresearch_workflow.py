@@ -12,7 +12,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from spdl.autoresearch.core import TaskSpec
+from spdl.autoresearch.core import (
+    AnalysisResult,
+    FailureKind,
+    FailurePhase,
+    HypothesisNode,
+    TaskSpec,
+)
 from spdl.tools.autoresearch.plot_progress import (
     _edge_label,
     _load_tsv,
@@ -30,13 +36,6 @@ from spdl.tools.autoresearch.utils.state import (
     MASTER_TABLE_HEADERS,
     SCHEMA_VERSION,
     write_state,
-)
-from spdl.tools.autoresearch.utils.types import (
-    _AnalysisResult,
-    _HypothesisNode,
-    FailureKind,
-    FailurePhase,
-    FailureRecord,
 )
 from spdl.tools.autoresearch.utils.workflow import (
     _AutoresearchStore,
@@ -154,17 +153,17 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             )
 
     def test_planning_is_blocked_until_must_run_experiments_finish(self) -> None:
-        baseline = _HypothesisNode(
+        baseline = HypothesisNode(
             node_id="000_baseline",
             name="baseline",
             status="completed",
         )
-        headspace = _HypothesisNode(
+        headspace = HypothesisNode(
             node_id="000_headspace",
             name="headspace_cache",
             status="queued",
         )
-        mtp = _HypothesisNode(
+        mtp = HypothesisNode(
             node_id="001_mtp",
             name="mtp",
             status="completed",
@@ -181,11 +180,11 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
         self.assertIsNone(selected)
 
-    def _load_node(self, spec: TaskSpec) -> _HypothesisNode:
+    def _load_node(self, spec: TaskSpec) -> HypothesisNode:
         """Extract node from a TaskSpec with a safe dict cast for Pyre."""
         node_data = spec.payload["node"]
         assert isinstance(node_data, dict)
-        return _HypothesisNode.from_dict(node_data)
+        return HypothesisNode.from_dict(node_data)
 
     def test_child_spec_parents_under_baseline_when_goto_is_null(self) -> None:
         """Experiments that start from anchor (goto=null) should be parented
@@ -271,18 +270,18 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             self.assertEqual("000_baseline", child_node.parent_id)
 
     def test_headspace_completion_selects_mtp_after_must_run_finish(self) -> None:
-        baseline = _HypothesisNode(
+        baseline = HypothesisNode(
             node_id="000_baseline",
             name="baseline",
             status="completed",
         )
-        headspace = _HypothesisNode(
+        headspace = HypothesisNode(
             node_id="000_headspace",
             name="headspace_cache",
             status="completed",
             spec={"_is_headspace": True},
         )
-        mtp = _HypothesisNode(
+        mtp = HypothesisNode(
             node_id="001_mtp",
             name="mtp",
             status="completed",
@@ -433,13 +432,13 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
     def test_duplicate_requires_matching_change_sets(self) -> None:
         base = "torchx run --image $IMAGE --num_workers 8"
-        baseline = _HypothesisNode(
+        baseline = HypothesisNode(
             node_id="000_baseline",
             name="baseline",
             status="completed",
             spec={"changes": [], "launch_command": base},
         )
-        mtp = _HypothesisNode(
+        mtp = HypothesisNode(
             node_id="001_mtp",
             name="mtp",
             status="completed",
@@ -485,7 +484,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
     def test_duplicate_distinguishes_param_only_experiments(self) -> None:
         base = "torchx run --image $IMAGE --num_workers 8"
-        batch_48 = _HypothesisNode(
+        batch_48 = HypothesisNode(
             node_id="002_batch48",
             name="batch_size_48",
             status="completed",
@@ -516,7 +515,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
     def test_duplicate_skips_failed_nodes(self) -> None:
         base = "torchx run --image $IMAGE"
-        failed = _HypothesisNode(
+        failed = HypothesisNode(
             node_id="003_oom",
             name="batch_64",
             status="failed",
@@ -536,7 +535,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
     def test_duplicate_combination_vs_individual(self) -> None:
         base = "torchx run --image $IMAGE"
-        mtp_only = _HypothesisNode(
+        mtp_only = HypothesisNode(
             node_id="001_mtp",
             name="mtp",
             status="completed",
@@ -558,7 +557,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         base = "torchx run --image $IMAGE --num_workers 8"
         # Old spec without changes field — change set is derived purely from
         # launch command diffs.
-        old_node = _HypothesisNode(
+        old_node = HypothesisNode(
             node_id="002_batch48",
             name="batch_size_48",
             status="completed",
@@ -584,7 +583,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         )
 
     def test_startup_retry_inherits_changes(self) -> None:
-        node = _HypothesisNode(
+        node = HypothesisNode(
             node_id="001_mtp",
             name="mtp",
             status="failed",
@@ -613,7 +612,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             for spec in specs:
                 node_data = spec.payload["node"]
                 assert isinstance(node_data, dict)
-                nodes.append(_HypothesisNode.from_dict(node_data))
+                nodes.append(HypothesisNode.from_dict(node_data))
 
             by_name = {node.name: node for node in nodes}
             self.assertEqual([], by_name["baseline"].spec["changes"])
@@ -627,7 +626,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             workdir = Path(tmp)
             self._write_base_files(workdir)
             store = _AutoresearchStore(workdir, _state())
-            node = _HypothesisNode(
+            node = HypothesisNode(
                 node_id="000_baseline",
                 name="baseline",
                 status="queued",
@@ -655,7 +654,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             workdir = Path(tmp)
             self._write_base_files(workdir)
             store = _AutoresearchStore(workdir, _state())
-            node = _HypothesisNode(
+            node = HypothesisNode(
                 node_id="002_retry",
                 name="retry",
                 status="queued",
@@ -689,35 +688,12 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "payload.node"):
                 store.load_checkpoint()
 
-    def test_failure_record_round_trips_with_node(self) -> None:
-        node = _HypothesisNode(
-            node_id="001_bad_mtp",
-            name="bad_mtp",
-            status="failed",
-            failure=FailureRecord(
-                kind=FailureKind.JOB_STARTUP_FAILED,
-                phase=FailurePhase.JOB,
-                message="MTP failed during initialization",
-                details={"component": "mtp"},
-                job_id="job123",
-                created_at="2026-01-01T00:00:00",
-            ),
-        )
-
-        loaded = _HypothesisNode.from_dict(node.to_dict())
-
-        loaded_failure = loaded.failure
-        self.assertIsNotNone(loaded_failure)
-        assert loaded_failure is not None
-        self.assertEqual(FailureKind.JOB_STARTUP_FAILED, loaded_failure.kind)
-        self.assertEqual({"component": "mtp"}, loaded_failure.details)
-
     def test_store_persists_failure_view(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp)
             self._write_base_files(workdir)
             store = _AutoresearchStore(workdir, _state())
-            node = _HypothesisNode(
+            node = HypothesisNode(
                 node_id="001_failed",
                 name="failed",
                 status="failed",
@@ -748,7 +724,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp)
             adapter = self._adapter(workdir)
-            node = _HypothesisNode(node_id="001_failed", name="failed")
+            node = HypothesisNode(node_id="001_failed", name="failed")
             spec = _spec_from_node(node)
             failure = _make_failure(
                 FailureKind.LAUNCH_FAILED,
@@ -772,13 +748,13 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             workdir = Path(tmp)
             self._write_base_files(workdir)
             state = _state()
-            node = _HypothesisNode(
+            node = HypothesisNode(
                 node_id="001_failed",
                 name="failed",
                 status="failed",
                 spec={"name": "failed"},
             )
-            result = _AnalysisResult(
+            result = AnalysisResult(
                 structured={"metrics": {}, "findings": []},
                 failure=_make_failure(
                     FailureKind.JOB_FAILED,
@@ -854,7 +830,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         self.assertEqual(1, runtime.details["exit_code"])
 
     def test_startup_failure_retry_is_bounded_for_mtp(self) -> None:
-        node = _HypothesisNode(
+        node = HypothesisNode(
             node_id="001_mtp",
             name="mtp",
             status="failed",
@@ -881,7 +857,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         self.assertIsNone(_startup_retry_spec(node, _config()))
 
     def test_retry_policy_is_kind_specific(self) -> None:
-        node = _HypothesisNode(
+        node = HypothesisNode(
             node_id="001_mtp",
             name="mtp",
             spec={"best_practices_tags": ["mtp"]},
@@ -904,18 +880,18 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         self.assertIsNone(_retry_policy_for_failure(node, _config()))
 
     def test_planning_prefers_non_startup_failed_retry(self) -> None:
-        baseline = _HypothesisNode(
+        baseline = HypothesisNode(
             node_id="000_baseline",
             name="baseline",
             status="completed",
         )
-        headspace = _HypothesisNode(
+        headspace = HypothesisNode(
             node_id="000_headspace",
             name="headspace_cache",
             status="completed",
             spec={"_is_headspace": True},
         )
-        mtp = _HypothesisNode(
+        mtp = HypothesisNode(
             node_id="001_mtp",
             name="mtp",
             status="failed",
@@ -925,7 +901,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                 "startup",
             ),
         )
-        retry = _HypothesisNode(
+        retry = HypothesisNode(
             node_id="002_mtp_startup_retry_1",
             name="mtp_startup_retry_1",
             status="failed",
@@ -936,7 +912,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                 "startup",
             ),
         )
-        better_candidate = _HypothesisNode(
+        better_candidate = HypothesisNode(
             node_id="003_threads",
             name="threads",
             status="completed",

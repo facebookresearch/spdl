@@ -11,7 +11,6 @@ or filesystem writes. Keep predictable decisions here so they can be unit tested
 without infrastructure.
 
 Design note
-===========
 
 If a behavior is deterministic and can be expressed from specs, nodes, state,
 or metrics already in memory, prefer adding it here instead of burying it in
@@ -22,7 +21,7 @@ or LLM calls.
 .. mermaid::
 
    flowchart LR
-       Inputs["TaskSpec / _HypothesisNode / state"]
+       Inputs["TaskSpec / HypothesisNode / state"]
        Policy["pure policy helpers"]
        Decisions["workflow decisions"]
        Tests["unit tests"]
@@ -41,9 +40,12 @@ import re
 import shlex
 from collections.abc import Iterable, Mapping
 
-from spdl.autoresearch.core import TaskSpec
-
-from ..types import _HypothesisNode, _TERMINAL_STATUSES, FailureKind
+from spdl.autoresearch.core import (
+    FailureKind,
+    HypothesisNode,
+    TaskSpec,
+    TERMINAL_STATUSES,
+)
 
 __all__ = [
     "_build_change_set",
@@ -95,25 +97,25 @@ def _normalize_status(status: str) -> str:
     return "running"
 
 
-def _is_headspace_node(node: _HypothesisNode) -> bool:
+def _is_headspace_node(node: HypothesisNode) -> bool:
     return bool(node.spec.get("_is_headspace")) or "headspace" in node.name
 
 
 def _initial_experiments_finished(
-    tree: Mapping[str, _HypothesisNode],
+    tree: Mapping[str, HypothesisNode],
     required_names: frozenset[str] = _REQUIRED_INITIAL_EXPERIMENTS,
 ) -> bool:
     by_name = {node.name: node for node in tree.values()}
     return all(
-        (node := by_name.get(name)) is not None and node.status in _TERMINAL_STATUSES
+        (node := by_name.get(name)) is not None and node.status in TERMINAL_STATUSES
         for name in required_names
     )
 
 
 def _select_planning_node(
-    completed_node: _HypothesisNode,
-    tree: Mapping[str, _HypothesisNode],
-) -> _HypothesisNode | None:
+    completed_node: HypothesisNode,
+    tree: Mapping[str, HypothesisNode],
+) -> HypothesisNode | None:
     """Pick the non-headspace completed node that should trigger planning.
 
     Only successfully completed nodes can be planning parents.  Failed nodes
@@ -233,7 +235,7 @@ def _build_change_set(
 
 def _is_duplicate_spec(
     spec: dict,
-    nodes: Iterable[_HypothesisNode],
+    nodes: Iterable[HypothesisNode],
     base_launch_command: str = "",
 ) -> bool:
     """Check whether *spec* duplicates a non-failed node in *nodes*.
@@ -382,7 +384,7 @@ def _first_interesting_flag(command: str) -> str | None:
     return None
 
 
-def _record_failed_best_practice_attempt(state: dict, node: _HypothesisNode) -> None:
+def _record_failed_best_practice_attempt(state: dict, node: HypothesisNode) -> None:
     tags = node.spec.get("best_practices_tags", [])
     if not tags:
         return
@@ -399,7 +401,7 @@ def _record_failed_best_practice_attempt(state: dict, node: _HypothesisNode) -> 
     state["best_practices_tried"] = sorted(tried)
 
 
-def _retry_policy_for_failure(node: _HypothesisNode, config: dict) -> dict | None:
+def _retry_policy_for_failure(node: HypothesisNode, config: dict) -> dict | None:
     failure = node.failure
     if failure is None:
         return None
@@ -426,7 +428,7 @@ def _retry_policy_for_failure(node: _HypothesisNode, config: dict) -> dict | Non
     }
 
 
-def _is_startup_failed_retry(node: _HypothesisNode) -> bool:
+def _is_startup_failed_retry(node: HypothesisNode) -> bool:
     failure = node.failure
     return bool(
         node.spec.get("_startup_retry_of")
@@ -435,7 +437,7 @@ def _is_startup_failed_retry(node: _HypothesisNode) -> bool:
     )
 
 
-def _startup_retry_spec(node: _HypothesisNode, config: dict) -> dict | None:
+def _startup_retry_spec(node: HypothesisNode, config: dict) -> dict | None:
     """Return a repair experiment for retryable startup failures.
 
     Failed must-run experiments still count as terminal once attempts are
@@ -474,7 +476,7 @@ def _startup_retry_spec(node: _HypothesisNode, config: dict) -> dict | None:
     return retry
 
 
-def _spec_from_node(node: _HypothesisNode) -> TaskSpec:
+def _spec_from_node(node: HypothesisNode) -> TaskSpec:
     node.spec["change_summary"] = _change_summary_for_spec(node.spec)
     return TaskSpec(
         id=node.node_id,
@@ -484,14 +486,14 @@ def _spec_from_node(node: _HypothesisNode) -> TaskSpec:
     )
 
 
-def _node_from_spec(spec: TaskSpec) -> _HypothesisNode:
+def _node_from_spec(spec: TaskSpec) -> HypothesisNode:
     node_data = spec.payload.get("node", {})
     if not isinstance(node_data, dict):
         raise ValueError(f"Work spec {spec.id} has no node payload")
-    return _HypothesisNode.from_dict(node_data)
+    return HypothesisNode.from_dict(node_data)
 
 
-def _update_spec_from_node(spec: TaskSpec, node: _HypothesisNode) -> None:
+def _update_spec_from_node(spec: TaskSpec, node: HypothesisNode) -> None:
     spec.id = node.node_id
     spec.priority = node.priority
     spec.kind = _KIND_EXPERIMENT

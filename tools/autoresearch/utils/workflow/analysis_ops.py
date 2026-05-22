@@ -13,6 +13,13 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from spdl.autoresearch.core import (
+    AnalysisResult,
+    AutoresearchError,
+    FailureKind,
+    FailurePhase,
+    HypothesisNode,
+)
 from spdl.tools.autoresearch.plot_progress import (
     _load_tsv,
     _plot_hypothesis_tree,
@@ -22,13 +29,6 @@ from spdl.tools.autoresearch.plot_progress import (
 from ..platform import AutoresearchPlatform
 from ..platform.agents import _parse_agent_result
 from ..state import _append_master_row, _read_master_table, write_state
-from ..types import (
-    _AnalysisResult,
-    _AutoresearchError,
-    _HypothesisNode,
-    FailureKind,
-    FailurePhase,
-)
 from .common import (
     _compare_value,
     _current_best_metric,
@@ -53,8 +53,8 @@ def _analyze_job(
     status: str,
     progress_seen: bool = False,
 ) -> object:
-    """Analyze a completed job. Returns _AnalysisResult."""
-    assert isinstance(node, _HypothesisNode)
+    """Analyze a completed job. Returns AnalysisResult."""
+    assert isinstance(node, HypothesisNode)
 
     knowledge = platform.agent._load_knowledge()
     pipeline_code = _read_pipeline_code(config, workdir)
@@ -72,7 +72,7 @@ def _analyze_job(
     try:
         evidence = platform.evidence.collect(job_id, metrics_dir)
     except Exception as error:
-        raise _AutoresearchError(
+        raise AutoresearchError(
             _make_failure(
                 FailureKind.METRICS_COLLECTION_FAILED,
                 FailurePhase.METRICS,
@@ -101,7 +101,7 @@ def _analyze_job(
     try:
         analysis = platform.agent.run(prompt, workdir, f"analyze_{run_id}")
     except Exception as error:
-        raise _AutoresearchError(
+        raise AutoresearchError(
             _make_failure(
                 FailureKind.ANALYSIS_FAILED,
                 FailurePhase.ANALYSIS,
@@ -136,7 +136,7 @@ def _analyze_job(
         best_type == "none" or (cur_type == best_type and cur_val < best_val)
     )
 
-    return _AnalysisResult(
+    return AnalysisResult(
         structured=structured,
         duration=float(duration)
         if isinstance(duration, (int, float)) and duration > 0
@@ -148,7 +148,7 @@ def _analyze_job(
 
 def _append_master_result_row(
     workdir: Path,
-    node: _HypothesisNode,
+    node: HypothesisNode,
     status: str,
     duration: object,
     structured: dict | None,
@@ -185,8 +185,8 @@ def _update_on_complete(
     result: object,
 ) -> None:
     """Update autoresearch state after a node completes."""
-    assert isinstance(node, _HypothesisNode)
-    assert isinstance(result, _AnalysisResult)
+    assert isinstance(node, HypothesisNode)
+    assert isinstance(result, AnalysisResult)
 
     exp = node.spec
     best_type, best_val = _current_best_metric(state)

@@ -69,7 +69,7 @@ cancellation is needed, the coroutine or adapter must do it explicitly.
 **Failures are structured domain data.** Every failure path (prepare,
 build, launch, poll, analyze, plan) produces a ``FailureRecord`` with a
 ``FailureKind`` and ``FailurePhase``. The runner never learns about
-failure kinds. Expected failures flow through ``_AutoresearchError``;
+failure kinds. Expected failures flow through ``AutoresearchError``;
 unexpected exceptions are caught and wrapped into structured records.
 This ensures durable accounting even for phases that never reach a
 remote job.
