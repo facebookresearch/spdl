@@ -22,11 +22,11 @@ import shlex
 import sys
 from pathlib import Path
 
-from spdl.autoresearch.pipeline_optimization._prompts import load_prompt_directory
-from spdl.tools.autoresearch.utils.supervisor import (
+from spdl.autoresearch._common._supervisor import (
     _resolve_supervisor_agent,
     _SupervisorAgent,
 )
+from spdl.autoresearch.pipeline_optimization._prompts import load_prompt_directory
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 

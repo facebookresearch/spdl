@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import unittest
 
-from spdl.tools.autoresearch import cli
-from spdl.tools.autoresearch.utils.supervisor import (
+from spdl.autoresearch._common._supervisor import (
     _ClaudeSupervisor,
     _CodexSupervisor,
     _SupervisorAvailability,
 )
+from spdl.tools.autoresearch import cli
 
 __all__: list[str] = []
 

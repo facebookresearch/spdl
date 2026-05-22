@@ -13,11 +13,11 @@ import logging
 import re
 from pathlib import Path
 
+from spdl.autoresearch._common._state import _read_master_table, write_state
 from spdl.autoresearch.core import AnalysisResult, HypothesisNode
 
 from ..platform import AutoresearchPlatform
 from ..platform.agents import _parse_agent_result
-from ..state import _read_master_table, write_state
 from .common import _current_best_metric, _read_pipeline_code
 from .policy import (
     _change_summary_for_spec,

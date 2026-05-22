@@ -17,7 +17,8 @@ import subprocess
 import time
 from pathlib import Path
 
-from ..infra import jobs, scm
+from spdl.autoresearch._common import _jobs as jobs, _scm as scm
+
 from .types import _MetricsEvidence
 
 _LG: logging.Logger = logging.getLogger(__name__)

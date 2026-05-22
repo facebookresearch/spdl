@@ -11,9 +11,10 @@ import json
 import logging
 from pathlib import Path
 
-from ..log import setup_logging
+from spdl.autoresearch._common._log import setup_logging
+from spdl.autoresearch._common._state import _read_master_table, read_config, read_state
+
 from ..platform import create_platform
-from ..state import _read_master_table, read_config, read_state
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

@@ -4,13 +4,9 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Plot autoresearch optimization progress in Karpathy's style.
+"""Plot autoresearch optimization progress and hypothesis trees.
 
-Usage:
-    buck run //spdl/tools/autoresearch:plot_progress -- <master_table.tsv> [output.png]
-
-Reads the master_table.tsv produced by autoresearch and generates a two-subplot
-chart:
+Reads the master_table.tsv produced by autoresearch and generates charts:
   1. Job duration (primary metric, lower is better) — Karpathy-style scatter
   2. SM utilization (secondary metric) — scatter for context
 """
