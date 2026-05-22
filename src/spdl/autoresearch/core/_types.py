@@ -12,16 +12,16 @@ import dataclasses
 from dataclasses import dataclass, field
 from enum import Enum
 
-_TERMINAL_STATUSES = frozenset({"completed", "failed"})
+TERMINAL_STATUSES = frozenset({"completed", "failed"})
 
 __all__ = [
     "FailureKind",
     "FailurePhase",
     "FailureRecord",
-    "_AnalysisResult",
-    "_AutoresearchError",
-    "_HypothesisNode",
-    "_TERMINAL_STATUSES",
+    "AnalysisResult",
+    "AutoresearchError",
+    "HypothesisNode",
+    "TERMINAL_STATUSES",
 ]
 
 
@@ -85,13 +85,28 @@ class FailureRecord:
     """Machine-readable failure attached to a failed hypothesis node."""
 
     kind: FailureKind
+    """Category of the failure."""
+
     phase: FailurePhase
+    """Workflow phase where the failure occurred."""
+
     message: str
+    """Human-readable description."""
+
     retryable: bool = False
+    """Whether the engine should attempt a retry."""
+
     details: dict = field(default_factory=dict)
+    """Arbitrary extra context for debugging."""
+
     exception_type: str | None = None
+    """Fully qualified name of the original exception, if any."""
+
     job_id: str | None = None
+    """Identifier of the failed job, if applicable."""
+
     created_at: str | None = None
+    """ISO 8601 timestamp when the failure was recorded."""
 
     def to_dict(self) -> dict:
         data = dataclasses.asdict(self)
@@ -113,8 +128,14 @@ class FailureRecord:
         )
 
 
-class _AutoresearchError(RuntimeError):
-    """Expected workflow failure carrying a structured failure record."""
+class AutoresearchError(RuntimeError):
+    """Expected workflow failure carrying a structured failure record.
+
+    Args:
+        failure: The structured failure record describing what went wrong.
+            Stored as the ``failure`` attribute and its ``message`` field
+            is forwarded to ``RuntimeError``.
+    """
 
     def __init__(self, failure: FailureRecord) -> None:
         super().__init__(failure.message)
@@ -122,22 +143,48 @@ class _AutoresearchError(RuntimeError):
 
 
 @dataclass
-class _HypothesisNode:
+class HypothesisNode:
     """A node in the autoresearch hypothesis tree."""
 
     node_id: str
+    """Unique identifier (e.g. ``"003_nvdec"``)."""
+
     name: str
+    """Human-readable experiment name."""
+
     parent_id: str | None = None
+    """ID of the parent node, or ``None`` for root nodes."""
+
     commit: str | None = None
+    """Source-control commit hash for this experiment's code state."""
+
     spec: dict = field(default_factory=dict)
+    """Free-form experiment specification dict."""
+
     status: str = "queued"
+    """Current lifecycle status (``"queued"``, ``"running"``,
+    ``"completed"``, ``"failed"``)."""
+
     job_id: str | None = None
+    """External job identifier, if launched."""
+
     launched_at: float | None = None
+    """Unix timestamp when the job was launched."""
+
     result: dict | None = None
+    """Raw result dict from analysis."""
+
     children: list[str] = field(default_factory=list)
+    """IDs of child nodes in the hypothesis tree."""
+
     priority: float = 0.0
+    """Scheduling priority (lower runs first)."""
+
     duration: float | None = None
+    """Job duration in seconds, if completed."""
+
     failure: FailureRecord | None = None
+    """Structured failure record, if the experiment failed."""
 
     def to_dict(self) -> dict:
         data = dataclasses.asdict(self)
@@ -146,7 +193,7 @@ class _HypothesisNode:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict) -> _HypothesisNode:
+    def from_dict(cls, data: dict) -> HypothesisNode:
         field_names = {field.name for field in dataclasses.fields(cls)}
         values = {k: v for k, v in data.items() if k in field_names}
         if isinstance(values.get("failure"), dict):
@@ -155,10 +202,17 @@ class _HypothesisNode:
 
 
 @dataclass
-class _AnalysisResult:
+class AnalysisResult:
     """Structured analysis returned after an experiment finishes."""
 
     structured: dict | None = None
+    """Parsed JSON from the agent's analysis response."""
+
     duration: float | None = None
+    """Job duration in seconds."""
+
     improved: bool = False
+    """Whether the experiment improved on the current best."""
+
     failure: FailureRecord | None = None
+    """Structured failure, if analysis detected a problem."""

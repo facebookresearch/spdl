@@ -13,8 +13,14 @@ import logging
 import re
 from pathlib import Path
 
+from spdl.autoresearch.core import (
+    AutoresearchError,
+    FailureKind,
+    FailurePhase,
+    HypothesisNode,
+)
+
 from ..platform import AutoresearchPlatform
-from ..types import _AutoresearchError, _HypothesisNode, FailureKind, FailurePhase
 from .common import _read_pipeline_code
 from .failures import _make_failure, _raise_failure
 
@@ -103,7 +109,7 @@ def _apply_code_changes(
     try:
         output = platform.agent.run(prompt, workdir, f"apply_{run_id}")
     except Exception as error:
-        raise _AutoresearchError(
+        raise AutoresearchError(
             _make_failure(
                 FailureKind.CODE_CHANGE_FAILED,
                 FailurePhase.CODE_CHANGE,
@@ -124,7 +130,7 @@ def _apply_code_changes(
         try:
             output = platform.agent.run(retry_prompt, workdir, f"apply_{run_id}_retry")
         except Exception as error:
-            raise _AutoresearchError(
+            raise AutoresearchError(
                 _make_failure(
                     FailureKind.CODE_CHANGE_FAILED,
                     FailurePhase.CODE_CHANGE,
@@ -163,7 +169,7 @@ def _apply_code_changes(
         try:
             commit_hash = platform.workspace.commit(scm, source_dir, msg)
         except Exception as error:
-            raise _AutoresearchError(
+            raise AutoresearchError(
                 _make_failure(
                     FailureKind.CODE_CHANGE_FAILED,
                     FailurePhase.CODE_CHANGE,
@@ -190,7 +196,7 @@ def _prepare_node(
     parent: object | None,
 ) -> bool:
     """Prepare a node: restore source, apply code changes, and build."""
-    assert isinstance(node, _HypothesisNode)
+    assert isinstance(node, HypothesisNode)
 
     exp = node.spec
     run_id = node.node_id
@@ -200,7 +206,7 @@ def _prepare_node(
     source_dir = config.get("source_dir", "")
     anchor = state.get("anchor_commit", "")
     parent_ok = (
-        isinstance(parent, _HypothesisNode)
+        isinstance(parent, HypothesisNode)
         and parent.status == "completed"
         and not parent.spec.get("_is_headspace")
     )
@@ -235,7 +241,7 @@ def _prepare_node(
         try:
             platform.workspace.commit(scm, source_dir, msg)
         except Exception as error:
-            raise _AutoresearchError(
+            raise AutoresearchError(
                 _make_failure(
                     FailureKind.CODE_CHANGE_FAILED,
                     FailurePhase.CODE_CHANGE,
@@ -249,7 +255,7 @@ def _prepare_node(
         try:
             image = platform.artifacts.build(build_cmd, workdir, source_dir)
         except Exception as error:
-            raise _AutoresearchError(
+            raise AutoresearchError(
                 _make_failure(
                     FailureKind.BUILD_FAILED,
                     FailurePhase.BUILD,
@@ -281,7 +287,7 @@ def _launch_node(
     workdir: Path,
 ) -> str | None:
     """Launch a job for a node. Returns job_id or raises structured failure."""
-    assert isinstance(node, _HypothesisNode)
+    assert isinstance(node, HypothesisNode)
 
     exp = node.spec
     launch_cmd = exp.get("launch_command", "") or config.get("base_launch_command", "")
@@ -300,7 +306,7 @@ def _launch_node(
     try:
         job_id = platform.execution.launch(launch_cmd, workdir)
     except Exception as error:
-        raise _AutoresearchError(
+        raise AutoresearchError(
             _make_failure(
                 FailureKind.LAUNCH_FAILED,
                 FailurePhase.LAUNCH,

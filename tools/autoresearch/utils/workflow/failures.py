@@ -16,9 +16,9 @@ resulting ``FailureRecord`` on the node.
 
    flowchart LR
        Operation["workflow operation"]
-       Error["_AutoresearchError"]
+       Error["AutoresearchError"]
        Adapter["AutoresearchAdapter"]
-       Node["_HypothesisNode.failure"]
+       Node["HypothesisNode.failure"]
        Store["failure.json / history"]
 
        Operation -->|"expected failure"| Error
@@ -34,13 +34,14 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import NoReturn
 
-from ..platform import _MetricsEvidence
-from ..types import (
-    _AutoresearchError,
+from spdl.autoresearch.core import (
+    AutoresearchError,
     FailureKind,
     FailurePhase,
     FailureRecord,
 )
+
+from ..platform import _MetricsEvidence
 
 __all__ = [
     "_FAILURE_POLICIES",
@@ -223,7 +224,7 @@ def _raise_failure(
     exception: BaseException | None = None,
     job_id: str | None = None,
 ) -> NoReturn:
-    raise _AutoresearchError(
+    raise AutoresearchError(
         _make_failure(
             kind,
             phase,

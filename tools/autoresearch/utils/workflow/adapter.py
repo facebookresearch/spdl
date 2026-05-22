@@ -7,7 +7,6 @@
 """Autoresearch workflow adapter for the generic async runner.
 
 Design note
-===========
 
 This module is the domain side of the runner/adapter boundary. It orchestrates
 experiment coroutines, but durable state lives in ``store.py`` and deterministic
@@ -21,7 +20,7 @@ should sit behind ``AutoresearchPlatform`` capability objects. Do not turn the
 runner adapter boundary back into a large flat callback interface.
 
 Workflow failures are structured domain data. Expected failures should carry a
-``FailureRecord`` through ``_AutoresearchError`` or ``_AnalysisResult.failure``;
+``FailureRecord`` through ``AutoresearchError`` or ``AnalysisResult.failure``;
 the runner should never learn autoresearch failure kinds, and workflow code
 should not record durable failures as bare strings.
 
@@ -55,19 +54,20 @@ from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any
 
-from spdl.autoresearch.core import TaskResult, TaskSpec
-
-from ..platform import AutoresearchPlatform
-from ..state import _append_master_row
-from ..types import (
-    _AnalysisResult,
-    _AutoresearchError,
-    _HypothesisNode,
-    _TERMINAL_STATUSES,
+from spdl.autoresearch.core import (
+    AnalysisResult,
+    AutoresearchError,
     FailureKind,
     FailurePhase,
     FailureRecord,
+    HypothesisNode,
+    TaskResult,
+    TaskSpec,
+    TERMINAL_STATUSES,
 )
+
+from ..platform import AutoresearchPlatform
+from ..state import _append_master_row
 from .analysis_ops import (
     _analyze_job,
     _update_on_complete,
@@ -107,7 +107,7 @@ class AutoresearchAdapter:
 
        flowchart LR
            Spec["TaskSpec"]
-           Node["_HypothesisNode"]
+           Node["HypothesisNode"]
            Prepare["prepare source/build"]
            Launch["launch or resume job"]
            Poll["poll status/progress"]
@@ -194,7 +194,7 @@ class AutoresearchAdapter:
         except asyncio.CancelledError:
             self._store.update_spec(spec, node)
             raise
-        except _AutoresearchError as error:
+        except AutoresearchError as error:
             await self._record_failure(spec, node, error.failure)
             return TaskResult()
         except Exception as error:
@@ -209,7 +209,7 @@ class AutoresearchAdapter:
     async def _run_experiment_inner(
         self,
         spec: TaskSpec,
-        node: _HypothesisNode,
+        node: HypothesisNode,
     ) -> TaskResult:
         if node.status == "analyzing" and node.job_id:
             status = str(spec.payload.get("terminal_status", "completed"))
@@ -248,7 +248,7 @@ class AutoresearchAdapter:
         status = await self._poll_until_terminal(spec, node)
         return await self._analyze_record_and_plan(spec, node, status)
 
-    async def _prepare(self, spec: TaskSpec, node: _HypothesisNode) -> bool:
+    async def _prepare(self, spec: TaskSpec, node: HypothesisNode) -> bool:
         async with self._state_lock:
             node.status = "preparing"
             self._store.update_spec(spec, node)
@@ -265,7 +265,7 @@ class AutoresearchAdapter:
             self._store.update_spec(spec, node)
             return prepared
 
-    async def _poll_until_terminal(self, spec: TaskSpec, node: _HypothesisNode) -> str:
+    async def _poll_until_terminal(self, spec: TaskSpec, node: HypothesisNode) -> str:
         if node.launched_at is None:
             node.launched_at = time.monotonic()
 
@@ -279,7 +279,7 @@ class AutoresearchAdapter:
                 node.job_id or "",
             )
             status = _normalize_status(raw_status)
-            if status in _TERMINAL_STATUSES:
+            if status in TERMINAL_STATUSES:
                 spec.payload["terminal_status"] = status
                 spec.payload["progress_seen"] = ever_progressed
                 self._store.update_spec(spec, node)
@@ -315,7 +315,7 @@ class AutoresearchAdapter:
 
     async def _is_stalled(
         self,
-        node: _HypothesisNode,
+        node: HypothesisNode,
         stall_start: float,
         ever_progressed: bool,
     ) -> bool:
@@ -334,7 +334,7 @@ class AutoresearchAdapter:
     async def _analyze_record_and_plan(
         self,
         spec: TaskSpec,
-        node: _HypothesisNode,
+        node: HypothesisNode,
         status: str,
     ) -> TaskResult:
         async with self._state_lock:
@@ -351,8 +351,8 @@ class AutoresearchAdapter:
                 status,
                 bool(spec.payload.get("progress_seen", False)),
             )
-            if not isinstance(result, _AnalysisResult):
-                raise TypeError(f"Expected _AnalysisResult, got {type(result)}")
+            if not isinstance(result, AnalysisResult):
+                raise TypeError(f"Expected AnalysisResult, got {type(result)}")
 
             node.status = "completed" if status == "completed" else "failed"
             node.result = result.structured
@@ -382,7 +382,7 @@ class AutoresearchAdapter:
 
             planning_result = result
             if planning_node.node_id != node.node_id:
-                planning_result = _AnalysisResult(structured=planning_node.result)
+                planning_result = AnalysisResult(structured=planning_node.result)
 
             try:
                 followups = await asyncio.to_thread(
@@ -395,10 +395,10 @@ class AutoresearchAdapter:
                     planning_result,
                     self._store.tree_dict(),
                 )
-            except _AutoresearchError:
+            except AutoresearchError:
                 raise
             except Exception as error:
-                raise _AutoresearchError(
+                raise AutoresearchError(
                     _make_failure(
                         FailureKind.PLANNING_FAILED,
                         FailurePhase.PLANNING,
@@ -415,7 +415,7 @@ class AutoresearchAdapter:
     async def _record_failure(
         self,
         spec: TaskSpec,
-        node: _HypothesisNode,
+        node: HypothesisNode,
         failure: FailureRecord,
     ) -> None:
         async with self._state_lock:
@@ -454,18 +454,18 @@ class AutoresearchAdapter:
             self._store.write_all()
             await asyncio.to_thread(_update_summary_and_plot, self.workdir, self.state)
 
-    def _initial_nodes(self) -> list[_HypothesisNode]:
+    def _initial_nodes(self) -> list[HypothesisNode]:
         nodes = _build_initial_nodes(self.workdir, self.config, self.state)
         for node in nodes:
             self._store.upsert_node(node)
         self._store.write_all()
         return nodes
 
-    def _create_child_spec(self, parent: _HypothesisNode, child_spec: dict) -> TaskSpec:
+    def _create_child_spec(self, parent: HypothesisNode, child_spec: dict) -> TaskSpec:
         name = child_spec.get("name", f"exp_{self._store.node_counter}")
         child_spec["change_summary"] = _change_summary_for_spec(child_spec)
         actual_parent = self._resolve_parent(parent, child_spec)
-        node = _HypothesisNode(
+        node = HypothesisNode(
             node_id=f"{self._store.node_counter:03d}_{name}",
             name=name,
             parent_id=actual_parent.node_id,
@@ -479,9 +479,9 @@ class AutoresearchAdapter:
 
     def _resolve_parent(
         self,
-        default_parent: _HypothesisNode,
+        default_parent: HypothesisNode,
         child_spec: dict,
-    ) -> _HypothesisNode:
+    ) -> HypothesisNode:
         """Resolve the actual parent node for a child experiment.
 
         When ``goto`` is absent or null (experiment starts from the anchor

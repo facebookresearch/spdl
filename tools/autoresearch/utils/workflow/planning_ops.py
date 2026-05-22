@@ -13,10 +13,11 @@ import logging
 import re
 from pathlib import Path
 
+from spdl.autoresearch.core import AnalysisResult, HypothesisNode
+
 from ..platform import AutoresearchPlatform
 from ..platform.agents import _parse_agent_result
 from ..state import _read_master_table, write_state
-from ..types import _AnalysisResult, _HypothesisNode
 from .common import _current_best_metric, _read_pipeline_code
 from .policy import (
     _change_summary_for_spec,
@@ -259,8 +260,8 @@ def _plan_followups(
     tree: dict,
 ) -> list[dict]:
     """Plan follow-up experiments. Returns experiment spec dicts."""
-    assert isinstance(parent_node, _HypothesisNode)
-    assert isinstance(result, _AnalysisResult)
+    assert isinstance(parent_node, HypothesisNode)
+    assert isinstance(result, AnalysisResult)
 
     if parent_node.spec.get("_is_headspace"):
         return []
@@ -304,15 +305,15 @@ def _plan_followups(
 
 
 def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
-    """Create initial _HypothesisNode objects for baseline, headspace, and MTP."""
-    nodes: list[_HypothesisNode] = []
+    """Create initial HypothesisNode objects for baseline, headspace, and MTP."""
+    nodes: list[HypothesisNode] = []
     history_names = {entry.get("name") for entry in state.get("history", [])}
     tried_practices = set(state.get("best_practices_tried", []))
     base_launch = config.get("base_launch_command", "")
 
     if "baseline" not in history_names:
         nodes.append(
-            _HypothesisNode(
+            HypothesisNode(
                 node_id="000_baseline",
                 name="baseline",
                 spec={
@@ -337,7 +338,7 @@ def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
     )
     if not headspace_succeeded:
         nodes.append(
-            _HypothesisNode(
+            HypothesisNode(
                 node_id="000_headspace",
                 name="headspace_cache",
                 spec={
@@ -359,7 +360,7 @@ def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
 
     if "mtp" not in tried_practices:
         nodes.append(
-            _HypothesisNode(
+            HypothesisNode(
                 node_id="001_mtp",
                 name="mtp",
                 spec={
