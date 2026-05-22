@@ -275,13 +275,39 @@ def _should_cancel_for_stall(
 
 
 def _compare_metric_value(metrics: Mapping[str, object]) -> tuple[str, float]:
+    """Extract the primary comparison metric from experiment results.
+
+    Returns ``(type, value)`` where *higher* values are always better.
+    Callers should use ``>`` to test for improvement.
+
+    Priority:
+    1. ``throughput_samples_per_s`` — reported by the analysis agent; directly
+       measures end-to-end training throughput.  Higher is better.
+    2. ``steady_step_time_ms`` — fallback when throughput is unavailable.
+       Negated so that lower step-time becomes higher metric value.
+    3. ``duration_s`` — last-resort fallback (also negated).
+    """
+    tput = metrics.get("throughput_samples_per_s")
+    if isinstance(tput, (int, float)) and tput > 0:
+        return ("throughput", float(tput))
     step = metrics.get("steady_step_time_ms")
     if isinstance(step, (int, float)) and step > 0:
-        return ("step_ms", float(step))
+        return ("step_ms", -float(step))
     duration = metrics.get("duration_s")
     if isinstance(duration, (int, float)) and duration > 0:
-        return ("duration_s", float(duration))
-    return ("none", float("inf"))
+        return ("duration_s", -float(duration))
+    return ("none", float("-inf"))
+
+
+def _format_best_metric(metric_type: str, value: float) -> str:
+    """Format the best metric value for display."""
+    if metric_type == "throughput":
+        return f"{value:.1f} samples/s"
+    if metric_type == "step_ms":
+        return f"{-value:.0f}ms"
+    if metric_type == "duration_s":
+        return f"{-value:.0f}s"
+    return "N/A"
 
 
 def _extract_total_threads(launch_cmd: str) -> int | None:
