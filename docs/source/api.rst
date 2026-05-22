@@ -13,6 +13,7 @@ API Reference
    spdl.io
    spdl.io.utils
    spdl.autoresearch
+   spdl.autoresearch.core
 
    spdl.dataloader
    spdl.source

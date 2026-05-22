@@ -170,7 +170,7 @@ After the seed experiments, autoresearch enters an iterative loop:
 .. mermaid::
 
    sequenceDiagram
-       participant Engine as AsyncWorkEngine
+       participant Engine as Orchestrator
        participant Adapter as AutoresearchAdapter
        participant Agent as Coding Agent
        participant Platform as Platform
@@ -199,7 +199,7 @@ useful for monitoring progress.
 
 ``engine/checkpoint.json``
    Runner checkpoint containing the serialized queued and running
-   ``_WorkSpec`` objects. This is the source of truth for resume.
+   ``TaskSpec`` objects. This is the source of truth for resume.
 
 ``engine/queue.json``
    Compatibility view of pending experiments in priority order.
@@ -275,7 +275,7 @@ Modifying the Queue
 
 To manually adjust the experiment queue, stop the engine and edit
 ``engine/checkpoint.json``. The ``queued`` list contains serialized
-``_WorkSpec`` objects; change their ``priority`` values or remove specs
+``TaskSpec`` objects; change their ``priority`` values or remove specs
 as needed. Lower values run first. ``engine/queue.json`` is a
 compatibility view for monitoring and should not be treated as the
 resume source of truth.

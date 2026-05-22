@@ -42,12 +42,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from spdl.autoresearch.core import Orchestrator
 from spdl.tools.autoresearch.utils.log import setup_logging
 from spdl.tools.autoresearch.utils.platform import (
     AutoresearchPlatform,
     create_platform,
 )
-from spdl.tools.autoresearch.utils.runner import AsyncWorkEngine
 from spdl.tools.autoresearch.utils.state import (
     MASTER_TABLE_HEADERS,
     read_config,
@@ -376,8 +376,8 @@ def main() -> None:
         state=state,
         platform=platform,
     )
-    engine = AsyncWorkEngine(
-        adapter=adapter,
+    engine = Orchestrator(
+        workflow=adapter,
         max_concurrency=config.get("max_concurrency", 3),
     )
 
