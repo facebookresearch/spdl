@@ -56,9 +56,10 @@ from spdl.autoresearch.core import (
     FailureRecord,
     Orchestrator,
 )
-from spdl.autoresearch.pipeline_optimization._ops import PipelineOptimizationWorkflow
-from spdl.autoresearch.pipeline_optimization._ops._failures import _make_failure
-from spdl.autoresearch.pipeline_optimization._platform import (
+
+from ._ops import PipelineOptimizationWorkflow
+from ._ops._failures import _make_failure
+from ._platform import (
     AutoresearchPlatform,
     create_platform,
 )

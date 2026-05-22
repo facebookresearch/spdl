@@ -16,8 +16,8 @@ from typing import Any
 
 from spdl.autoresearch._common._claude import _run_claude
 from spdl.autoresearch._common._codex import _run_codex
-from spdl.autoresearch.pipeline_optimization._prompts import load_knowledge, load_prompt
 
+from .._prompts import load_knowledge, load_prompt
 from ._types import _AgentResult
 
 _LG: logging.Logger = logging.getLogger(__name__)

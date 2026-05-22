@@ -20,7 +20,8 @@ from spdl.autoresearch._common._state import (
     SCHEMA_VERSION,
     write_state,
 )
-from spdl.autoresearch.pipeline_optimization._platform import create_platform
+
+from .._platform import create_platform
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

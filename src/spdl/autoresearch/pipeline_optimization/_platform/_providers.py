@@ -157,7 +157,8 @@ def _discover_extension_providers() -> list[_AutoresearchPlatformProvider]:
 
 
 def _discover_convention_providers() -> list[_AutoresearchPlatformProvider]:
-    root = importlib.import_module("spdl.tools.autoresearch")
+    parent_package = __package__.rsplit(".", 1)[0]
+    root = importlib.import_module(parent_package)
     package_paths = getattr(root, "__path__", None)
     if package_paths is None:
         return []
@@ -166,7 +167,7 @@ def _discover_convention_providers() -> list[_AutoresearchPlatformProvider]:
     for module_info in pkgutil.iter_modules(package_paths):
         try:
             module = importlib.import_module(
-                f"spdl.tools.autoresearch.{module_info.name}.platform"
+                f"{parent_package}.{module_info.name}._platform"
             )
         except ImportError:
             continue

@@ -18,10 +18,8 @@ from spdl.autoresearch._common._state import (
     read_state,
     write_state,
 )
-from spdl.autoresearch.pipeline_optimization._platform import (
-    AutoresearchPlatform,
-    create_platform,
-)
+
+from .._platform import AutoresearchPlatform, create_platform
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -177,4 +175,4 @@ def _run(args: list[str]) -> None:
         _instrument_pipeline(workdir, config, platform, pipeline_script, pipeline_code)
 
     print(f"\nResults saved to {run_dir}")
-    print(f"Next: buck run //spdl/tools/autoresearch:run -- {workdir}")
+    print(f"Next: python launch.py loop {workdir}")
