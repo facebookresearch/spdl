@@ -59,27 +59,27 @@ def main() -> None:
 
     match args.command:
         case _CMD.INIT:
-            from spdl.autoresearch.pipeline_optimization._commands._init import _run
+            from ._commands._init import _run
 
             _run(others)
 
         case _CMD.ASSESS:
-            from spdl.autoresearch.pipeline_optimization._commands._assess import _run
+            from ._commands._assess import _run
 
             _run(others)
 
         case _CMD.STATUS:
-            from spdl.autoresearch.pipeline_optimization._commands._status import _run
+            from ._commands._status import _run
 
             _run(others)
 
         case _CMD.QUEUE:
-            from spdl.autoresearch.pipeline_optimization._commands._queue import _run
+            from ._commands._queue import _run
 
             _run(others)
 
         case _CMD.REPORT:
-            from spdl.autoresearch.pipeline_optimization._commands._report import _run
+            from ._commands._report import _run
 
             _run(others)
 

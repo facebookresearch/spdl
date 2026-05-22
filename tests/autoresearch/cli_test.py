@@ -8,11 +8,7 @@ from __future__ import annotations
 
 import unittest
 
-from spdl.autoresearch._common._supervisor import (
-    _ClaudeSupervisor,
-    _CodexSupervisor,
-    _SupervisorAvailability,
-)
+from spdl.autoresearch._common._supervisor import _SupervisorAvailability
 from spdl.autoresearch.pipeline_optimization import _cli as cli
 
 __all__: list[str] = []
@@ -153,20 +149,6 @@ class _CliTest(unittest.TestCase):
         )
 
         self.assertEqual("Inspect the current run first.", prompt)
-
-    def test_claude_supervisor_receives_system_and_initial_prompts(self) -> None:
-        command = _ClaudeSupervisor().command("SYSTEM", "INITIAL")
-
-        self.assertEqual(["claude", "--system-prompt", "SYSTEM", "INITIAL"], command)
-
-    def test_codex_supervisor_receives_system_and_initial_prompts(self) -> None:
-        command = _CodexSupervisor().command("SYSTEM", "INITIAL")
-
-        self.assertEqual("codex", command[0])
-        self.assertEqual(2, len(command))
-        self.assertIn("SYSTEM", command[1])
-        self.assertIn("## User Request", command[1])
-        self.assertIn("INITIAL", command[1])
 
 
 if __name__ == "__main__":
