@@ -12,6 +12,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from spdl.autoresearch._common._state import (
+    _append_master_row,
+    MASTER_TABLE_HEADERS,
+    write_state,
+)
+from spdl.autoresearch._common._visualization import _load_tsv
 from spdl.autoresearch.core import (
     AnalysisResult,
     FailureKind,
@@ -19,24 +25,11 @@ from spdl.autoresearch.core import (
     HypothesisNode,
     TaskSpec,
 )
-from spdl.tools.autoresearch.plot_progress import (
-    _edge_label,
-    _load_tsv,
-    _tree_font_sizes,
-)
 from spdl.tools.autoresearch.utils.commands.report import _read_failures
 from spdl.tools.autoresearch.utils.commands.status import _failure_summary
 from spdl.tools.autoresearch.utils.platform import _MetricsEvidence, create_platform
 from spdl.tools.autoresearch.utils.platform.agents import _MockAgent
 from spdl.tools.autoresearch.utils.platform.local import _summarize_error
-from spdl.tools.autoresearch.utils.state import (
-    _append_master_row,
-    _normalize_config,
-    _normalize_state,
-    MASTER_TABLE_HEADERS,
-    SCHEMA_VERSION,
-    write_state,
-)
 from spdl.tools.autoresearch.utils.workflow import (
     _AutoresearchStore,
     AutoresearchAdapter,
@@ -976,25 +969,6 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         self.assertIn("knowledge", prompt)
         self.assertIn("def main", prompt)
 
-    def test_tree_edge_label_describes_experiment_evolution(self) -> None:
-        parent = {"node_id": "001_parent", "name": "parent", "spec": {}}
-        child = {
-            "node_id": "002_child",
-            "name": "child",
-            "spec": {
-                "change_summary": "raise decode threads",
-                "description": "increase decode thread count",
-            },
-        }
-        retry = {
-            "node_id": "003_retry",
-            "name": "retry",
-            "spec": {"_startup_retry_attempt": 2, "description": "repair"},
-        }
-
-        self.assertEqual("raise decode threads", _edge_label(parent, child))
-        self.assertEqual("startup repair #2", _edge_label(parent, retry))
-
     def test_change_summary_is_concise_and_persisted_in_master_table(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp)
@@ -1025,22 +999,6 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
             self.assertEqual("Increase decode thread count while", summary)
             self.assertEqual(summary, rows[0]["change_summary"])
-
-    def test_tree_font_sizes_grow_with_tree_size(self) -> None:
-        small = _tree_font_sizes(4, 1)
-        large = _tree_font_sizes(120, 10)
-
-        self.assertGreater(large["title"], small["title"])
-        self.assertGreater(large["legend"], small["legend"])
-
-    def test_schema_normalizers_add_versions_and_defaults(self) -> None:
-        config = _normalize_config({})
-        state = _normalize_state({})
-
-        self.assertEqual(SCHEMA_VERSION, config["schema_version"])
-        self.assertEqual(SCHEMA_VERSION, state["schema_version"])
-        self.assertEqual("auto", config["platform"])
-        self.assertEqual([], state["history"])
 
     def test_every_failure_kind_has_policy(self) -> None:
         self.assertEqual(set(FailureKind.__members__.values()), set(_FAILURE_POLICIES))

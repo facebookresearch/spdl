@@ -11,14 +11,13 @@ from __future__ import annotations
 import json
 import logging
 import re
-import subprocess
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from spdl.autoresearch._common._claude import _run_claude
+from spdl.autoresearch._common._codex import _run_codex
 from spdl.autoresearch.pipeline_optimization._prompts import load_knowledge, load_prompt
 
-from .. import claude
 from .types import _AgentResult
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -43,7 +42,7 @@ class _ClaudeAgent:
         return load_knowledge()
 
     def run(self, prompt: str, workdir: Path, phase: str) -> str:
-        return claude._run_claude(prompt, workdir, phase)
+        return _run_claude(prompt, workdir, phase)
 
     def _extract_json_block(self, text: str) -> dict | None:
         return _extract_json_block(text)
@@ -68,32 +67,7 @@ class _CodexAgent:
         return load_knowledge()
 
     def run(self, prompt: str, workdir: Path, phase: str) -> str:
-        log_dir = workdir / "logs"
-        log_dir.mkdir(exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        prompt_file = log_dir / f"{timestamp}_{phase}_prompt.md"
-        output_file = log_dir / f"{timestamp}_{phase}_output.md"
-        raw_file = log_dir / f"{timestamp}_{phase}_raw.txt"
-        prompt_file.write_text(prompt)
-
-        _LG.info("Running codex [phase=%s] cmd=%s", phase, self._command)
-        result = subprocess.run(
-            self._command,
-            input=prompt,
-            capture_output=True,
-            text=True,
-            cwd=str(workdir),
-            timeout=900,
-        )
-        raw_file.write_text(f"[STDOUT]\n{result.stdout}\n[STDERR]\n{result.stderr}")
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"Codex exited with code {result.returncode} during '{phase}'. "
-                f"See {raw_file} for details.\n"
-                f"stderr: {result.stderr[:500]}"
-            )
-        output_file.write_text(result.stdout)
-        return result.stdout
+        return _run_codex(prompt, workdir, phase, command=self._command)
 
     def _extract_json_block(self, text: str) -> dict | None:
         return _extract_json_block(text)

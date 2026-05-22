@@ -14,7 +14,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from .state import read_config
+from spdl.autoresearch._common._state import read_config
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

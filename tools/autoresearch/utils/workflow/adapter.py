@@ -54,6 +54,7 @@ from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any
 
+from spdl.autoresearch._common._state import _append_master_row
 from spdl.autoresearch.core import (
     AnalysisResult,
     AutoresearchError,
@@ -67,7 +68,6 @@ from spdl.autoresearch.core import (
 )
 
 from ..platform import AutoresearchPlatform
-from ..state import _append_master_row
 from .analysis_ops import (
     _analyze_job,
     _update_on_complete,
