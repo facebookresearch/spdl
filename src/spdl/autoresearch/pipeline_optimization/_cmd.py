@@ -8,14 +8,14 @@
 """Autoresearch CLI tools for SPDL pipeline optimization.
 
 Individual commands for setting up and inspecting autoresearch experiments.
-For running the optimization engine, use run.py instead.
+For running the optimization engine, use _run.py instead.
 
 Usage:
-    python cmd.py init <workdir> [options]
-    python cmd.py assess <workdir> --baseline-job <JOB>
-    python cmd.py status <workdir>
-    python cmd.py queue <workdir> list|remove|priority ...
-    python cmd.py report <workdir>
+    python _cmd.py init <workdir> [options]
+    python _cmd.py assess <workdir> --baseline-job <JOB>
+    python _cmd.py status <workdir>
+    python _cmd.py queue <workdir> list|remove|priority ...
+    python _cmd.py report <workdir>
 """
 
 from __future__ import annotations
@@ -59,27 +59,27 @@ def main() -> None:
 
     match args.command:
         case _CMD.INIT:
-            from utils.commands.init import _run
+            from spdl.autoresearch.pipeline_optimization._commands._init import _run
 
             _run(others)
 
         case _CMD.ASSESS:
-            from utils.commands.assess import _run
+            from spdl.autoresearch.pipeline_optimization._commands._assess import _run
 
             _run(others)
 
         case _CMD.STATUS:
-            from utils.commands.status import _run
+            from spdl.autoresearch.pipeline_optimization._commands._status import _run
 
             _run(others)
 
         case _CMD.QUEUE:
-            from utils.commands.queue import _run
+            from spdl.autoresearch.pipeline_optimization._commands._queue import _run
 
             _run(others)
 
         case _CMD.REPORT:
-            from utils.commands.report import _run
+            from spdl.autoresearch.pipeline_optimization._commands._report import _run
 
             _run(others)
 
