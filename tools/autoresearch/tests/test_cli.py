@@ -13,7 +13,7 @@ from spdl.autoresearch._common._supervisor import (
     _CodexSupervisor,
     _SupervisorAvailability,
 )
-from spdl.tools.autoresearch import cli
+from spdl.autoresearch.pipeline_optimization import _cli as cli
 
 __all__: list[str] = []
 
@@ -66,7 +66,7 @@ class _CliTest(unittest.TestCase):
 
         command = cli._build_engine_command(ns, "/tmp/autoresearch", _Supervisor())
 
-        self.assertTrue(command[1].endswith("spdl/tools/autoresearch/run.py"))
+        self.assertTrue(command[1].endswith("_run.py"))
         self.assertIn("--agent", command)
         self.assertEqual("codex", command[command.index("--agent") + 1])
         self.assertEqual("local", command[command.index("--platform") + 1])

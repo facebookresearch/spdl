@@ -13,7 +13,7 @@ Designed to be invoked by Claude Code or directly from the command line.
 
 First run::
 
-    fbpython run.py <workdir> \\
+    python -m spdl.autoresearch.pipeline_optimization._run <workdir> \\
       --pipeline-script path/to/pipeline.py \\
       --source-dir path/to/source \\
       --build-command "docker build -t my_image ." \\
@@ -23,7 +23,7 @@ First run::
 
 Resume after Ctrl+C::
 
-    fbpython run.py <workdir>
+    python -m spdl.autoresearch.pipeline_optimization._run <workdir>
 
 All config is persisted in ``<workdir>/config.json`` after the first run,
 so resuming only needs the workdir path.
@@ -207,6 +207,7 @@ def _init_workdir(
         "best_metric": None,
         "plateau_count": 0,
         "best_practices_tried": [],
+        "cached_image": None,
         "anchor_commit": anchor_commit_hash,
         "history": [],
         "_setup_failures": setup_failures,

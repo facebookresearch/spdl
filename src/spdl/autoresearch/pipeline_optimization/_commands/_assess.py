@@ -177,4 +177,4 @@ def _run(args: list[str]) -> None:
         _instrument_pipeline(workdir, config, platform, pipeline_script, pipeline_code)
 
     print(f"\nResults saved to {run_dir}")
-    print(f"Next: python launch.py loop {workdir}")
+    print(f"Next: buck run //spdl/tools/autoresearch:run -- {workdir}")

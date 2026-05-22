@@ -177,4 +177,4 @@ def _run(args: list[str]) -> None:
         shutil.copy2(ns.pipeline_script, workdir / "pipeline.py")
 
     print(f"Initialized experiment at {workdir}")
-    print(f"Next: python launch.py assess {workdir} --baseline-job <JOB_NAME>")
+    print(f"Next: python _cmd.py assess {workdir} --baseline-job <JOB_NAME>")
