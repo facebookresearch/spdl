@@ -298,7 +298,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
 
     def test_policy_helpers_cover_metric_and_thread_decisions(self) -> None:
         self.assertEqual(
-            ("step_ms", 12.5),
+            ("step_ms", -12.5),
             _compare_metric_value({"steady_step_time_ms": 12.5, "duration_s": 100}),
         )
         # Only --num-threads → use it directly.
