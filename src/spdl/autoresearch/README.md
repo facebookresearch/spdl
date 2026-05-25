@@ -13,7 +13,6 @@ The package is organized into three layers:
 - **`pipeline_optimization/`** — Public submodule (`spdl.autoresearch.pipeline_optimization`). The concrete SPDL pipeline optimization workflow, organized as:
   - `_ops/` — Workflow operations: experiment lifecycle, analysis, planning policy, source mutations, failure handling, and persistent state.
   - `_platform/` — Platform abstraction: coding agent implementations, local/remote execution, and provider discovery.
-  - `_commands/` — CLI subcommands (init, assess, status, queue, report).
   - `prompts/` — Markdown prompt templates for LLM workflow agents, organized by category (phase prompts, knowledge, platform, supervisor).
 
 When adding a new autoresearch use case (e.g. model architecture search, hyperparameter tuning), it should be added as a new public submodule under `spdl.autoresearch`, reusing `core/` and `_common/`, but not `pipeline_optimization`.
