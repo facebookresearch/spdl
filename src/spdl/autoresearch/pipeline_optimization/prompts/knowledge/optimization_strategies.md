@@ -83,6 +83,10 @@ def build_spdl_pipeline(
         .add_sink(buffer_size=3)
     )
     return frontend.build(num_threads=1)
+    # NOTE: num_threads=1 is sufficient here because transfer_tensor is the
+    # only stage and runs without concurrency.  When the frontend has
+    # concurrent stages (e.g. NVDEC decode at concurrency=7), set
+    # num_threads >= max stage concurrency (see the Key Parameters table).
 ```
 
 ### Training Loop with MTP
@@ -218,7 +222,7 @@ When using `run_pipeline_in_subprocess()`, all pipeline stage functions must be 
 
 - **Lambda functions** — cannot be pickled.
 - **Locally defined (inner/nested) functions** — not picklable.
-- **Bound methods of non-picklable objects** (e.g., objects holding open file handles or locks).
+- **Bound methods** (e.g., `dataset.__getitem__`, `self.process`) — while Python 3.5+ can pickle bound methods, prefer module-level functions with `functools.partial` instead (see Tier 1 pattern below). Module-level functions make the serialization boundary explicit, produce clearer error messages when pickling fails, and can be extended with lazy initialization or thread-local storage without modifying the original class.
 
 ### Two-Tier Approach for MTP Stage Functions
 
@@ -308,11 +312,21 @@ Note: OpenAI's `tiktoken` tokenizers ARE thread-safe and do not need TLS.
 
 ```python
 # WRONG — all of these fail or cause subtle bugs:
-pipeline.pipe(lambda x: tokenize(x, max_length=512))       # lambda — not picklable
+pipeline.pipe(dataset.__getitem__, concurrency=8)            # bound method — works but opaque;
+                                                             #   prefer module-level fn (see below)
+pipeline.pipe(lambda x: tokenize(x, max_length=512))        # lambda — not picklable
 pipeline.pipe(my_inner_function)                             # inner function — not picklable
 pipeline.pipe(partial(fn, tls=threading.local()))            # non-picklable arg
 pipeline.pipe(partial(tokenize, tokenizer=hf_tokenizer),     # shared HF tokenizer —
               concurrency=8)                                 #   not thread-safe, will corrupt
+```
+
+```python
+# PREFERRED — module-level function + partial:
+def _fetch(index: int, *, dataset: MyDataset) -> dict:
+    return dataset[index]
+
+pipeline.pipe(partial(_fetch, dataset=dataset), concurrency=8)
 ```
 
 ## Headspace Analysis
