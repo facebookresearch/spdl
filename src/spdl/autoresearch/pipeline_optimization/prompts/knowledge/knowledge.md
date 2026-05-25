@@ -92,6 +92,8 @@ GPU video decode supports two integration modes:
 `VideoPackets` are now picklable, so **MTP and GPU decode can be combined**. Demux in a subprocess and decode with NVDEC in the main process:
 
 ```python
+from concurrent.futures import ThreadPoolExecutor
+
 # Backend (subprocess) — fetch + demux only
 backend = (
     PipelineBuilder()
@@ -108,10 +110,12 @@ source2 = spdl.pipeline.run_pipeline_in_subprocess(
 )
 
 # Frontend (main process) — GPU decode + to_torch
+# Use a dedicated executor for NVDEC decode (separate from pipeline thread pool)
+decode_executor = ThreadPoolExecutor(max_workers=7)
 frontend = (
     PipelineBuilder()
     .add_source(source2, continuous=True)
-    .pipe(decode_nvdec_fn, concurrency=7)  # match GPU decoder slots
+    .pipe(decode_nvdec_fn, concurrency=7, executor=decode_executor)
     .pipe(spdl.io.to_torch)
     .add_sink(buffer_size=3)
 )

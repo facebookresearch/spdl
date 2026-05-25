@@ -40,6 +40,28 @@ def _extract_code_block(text: str) -> str | None:
     return None
 
 
+def _extract_top_level_names(source: str) -> set[str]:
+    """Extract top-level function and class names from Python source code.
+
+    Uses regex rather than ``ast.parse`` to avoid failures on code that
+    contains syntax specific to newer Python versions.
+    """
+    names: set[str] = set()
+    for match in re.finditer(r"^(?:def|class)\s+(\w+)", source, re.MULTILINE):
+        names.add(match.group(1))
+    return names
+
+
+def _validate_preserved_symbols(original_code: str, modified_code: str) -> list[str]:
+    """Return names of top-level symbols present in *original_code* but
+    missing from *modified_code*.  An empty list means all symbols are
+    preserved.
+    """
+    original_names = _extract_top_level_names(original_code)
+    modified_names = _extract_top_level_names(modified_code)
+    return sorted(original_names - modified_names)
+
+
 def _build_apply_prompt(
     platform: AutoresearchPlatform,
     exp: dict,
@@ -152,6 +174,27 @@ def _apply_code_changes(
             FailurePhase.CODE_CHANGE,
             "Coding agent did not return a Python code block for experiment changes",
             details={"log": str(failed_log)},
+        )
+
+    # Validate that the agent didn't accidentally replace the file with
+    # content from a different module (a common failure mode when the
+    # experiment description references a file other than pipeline_script).
+    missing = _validate_preserved_symbols(pipeline_code, modified_code)
+    if missing:
+        _LG.warning(
+            "Modified code is missing top-level symbols from the original: %s",
+            ", ".join(missing),
+        )
+        print(f"  Warning: modified code drops symbols: {', '.join(missing)}")
+        _raise_failure(
+            FailureKind.CODE_CHANGE_FAILED,
+            FailurePhase.CODE_CHANGE,
+            f"Agent output is missing top-level symbols from the original "
+            f"file ({', '.join(missing)}). This usually means the agent "
+            f"output the content of a different file instead of modifying "
+            f"the pipeline script. The experiment description may reference "
+            f"a file that is not the pipeline script.",
+            details={"missing_symbols": missing},
         )
 
     target = Path(pipeline_script)
