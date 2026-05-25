@@ -171,8 +171,11 @@ python run.py /tmp/my_experiment \
 # Resume after Ctrl+C (config is persisted)
 python run.py /tmp/my_experiment
 
-# Check progress
-python cmd.py status /tmp/my_experiment
+# Check progress (read these files in the workdir)
+#   summary.md          — live progress summary
+#   progress.png        — Karpathy-style progress chart
+#   engine/engine_state.json — engine status + counts
+#   engine/tree.json    — full hypothesis tree
 
 # Generate final report
 python cmd.py report /tmp/my_experiment
@@ -288,7 +291,7 @@ In each planning session, the coding agent chooses one of three actions:
 ```
 autoresearch/
 ├── run.py                         # Single entry point (init + instrument + engine)
-├── cmd.py                         # CLI tools (init, assess, status, report)
+├── cmd.py                         # CLI tool (final-report generation)
 ├── launch.sh                      # Interactive coding-agent front-end
 ├── plot_progress.py               # Progress chart + hypothesis tree visualization
 ├── BUCK                           # Build targets
@@ -296,7 +299,7 @@ autoresearch/
 │   ├── runner.py                  # Generic async WorkSpec scheduler
 │   ├── workflow/                  # Experiment lifecycle, store, and policy
 │   ├── platform/                  # Workspace/artifacts/execution/evidence/agent
-│   ├── commands/                  # init, assess, status, report commands
+│   ├── commands/                  # final-report command
 │   ├── infra/                     # Low-level generic helper functions
 │   ├── claude.py                  # Claude implementation for CodingAgent
 │   ├── state.py                   # Experiment state, config, master table

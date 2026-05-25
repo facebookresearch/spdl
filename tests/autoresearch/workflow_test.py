@@ -25,8 +25,6 @@ from spdl.autoresearch.core import (
     HypothesisNode,
     TaskSpec,
 )
-from spdl.autoresearch.pipeline_optimization._commands._report import _read_failures
-from spdl.autoresearch.pipeline_optimization._commands._status import _failure_summary
 from spdl.autoresearch.pipeline_optimization._ops import (
     _WorkflowStateStore,
     PipelineOptimizationWorkflow,
@@ -37,7 +35,9 @@ from spdl.autoresearch.pipeline_optimization._ops._analysis_ops import (
 from spdl.autoresearch.pipeline_optimization._ops._failures import (
     _classify_terminal_job_failure,
     _FAILURE_POLICIES,
+    _failure_summary,
     _make_failure,
+    _read_failures,
 )
 from spdl.autoresearch.pipeline_optimization._ops._policy import (
     _build_change_set,

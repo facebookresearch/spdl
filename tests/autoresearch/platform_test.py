@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from spdl.autoresearch.pipeline_optimization._commands import _queue as cmd_queue
+from spdl.autoresearch.pipeline_optimization._ops._store import _set_queued_priority
 from spdl.autoresearch.pipeline_optimization._platform import (
     _MetricsEvidence,
     AutoresearchPlatform,
@@ -166,7 +166,7 @@ class _PlatformTest(unittest.TestCase):
                 '"payload": {"node": {"node_id": "001_a"}}}], "running": []}\n'
             )
 
-            cmd_queue._run([str(workdir), "priority", "001_a", "-5"])
+            _set_queued_priority(workdir, "001_a", -5)
 
             text = (engine / "checkpoint.json").read_text()
             self.assertIn('"priority": -5.0', text)

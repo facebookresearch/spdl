@@ -60,6 +60,7 @@ from ._policy import (
 
 __all__ = [
     "_WorkflowStateStore",
+    "_set_queued_priority",
     "_write_text_atomic",
 ]
 
@@ -287,6 +288,32 @@ class _WorkflowStateStore:
             json.dumps([node.to_dict() for node in self.tree.values()], indent=2)
             + "\n",
         )
+
+
+def _set_queued_priority(workdir: Path, node_id: str, value: float) -> None:
+    """Update the priority of a queued spec in ``engine/checkpoint.json``.
+
+    Operator helper for re-ordering pending experiments without restarting
+    the engine. Raises ``SystemExit`` if the checkpoint or queued spec is
+    missing.
+    """
+    checkpoint = workdir.resolve() / "engine" / "checkpoint.json"
+    if not checkpoint.exists():
+        raise SystemExit(f"No checkpoint found: {checkpoint}")
+    data = json.loads(checkpoint.read_text())
+    if not isinstance(data, dict):
+        raise SystemExit(f"Invalid checkpoint: {checkpoint}")
+    queued = [TaskSpec.from_dict(spec) for spec in data.get("queued", [])]
+    found = False
+    for spec in queued:
+        if spec.id == node_id:
+            spec.priority = float(value)
+            found = True
+            break
+    if not found:
+        raise SystemExit(f"Queued spec not found: {node_id}")
+    data["queued"] = [spec.to_dict() for spec in queued]
+    checkpoint.write_text(json.dumps(data, indent=2) + "\n")
 
 
 def _timestamp() -> str:
