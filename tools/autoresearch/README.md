@@ -130,6 +130,15 @@ Press **Ctrl+C** to stop the engine gracefully. The runner persists queued and r
 
 Re-run the same command to resume — the engine re-checks job status and picks up where it left off.
 
+## Buck Binary Targets
+
+Two binaries are provided:
+
+- `:autoresearch` — bare framework binary. Eventually accepts an arbitrary user-supplied workflow via `--workflow module.path:factory`. Today it falls back to the bundled pipeline-optimization workflow when `--workflow` is not supplied, so the legacy invocations under `examples/*/fb/autoresearch.sh` continue to work.
+- `:autoresearch_with_pipeline_opt` — convenience binary that bundles the pipeline-optimization workflow alongside the framework. The default if you want the out-of-the-box SPDL pipeline-optimization behavior at Meta.
+
+When the entry point eventually merges into the unified `spdl` CLI, the framework dispatcher allows the workflow implementation to evolve (or be supplied by the user) without rebuilding the CLI binary.
+
 ## Quick Start
 
 ### Option 1: Supervised CLI
