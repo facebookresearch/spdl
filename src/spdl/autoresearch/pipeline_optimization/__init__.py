@@ -6,11 +6,19 @@
 
 """SPDL pipeline optimization implementation of autoresearch.
 
-Provides the complete workflow for automatically optimizing SPDL data loading
-pipelines: supervisor CLI, engine runner, experiment adapter, platform
-providers, and CLI commands.
+Provides the complete workflow for automatically optimizing SPDL data
+loading pipelines. Two public entry points:
+
+- :py:func:`create_workflow` is a
+  :py:data:`~spdl.autoresearch.core.WorkflowFactory`. Pass
+  ``--workflow spdl.autoresearch.pipeline_optimization:create_workflow``
+  to the framework dispatcher (or rely on the bundled binary's default).
+- :py:func:`main` is the legacy supervisor-CLI entry point that the
+  ``autoresearch`` Buck binary currently dispatches to. Subsequent
+  refactor steps replace this with the framework dispatcher.
 """
 
 from ._cli import main
+from ._factory import create_workflow
 
-__all__ = ["main"]
+__all__ = ["create_workflow", "main"]
