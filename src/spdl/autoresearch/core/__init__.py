@@ -72,6 +72,7 @@ from ._types import (
     HypothesisNode,
     TERMINAL_STATUSES,
 )
+from ._workflow import WorkflowFactory, WorkflowSpec
 
 __all__ = [
     "AnalysisResult",
@@ -84,7 +85,9 @@ __all__ = [
     "TaskResult",
     "TaskSpec",
     "TERMINAL_STATUSES",
+    "WorkflowFactory",
     "WorkflowProtocol",
+    "WorkflowSpec",
     "load_or_init",
     "read_engine_state",
     "write_engine_state",
