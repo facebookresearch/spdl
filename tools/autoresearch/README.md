@@ -139,6 +139,33 @@ Two binaries are provided:
 
 When the entry point eventually merges into the unified `spdl` CLI, the framework dispatcher allows the workflow implementation to evolve (or be supplied by the user) without rebuilding the CLI binary.
 
+## Pluggable Workflows (`--workflow`)
+
+The framework dispatcher accepts a workflow specifier in one of two forms:
+
+- `module.path:factory_name` — imports `module.path` and uses `factory_name` as the workflow factory. The factory must match `Callable[[list[str], Path | None], WorkflowSpec]`.
+- a short name registered under the `spdl.autoresearch.workflows` Python entry-points group — useful for OSS distribution where users register their workflow at install time via `pyproject.toml`.
+
+```toml
+# In your project's pyproject.toml
+[project.entry-points."spdl.autoresearch.workflows"]
+my_workflow = "my_pkg.my_module:create_workflow"
+```
+
+When invoking, framework arguments come before `--`, and arguments specific to the workflow factory come after `--`:
+
+```bash
+spdl-autoresearch /tmp/my_experiment \
+  --workflow spdl.autoresearch.pipeline_optimization:create_workflow \
+  --agent claude --platform auto --max-concurrency 3 \
+  -- \
+  --pipeline-script path/to/pipeline.py \
+  --build-command "make image" \
+  --base-launch-command "torchx run --image \$IMAGE"
+```
+
+The bundled `:autoresearch_with_pipeline_opt` binary injects `--workflow spdl.autoresearch.pipeline_optimization:create_workflow` automatically when none is supplied.
+
 ## Quick Start
 
 ### Option 1: Supervised CLI
