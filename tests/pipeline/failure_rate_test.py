@@ -6,13 +6,46 @@
 
 # pyre-strict
 
+import functools
 import unittest
+import warnings
+from collections.abc import Callable
 from fractions import Fraction
+from typing import Type, TypeVar
 
 from parameterized import parameterized
 from spdl.pipeline import PipelineBuilder, PipelineFailure
 
+_F = TypeVar("_F", bound=Callable[..., object])
+_C = TypeVar("_C", bound=Type[object])
 
+
+def _ignore_fork_warning(fn: _F) -> _F:
+    @functools.wraps(fn)
+    def wrapper(*args: object, **kwargs: object) -> object:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"This process \(pid=\d+\) is multi-threaded, use of "
+                    r"fork\(\) may lead to deadlocks in the child"
+                ),
+                category=DeprecationWarning,
+            )
+            return fn(*args, **kwargs)
+
+    # pyre-ignore[7]
+    return wrapper
+
+
+def _ignore_fork_warning_in_class(cls: _C) -> _C:
+    for name, member in list(vars(cls).items()):
+        if name.startswith("test_") and callable(member):
+            setattr(cls, name, _ignore_fork_warning(member))
+    return cls
+
+
+@_ignore_fork_warning_in_class
 class PipelineFailureRateTest(unittest.TestCase):
     """Tests for Fraction-based failure rate thresholds in SPDL pipeline.
 

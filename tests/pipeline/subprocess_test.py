@@ -6,6 +6,7 @@
 
 # pyre-unsafe
 
+import functools
 import multiprocessing as mp
 import os.path
 import random
@@ -13,11 +14,42 @@ import tempfile
 import threading
 import time
 import unittest
+import warnings
 from collections.abc import Iterable, Iterator
 from functools import partial
 
 from spdl.pipeline import iterate_in_subprocess as _iterate_in_subprocess
 from spdl.pipeline._iter_utils._common import _Cmd, _execute_iterable, _Status
+
+
+def _ignore_fork_warning(fn):
+    """Suppress the multi-threaded fork() DeprecationWarning emitted by
+    multiprocessing.popen_fork when starting subprocesses while pipeline
+    worker threads are alive. The warning is intentional in these tests.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"This process \(pid=\d+\) is multi-threaded, use of "
+                    r"fork\(\) may lead to deadlocks in the child"
+                ),
+                category=DeprecationWarning,
+            )
+            return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def _ignore_fork_warning_in_class(cls):
+    """Apply ``_ignore_fork_warning`` to every ``test_*`` method on a class."""
+    for name, member in list(vars(cls).items()):
+        if name.startswith("test_") and callable(member):
+            setattr(cls, name, _ignore_fork_warning(member))
+    return cls
 
 
 def iterate_in_subprocess(fn, *, timeout=10, **kwargs):
@@ -33,6 +65,7 @@ def initializer(path: str, val: str) -> None:
         f.write(val)
 
 
+@_ignore_fork_warning_in_class
 class TestIterateInSubprocess(unittest.TestCase):
     def test_iterate_in_subprocess(self) -> None:
         """iterate_in_subprocess iterates"""
@@ -116,6 +149,7 @@ def iter_range_and_store_with_sync(n: int, sync_queue: mp.Queue) -> Iterable[int
         sync_queue.put(i)
 
 
+@_ignore_fork_warning_in_class
 class TestIterateInSubprocessBufferSize(unittest.TestCase):
     def test_iterate_in_subprocess_buffer_size_1(self) -> None:
         """buffer_size=1 makes iterate_in_subprocess works sort-of interactively"""
@@ -397,6 +431,7 @@ def _fail_initializer():
 _VERY_BAD_REFERENCE = None
 
 
+@_ignore_fork_warning_in_class
 class TestIterateInSubprocessFailures(unittest.TestCase):
     def test_iterate_in_subprocess_initializer_failure(self) -> None:
         with self.assertRaisesRegex(RuntimeError, r"Initializer failed"):

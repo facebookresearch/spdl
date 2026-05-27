@@ -6,11 +6,13 @@
 
 # pyre-unsafe
 
+import functools
 import os
 import sys
 import threading
 import time
 import unittest
+import warnings
 import weakref
 from collections.abc import Iterator
 
@@ -22,6 +24,23 @@ from spdl.pipeline import (
     run_pipeline_in_subprocess,
 )
 from spdl.pipeline.defs import Merge, PipelineConfig, SinkConfig
+
+
+def _ignore_fork_warning(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"This process \(pid=\d+\) is multi-threaded, use of "
+                    r"fork\(\) may lead to deadlocks in the child"
+                ),
+                category=DeprecationWarning,
+            )
+            return fn(*args, **kwargs)
+
+    return wrapper
 
 
 class SourceIterable:
@@ -252,6 +271,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
             # auto_stop exits — pipeline has items buffered for next epoch
             # stop() must drain and shut down cleanly
 
+    @_ignore_fork_warning
     def test_continuous_stop_with_subprocess_source(self) -> None:
         """Continuous pipeline reading from subprocess can be stopped."""
         backend = (
@@ -275,6 +295,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
             self.assertEqual(r1, [0, 1, 2, 3, 4])
             # auto_stop exits — must not hang on subprocess IPC
 
+    @_ignore_fork_warning
     def test_continuous_pipeline_in_subprocess_multi_epoch(self) -> None:
         """A continuous pipeline running inside a subprocess supports
         multi-epoch iteration without recreating the subprocess."""
@@ -294,6 +315,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
             result = list(source)
             self.assertEqual(result, [0, 1, 2, 3, 4], f"epoch {epoch}")
 
+    @_ignore_fork_warning
     def test_continuous_pipeline_in_subprocess_stop_mid_epoch(self) -> None:
         """Subprocess with continuous pipeline can be abandoned mid-epoch."""
         backend = (
@@ -314,6 +336,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
         del it
         del source
 
+    @_ignore_fork_warning
     def test_continuous_frontend_backend_multi_epoch(self) -> None:
         """Frontend continuous pipeline on top of subprocess backend
         supports multi-epoch iteration."""
@@ -340,6 +363,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
                 result = list(pipeline.get_iterator(timeout=5))
                 self.assertEqual(result, [0, 1, 2, 3, 4], f"epoch {epoch}")
 
+    @_ignore_fork_warning
     def test_continuous_frontend_backend_stop_mid_epoch(self) -> None:
         """Frontend continuous pipeline on top of subprocess backend
         can be stopped mid-epoch without hanging."""
@@ -367,6 +391,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
             self.assertEqual(next(it), 1)
             # auto_stop exits mid-epoch — must not hang
 
+    @_ignore_fork_warning
     def test_continuous_frontend_backend_finalizer_shutdown(self) -> None:
         """Frontend+backend pipeline cleaned up via weakref.finalize.
 
@@ -490,6 +515,7 @@ class _RecordIDs:
 
 
 class TestContinuousSubprocessPipelineReuse(unittest.TestCase):
+    @_ignore_fork_warning
     def test_subprocess_pipeline_reused_across_epochs(self) -> None:
         """Thread and process IDs stay the same across epochs, proving
         the pipeline is reused rather than rebuilt."""
@@ -548,6 +574,7 @@ class TestContinuousSubprocessPipelineReuse(unittest.TestCase):
     "Subinterpreters require Python 3.14+",
 )
 class TestContinuousSubinterpreterPipelineReuse(unittest.TestCase):
+    @_ignore_fork_warning
     def test_subinterpreter_pipeline_reused_across_epochs(self) -> None:
         """Thread and process IDs stay the same across epochs in subinterpreter."""
         recorder = _RecordIDs()

@@ -6,6 +6,7 @@
 
 import os
 import unittest
+import warnings
 from unittest.mock import patch
 
 from spdl.pipeline import build_pipeline
@@ -34,12 +35,18 @@ class TestBuildPipeline(unittest.TestCase):
             sink=SinkConfig(1),
         )
 
-        with patch.dict("os.environ", {"SPDL_PIPELINE_DIAGNOSTIC_MODE": "1"}):
-            pipeline = build_pipeline(cfg, num_threads=2)
-            self.assertIsInstance(pipeline, _ProfilePipeline)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="coroutine '_run_pipeline_coroutines' was never awaited",
+                category=RuntimeWarning,
+            )
+            with patch.dict("os.environ", {"SPDL_PIPELINE_DIAGNOSTIC_MODE": "1"}):
+                pipeline = build_pipeline(cfg, num_threads=2)
+                self.assertIsInstance(pipeline, _ProfilePipeline)
 
-        with patch.dict("os.environ", {}, clear=False):
-            os.environ.pop("SPDL_PIPELINE_DIAGNOSTIC_MODE", None)
+            with patch.dict("os.environ", {}, clear=False):
+                os.environ.pop("SPDL_PIPELINE_DIAGNOSTIC_MODE", None)
 
-            pipeline = build_pipeline(cfg, num_threads=2)
-            self.assertNotIsInstance(pipeline, _ProfilePipeline)
+                pipeline = build_pipeline(cfg, num_threads=2)
+                self.assertNotIsInstance(pipeline, _ProfilePipeline)

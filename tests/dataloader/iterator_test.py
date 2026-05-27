@@ -6,12 +6,32 @@
 
 # pyre-unsafe
 
+import functools
 import pickle
 import random
 import unittest
+import warnings
 from collections.abc import Iterator
 from functools import partial
 from unittest.mock import patch
+
+
+def _ignore_fork_warning(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"This process \(pid=\d+\) is multi-threaded, use of "
+                    r"fork\(\) may lead to deadlocks in the child"
+                ),
+                category=DeprecationWarning,
+            )
+            return fn(*args, **kwargs)
+
+    return wrapper
+
 
 from spdl.pipeline import iterate_in_subprocess as _iterate_in_subprocess
 from spdl.source.utils import (
@@ -339,6 +359,7 @@ class TestShuffleAndIterate(unittest.TestCase):
             hyp = list(src)
             self.assertEqual(hyp, ref)
 
+    @_ignore_fork_warning
     def test_move_iterable_to_subprocess_success_iterable_with_shuffle(self) -> None:
         """IterableWithShuffle can be executed in the subprocess."""
         iterator = iterate_in_subprocess(

@@ -7,6 +7,7 @@
 # pyre-strict
 
 import unittest
+import warnings
 
 import numpy as np
 import spdl.io
@@ -68,7 +69,13 @@ class TestDemuxer(unittest.TestCase):
         with open(sample.path, "rb") as f:
             data = f.read()
 
-        src = torch.frombuffer(data, dtype=torch.uint8)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"The given buffer is not writable.*",
+                category=UserWarning,
+            )
+            src = torch.frombuffer(data, dtype=torch.uint8)
 
         with spdl.io.Demuxer(src) as demuxer:
             packets = demuxer.demux_video()
