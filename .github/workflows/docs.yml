@@ -46,6 +46,8 @@ jobs:
       - name: Build docs
         run: |
           set -x
+          conda install -q -y pip
+
           wget -qO- https://astral.sh/uv/install.sh | sh
           uv pip install . -v
           conda install -q 'ffmpeg==8' doxygen
@@ -64,7 +66,7 @@ jobs:
           echo "CONDA_PREFIX=$CONDA_PREFIX"
           echo "CONDA_DEFAULT_ENV=$CONDA_DEFAULT_ENV"
           ls -ld /usr/share/miniconda /usr/share/miniconda/envs /usr/share/miniconda/envs/test 2>/dev/null
-          ls -ld /usr/share/miniconda/envs/test/lib/python3.12/site-packages 2>/dev/null
+          ls -ld /usr/share/miniconda/envs/test/lib/python*/site-packages 2>/dev/null
           echo "=== pip view ==="
           pip -V
           pip config list -v
