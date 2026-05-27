@@ -116,9 +116,9 @@ jobs:
 
           # Install PyTorch and others
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            pip install torch numpy pytest parameterized
+            pip install torch numpy pytest parameterized matplotlib
           else
-            pip install torch numpy numba pytest parameterized
+            pip install torch numpy numba pytest parameterized matplotlib
           fi
 
           # Install FFmpeg
@@ -130,4 +130,5 @@ jobs:
           pytest -v -n ${{ inputs.test-concurrency }} \
               tests/io \
               tests/dataloader \
-              tests/pipeline
+              tests/pipeline \
+              tests/autoresearch

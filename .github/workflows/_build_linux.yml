@@ -163,7 +163,7 @@ jobs:
 
           # Install PyTorch and others
           conda run -n test_env python -m pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
-          conda install -q numba pytest pytest-xdist parameterized
+          conda install -q numba pytest pytest-xdist parameterized matplotlib
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
@@ -179,7 +179,8 @@ jobs:
           pytest -v -n ${{ inputs.test-concurrency }} \
               tests/io/ \
               tests/dataloader/ \
-              tests/pipeline/
+              tests/pipeline/ \
+              tests/autoresearch/
 
   stub-check:
     needs: ["build"]
