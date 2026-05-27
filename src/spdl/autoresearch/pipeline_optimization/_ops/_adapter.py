@@ -54,7 +54,7 @@ from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any
 
-from spdl.autoresearch._common._state import _append_master_row
+from spdl.autoresearch._common._state import _append_master_row, _read_master_table
 from spdl.autoresearch.core import (
     AnalysisResult,
     AutoresearchError,
@@ -73,7 +73,12 @@ from ._analysis_ops import (
     _update_on_complete,
     _update_summary_and_plot,
 )
-from ._failures import _failure_note, _make_failure, _unexpected_failure
+from ._failures import (
+    _failure_note,
+    _make_failure,
+    _read_failures,
+    _unexpected_failure,
+)
 from ._planning_ops import _build_initial_nodes, _plan_followups
 from ._policy import (
     _change_summary_for_spec,
@@ -165,6 +170,23 @@ class PipelineOptimizationWorkflow:
 
     def make_coro(self, spec: TaskSpec) -> Coroutine[Any, Any, TaskResult]:
         return self.run_experiment(spec)
+
+    def summarize(self, workdir: Path) -> str:
+        """Return a deterministic markdown summary of the workdir state.
+
+        Reads ``master_table.tsv``, the live ``summary.md`` file, and the
+        recorded failures (via :py:func:`_read_failures`) without
+        invoking the coding agent. Safe to call at any time.
+        """
+        sections = ["# Autoresearch summary", "", f"Workdir: `{workdir}`", ""]
+        master_table = _read_master_table(workdir)
+        if master_table:
+            sections.extend(["## Master table", "", master_table, ""])
+        summary_path = workdir / "summary.md"
+        if summary_path.exists():
+            sections.extend(["## Live summary", "", summary_path.read_text(), ""])
+        sections.extend(["## Failures", "", _read_failures(workdir), ""])
+        return "\n".join(sections)
 
     async def on_result(self, spec: TaskSpec, result: TaskResult) -> list[TaskSpec]:
         children = []

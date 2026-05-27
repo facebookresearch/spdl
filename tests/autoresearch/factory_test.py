@@ -6,8 +6,12 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
+from spdl.autoresearch._common._state import MASTER_TABLE_HEADERS, write_state
 from spdl.autoresearch.pipeline_optimization import create_workflow
 
 __all__: list[str] = []
@@ -124,3 +128,75 @@ class _CreateWorkflowTest(unittest.TestCase):
         assert description is not None  # for type checker
         self.assertIn("---", description)
         self.assertIn("Automated SPDL Pipeline Optimization", description)
+
+
+def _write_minimal_workdir(workdir: Path) -> None:
+    """Create the minimum files PipelineOptimizationWorkflow.summarize reads."""
+    workdir.mkdir(parents=True, exist_ok=True)
+    (workdir / "config.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "pipeline_script": "",
+                "source_dir": "",
+                "scm": "",
+                "build_command": "",
+                "base_launch_command": "",
+                "stopping_criteria": {"max_iterations": 1, "patience": 1},
+                "max_concurrency": 1,
+                "job_timeout_s": 60,
+                "poll_interval": 0,
+                "platform": "auto",
+                "agent": "claude",
+                "local_execution_mode": "full",
+            }
+        )
+    )
+    write_state(
+        workdir,
+        {
+            "iteration": 0,
+            "status": "looping",
+            "baseline_job": None,
+            "current_best": None,
+            "best_metric": None,
+            "plateau_count": 0,
+            "best_practices_tried": [],
+            "history": [],
+        },
+    )
+    (workdir / "master_table.tsv").write_text("\t".join(MASTER_TABLE_HEADERS) + "\n")
+
+
+class _SummarizeTest(unittest.TestCase):
+    def test_summarize_returns_markdown_for_empty_workdir(self) -> None:
+        """summarize handles a freshly initialised workdir without raising."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            _write_minimal_workdir(workdir)
+            spec = create_workflow([], workdir)
+            workflow = spec.build_workflow(workdir)
+
+            output = workflow.summarize(workdir)
+
+            self.assertIn("# Autoresearch summary", output)
+            self.assertIn(str(workdir), output)
+            self.assertIn("## Failures", output)
+
+    def test_summarize_includes_master_table_and_live_summary(self) -> None:
+        """summarize renders master-table rows and summary.md content."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            _write_minimal_workdir(workdir)
+            with open(workdir / "master_table.tsv", "a") as f:
+                f.write("run_001\tbaseline\t0.5\n")
+            (workdir / "summary.md").write_text("Best SM util improved to 85%")
+            spec = create_workflow([], workdir)
+            workflow = spec.build_workflow(workdir)
+
+            output = workflow.summarize(workdir)
+
+            self.assertIn("## Master table", output)
+            self.assertIn("run_001", output)
+            self.assertIn("## Live summary", output)
+            self.assertIn("Best SM util improved to 85%", output)

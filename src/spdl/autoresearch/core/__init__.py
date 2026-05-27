@@ -54,6 +54,10 @@ Example::
             # Filter or transform children before they enter the queue.
             return result.children
 
+        def summarize(self, workdir: Path) -> str:
+            # Render workdir state as markdown. Safe to call any time.
+            return _render_summary(workdir)
+
         def _initial_specs(self) -> list[TaskSpec]:
             return [TaskSpec(id="exp_001", priority=0)]
 

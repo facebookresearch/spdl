@@ -56,13 +56,20 @@ python run.py <workdir>
 
 Config is persisted in `<workdir>/config.json` from the first run.
 
-## Step 3: Generate Final Report
+## Step 3: Read the Final Report
 
-After the engine finishes:
+When the engine exits cleanly the framework writes
+`<workdir>/report.md` automatically — read it and surface the key
+findings to the user. You can also re-render the same report at any
+time during a run via:
 
 ```bash
-python cmd.py report <workdir>
+spdl autoresearch summary <workdir>
 ```
+
+The `summary` subcommand prints a deterministic snapshot of the workdir
+state (master table, live summary, recorded failures); it does not
+invoke a coding agent.
 
 ## What the Engine Does
 
