@@ -52,14 +52,46 @@ def _extract_top_level_names(source: str) -> set[str]:
     return names
 
 
+def _extract_import_modules(source: str) -> set[str]:
+    """Extract imported module names from ``import`` / ``from … import`` lines.
+
+    Returns dotted module paths (e.g. ``{"torch", "torch.distributed",
+    "spdl.io"}``).  Used to detect wholesale file replacement where the
+    agent outputs a different module's content.
+    """
+    modules: set[str] = set()
+    for match in re.finditer(r"^(?:import|from)\s+([\w.]+)", source, re.MULTILINE):
+        modules.add(match.group(1))
+    return modules
+
+
 def _validate_preserved_symbols(original_code: str, modified_code: str) -> list[str]:
     """Return names of top-level symbols present in *original_code* but
     missing from *modified_code*.  An empty list means all symbols are
     preserved.
+
+    Also detects wrong-file replacement by checking whether a majority
+    of the original file's imported modules were dropped — a strong
+    signal that the agent output the content of a different file.
     """
     original_names = _extract_top_level_names(original_code)
     modified_names = _extract_top_level_names(modified_code)
-    return sorted(original_names - modified_names)
+    missing = original_names - modified_names
+
+    # Detect wrong-file replacement: if more than half of the original
+    # imported modules disappeared, the agent almost certainly output
+    # the content of a different file (e.g. utils/pipeline.py instead
+    # of the training script).
+    original_imports = _extract_import_modules(original_code)
+    modified_imports = _extract_import_modules(modified_code)
+    dropped_imports = original_imports - modified_imports
+    if original_imports and len(dropped_imports) > len(original_imports) // 2:
+        missing.add(
+            f"imports:dropped {len(dropped_imports)}/{len(original_imports)} "
+            f"({', '.join(sorted(dropped_imports))})"
+        )
+
+    return sorted(missing)
 
 
 def _build_apply_prompt(

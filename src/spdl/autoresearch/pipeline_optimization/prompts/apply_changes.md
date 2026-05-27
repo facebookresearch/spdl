@@ -26,7 +26,13 @@ __PIPELINE_CODE__
    - If the change can be applied by wrapping or monkey-patching the imported function within this file, do that.
    - If the change truly cannot be expressed as a modification to this file, output the file UNCHANGED and add a comment `# AUTORESEARCH: change requires modifying a different file` at the top.
    **NEVER output the content of a different file** — the engine will overwrite `__PIPELINE_SCRIPT__` with your output, destroying all existing functions (main, parse_args, init_logging, train, etc.) and causing ImportError crashes.
-3. **Preserve ALL existing top-level symbols**: The output file MUST contain every function, class, and module-level variable that exists in the input. Other modules import symbols from this file (e.g., `init_logging`, `main`, `parse_args`). Dropping any of them causes `ImportError` at runtime. Before outputting, mentally verify that every `def` and `class` from the input appears in your output.
+3. **Preserve ALL existing top-level symbols**: The output file MUST contain every function, class, and module-level variable that exists in the input. Other modules import symbols from this file (e.g., `init_logging`, `main`, `parse_args`, `train`). Dropping any of them causes `ImportError` at runtime.
+
+   **VERIFICATION CHECKLIST** (do this before outputting):
+   - List every `def` and `class` from the input file. Confirm each one appears in your output.
+   - If your output is missing `train()`, `main()`, `parse_args()`, or `init_logging()`, you are almost certainly outputting the content of a different file (e.g., `utils/pipeline.py`) instead of modifying the pipeline script. STOP and re-read the input file.
+   - If your output no longer imports `torch.distributed`, `DDP`, or `torchvision`, you are outputting the wrong file.
+   - The training loop, model creation, optimizer setup, and DDP wrapping must remain intact.
 4. Preserve all existing functionality that is not explicitly being changed (instrumentation, logging, model setup, training loop structure).
 5. **CRITICAL**: You MUST output the complete modified file content inside a single fenced code block with the `python` language tag. Do NOT output a diff, do NOT output partial snippets, do NOT skip the code block. The output MUST contain exactly one block in this format:
 
