@@ -14,7 +14,6 @@ from pathlib import Path
 
 from spdl.autoresearch._common._state import (
     _append_master_row,
-    MASTER_TABLE_HEADERS,
     write_state,
 )
 from spdl.autoresearch._common._visualization import _load_tsv
@@ -31,6 +30,7 @@ from spdl.autoresearch.pipeline_optimization._ops import (
 )
 from spdl.autoresearch.pipeline_optimization._ops._analysis_ops import (
     _update_on_complete,
+    MASTER_TABLE_HEADERS,
 )
 from spdl.autoresearch.pipeline_optimization._ops._failures import (
     _classify_terminal_job_failure,
@@ -998,6 +998,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                     "change_summary": summary,
                     "sm_util_pct": "50",
                 },
+                MASTER_TABLE_HEADERS,
             )
 
             rows = _load_tsv(workdir / "master_table.tsv")

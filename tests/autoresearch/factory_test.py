@@ -11,8 +11,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from spdl.autoresearch._common._state import MASTER_TABLE_HEADERS, write_state
+from spdl.autoresearch._common._state import write_state
 from spdl.autoresearch.pipeline_optimization import create_workflow
+from spdl.autoresearch.pipeline_optimization._ops._analysis_ops import (
+    MASTER_TABLE_HEADERS,
+)
 
 __all__: list[str] = []
 

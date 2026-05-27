@@ -34,7 +34,6 @@ from pathlib import Path
 
 from spdl.autoresearch._common._log import setup_logging
 from spdl.autoresearch._common._state import (
-    MASTER_TABLE_HEADERS,
     read_config,
     read_state,
     SCHEMA_VERSION,
@@ -46,6 +45,9 @@ from spdl.autoresearch.core import (
     FailureRecord,
     WorkflowProtocol,
     WorkflowSpec,
+)
+from spdl.autoresearch.pipeline_optimization._ops._analysis_ops import (
+    MASTER_TABLE_HEADERS,
 )
 
 from ._ops import PipelineOptimizationWorkflow

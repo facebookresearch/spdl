@@ -4,11 +4,13 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Plot autoresearch optimization progress and hypothesis trees.
+"""Generic progress and hypothesis-tree plotting for autoresearch.
 
-Reads the master_table.tsv produced by autoresearch and generates charts:
-  1. Job duration (primary metric, lower is better) — Karpathy-style scatter
-  2. SM utilization (secondary metric) — scatter for context
+This module is workflow-agnostic.  Callers pass :class:`MetricSpec` objects
+that describe *which* columns to plot, their axis labels, units, and
+direction (higher-is-better vs lower-is-better).  The module handles all
+rendering: Karpathy-style scatter charts, running-best step lines,
+headspace reference lines, hypothesis trees, and crash markers.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ import argparse
 import csv
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib
@@ -25,6 +28,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 __all__ = [
+    "MetricSpec",
     "_edge_label",
     "_load_tsv",
     "_plot_hypothesis_tree",
@@ -34,82 +38,113 @@ __all__ = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# MetricSpec — the contract between workflow and visualization
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class MetricSpec:
+    """Describes one metric panel in the progress chart.
+
+    Workflows create a list of these and pass them to :func:`_plot_progress`.
+    The first metric in the list is used for the "kept" (green dot) criterion
+    and receives annotations on its data points.
+    """
+
+    key: str
+    """Column name in the experiment dict (must match a TSV column)."""
+
+    label: str
+    """Y-axis label displayed on the chart panel."""
+
+    lower_is_better: bool
+    """If *True* the running-best line decreases; if *False* it increases."""
+
+    unit: str = ""
+    """Unit suffix for headspace / annotation labels (e.g. ``"samples/s"``)."""
+
+    fmt: str = ".1f"
+    """Format spec applied to values in annotations and headspace labels."""
+
+
+# ---------------------------------------------------------------------------
+# TSV loading — generic, no hardcoded column names
+# ---------------------------------------------------------------------------
+
+_STRING_COLUMNS = frozenset(
+    {
+        "run_id",
+        "name",
+        "job_id",
+        "status",
+        "changes",
+        "change_summary",
+        "notes",
+    }
+)
+
+
 def _unescape(value: str) -> str:
     return value.replace("\\n", "\n").replace("\\t", "\t").replace("\\\\", "\\")
 
 
 def _load_tsv(tsv_path: Path) -> list[dict]:
-    experiments = []
+    """Load experiments from a ``master_table.tsv``.
+
+    String columns are unescaped; every other column is parsed as ``float``
+    (or ``None`` when the cell is empty or not numeric).  Two synthetic keys
+    are added to each row:
+
+    * ``status`` — visualisation status: ``VALID``, ``CRASH``, or ``HEADSPACE``
+    * ``description`` — human-readable name with underscores replaced by spaces
+    """
+    experiments: list[dict] = []
     with open(tsv_path) as f:
         reader = csv.DictReader(f, delimiter="\t")
         for row in reader:
-            sm_raw = row.get("sm_util_pct", "")
-            try:
-                sm = float(sm_raw)
-            except (ValueError, TypeError):
-                sm = 0.0
+            exp: dict = {}
+            for col, raw in row.items():
+                if col in _STRING_COLUMNS:
+                    exp[col] = _unescape(raw) if raw else ""
+                else:
+                    try:
+                        exp[col] = float(raw) if raw else None
+                    except (ValueError, TypeError):
+                        exp[col] = None
 
-            dur_raw = row.get("duration_s", "")
-            try:
-                duration = float(dur_raw)
-            except (ValueError, TypeError):
-                duration = None
-
-            status = row.get("status", "")
-            if status == "failed" or sm <= 0:
-                exp_status = "CRASH"
-            else:
-                exp_status = "VALID"
-
-            name = row.get("name", row.get("run_id", ""))
-
-            run_id = row.get("run_id", "")
+            name = exp.get("name") or exp.get("run_id") or ""
+            run_id = exp.get("run_id") or ""
+            raw_status = exp.get("status") or ""
+            sm = exp.get("sm_util_pct")
             is_headspace = run_id == "000h" or name == "headspace_cache"
 
-            step_raw = row.get("step_time_ms", "")
-            try:
-                step_time = float(step_raw)
-            except (ValueError, TypeError):
-                step_time = None
+            if is_headspace:
+                exp["status"] = "HEADSPACE"
+            elif raw_status == "failed" or (sm is not None and sm <= 0):
+                exp["status"] = "CRASH"
+            else:
+                exp["status"] = "VALID"
 
-            steady_step_raw = row.get("steady_step_time_ms", "")
-            try:
-                steady_step = float(steady_step_raw)
-            except (ValueError, TypeError):
-                steady_step = None
-
-            steady_sm_raw = row.get("steady_sm_util_pct", "")
-            try:
-                steady_sm = float(steady_sm_raw)
-            except (ValueError, TypeError):
-                steady_sm = None
-
-            experiments.append(
-                {
-                    "run_id": run_id,
-                    "name": name,
-                    "sm_util": sm,
-                    "steady_sm_util": steady_sm,
-                    "step_time_ms": step_time,
-                    "steady_step_time_ms": steady_step,
-                    "duration_s": duration,
-                    "status": "HEADSPACE" if is_headspace else exp_status,
-                    "description": _unescape(name).replace("_", " "),
-                    "change_summary": _unescape(row.get("change_summary", "")),
-                }
-            )
+            exp["description"] = str(name).replace("_", " ")
+            experiments.append(exp)
     return experiments
 
 
-def _format_label(exp: dict) -> str:
+# ---------------------------------------------------------------------------
+# Annotation / label helpers
+# ---------------------------------------------------------------------------
+
+
+def _format_label(exp: dict, metrics: list[MetricSpec]) -> str:
+    """Build a compact annotation string from the first few metrics."""
     name = exp["description"]
     parts = []
-    dur = exp.get("duration_s")
-    sm = exp.get("sm_util")
-    if dur:
-        parts.append(f"{dur / 60:.1f}m")
-    if sm and sm > 0:
-        parts.append(f"SM {sm:.0f}%")
+    for m in metrics:
+        val = exp.get(m.key)
+        if val is not None and val > 0:
+            val_str = format(val, m.fmt)
+            parts.append(f"{val_str} {m.unit}".rstrip())
     suffix = f" ({', '.join(parts)})" if parts else ""
     label = name + suffix
     if len(label) > 55:
@@ -117,20 +152,33 @@ def _format_label(exp: dict) -> str:
     return label
 
 
-def _mark_kept(experiments: list[dict]) -> None:
-    """Mark experiments that set a new best (lowest) duration.
-    Headspace runs are excluded — they are not real training runs."""
-    best_dur = float("inf")
+# ---------------------------------------------------------------------------
+# Kept-experiment marking
+# ---------------------------------------------------------------------------
+
+
+def _mark_kept(experiments: list[dict], metric: MetricSpec) -> None:
+    """Mark experiments that set a new best for *metric*.
+
+    Headspace runs are excluded — they are not real training runs.
+    """
+    best = float("inf") if metric.lower_is_better else 0.0
+    is_better = (lambda v, b: v < b) if metric.lower_is_better else (lambda v, b: v > b)
     for exp in experiments:
-        if exp["status"] not in ("VALID",):
+        if exp["status"] != "VALID":
             exp["kept"] = False
             continue
-        dur = exp.get("duration_s")
-        if dur is not None and dur < best_dur:
+        val = exp.get(metric.key)
+        if val is not None and is_better(val, best):
             exp["kept"] = True
-            best_dur = dur
+            best = val
         else:
             exp["kept"] = False
+
+
+# ---------------------------------------------------------------------------
+# Low-level plot helpers (take primitive ``y_key`` — no MetricSpec needed)
+# ---------------------------------------------------------------------------
 
 
 def _running_best(values: list[float], lower_is_better: bool) -> list[float]:
@@ -150,6 +198,7 @@ def _plot_kept_with_line(
     lower_is_better: bool,
     last_idx: int,
     show_annotations: bool,
+    annotation_metrics: list[MetricSpec] | None = None,
 ) -> None:
     kept_x = [e["idx"] for e in kept]
     kept_y = [e[y_key] for e in kept]
@@ -174,13 +223,13 @@ def _plot_kept_with_line(
         zorder=3,
         label="Running best",
     )
-    if show_annotations:
+    if show_annotations and annotation_metrics is not None:
         rotation = 30 if lower_is_better else -30
         xytext = (6, 6) if lower_is_better else (6, -6)
         va = "bottom" if lower_is_better else "top"
         for exp in kept:
             ax.annotate(
-                _format_label(exp),
+                _format_label(exp, annotation_metrics),
                 (exp["idx"], exp[y_key]),
                 textcoords="offset points",
                 xytext=xytext,
@@ -210,18 +259,29 @@ def _set_y_limits(
         ax.set_ylim(y_lo, hi + margin)
 
 
-def _plot_headspace_line(ax: plt.Axes, experiments: list[dict], y_key: str) -> None:
+def _plot_headspace_line(
+    ax: plt.Axes,
+    experiments: list[dict],
+    metric: MetricSpec,
+) -> None:
     """Draw a horizontal dashed line at the headspace (CacheDataLoader) value."""
     for exp in experiments:
-        if exp["status"] == "HEADSPACE" and exp.get(y_key):
+        if exp["status"] == "HEADSPACE" and exp.get(metric.key) is not None:
+            val = exp[metric.key]
+            kind = "floor" if metric.lower_is_better else "ceiling"
+            val_str = format(val, metric.fmt)
+            if metric.unit:
+                label = f"Headspace {kind} ({val_str} {metric.unit})"
+            else:
+                label = f"Headspace {kind} ({val_str})"
             ax.axhline(
-                y=exp[y_key],
+                y=val,
                 color="#3498db",
                 linestyle="--",
                 linewidth=1.5,
                 alpha=0.7,
                 zorder=1,
-                label=f"Headspace floor ({exp[y_key]:.0f}s)",
+                label=label,
             )
             break
 
@@ -272,15 +332,21 @@ def _collect_y_values(experiments, valid, y_key):
     return all_y
 
 
+# ---------------------------------------------------------------------------
+# Per-panel rendering
+# ---------------------------------------------------------------------------
+
+
 def _plot_metric(
     ax: plt.Axes,
     experiments: list[dict],
-    y_key: str,
-    ylabel: str,
-    lower_is_better: bool,
+    metric: MetricSpec,
     show_annotations: bool,
     show_legend: bool,
+    annotation_metrics: list[MetricSpec] | None = None,
 ) -> None:
+    y_key = metric.key
+    lower_is_better = metric.lower_is_better
     valid, crashes, kept, discarded = _partition_experiments(experiments, y_key)
 
     if crashes:
@@ -295,11 +361,11 @@ def _plot_metric(
             lower_is_better,
             experiments[-1]["idx"],
             show_annotations,
+            annotation_metrics,
         )
-    if lower_is_better:
-        _plot_headspace_line(ax, experiments, y_key)
+    _plot_headspace_line(ax, experiments, metric)
 
-    ax.set_ylabel(ylabel, fontsize=12)
+    ax.set_ylabel(metric.label, fontsize=12)
     if show_legend:
         loc = "upper right" if lower_is_better else "lower right"
         ax.legend(loc=loc, fontsize=9)
@@ -309,62 +375,61 @@ def _plot_metric(
     _set_y_limits(ax, all_y, lower_is_better, bool(crashes))
 
 
+# ---------------------------------------------------------------------------
+# Main progress chart
+# ---------------------------------------------------------------------------
+
+
 def _plot_progress(
     experiments: list[dict],
     output_path: str,
+    metrics: list[MetricSpec],
     title_prefix: str = "",
 ) -> None:
+    """Render the multi-panel progress chart.
+
+    Parameters
+    ----------
+    experiments:
+        Rows returned by :func:`_load_tsv`.
+    output_path:
+        Where to write the PNG.
+    metrics:
+        Ordered list of metric panels.  The first metric with data in the
+        experiments is used for the "kept" criterion and receives annotations.
+    title_prefix:
+        Optional string prepended to the chart title.
+    """
     for i, exp in enumerate(experiments):
         exp["idx"] = i
-    _mark_kept(experiments)
+
+    # Keep only metrics that have at least one valid data point.
+    active = [
+        m
+        for m in metrics
+        if any(e.get(m.key) is not None and e["status"] == "VALID" for e in experiments)
+    ]
+    if not active:
+        print(f"No metric data found, skipping {output_path}")
+        return
+
+    _mark_kept(experiments, active[0])
 
     n_total = len(experiments)
     n_kept = sum(1 for e in experiments if e.get("kept"))
-    has_duration = any(
-        e["duration_s"] is not None and e["status"] == "VALID" for e in experiments
-    )
-
-    has_step_time = any(
-        e.get("step_time_ms") is not None and e["status"] == "VALID"
-        for e in experiments
-    )
-    has_steady_step = any(
-        e.get("steady_step_time_ms") is not None and e["status"] == "VALID"
-        for e in experiments
-    )
-    has_steady_sm = any(
-        e.get("steady_sm_util") is not None and e["status"] == "VALID"
-        for e in experiments
-    )
-
-    # Determine subplot count
-    plots = []
-    if has_duration:
-        plots.append(("duration_s", "Duration (seconds, lower is better)", True))
-    if has_steady_step:
-        plots.append(
-            ("steady_step_time_ms", "Steady Step Time (ms, lower is better)", True)
-        )
-    elif has_step_time:
-        plots.append(("step_time_ms", "Step Time (ms, lower is better)", True))
-    if has_steady_sm:
-        plots.append(("steady_sm_util", "Steady-State SM Utilization %", False))
-    plots.append(("sm_util", "SM Utilization % (raw avg)", False))
-
-    n_plots = len(plots)
+    n_plots = len(active)
     fig, axes = plt.subplots(n_plots, 1, figsize=(16, 5 * n_plots), sharex=True)
     if n_plots == 1:
         axes = [axes]
 
-    for i, (y_key, ylabel, lower) in enumerate(plots):
+    for i, metric in enumerate(active):
         _plot_metric(
             axes[i],
             experiments,
-            y_key=y_key,
-            ylabel=ylabel,
-            lower_is_better=lower,
+            metric,
             show_annotations=(i == 0),
             show_legend=(i == 0),
+            annotation_metrics=active if i == 0 else None,
         )
     axes[-1].set_xlabel("Experiment #", fontsize=12)
 
@@ -377,6 +442,10 @@ def _plot_progress(
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     print(f"Saved to {output_path}")
 
+
+# ---------------------------------------------------------------------------
+# Hypothesis tree (unchanged — already workflow-agnostic)
+# ---------------------------------------------------------------------------
 
 _STATUS_COLORS = {
     "completed": "#2ecc71",
@@ -670,6 +739,39 @@ def _plot_hypothesis_tree(
     print(f"Hypothesis tree saved to {output_path}")
 
 
+# ---------------------------------------------------------------------------
+# CLI entry point — auto-detects metrics from the data
+# ---------------------------------------------------------------------------
+
+_LOWER_IS_BETTER_HINTS = frozenset({"time", "duration", "ttfb", "latency"})
+
+
+def _auto_detect_metrics(experiments: list[dict]) -> list[MetricSpec]:
+    """Infer :class:`MetricSpec` instances from the available data columns.
+
+    Used only by the standalone ``main()`` CLI.  Workflows should provide
+    their own explicit metric list instead.
+    """
+    skip = _STRING_COLUMNS | {"description", "idx", "kept"}
+    seen: set[str] = set()
+    metrics: list[MetricSpec] = []
+    for exp in experiments:
+        for key in exp:
+            if key in skip or key in seen:
+                continue
+            seen.add(key)
+            if any(
+                isinstance(e.get(key), (int, float))
+                for e in experiments
+                if e.get("status") == "VALID"
+            ):
+                lower = any(hint in key for hint in _LOWER_IS_BETTER_HINTS)
+                direction = "lower is better" if lower else "higher is better"
+                label = key.replace("_", " ").title()
+                metrics.append(MetricSpec(key, f"{label} ({direction})", lower))
+    return metrics
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("tsv", help="Path to master_table.tsv")
@@ -689,7 +791,8 @@ def main() -> None:
 
     output = args.output or str(tsv_path.parent / "progress.png")
     experiments = _load_tsv(tsv_path)
-    _plot_progress(experiments, output, args.title)
+    metrics = _auto_detect_metrics(experiments)
+    _plot_progress(experiments, output, metrics, args.title)
 
     tree_file = tsv_path.parent / "engine" / "tree.json"
     if tree_file.exists():

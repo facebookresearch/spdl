@@ -13,25 +13,7 @@ from pathlib import Path
 
 SCHEMA_VERSION = 2
 
-MASTER_TABLE_HEADERS = [
-    "run_id",
-    "name",
-    "job_id",
-    "status",
-    "step_time_ms",
-    "steady_step_time_ms",
-    "ttfb_s",
-    "sm_util_pct",
-    "steady_sm_util_pct",
-    "data_readiness_pct",
-    "duration_s",
-    "changes",
-    "change_summary",
-    "notes",
-]
-
 __all__ = [
-    "MASTER_TABLE_HEADERS",
     "SCHEMA_VERSION",
     "_append_master_row",
     "_normalize_config",
@@ -67,9 +49,9 @@ def _escape_tsv(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
 
 
-def _append_master_row(workdir: Path, row: dict) -> None:
+def _append_master_row(workdir: Path, row: dict, headers: list[str]) -> None:
     with open(workdir / "master_table.tsv", "a") as f:
-        values = [_escape_tsv(str(row.get(h, ""))) for h in MASTER_TABLE_HEADERS]
+        values = [_escape_tsv(str(row.get(h, ""))) for h in headers]
         f.write("\t".join(values) + "\n")
 
 
