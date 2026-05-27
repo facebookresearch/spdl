@@ -6,6 +6,7 @@
 
 # pyre-strict
 
+import functools
 import gc
 import itertools
 import pickle
@@ -13,6 +14,7 @@ import sys
 import threading
 import time
 import unittest
+import warnings
 import weakref
 from concurrent.futures import Executor, Future, ThreadPoolExecutor
 from queue import Empty
@@ -25,6 +27,30 @@ from spdl.pipeline import (
     PriorityThreadPoolExecutor,
 )
 from spdl.pipeline._priority_executor import _OWNER_REGISTRY, _PriorityQueueAdapter
+
+
+def _ignore_fork_warning(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"This process \(pid=\d+\) is multi-threaded, use of "
+                    r"fork\(\) may lead to deadlocks in the child"
+                ),
+                category=DeprecationWarning,
+            )
+            return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def _ignore_fork_warning_in_class(cls):
+    for name, member in list(vars(cls).items()):
+        if name.startswith("test_") and callable(member):
+            setattr(cls, name, _ignore_fork_warning(member))
+    return cls
 
 
 def _raise_value_error() -> None:
@@ -237,6 +263,7 @@ class TestPriorityThreadPoolExecutorOrdering(unittest.TestCase):
 # ─── PriorityProcessPoolExecutor tests ───
 
 
+@_ignore_fork_warning_in_class
 class TestPriorityProcessPoolExecutor(unittest.TestCase):
     def test_basic_execution(self) -> None:
         executor = PriorityProcessPoolExecutor(max_workers=2)
@@ -717,6 +744,7 @@ class TestPriorityExecutorPickle(unittest.TestCase):
         self.assertEqual(fut2.result(timeout=5), 9)
         restored1._owner.shutdown()
 
+    @_ignore_fork_warning
     def test_process_executor_round_trip(self) -> None:
         pool = PriorityProcessPoolExecutor(max_workers=2)
         data = pickle.dumps(pool)

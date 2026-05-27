@@ -7,6 +7,7 @@
 # pyre-unsafe
 
 import asyncio
+import functools
 import os
 import platform
 import random
@@ -15,6 +16,7 @@ import sys
 import threading
 import time
 import unittest
+import warnings
 from collections.abc import Iterator
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -46,6 +48,52 @@ from spdl.pipeline.defs import Aggregator
 from spdl.source.utils import embed_shuffle
 
 T = TypeVar("T")
+
+
+def _ignore_warnings(*filters):
+    """Decorator that wraps a test in `warnings.catch_warnings()` and applies
+    the given filters. Each ``filter`` is a dict of kwargs forwarded to
+    ``warnings.filterwarnings``.
+    """
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            with warnings.catch_warnings():
+                for f in filters:
+                    warnings.filterwarnings("ignore", **f)
+                return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+_FORK_WARNING = {
+    "message": (
+        r"This process \(pid=\d+\) is multi-threaded, use of fork\(\) "
+        r"may lead to deadlocks in the child"
+    ),
+    "category": DeprecationWarning,
+}
+
+_RUN_PIPELINE_DEPRECATION = {
+    "message": (
+        r"Passing a `PipelineBuilder` object directly to "
+        r"`run_pipeline_in_subprocess` is now deprecated\..*"
+    ),
+    "category": UserWarning,
+}
+
+_UNAWAITED_RUN_PIPELINE_COROUTINES = {
+    "message": "coroutine '_run_pipeline_coroutines' was never awaited",
+    "category": RuntimeWarning,
+}
+
+_UNAWAITED_COROUTINE = {
+    "message": "coroutine .* was never awaited",
+    "category": RuntimeWarning,
+}
 
 
 def _SI(name: str) -> StageInfo:
@@ -637,6 +685,8 @@ class TestPipelineHook(unittest.TestCase):
             self.assertEqual(h._enter_task_called, 10)
             self.assertEqual(h._exit_task_called, 10)
 
+    @_ignore_warnings({"category": RuntimeWarning})
+    @_ignore_warnings(_UNAWAITED_COROUTINE)
     def test_pipeline_hook_failure_enter_stage(self) -> None:
         """If enter_stage fails, the pipeline is aborted."""
 
@@ -664,6 +714,8 @@ class TestPipelineHook(unittest.TestCase):
 
         self.assertEqual(vals, [])
 
+    @_ignore_warnings({"category": RuntimeWarning})
+    @_ignore_warnings(_UNAWAITED_COROUTINE)
     def test_pipeline_hook_failure_exit_stage(self) -> None:
         """If exit_stage fails, the error is propagated to the front end."""
 
@@ -690,6 +742,7 @@ class TestPipelineHook(unittest.TestCase):
                 vals = list(pipeline.get_iterator(timeout=10))
         self.assertEqual(vals, list(range(10)))
 
+    @_ignore_warnings({"category": RuntimeWarning})
     def test_pipeline_hook_failure_enter_task(self) -> None:
         """If enter_task fails, the pipeline does not fail."""
 
@@ -714,6 +767,7 @@ class TestPipelineHook(unittest.TestCase):
         with pipeline.auto_stop():
             self.assertEqual([], list(pipeline.get_iterator(timeout=10)))
 
+    @_ignore_warnings({"category": RuntimeWarning})
     def test_pipeline_hook_failure_exit_task(self) -> None:
         """If exit_task fails, the pipeline does not fail.
 
@@ -1151,6 +1205,7 @@ class TestPipelineOrder(unittest.TestCase):
         with pipeline.auto_stop():
             self.assertEqual(list(pipeline.get_iterator(timeout=10)), src)
 
+    @_ignore_warnings({"category": RuntimeWarning})
     def test_pipeline_order_input_filter_none(self) -> None:
         """Ordered pipe filters out None values returned by the pipe operation."""
 
@@ -2182,6 +2237,7 @@ def hook_factory(_: StageInfo) -> list[TaskHook]:
 
 
 class TestPipelinebuilderPicklable(unittest.TestCase):
+    @_ignore_warnings(_RUN_PIPELINE_DEPRECATION, _FORK_WARNING)
     def test_pipelinebuilder_picklable(self) -> None:
         """PipelineBuilder can be passed to subprocess (==picklable)"""
 
@@ -2521,6 +2577,8 @@ class TestPipelinePropagate(unittest.TestCase):
 
 
 class TestIterableWithShuffle:
+    __test__ = False
+
     def __init__(self, n: int) -> None:
         self.vals = list(range(n))
         self.seed = 0
@@ -2534,6 +2592,7 @@ class TestIterableWithShuffle:
 
 
 class TestRunPipeline(unittest.TestCase):
+    @_ignore_warnings(_RUN_PIPELINE_DEPRECATION, _FORK_WARNING)
     def test_run_pipeline_in_subprocess_state(self) -> None:
         """The status of the source is maintained and propagated properly in subprocess"""
         n = 5
@@ -2558,6 +2617,7 @@ class TestRunPipeline(unittest.TestCase):
         self.assertEqual([3, 4, 0, 1, 2], list(src))
         self.assertEqual(2, src.src.seed)
 
+    @_ignore_warnings(_RUN_PIPELINE_DEPRECATION, _FORK_WARNING)
     def test_run_pipeline_in_subprocess_pipeline_id(self) -> None:
         """The pipeline construdted in a subprocess inherits the global ID from the main process"""
 
@@ -2575,6 +2635,7 @@ class TestRunPipeline(unittest.TestCase):
 
 
 class TestOverrideStage(unittest.TestCase):
+    @_ignore_warnings(_UNAWAITED_RUN_PIPELINE_COROUTINES)
     def test_override_stage_id(self) -> None:
         """Providing `stage_id` overrides the index of stages."""
         ref = 12345

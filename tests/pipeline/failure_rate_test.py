@@ -6,13 +6,40 @@
 
 # pyre-strict
 
+import functools
 import unittest
+import warnings
 from fractions import Fraction
 
 from parameterized import parameterized
 from spdl.pipeline import PipelineBuilder, PipelineFailure
 
 
+def _ignore_fork_warning(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"This process \(pid=\d+\) is multi-threaded, use of "
+                    r"fork\(\) may lead to deadlocks in the child"
+                ),
+                category=DeprecationWarning,
+            )
+            return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def _ignore_fork_warning_in_class(cls):
+    for name, member in list(vars(cls).items()):
+        if name.startswith("test_") and callable(member):
+            setattr(cls, name, _ignore_fork_warning(member))
+    return cls
+
+
+@_ignore_fork_warning_in_class
 class PipelineFailureRateTest(unittest.TestCase):
     """Tests for Fraction-based failure rate thresholds in SPDL pipeline.
 
