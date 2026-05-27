@@ -49,13 +49,14 @@ import os
 import time
 from pathlib import Path
 
-from spdl.autoresearch._common._state import SCHEMA_VERSION, write_state
+from spdl.autoresearch._common._state import SCHEMA_VERSION
 from spdl.autoresearch.core import HypothesisNode, TaskSpec
 
 from ._policy import (
     _extract_counter,
     _node_from_spec,
     _update_spec_from_node,
+    write_state,
 )
 
 __all__ = [

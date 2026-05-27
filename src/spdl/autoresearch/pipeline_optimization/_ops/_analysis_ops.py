@@ -16,12 +16,12 @@ from pathlib import Path
 from spdl.autoresearch._common._state import (
     _append_master_row,
     _read_master_table,
-    write_state,
 )
 from spdl.autoresearch._common._visualization import (
     _load_tsv,
     _plot_hypothesis_tree,
     _plot_progress,
+    MetricSpec,
 )
 from spdl.autoresearch.core import (
     AnalysisResult,
@@ -40,9 +40,35 @@ from ._common import (
     _read_pipeline_code,
 )
 from ._failures import _classify_terminal_job_failure, _failure_note, _make_failure
-from ._policy import _change_summary_for_spec, _format_best_metric
+from ._policy import _change_summary_for_spec, _format_best_metric, write_state
+
+__all__: list[str] = [
+    "MASTER_TABLE_HEADERS",
+    "_analyze_job",
+    "_pipeline_opt_metrics",
+    "_update_on_complete",
+    "_update_summary_and_plot",
+]
 
 _LG: logging.Logger = logging.getLogger(__name__)
+
+MASTER_TABLE_HEADERS = [
+    "run_id",
+    "name",
+    "job_id",
+    "status",
+    "throughput_samples_per_s",
+    "step_time_ms",
+    "steady_step_time_ms",
+    "ttfb_s",
+    "sm_util_pct",
+    "steady_sm_util_pct",
+    "data_readiness_pct",
+    "duration_s",
+    "changes",
+    "change_summary",
+    "notes",
+]
 
 _STRUCTURAL_PRACTICES = {"mtp"}
 _STRUCTURAL_ATTEMPT_THRESHOLD = 3
@@ -169,6 +195,7 @@ def _append_master_result_row(
     }
     if structured and "metrics" in structured:
         metrics = structured["metrics"]
+        row["throughput_samples_per_s"] = metrics.get("throughput_samples_per_s", "")
         row["step_time_ms"] = metrics.get("step_time_ms", "")
         row["steady_step_time_ms"] = metrics.get("steady_step_time_ms", "")
         row["ttfb_s"] = metrics.get("ttfb_s", "")
@@ -178,7 +205,7 @@ def _append_master_result_row(
         row["notes"] = metrics.get("notes", "")
     if terminal_failure is not None and not row.get("notes"):
         row["notes"] = _failure_note(terminal_failure)
-    _append_master_row(workdir, row)
+    _append_master_row(workdir, row, MASTER_TABLE_HEADERS)
 
 
 def _update_on_complete(
@@ -276,11 +303,80 @@ def _append_findings(workdir: Path, name: str, structured: dict | None) -> None:
         f.writelines(lines)
 
 
+def _pipeline_opt_metrics(experiments: list[dict]) -> list[MetricSpec]:
+    """Build the metric spec list for the pipeline-optimization workflow.
+
+    This is where all workflow-specific metric knowledge lives: which columns
+    to plot, in what order, axis labels, units, direction, and the
+    steady-step vs raw-step fallback.
+    """
+
+    def _has(key: str) -> bool:
+        return any(
+            e.get(key) is not None and e.get("status") == "VALID" for e in experiments
+        )
+
+    metrics: list[MetricSpec] = [
+        MetricSpec(
+            "throughput_samples_per_s",
+            "Sample Throughput (samples/s, higher is better)",
+            lower_is_better=False,
+            unit="samples/s",
+            fmt=".0f",
+        ),
+    ]
+    if _has("steady_step_time_ms"):
+        metrics.append(
+            MetricSpec(
+                "steady_step_time_ms",
+                "Steady Step Time (ms, lower is better)",
+                lower_is_better=True,
+                unit="ms",
+                fmt=".0f",
+            )
+        )
+    elif _has("step_time_ms"):
+        metrics.append(
+            MetricSpec(
+                "step_time_ms",
+                "Step Time (ms, lower is better)",
+                lower_is_better=True,
+                unit="ms",
+                fmt=".0f",
+            )
+        )
+    metrics.extend(
+        [
+            MetricSpec(
+                "steady_sm_util_pct",
+                "Steady-State SM Utilization %",
+                lower_is_better=False,
+                unit="%",
+                fmt=".1f",
+            ),
+            MetricSpec(
+                "duration_s",
+                "Duration (seconds, lower is better)",
+                lower_is_better=True,
+                unit="s",
+                fmt=".0f",
+            ),
+            MetricSpec(
+                "sm_util_pct",
+                "SM Utilization % (raw avg)",
+                lower_is_better=False,
+                unit="%",
+                fmt=".1f",
+            ),
+        ]
+    )
+    return metrics
+
+
 def _update_summary_and_plot(workdir: Path, state: dict) -> None:
     """Regenerate summary.md, progress.png, and hypothesis_tree.png."""
     history = state.get("history", [])
     best = state.get("current_best", "N/A")
-    best_metric = state.get("best_metric")
     plateau = state.get("plateau_count", 0)
 
     best_type, best_val = _current_best_metric(state)
@@ -315,7 +411,8 @@ def _update_summary_and_plot(workdir: Path, state: dict) -> None:
         if tsv_path.exists():
             experiments = _load_tsv(tsv_path)
             if experiments:
-                _plot_progress(experiments, str(workdir / "progress.png"))
+                metrics = _pipeline_opt_metrics(experiments)
+                _plot_progress(experiments, str(workdir / "progress.png"), metrics)
     except Exception as error:
         _LG.warning("Failed to regenerate progress plot: %s", error)
 
@@ -328,6 +425,3 @@ def _update_summary_and_plot(workdir: Path, state: dict) -> None:
             )
     except Exception as error:
         _LG.warning("Failed to regenerate hypothesis tree plot: %s", error)
-
-
-__all__ = ["_analyze_job", "_update_on_complete", "_update_summary_and_plot"]

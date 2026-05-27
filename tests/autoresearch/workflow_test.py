@@ -12,11 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from spdl.autoresearch._common._state import (
-    _append_master_row,
-    MASTER_TABLE_HEADERS,
-    write_state,
-)
+from spdl.autoresearch._common._state import _append_master_row
 from spdl.autoresearch._common._visualization import _load_tsv
 from spdl.autoresearch.core import (
     AnalysisResult,
@@ -31,6 +27,7 @@ from spdl.autoresearch.pipeline_optimization._ops import (
 )
 from spdl.autoresearch.pipeline_optimization._ops._analysis_ops import (
     _update_on_complete,
+    MASTER_TABLE_HEADERS,
 )
 from spdl.autoresearch.pipeline_optimization._ops._failures import (
     _classify_terminal_job_failure,
@@ -53,6 +50,7 @@ from spdl.autoresearch.pipeline_optimization._ops._policy import (
     _spec_from_node,
     _startup_retry_spec,
     _validate_thread_budget,
+    write_state,
 )
 from spdl.autoresearch.pipeline_optimization._ops._source_ops import _build_apply_prompt
 from spdl.autoresearch.pipeline_optimization._ops._store import _write_text_atomic
@@ -998,6 +996,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                     "change_summary": summary,
                     "sm_util_pct": "50",
                 },
+                MASTER_TABLE_HEADERS,
             )
 
             rows = _load_tsv(workdir / "master_table.tsv")
