@@ -174,7 +174,11 @@ spdl.io.convert_frames(
 
 **IMPORTANT**: `convert_frames` does NOT accept `filter_desc`. Filtering (scaling, pixel format) is done at `decode_packets` time via the `filter_desc` parameter. Passing `filter_desc` to `convert_frames` will raise a `TypeError`.
 
-The output buffer shape for video is `[N, C, H, W]` — this is already channels-first when the input was decoded with an rgb24 filter.
+**Output tensor shape depends on pixel format:**
+- **`pix_fmt="rgb24"`** (interleaved/packed) → `convert_frames` produces **`[N, H, W, C]`** (channel-last, C=3)
+- **`pix_fmt="rgb"` via NVDEC** (planar) → `to_torch` produces **`[N, C, H, W]`** (channel-first, C=3)
+
+This is a critical difference. When replacing NVDEC (`[N, C, H, W]`) with CPU FFmpeg decode using `rgb24` (`[N, H, W, C]`), you MUST add an extra permute step: `tensor = tensor.permute(0, 3, 1, 2)` to convert from channel-last to channel-first before applying the existing frame sampling and normalization logic.
 
 **`spdl.io.to_torch`** — convert buffer to torch tensor:
 ```python
@@ -206,7 +210,8 @@ filter_desc = spdl.io.get_video_filter_desc(
 )
 frames = spdl.io.decode_packets(packets, filter_desc=filter_desc)
 buffer = spdl.io.convert_frames(frames)
-tensor = spdl.io.to_torch(buffer)  # [T, C, H, W] on CPU
+tensor = spdl.io.to_torch(buffer)  # [T, H, W, C] on CPU (rgb24 is channel-last!)
+tensor = tensor.permute(0, 3, 1, 2)  # [T, H, W, C] -> [T, C, H, W] to match NVDEC layout
 ```
 
 After the decode callable, add GPU transfer. Since CPU decode produces CPU tensors, add `transfer_tensor` as a pipeline stage **after collate but before the sink**:
@@ -223,8 +228,10 @@ Remove `cuda_config` setup code that was only used for NVDEC. Keep the `device` 
 
 1. **Do NOT pass `filter_desc` to `convert_frames()`** — it only accepts `(frames, storage=None)`.
 2. **Do NOT forget GPU transfer** — CPU decode produces CPU tensors; add `transfer_tensor` stage.
-3. **Do NOT modify the wrong file** — if the decode callable is in a utility module (e.g., `utils/pipeline.py`) and the engine modifies the training script, define a new decode callable in the training script and override the pipeline construction call.
-4. **Do NOT remove BUCK dependencies** — the training script needs its model/training deps (torchvision, DDP, etc.) even when changing the pipeline.
+3. **Do NOT forget the channel-last → channel-first permute** — `rgb24` produces `[N, H, W, C]` but the rest of the pipeline expects `[N, C, H, W]`. Add `tensor = tensor.permute(0, 3, 1, 2)` immediately after `to_torch`. Without this, the downstream frame sampling and permute logic operates on the wrong dimensions, raising shape errors.
+4. **Do NOT use bare `except` to swallow errors** — `except RuntimeError: return None` or `except Exception: return None` hides bugs like shape mismatches, making debugging impossible. Always log the exception: `except RuntimeError as e: logging.getLogger(__name__).warning("Decode failed: %s", e); return None`. This way, if every sample fails, the pipeline stats show 100% failure rate and the analysis agent can diagnose the root cause from logs.
+5. **Do NOT modify the wrong file** — if the decode callable is in a utility module (e.g., `utils/pipeline.py`) and the engine modifies the training script, define a new decode callable in the training script and override the pipeline construction call.
+6. **Do NOT remove BUCK dependencies** — the training script needs its model/training deps (torchvision, DDP, etc.) even when changing the pipeline.
 
 ### Headspace Analysis in the Loop
 
