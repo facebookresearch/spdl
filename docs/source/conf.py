@@ -157,7 +157,11 @@ def linkcode_resolve(domain, info):
 
     parts = info["fullname"].split(".")
     obj = getattr(mod, parts[0])
-    filename = obj.__module__.replace(".", "/")
+    try:
+        filename = obj.__module__.replace(".", "/")
+    except AttributeError:
+        return None
+
     if dataclasses.is_dataclass(obj):
         if len(parts) > 1:
             return None
