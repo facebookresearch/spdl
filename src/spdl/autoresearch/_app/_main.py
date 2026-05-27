@@ -30,10 +30,10 @@ def main(argv: list[str] | None = None) -> None:
         argv: Argv list (excluding ``argv[0]``). Defaults to ``sys.argv[1:]``.
     """
     from ._engine import _run_engine
+    from ._supervisor import _run_supervisor
 
     args = list(sys.argv[1:] if argv is None else argv)
     if args and args[0] == "engine":
         _run_engine(args[1:])
         return
-    # Supervisor path is wired up in step 5; for now defer to the engine.
-    _run_engine(args)
+    _run_supervisor(args)

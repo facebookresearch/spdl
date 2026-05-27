@@ -21,16 +21,18 @@ the workflow through :py:class:`~spdl.autoresearch.core.WorkflowSpec`.
 from __future__ import annotations
 
 import argparse
+import os
 import shlex
 import sys
 from pathlib import Path
 
+from spdl.autoresearch._common._supervisor import _resolve_supervisor_agent
 from spdl.autoresearch.core import WorkflowSpec
 
+from ._spec import _resolve_workflow
+
 __all__ = [
-    "_build_engine_command",
-    "_build_supervisor_prompt",
-    "_parse_supervisor_args",
+    "_run_supervisor",
 ]
 
 
@@ -194,3 +196,59 @@ def _build_supervisor_prompt(
     )
     sections = [section for section in (workflow_md, context) if section]
     return "\n\n---\n\n".join(sections)
+
+
+def _run_supervisor(argv: list[str] | None = None) -> None:
+    """Resolve workflow, render supervisor prompt, exec the coding agent.
+
+    Replaces the current process with the supervisor agent (Claude or
+    Codex) via :py:func:`os.execvp`, exactly mirroring the legacy
+    ``pipeline_optimization._cli`` path but without any pipeline-opt
+    knowledge in the framework.
+
+    Args:
+        argv: Argv list (excluding ``argv[0]``). Defaults to
+            ``sys.argv[1:]``.
+    """
+    ns, workflow_argv = _parse_supervisor_args(argv)
+    if not ns.workflow:
+        raise SystemExit(
+            "--workflow is required. Pass module.path:factory_name or a "
+            "short name registered under the spdl.autoresearch.workflows "
+            "entry-points group."
+        )
+    workdir = Path(ns.workdir).resolve() if ns.workdir else None
+    factory = _resolve_workflow(ns.workflow)
+    spec: WorkflowSpec = factory(workflow_argv, workdir)
+
+    supervisor = _resolve_supervisor_agent(ns.agent)
+    framework_flags = _supervisor_framework_flags(ns)
+    engine_command = _build_engine_command(
+        engine_command_override=ns.engine_command,
+        workflow_spec=ns.workflow,
+        workdir=workdir or Path("(missing)"),
+        framework_flags=framework_flags,
+        workflow_argv_tail=spec.engine_argv_tail(),
+    )
+    engine_command_text = " ".join(shlex.quote(part) for part in engine_command)
+    prompt = _build_supervisor_prompt(
+        spec, workdir=workdir, engine_command_text=engine_command_text
+    )
+    initial_request = (
+        f"Start supervising this autoresearch run.\n\n"
+        f"Workdir: {workdir or '(missing)'}\n\n"
+        f"Engine command:\n\n```bash\n{engine_command_text}\n```\n"
+    )
+    command = supervisor.command(prompt, initial_request)
+    os.execvp(command[0], command)
+
+
+def _supervisor_framework_flags(ns: argparse.Namespace) -> list[str]:
+    flags: list[str] = []
+    if ns.max_concurrency is not None:
+        flags.extend(["--max-concurrency", str(ns.max_concurrency)])
+    if ns.platform:
+        flags.extend(["--platform", ns.platform])
+    if ns.dangerously_skip_permissions:
+        flags.append("--dangerously-skip-permissions")
+    return flags
