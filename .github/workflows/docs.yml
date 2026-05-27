@@ -54,6 +54,24 @@ jobs:
           pip install tensorboard psutil -r docs/requirements.txt
           python -c 'import logging;logging.basicConfig(level=logging.DEBUG);from spdl.io.lib import _libspdl_cuda;_libspdl_cuda.CUDABuffer'
           python -c 'import logging;logging.basicConfig(level=logging.DEBUG);import spdl.io;print(spdl.io.CUDABuffer.__doc__);'
+
+
+          echo "=== which/where ==="
+          which python python3 pip
+          python  -c "import sys; print('exe=', sys.executable); print('prefix=', sys.prefix); print('path=', sys.path)"
+          python3 -c "import sys; print('exe=', sys.executable); print('prefix=', sys.prefix); print('path=', sys.path)"
+          echo "=== conda env ==="
+          echo "CONDA_PREFIX=$CONDA_PREFIX"
+          echo "CONDA_DEFAULT_ENV=$CONDA_DEFAULT_ENV"
+          ls -ld /usr/share/miniconda /usr/share/miniconda/envs /usr/share/miniconda/envs/test 2>/dev/null
+          ls -ld /usr/share/miniconda/envs/test/lib/python3.12/site-packages 2>/dev/null
+          echo "=== pip view ==="
+          pip -V
+          pip config list -v
+          python -m pip show pygments || true
+          python3 -m pip show pygments || true
+
+          
           ./docs/build.sh
           mkdir upload
           mv docs/_build upload/_site
