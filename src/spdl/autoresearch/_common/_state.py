@@ -4,38 +4,25 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Experiment state, config, and master table helpers."""
+"""Generic experiment state, config, and master-table I/O.
+
+This module provides workflow-agnostic file I/O for the autoresearch
+framework.  Workflow-specific schema defaults (``_normalize_config``,
+``_normalize_state``) live in
+``spdl.autoresearch.pipeline_optimization._ops._policy``.
+"""
 
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 SCHEMA_VERSION = 2
 
-MASTER_TABLE_HEADERS = [
-    "run_id",
-    "name",
-    "job_id",
-    "status",
-    "step_time_ms",
-    "steady_step_time_ms",
-    "ttfb_s",
-    "sm_util_pct",
-    "steady_sm_util_pct",
-    "data_readiness_pct",
-    "duration_s",
-    "changes",
-    "change_summary",
-    "notes",
-]
-
 __all__ = [
-    "MASTER_TABLE_HEADERS",
     "SCHEMA_VERSION",
     "_append_master_row",
-    "_normalize_config",
-    "_normalize_state",
     "_read_master_table",
     "read_config",
     "read_state",
@@ -43,17 +30,30 @@ __all__ = [
 ]
 
 
-def read_state(workdir: Path) -> dict:
-    return _normalize_state(json.loads((workdir / "state.json").read_text()))
+def read_state(
+    workdir: Path,
+    normalize: Callable[[dict], dict] | None = None,
+) -> dict:
+    state = json.loads((workdir / "state.json").read_text())
+    return normalize(state) if normalize else state
 
 
-def write_state(workdir: Path, state: dict) -> None:
-    state = _normalize_state(state)
+def write_state(
+    workdir: Path,
+    state: dict,
+    normalize: Callable[[dict], dict] | None = None,
+) -> None:
+    if normalize:
+        state = normalize(state)
     (workdir / "state.json").write_text(json.dumps(state, indent=2) + "\n")
 
 
-def read_config(workdir: Path) -> dict:
-    return _normalize_config(json.loads((workdir / "config.json").read_text()))
+def read_config(
+    workdir: Path,
+    normalize: Callable[[dict], dict] | None = None,
+) -> dict:
+    config = json.loads((workdir / "config.json").read_text())
+    return normalize(config) if normalize else config
 
 
 def _read_master_table(workdir: Path) -> str:
@@ -67,36 +67,7 @@ def _escape_tsv(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
 
 
-def _append_master_row(workdir: Path, row: dict) -> None:
+def _append_master_row(workdir: Path, row: dict, headers: list[str]) -> None:
     with open(workdir / "master_table.tsv", "a") as f:
-        values = [_escape_tsv(str(row.get(h, ""))) for h in MASTER_TABLE_HEADERS]
+        values = [_escape_tsv(str(row.get(h, ""))) for h in headers]
         f.write("\t".join(values) + "\n")
-
-
-def _normalize_config(config: dict) -> dict:
-    normalized = dict(config)
-    normalized.setdefault("schema_version", SCHEMA_VERSION)
-    normalized.setdefault("stopping_criteria", {})
-    normalized["stopping_criteria"].setdefault("max_iterations", 10)
-    normalized["stopping_criteria"].setdefault("patience", 3)
-    normalized.setdefault("platform", "auto")
-    normalized.setdefault("agent", "claude")
-    normalized.setdefault("local_execution_mode", "full")
-    normalized.setdefault("startup_failure_retries", 2)
-    normalized.setdefault("startup_retryable_experiments", ["mtp"])
-    return normalized
-
-
-def _normalize_state(state: dict) -> dict:
-    normalized = dict(state)
-    normalized.setdefault("schema_version", SCHEMA_VERSION)
-    normalized.setdefault("iteration", 0)
-    normalized.setdefault("status", "initialized")
-    normalized.setdefault("baseline_job", None)
-    normalized.setdefault("current_best", None)
-    normalized.setdefault("best_metric", None)
-    normalized.setdefault("plateau_count", 0)
-    normalized.setdefault("best_practices_tried", [])
-    normalized.setdefault("anchor_commit", "")
-    normalized.setdefault("history", [])
-    return normalized

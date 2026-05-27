@@ -17,8 +17,8 @@ The factory parses pipeline-optimization-specific flags
 specifier in the workdir on a fresh run, performs first-run workdir
 initialisation and pipeline instrumentation when ``setup()`` is called,
 and constructs a
-:py:class:`~spdl.autoresearch.pipeline_optimization._ops._adapter.PipelineOptimizationWorkflow`
-adapter on demand.
+:py:class:`~spdl.autoresearch.pipeline_optimization._workflow.PipelineOptimizationWorkflow`
+workflow on demand.
 """
 
 from __future__ import annotations
@@ -33,19 +33,21 @@ from datetime import datetime
 from pathlib import Path
 
 from spdl.autoresearch._common._log import setup_logging
-from spdl.autoresearch._common._state import (
-    MASTER_TABLE_HEADERS,
-    read_config,
-    read_state,
-    SCHEMA_VERSION,
-    write_state,
-)
+from spdl.autoresearch._common._state import SCHEMA_VERSION
 from spdl.autoresearch.core import (
     FailureKind,
     FailurePhase,
     FailureRecord,
     WorkflowProtocol,
     WorkflowSpec,
+)
+from spdl.autoresearch.pipeline_optimization._ops._analysis_ops import (
+    MASTER_TABLE_HEADERS,
+)
+from spdl.autoresearch.pipeline_optimization._ops._policy import (
+    read_config,
+    read_state,
+    write_state,
 )
 
 from ._ops import PipelineOptimizationWorkflow

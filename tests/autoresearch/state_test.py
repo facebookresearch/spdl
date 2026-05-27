@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import unittest
 
-from spdl.autoresearch._common._state import (
+from spdl.autoresearch._common._state import SCHEMA_VERSION
+from spdl.autoresearch.pipeline_optimization._ops._policy import (
     _normalize_config,
     _normalize_state,
-    SCHEMA_VERSION,
 )
 
 

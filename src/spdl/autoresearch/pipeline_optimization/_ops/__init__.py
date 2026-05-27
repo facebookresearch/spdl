@@ -6,7 +6,7 @@
 
 """Autoresearch workflow layer."""
 
-from ._adapter import PipelineOptimizationWorkflow
+from .._workflow import PipelineOptimizationWorkflow
 from ._store import _WorkflowStateStore
 
 __all__ = [

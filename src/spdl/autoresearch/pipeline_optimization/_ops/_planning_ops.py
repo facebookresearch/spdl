@@ -13,7 +13,7 @@ import logging
 import re
 from pathlib import Path
 
-from spdl.autoresearch._common._state import _read_master_table, write_state
+from spdl.autoresearch._common._state import _read_master_table
 from spdl.autoresearch.core import AnalysisResult, HypothesisNode
 
 from .._platform import AutoresearchPlatform
@@ -26,6 +26,7 @@ from ._policy import (
     _extract_total_threads,
     _format_best_metric,
     _validate_thread_budget as _policy_validate_thread_budget,
+    write_state,
 )
 
 _LG: logging.Logger = logging.getLogger(__name__)

@@ -4,14 +4,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Autoresearch workflow adapter for the generic async runner.
+"""Pipeline-optimization workflow for the autoresearch engine.
 
 Design note
 
-This module is the domain side of the runner/adapter boundary. It orchestrates
-experiment coroutines, but durable state lives in ``store.py`` and deterministic
-policy lives in ``policy.py``. Keep SPDL, coding-agent, source-control, metric,
-and hypothesis-planning decisions out of ``runner.py``.
+This module is the domain side of the runner/workflow boundary. It orchestrates
+experiment coroutines, but durable state lives in ``_ops/_store.py`` and
+deterministic policy lives in ``_ops/_policy.py``. Keep SPDL, coding-agent,
+source-control, metric, and hypothesis-planning decisions out of ``runner.py``.
 
 The workflow is the right place to sequence domain operations: restore source,
 apply experiment changes, build, launch, poll, collect metrics, analyze, update
@@ -29,7 +29,7 @@ should not record durable failures as bare strings.
    flowchart TB
        Run["run.py"]
        Runner["Orchestrator"]
-       Adapter["PipelineOptimizationWorkflow"]
+       Workflow["PipelineOptimizationWorkflow"]
        Store["_WorkflowStateStore"]
        Policy["autoresearch_policy"]
        Platform["AutoresearchPlatform"]
@@ -48,6 +48,7 @@ should not record durable failures as bare strings.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from collections.abc import Coroutine
@@ -55,6 +56,11 @@ from pathlib import Path
 from typing import Any
 
 from spdl.autoresearch._common._state import _append_master_row, _read_master_table
+from spdl.autoresearch._common._visualization import (
+    _load_tsv,
+    _plot_hypothesis_tree,
+    _plot_progress,
+)
 from spdl.autoresearch.core import (
     AnalysisResult,
     AutoresearchError,
@@ -67,20 +73,21 @@ from spdl.autoresearch.core import (
     TERMINAL_STATUSES,
 )
 
-from .._platform import AutoresearchPlatform
-from ._analysis_ops import (
+from ._ops._analysis_ops import (
     _analyze_job,
+    _pipeline_opt_metrics,
     _update_on_complete,
     _update_summary_and_plot,
+    MASTER_TABLE_HEADERS,
 )
-from ._failures import (
+from ._ops._failures import (
     _failure_note,
     _make_failure,
     _read_failures,
     _unexpected_failure,
 )
-from ._planning_ops import _build_initial_nodes, _plan_followups
-from ._policy import (
+from ._ops._planning_ops import _build_initial_nodes, _plan_followups
+from ._ops._policy import (
     _change_summary_for_spec,
     _is_duplicate_spec,
     _node_from_spec,
@@ -91,8 +98,9 @@ from ._policy import (
     _spec_from_node,
     _startup_retry_spec,
 )
-from ._source_ops import _launch_node, _prepare_node
-from ._store import _WorkflowStateStore
+from ._ops._source_ops import _launch_node, _prepare_node
+from ._ops._store import _WorkflowStateStore
+from ._platform import AutoresearchPlatform
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -176,7 +184,8 @@ class PipelineOptimizationWorkflow:
 
         Reads ``master_table.tsv``, the live ``summary.md`` file, and the
         recorded failures (via :py:func:`_read_failures`) without
-        invoking the coding agent. Safe to call at any time.
+        invoking the coding agent.  Also regenerates ``progress.png``
+        and ``hypothesis_tree.png``.  Safe to call at any time.
         """
         sections = ["# Autoresearch summary", "", f"Workdir: `{workdir}`", ""]
         master_table = _read_master_table(workdir)
@@ -186,7 +195,33 @@ class PipelineOptimizationWorkflow:
         if summary_path.exists():
             sections.extend(["## Live summary", "", summary_path.read_text(), ""])
         sections.extend(["## Failures", "", _read_failures(workdir), ""])
+
+        self._regenerate_plots(workdir)
+
         return "\n".join(sections)
+
+    @staticmethod
+    def _regenerate_plots(workdir: Path) -> None:
+        """Best-effort regeneration of progress and hypothesis-tree PNGs."""
+
+        tsv_path = workdir / "master_table.tsv"
+        try:
+            if tsv_path.exists():
+                experiments = _load_tsv(tsv_path)
+                if experiments:
+                    metrics = _pipeline_opt_metrics(experiments)
+                    out = str(workdir / "progress.png")
+                    _plot_progress(experiments, out, metrics)
+        except Exception as exc:
+            _LG.warning("Failed to regenerate progress plot: %s", exc)
+
+        tree_file = workdir / "engine" / "tree.json"
+        try:
+            if tree_file.exists():
+                tree_data = json.loads(tree_file.read_text())
+                _plot_hypothesis_tree(tree_data, str(workdir / "hypothesis_tree.png"))
+        except Exception as exc:
+            _LG.warning("Failed to regenerate hypothesis tree plot: %s", exc)
 
     async def on_result(self, spec: TaskSpec, result: TaskResult) -> list[TaskSpec]:
         children = []
@@ -456,6 +491,7 @@ class PipelineOptimizationWorkflow:
                     "change_summary": _change_summary_for_spec(node.spec),
                     "notes": note,
                 },
+                MASTER_TABLE_HEADERS,
             )
             self.state.setdefault("history", []).append(
                 {

@@ -39,7 +39,14 @@ from __future__ import annotations
 import re
 import shlex
 from collections.abc import Iterable, Mapping
+from pathlib import Path
 
+from spdl.autoresearch._common._state import (
+    read_config as _read_config_raw,
+    read_state as _read_state_raw,
+    SCHEMA_VERSION,
+    write_state as _write_state_raw,
+)
 from spdl.autoresearch.core import (
     FailureKind,
     HypothesisNode,
@@ -60,7 +67,12 @@ __all__ = [
     "_is_headspace_node",
     "_is_startup_failed_retry",
     "_node_from_spec",
+    "_normalize_config",
+    "_normalize_state",
     "_normalize_status",
+    "read_config",
+    "read_state",
+    "write_state",
     "_record_failed_best_practice_attempt",
     "_retry_policy_for_failure",
     "_select_planning_node",
@@ -531,3 +543,56 @@ def _extract_counter(node_id: str) -> int:
         return int(node_id.split("_", 1)[0])
     except (IndexError, ValueError):
         return 0
+
+
+# ---------------------------------------------------------------------------
+# Workflow-specific state / config schema defaults
+# ---------------------------------------------------------------------------
+
+
+def _normalize_config(config: dict) -> dict:
+    """Apply pipeline-optimization default values to a raw config dict."""
+    normalized = dict(config)
+    normalized.setdefault("schema_version", SCHEMA_VERSION)
+    normalized.setdefault("stopping_criteria", {})
+    normalized["stopping_criteria"].setdefault("max_iterations", 10)
+    normalized["stopping_criteria"].setdefault("patience", 3)
+    normalized.setdefault("platform", "auto")
+    normalized.setdefault("agent", "claude")
+    normalized.setdefault("local_execution_mode", "full")
+    normalized.setdefault("startup_failure_retries", 2)
+    normalized.setdefault("startup_retryable_experiments", ["mtp"])
+    return normalized
+
+
+def _normalize_state(state: dict) -> dict:
+    """Apply pipeline-optimization default values to a raw state dict."""
+    normalized = dict(state)
+    normalized.setdefault("schema_version", SCHEMA_VERSION)
+    normalized.setdefault("iteration", 0)
+    normalized.setdefault("status", "initialized")
+    normalized.setdefault("baseline_job", None)
+    normalized.setdefault("current_best", None)
+    normalized.setdefault("best_metric", None)
+    normalized.setdefault("plateau_count", 0)
+    normalized.setdefault("best_practices_tried", [])
+    normalized.setdefault("anchor_commit", "")
+    normalized.setdefault("history", [])
+    return normalized
+
+
+# ---------------------------------------------------------------------------
+# Workflow-bound I/O wrappers (thin wrappers around generic _common._state)
+# ---------------------------------------------------------------------------
+
+
+def read_state(workdir: Path) -> dict:
+    return _read_state_raw(workdir, normalize=_normalize_state)
+
+
+def write_state(workdir: Path, state: dict) -> None:
+    _write_state_raw(workdir, state, normalize=_normalize_state)
+
+
+def read_config(workdir: Path) -> dict:
+    return _read_config_raw(workdir, normalize=_normalize_config)
