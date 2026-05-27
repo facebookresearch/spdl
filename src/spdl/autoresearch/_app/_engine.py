@@ -18,12 +18,15 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import sys
 from pathlib import Path
 
 from spdl.autoresearch.core import Orchestrator, WorkflowSpec
 
 from ._spec import _record_workflow_factory, _resolve_workflow
+
+_LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
     "_parse_engine_args",
@@ -99,6 +102,12 @@ def _split_at_double_dash(
 def _run_engine(argv: list[str] | None = None) -> None:
     """Resolve the workflow, build the spec, and drive the orchestrator.
 
+    On a clean engine exit, the framework writes
+    ``<workdir>/report.md`` with the result of
+    :py:meth:`WorkflowProtocol.summarize <spdl.autoresearch.core.WorkflowProtocol.summarize>`
+    so operators have a final summary without needing to invoke a
+    separate command.
+
     Args:
         argv: Argv list (excluding ``argv[0]``). Defaults to ``sys.argv[1:]``.
     """
@@ -118,3 +127,24 @@ def _run_engine(argv: list[str] | None = None) -> None:
     )
     engine = Orchestrator(workflow=workflow, max_concurrency=max_concurrency)
     asyncio.run(engine.run())
+    _write_final_report(workdir, workflow)
+
+
+def _write_final_report(workdir: Path, workflow: object) -> None:
+    """Write the workflow's final summary to ``<workdir>/report.md``.
+
+    Best-effort: if ``summarize`` raises (for example, the workflow's
+    persisted state is missing), the engine still exits cleanly and a
+    warning is logged rather than crashing the process.
+    """
+    summarize = getattr(workflow, "summarize", None)
+    if summarize is None:
+        return
+    try:
+        report = summarize(workdir)
+        (workdir / "report.md").write_text(report)
+    except Exception:  # noqa: BLE001 — final-report failures must not crash exit
+        _LG.warning(
+            "Failed to write final report",
+            exc_info=True,
+        )

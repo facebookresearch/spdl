@@ -44,6 +44,7 @@ import logging
 import signal
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Protocol
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -132,7 +133,7 @@ class WorkflowProtocol(Protocol):
     """Protocol for domain-specific adapters that drive the work engine.
 
     Implementations must provide ``load``, ``checkpoint``, ``make_coro``,
-    and ``on_result``.
+    ``on_result``, and ``summarize``.
     """
 
     def load(self) -> list[TaskSpec]:
@@ -173,6 +174,23 @@ class WorkflowProtocol(Protocol):
         Called after a work coroutine finishes.  The adapter can filter
         duplicates, update persistent state, or transform the result's
         children before they enter the priority queue.
+        """
+        ...
+
+    def summarize(self, workdir: Path) -> str:
+        """Return a human-readable summary of the workdir state.
+
+        Required. Must be safe to call at any time — before any run, in
+        the middle of a run, after a paused or interrupted run, and
+        after a clean exit. The framework calls this method to handle
+        ``autoresearch summary <wd>`` invocations on demand and writes
+        the result to ``<wd>/report.md`` automatically when the engine
+        exits cleanly.
+
+        Implementations should render the summary deterministically
+        from durable workdir state (master tables, summary files,
+        recorded failures), without invoking long-running operations
+        such as coding-agent calls.
         """
         ...
 

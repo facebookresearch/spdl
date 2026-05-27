@@ -57,7 +57,10 @@ def read_config(workdir: Path) -> dict:
 
 
 def _read_master_table(workdir: Path) -> str:
-    return (workdir / "master_table.tsv").read_text()
+    path = workdir / "master_table.tsv"
+    if not path.exists():
+        return ""
+    return path.read_text()
 
 
 def _escape_tsv(value: str) -> str:

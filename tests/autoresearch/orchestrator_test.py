@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import unittest
+from pathlib import Path
 
 from spdl.autoresearch.core import Orchestrator, TaskResult, TaskSpec
 
@@ -43,6 +44,9 @@ class _FakeAdapter:
 
     async def on_result(self, spec: TaskSpec, result: TaskResult) -> list[TaskSpec]:
         return result.children
+
+    def summarize(self, workdir: Path) -> str:
+        return f"_FakeAdapter summary at {workdir}"
 
 
 class OrchestratorTest(unittest.IsolatedAsyncioTestCase):
