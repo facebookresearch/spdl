@@ -130,14 +130,29 @@ Press **Ctrl+C** to stop the engine gracefully. The runner persists queued and r
 
 Re-run the same command to resume — the engine re-checks job status and picks up where it left off.
 
-## Buck Binary Targets
+## Buck Binary and `python -m` Entry Point
 
-Two binaries are provided:
+A single Buck binary, `:autoresearch`, drives the framework dispatcher.
+The binary is sourceless — its `main_module` points at the package's
+`__main__.py`, so `python -m spdl.autoresearch [args]` is the equivalent
+invocation outside Buck.
 
-- `:autoresearch` — bare framework binary. Eventually accepts an arbitrary user-supplied workflow via `--workflow module.path:factory`. Today it falls back to the bundled pipeline-optimization workflow when `--workflow` is not supplied, so the legacy invocations under `examples/*/fb/autoresearch.sh` continue to work.
-- `:autoresearch_with_pipeline_opt` — convenience binary that bundles the pipeline-optimization workflow alongside the framework. The default if you want the out-of-the-box SPDL pipeline-optimization behavior at Meta.
+```bash
+buck run fbcode//spdl/tools/autoresearch:autoresearch -- <args>
+# or, with spdl.autoresearch on PYTHONPATH:
+python -m spdl.autoresearch <args>
+```
 
-When the entry point eventually merges into the unified `spdl` CLI, the framework dispatcher allows the workflow implementation to evolve (or be supplied by the user) without rebuilding the CLI binary.
+`:autoresearch` bundles `pipeline_optimization` as a runtime dependency so
+`--workflow spdl.autoresearch.pipeline_optimization:create_workflow`
+resolves out of the box. To run a different workflow, define your own
+`python_binary` that depends on `//spdl/autoresearch:__main__` plus your
+workflow's `public_api` target, or install the workflow into the Python
+environment used by `python -m spdl.autoresearch`.
+
+When the entry point eventually merges into the unified `spdl` CLI, the
+framework dispatcher allows the workflow implementation to evolve (or be
+supplied by the user) without rebuilding the CLI binary.
 
 ## Pluggable Workflows (`--workflow`)
 
@@ -155,7 +170,7 @@ my_workflow = "my_pkg.my_module:create_workflow"
 When invoking, framework arguments come before `--`, and arguments specific to the workflow factory come after `--`:
 
 ```bash
-spdl-autoresearch /tmp/my_experiment \
+buck run fbcode//spdl/tools/autoresearch:autoresearch -- supervisor /tmp/my_experiment \
   --workflow spdl.autoresearch.pipeline_optimization:create_workflow \
   --agent claude --platform auto --max-concurrency 3 \
   -- \
@@ -164,7 +179,9 @@ spdl-autoresearch /tmp/my_experiment \
   --base-launch-command "torchx run --image \$IMAGE"
 ```
 
-The bundled `:autoresearch_with_pipeline_opt` binary injects `--workflow spdl.autoresearch.pipeline_optimization:create_workflow` automatically when none is supplied.
+`--workflow` is required — there is no auto-injected default. The example
+shell scripts under `spdl/examples/*/fb/autoresearch.sh` show the
+pipeline-optimization invocation.
 
 ## Quick Start
 
