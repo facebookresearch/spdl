@@ -133,7 +133,11 @@ class _PipelineOptimizationSpec:
     ) -> None:
         self._ns = ns
         self._workdir = workdir
-        self.max_concurrency: int = ns.max_concurrency
+        self._max_concurrency: int = ns.max_concurrency
+
+    @property
+    def max_concurrency(self) -> int:
+        return self._max_concurrency
 
     # --- Supervisor phase ---
 
@@ -235,7 +239,7 @@ class _PipelineOptimizationSpec:
         platform = create_platform(config, workdir)
         state["status"] = "looping"
         write_state(workdir, state)
-        self.max_concurrency = int(config.get("max_concurrency", 3))
+        self._max_concurrency = int(config.get("max_concurrency", 3))
         return PipelineOptimizationWorkflow(
             workdir=workdir,
             config=config,

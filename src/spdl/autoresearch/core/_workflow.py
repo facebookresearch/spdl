@@ -50,12 +50,12 @@ class WorkflowSpec(Protocol):
     A workflow factory is any callable matching :py:data:`WorkflowFactory`
     that returns a value satisfying this protocol.
 
-    Attributes:
-        max_concurrency: Maximum concurrent coroutines the orchestrator
-            should run for this workflow.
     """
 
-    max_concurrency: int
+    @property
+    def max_concurrency(self) -> int:
+        """Maximum concurrent coroutines the orchestrator should run."""
+        ...
 
     # --- Supervisor phase (consumed by framework supervisor) ---
 
