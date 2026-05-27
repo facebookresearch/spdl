@@ -186,6 +186,7 @@ jobs:
 
           # Install SPDL
           conda run -n test_env python -m pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          spdl --help
 
           # Install PyTorch and others
           conda run -n test_env python -m pip install pytest pytest-xdist parameterized
@@ -265,6 +266,7 @@ jobs:
 
           # Install SPDL
           conda run -n test_env python -m pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          spdl --help
 
           # Install PyTorch and others
           conda run -n test_env python -m pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
@@ -322,6 +324,7 @@ jobs:
 
           # Install SPDL
           conda run -n test_env python -m pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          spdl --help
 
           # Install deps
           conda run -n test_env python -m pip install numpy nanobind==2.8.0 typing_extensions
