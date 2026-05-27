@@ -181,6 +181,7 @@ def _get_plan(
         KNOWLEDGE=knowledge,
         MASTER_TABLE=_read_master_table(workdir),
         LAST_ANALYSIS=last_analysis[:8000],
+        PIPELINE_SCRIPT=config.get("pipeline_script", "(unknown)"),
         PIPELINE_CODE=pipeline_code or "(not provided)",
         ITERATION=str(iteration),
         MAX_ITERATIONS=str(max_iter),

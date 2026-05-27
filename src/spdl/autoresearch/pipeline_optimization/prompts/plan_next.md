@@ -39,7 +39,7 @@ __LAST_ANALYSIS__
 __HISTORY_JSON__
 ```
 
-### Pipeline Source Code
+### Pipeline Source Code (`__PIPELINE_SCRIPT__`)
 ```python
 __PIPELINE_CODE__
 ```
@@ -112,6 +112,7 @@ Before you can consider stopping, ALL of the following must have been attempted 
    - **NOT compatible with MTP (subprocess mode)** — `VideoPackets` are not picklable and cannot cross process boundaries. GPU video decode must run as a pure multithreaded pipeline in the main process (using `PipelineBuilder.build(num_threads=N)`). `gpu_video_decode` is an **independent optimization path** from `mtp` — they are mutually exclusive alternatives, not stackable. The GPU decode experiment must apply its changes to the original instrumented pipeline (not on top of MTP changes). Do NOT set `goto` to an MTP commit.
    - **Use a dedicated `ThreadPoolExecutor` for the NVDEC decode stage** — do NOT share the pipeline's default thread pool. Create `ThreadPoolExecutor(max_workers=C)` and pass it via `executor=` to the decode `.pipe()` call. This prevents NVDEC decode threads (which need their own CUDA contexts) from competing with CPU fetch threads.
    - Write the `description` field with explicit instructions, e.g.: "Replace `spdl.io.decode_packets(packets)` + `convert_frames` + `transfer_buffer` with `spdl.io.decode_packets_nvdec(packets, device_config=cuda_cfg, pix_fmt='rgb')`. Remove the `transfer_buffer`/`transfer_tensor` stage since data is already on GPU. Set decode concurrency to 7. Use a dedicated `ThreadPoolExecutor(7)` for the decode stage via `executor=ThreadPoolExecutor(7)`. Create `cuda_cfg` using `spdl.io.cuda_config(device_index, allocator=(torch.cuda.caching_allocator_alloc, torch.cuda.caching_allocator_delete))`. Use pure multithreading (no subprocess MTP)."
+   - **Reverse direction (NVDEC → CPU FFmpeg)**: If the pipeline already uses `decode_packets_nvdec` and the NVDEC hardware decoder slots are the bottleneck (e.g., only 7 slots on H100), try switching to CPU FFmpeg decode to bypass the hardware limit. **Follow the "CPU FFmpeg Video Decoding" section in the knowledge base** for the correct API signatures. Key: use `decode_packets(packets, filter_desc=get_video_filter_desc(scale_width=W, scale_height=H, pix_fmt="rgb24"))` → `convert_frames(frames)` → `to_torch(buffer)`, then add `transfer_tensor` as a pipeline stage after collate. **CRITICAL**: `convert_frames` does NOT accept `filter_desc` — filtering is done at `decode_packets` time.
 
 If the "Not yet tried" list is non-empty, you MUST prioritize those practices. If a practice doesn't apply to this pipeline (e.g., already uses continuous mode, or doesn't do video decoding for gpu_video_decode), explain why in your reasoning and still tag it so the orchestrator knows it was considered.
 
@@ -186,7 +187,16 @@ Output your reasoning, then a JSON block:
 ```
 
 Rules:
-- **Single-file constraint**: The engine can only modify the pipeline script file shown in "Pipeline Source Code" above. All code changes described in the `"description"` field MUST be expressible as modifications to **this file only**. If `build_pipeline()` or other target functions are defined in a separate module (e.g., `utils/pipeline.py`) that is imported by the pipeline script, the description MUST instruct the apply agent to modify the pipeline script itself — for example, by inlining the function, overriding the import, or wrapping the call. Do NOT write descriptions that say "In utils/pipeline.py, change..." — the apply agent will output the wrong file's content and destroy the pipeline script, causing `ImportError` crashes. Instead, write descriptions that target the functions and code visible in the pipeline script source code above.
+- **Single-file constraint (CRITICAL — read carefully)**: The engine can ONLY modify the file `__PIPELINE_SCRIPT__`. All code changes described in the `"description"` field MUST be expressible as modifications to **this file only**. The apply agent receives this file's content and must output the modified version — if the description references a different file (e.g., `utils/pipeline.py`, `pipeline.py`), the apply agent will output that other file's content instead, **destroying `__PIPELINE_SCRIPT__`** and causing `ImportError` crashes (the training loop, model setup, and DDP initialization are deleted).
+
+  **How to handle imported pipeline code**: If `build_pipeline()` or other target functions are defined in a separate module that is imported by the pipeline script, the description MUST instruct the apply agent to:
+  1. Keep ALL existing imports, functions, and classes in the pipeline script.
+  2. Add any new imports needed (e.g., `import spdl.io`, `from concurrent.futures import ThreadPoolExecutor`).
+  3. Define new classes/functions (e.g., `CpuDecode`) directly in the pipeline script.
+  4. Either (a) override the imported `build_pipeline` by defining a local replacement that uses the new code, or (b) apply the change as a post-import monkey-patch.
+  5. Update the call site (e.g., in `main()`) to use the new local function.
+
+  **NEVER** write descriptions that say "In utils/pipeline.py, change..." or "Modify the NvdecDecode class in the utils module" — these direct the apply agent to the wrong file. Instead, say "In `__PIPELINE_SCRIPT__`, define a new `CpuDecode` class and a new `build_pipeline_cpu()` function, then update `main()` to call `build_pipeline_cpu()` instead of the imported `build_pipeline`."
 - **`changes`** is the experiment's identity for dedup. List every modification as a short, canonical, snake_case identifier. For code changes use identifiers like `"torch_compile"`, `"fused_adamw"`, `"mtp"`, `"priority_executor"`, `"cache_dataloader"`. For parameter changes use `"param_name=value"` format like `"batch_size=48"`, `"num_workers=16"`. Combination experiments list all changes (e.g. `["mtp", "torch_compile"]`). Parameter changes are also auto-detected from launch command diffs, but code changes **must** be listed explicitly. The orchestrator rejects experiments whose change set matches a non-failed existing node.
 - **Do NOT propose experiments that are semantically identical to existing ones**, even under a different name. Before proposing, check the Master Table for any run that used the same launch parameters (batch_size, num_workers, etc.) and code changes. If a configuration has been tested — regardless of what it was named — do not re-test it.
 - Use `$IMAGE` as placeholder for the job image (the orchestrator substitutes it)

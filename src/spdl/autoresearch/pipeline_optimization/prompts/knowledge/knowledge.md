@@ -133,6 +133,99 @@ Build the entire pipeline (demux → decode_packets_nvdec → to_torch) in the m
 - **Use a dedicated `ThreadPoolExecutor` for the decode stage** — do NOT share the pipeline's default thread pool. Create `ThreadPoolExecutor(max_workers=C)` and pass it via `executor=` to the decode `.pipe()` call. This avoids contention between NVDEC decode threads (which need their own CUDA contexts) and CPU fetch/processing threads
 
 
+### CPU FFmpeg Video Decoding (reverse of GPU decode)
+
+When the pipeline uses GPU NVDEC decode and you want to switch to CPU FFmpeg decode (e.g., to bypass the NVDEC hardware decoder slot limit), replace the NVDEC decode chain with CPU FFmpeg decode + GPU transfer.
+
+**GPU decode pipeline (current):** `demux_video → decode_packets_nvdec → to_torch` (output on GPU)
+**CPU decode pipeline (replacement):** `demux_video → decode_packets → convert_frames → to_torch → transfer_tensor` (output on CPU, then transferred to GPU)
+
+#### Key APIs and their exact signatures
+
+**`spdl.io.decode_packets`** — CPU FFmpeg decode:
+```python
+spdl.io.decode_packets(
+    packets,                           # VideoPackets from demux_video()
+    filter_desc: str | None = <default>,  # FFmpeg filter graph string
+    decode_config: DecodeConfig | None = None,
+    *,
+    num_frames: int = -1,              # keyword-only
+) -> VideoFrames
+```
+
+The `filter_desc` parameter controls pixel format conversion and scaling. By default it converts to `rgb24`. Use `spdl.io.get_video_filter_desc()` to construct filter strings with scaling:
+
+```python
+filter_desc = spdl.io.get_video_filter_desc(
+    scale_width=112,
+    scale_height=112,
+    pix_fmt="rgb24",
+)
+frames = spdl.io.decode_packets(packets, filter_desc=filter_desc)
+```
+
+**`spdl.io.convert_frames`** — convert decoded frames to buffer:
+```python
+spdl.io.convert_frames(
+    frames,                    # VideoFrames from decode_packets()
+    storage: CPUStorage | None = None,
+) -> CPUBuffer
+```
+
+**IMPORTANT**: `convert_frames` does NOT accept `filter_desc`. Filtering (scaling, pixel format) is done at `decode_packets` time via the `filter_desc` parameter. Passing `filter_desc` to `convert_frames` will raise a `TypeError`.
+
+The output buffer shape for video is `[N, C, H, W]` — this is already channels-first when the input was decoded with an rgb24 filter.
+
+**`spdl.io.to_torch`** — convert buffer to torch tensor:
+```python
+tensor = spdl.io.to_torch(buffer)  # CPU tensor, shape matches buffer layout
+```
+
+**`spdl.io.transfer_tensor`** — transfer CPU tensors to GPU:
+```python
+spdl.io.transfer_tensor(batch, /, *, num_caches: int = 4)
+```
+
+Handles nested structures (dict, list, tuple, dataclass). Uses `LOCAL_RANK` env var to determine target GPU device. Creates a dedicated CUDA stream per thread for overlapping transfer with compute.
+
+#### Replacing NVDEC with CPU decode (in-place pattern)
+
+The simplest approach is to modify the existing decode callable's `__call__` method. Replace the NVDEC decode body:
+
+```python
+# BEFORE (NVDEC):
+buffer = spdl.io.decode_packets_nvdec(
+    packets, device_config=self.cuda_cfg,
+    scale_width=self.width, scale_height=self.height, pix_fmt="rgb",
+)
+tensor = spdl.io.to_torch(buffer)  # [T, C, H, W] on GPU
+
+# AFTER (CPU FFmpeg):
+filter_desc = spdl.io.get_video_filter_desc(
+    scale_width=self.width, scale_height=self.height, pix_fmt="rgb24",
+)
+frames = spdl.io.decode_packets(packets, filter_desc=filter_desc)
+buffer = spdl.io.convert_frames(frames)
+tensor = spdl.io.to_torch(buffer)  # [T, C, H, W] on CPU
+```
+
+After the decode callable, add GPU transfer. Since CPU decode produces CPU tensors, add `transfer_tensor` as a pipeline stage **after collate but before the sink**:
+
+```python
+.pipe(collate)
+.pipe(spdl.io.transfer_tensor, executor=ThreadPoolExecutor(max_workers=1))
+.add_sink(buffer_size=3)
+```
+
+Remove `cuda_config` setup code that was only used for NVDEC. Keep the `device` variable if the label tensor needs to be on GPU.
+
+#### Common mistakes to avoid
+
+1. **Do NOT pass `filter_desc` to `convert_frames()`** — it only accepts `(frames, storage=None)`.
+2. **Do NOT forget GPU transfer** — CPU decode produces CPU tensors; add `transfer_tensor` stage.
+3. **Do NOT modify the wrong file** — if the decode callable is in a utility module (e.g., `utils/pipeline.py`) and the engine modifies the training script, define a new decode callable in the training script and override the pipeline construction call.
+4. **Do NOT remove BUCK dependencies** — the training script needs its model/training deps (torchvision, DDP, etc.) even when changing the pipeline.
+
 ### Headspace Analysis in the Loop
 
 The autoresearch loop runs CacheDataLoader analysis automatically as part of the first iteration, alongside other experiments like MTP. CacheDataLoader results must NOT be treated as a real training run — they are excluded from the running best and plateau detection.
