@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import importlib
+import sys
 import tempfile
 import unittest
 from collections.abc import Callable
@@ -251,3 +253,30 @@ class _CoreWorkflowExportTest(unittest.TestCase):
         from spdl.autoresearch.core import WorkflowFactory
 
         self.assertIs(get_origin(WorkflowFactory), Callable)
+
+
+class _MainImportTest(unittest.TestCase):
+    def test_main_import_does_not_load_app(self) -> None:
+        """Importing spdl.autoresearch.__main__ as a module is a no-op.
+
+        The framework dispatcher (under spdl.autoresearch._app) must
+        NOT be transitively loaded by ``import
+        spdl.autoresearch.__main__``. _app is reachable only when
+        __main__.py runs as a script (i.e. via ``python -m
+        spdl.autoresearch``), at which point ``__name__ ==
+        "__main__"`` and the lazy import inside the guard fires.
+        """
+        removed = {}
+        for mod_name in [
+            name
+            for name in list(sys.modules)
+            if name == "spdl.autoresearch.__main__"
+            or name.startswith("spdl.autoresearch._app")
+        ]:
+            removed[mod_name] = sys.modules.pop(mod_name)
+        self.addCleanup(sys.modules.update, removed)
+
+        importlib.import_module("spdl.autoresearch.__main__")
+
+        self.assertNotIn("spdl.autoresearch._app", sys.modules)
+        self.assertNotIn("spdl.autoresearch._app._main", sys.modules)

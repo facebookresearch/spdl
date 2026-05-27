@@ -9,14 +9,15 @@
 The single ``spdl-autoresearch`` binary supports three subcommands,
 parsed by :mod:`argparse`:
 
+- ``supervisor`` — run the interactive supervisor wrapper, which builds
+  the engine command and ``execvp``\\s a coding agent. All remaining
+  arguments are forwarded to the supervisor's own parser.
 - ``engine`` — run the orchestrator directly. Used by the supervisor
   when it execs the engine subprocess, and by developers running the
   engine without the agent wrapper.
 - ``summary <workdir>`` — re-resolve the workflow factory recorded in
   ``<workdir>/workflow_factory.json`` and print
   ``workflow.summarize(workdir)`` to stdout.
-- (default, no subcommand) — run the interactive supervisor wrapper,
-  which builds the engine command and ``execvp``\\s a coding agent.
 """
 
 from __future__ import annotations
@@ -37,6 +38,12 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="command")
+
+    subparsers.add_parser(
+        "supervisor",
+        help="Run the interactive supervisor wrapper.",
+        add_help=False,
+    )
 
     subparsers.add_parser(
         "engine",
@@ -72,8 +79,12 @@ def main(argv: list[str] | None = None) -> None:
         _run_engine(remaining)
     elif ns.command == "summary":
         _run_summary(ns.workdir)
+    elif ns.command == "supervisor":
+        _run_supervisor(remaining)
     else:
-        _run_supervisor(args)
+        parser = _build_parser()
+        parser.print_help()
+        raise SystemExit(1)
 
 
 def _run_summary(workdir_str: str) -> None:
