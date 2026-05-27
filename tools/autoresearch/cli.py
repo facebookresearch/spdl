@@ -5,48 +5,20 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Entry point for ``spdl autoresearch``.
+"""Entry point for the bare ``spdl-autoresearch`` Buck binary.
 
-Thin wrapper that dispatches to either the framework dispatcher
-(``spdl.autoresearch._app._main``) or the legacy pipeline-optimization
-supervisor depending on argv shape:
-
-- ``autoresearch engine ...`` — engine subcommand handled by the
-  framework dispatcher. Used by the supervisor when it execs the engine
-  subprocess and by developers running the engine directly.
-- ``autoresearch ... --workflow ...`` — framework dispatcher path.
-- otherwise — legacy ``pipeline_optimization.main`` supervisor path.
-  Preserves byte-for-byte behavior for the ``examples/*/fb/autoresearch.sh``
-  scripts and the bundled ``autoresearch_with_pipeline_opt`` binary's
-  default invocation.
-
-Step 6 of the refactor promotes ``--workflow`` to a real argument on the
-bare ``autoresearch`` binary and migrates the example scripts to the new
-flag shape; step 8 retires the legacy path entirely.
+Thin shim that delegates to the framework dispatcher in
+``spdl.autoresearch._app._main``. The framework dispatcher requires a
+``--workflow module.path:factory`` argument (or short name registered
+under the ``spdl.autoresearch.workflows`` entry-points group); the
+bundled ``autoresearch_with_pipeline_opt`` Buck binary uses a sibling
+shim that auto-injects the pipeline-optimization workflow as the
+default.
 """
 
 from __future__ import annotations
 
-import sys
-
-
-def main() -> None:
-    """Dispatch to the framework engine, framework supervisor, or legacy CLI."""
-    args = sys.argv[1:]
-    if args and args[0] == "engine":
-        from spdl.autoresearch._app._main import main as framework_main
-
-        framework_main()
-        return
-    if any(a == "--workflow" or a.startswith("--workflow=") for a in args):
-        from spdl.autoresearch._app._main import main as framework_main
-
-        framework_main()
-        return
-    from spdl.autoresearch.pipeline_optimization import main as legacy_main
-
-    legacy_main()
-
+from spdl.autoresearch._app._main import main
 
 if __name__ == "__main__":
     main()
