@@ -114,15 +114,17 @@ jobs:
             conda install -q python-freethreading
           fi
 
+          conda install -q pip
+
           # Install SPDL
-          pip install $(find package -name '*.whl' -depth -maxdepth 1)
+          python -m pip install $(find package -name '*.whl' -depth -maxdepth 1)
           spdl --help
 
           # Install PyTorch and others
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            pip install torch numpy pytest pytest-xdist parameterized matplotlib
+            python -m pip install torch numpy pytest pytest-xdist parameterized matplotlib
           else
-            pip install torch numpy numba pytest pytest-xdist parameterized matplotlib
+            python -m pip install torch numpy numba pytest pytest-xdist parameterized matplotlib
           fi
 
           # Install FFmpeg
