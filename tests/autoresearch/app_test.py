@@ -174,8 +174,8 @@ class _ArgvSplitTest(unittest.TestCase):
 
 
 class _EngineCommandTest(unittest.TestCase):
-    def test_default_uses_argv0_engine(self) -> None:
-        """Without an override, the engine prefix is 'sys.argv[0] engine'."""
+    def test_default_uses_spdl_autoresearch_engine(self) -> None:
+        """Without an override, the engine prefix is 'spdl autoresearch engine'."""
         cmd = _build_engine_command(
             engine_command_override=None,
             workflow_spec="pkg.mod:factory",
@@ -183,11 +183,12 @@ class _EngineCommandTest(unittest.TestCase):
             framework_flags=["--max-concurrency", "3"],
             workflow_argv_tail=["--build-command", "make"],
         )
-        # argv[0] varies under buck test; only assert structural shape.
-        self.assertEqual(cmd[1], "engine")
         self.assertEqual(
-            cmd[2:],
+            cmd,
             [
+                "spdl",
+                "autoresearch",
+                "engine",
                 "--workflow",
                 "pkg.mod:factory",
                 "--workdir",

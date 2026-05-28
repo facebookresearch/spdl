@@ -97,8 +97,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--engine-command",
         help=(
             "Override the engine command shown to the supervisor. Defaults "
-            "to '<argv0> engine ...' so the framework binary re-invokes "
-            "itself in engine mode."
+            "to 'spdl autoresearch engine'."
         ),
     )
     parser.add_argument(
@@ -135,7 +134,7 @@ def _build_engine_command(
 
     Args:
         engine_command_override: Value of ``--engine-command``, or
-            ``None`` to default to ``<argv0> engine``.
+            ``None`` to default to ``spdl autoresearch engine``.
         workflow_spec: Workflow specifier to forward via ``--workflow``.
         workdir: Workdir to forward to the engine.
         framework_flags: Framework-owned flags (such as
@@ -149,7 +148,7 @@ def _build_engine_command(
     if engine_command_override:
         prefix = shlex.split(engine_command_override)
     else:
-        prefix = [sys.argv[0], "engine"]
+        prefix = ["spdl", "autoresearch", "engine"]
     command = list(prefix)
     command.extend(["--workflow", workflow_spec])
     command.extend(["--workdir", str(workdir)])
