@@ -7,6 +7,7 @@
 # pyre-strict
 
 import unittest
+import warnings
 
 import numpy as np
 import spdl.io
@@ -77,8 +78,14 @@ class TestCloneFrames(unittest.TestCase):
             frames = spdl.io.decode_packets(spdl.io.demux_image(sample.path))
 
         _ = spdl.io.convert_frames(frames)
-        with self.assertRaises(TypeError):
-            frames.clone()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="nanobind: attempted to access a relinquished instance.*",
+                category=RuntimeWarning,
+            )
+            with self.assertRaises(TypeError):
+                frames.clone()
 
     @parameterized.expand(
         [
