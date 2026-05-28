@@ -108,30 +108,23 @@ jobs:
           channels: conda-forge
           conda-remove-defaults: "true"
 
-      - name: Diagnose interpreter / pip / wheel tags
-        run: |
-          set -x
-          which python; python --version
-          python -c "import sys; print(sys.executable); print(sys.version); print('FT:', getattr(sys, '_is_gil_enabled', lambda: True)() is False)"
-          which pip; pip --version
-          python -m pip debug --verbose | sed -n '/Compatible tags/,$p' | head -60
-          ls -la package/
-
       - name: Setup
         run: |
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
             conda install -q python-freethreading
           fi
 
+          conda install -q pip
+
           # Install SPDL
-          pip install $(find package -name '*.whl' -depth -maxdepth 1)
+          python -m pip install $(find package -name '*.whl' -depth -maxdepth 1)
           spdl --help
 
           # Install PyTorch and others
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            pip install torch numpy pytest pytest-xdist parameterized matplotlib
+            python -m pip install torch numpy pytest pytest-xdist parameterized matplotlib
           else
-            pip install torch numpy numba pytest pytest-xdist parameterized matplotlib
+            python -m pip install torch numpy numba pytest pytest-xdist parameterized matplotlib
           fi
 
           # Install FFmpeg
