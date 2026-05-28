@@ -59,7 +59,7 @@ def plot_benchmark_results(
 
     abi_info = " (free-threaded)" if free_threaded else ""
 
-    resolutions = sorted(set(r.config.resolution for r in results))
+    resolutions = sorted({r.config.resolution for r in results})
 
     fig, axes = plt.subplots(2, len(resolutions), figsize=(6 * len(resolutions), 10))
     if len(resolutions) == 1:
@@ -71,7 +71,7 @@ def plot_benchmark_results(
         resolution_results = [r for r in results if r.config.resolution == resolution]
 
         decoder_threads_set = sorted(
-            set(r.config.decoder_threads for r in resolution_results)
+            {r.config.decoder_threads for r in resolution_results}
         )
 
         for decoder_threads in decoder_threads_set:
