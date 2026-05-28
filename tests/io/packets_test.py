@@ -8,6 +8,7 @@
 
 import time
 import unittest
+import warnings
 from collections.abc import Sequence
 
 import numpy as np
@@ -189,8 +190,14 @@ class TestClonePackets(unittest.TestCase):
         else:
             raise RuntimeError("Unexpected media type")
 
-        with self.assertRaises(TypeError):
-            packets.clone()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="nanobind: attempted to access a relinquished instance.*",
+                category=RuntimeWarning,
+            )
+            with self.assertRaises(TypeError):
+                packets.clone()
 
     @parameterized.expand(
         [

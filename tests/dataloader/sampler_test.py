@@ -6,9 +6,13 @@
 
 # pyre-strict
 
+import functools
 import unittest
+import warnings
 from collections import Counter
+from collections.abc import Callable
 from functools import partial
+from typing import TypeVar
 
 import numpy as np
 from parameterized import parameterized
@@ -20,6 +24,26 @@ from spdl.source import (
     SizedIterableWithShuffle,
 )
 from spdl.source.utils import embed_shuffle
+
+_F = TypeVar("_F", bound=Callable[..., object])
+
+
+def _ignore_fork_warning(fn: _F) -> _F:
+    @functools.wraps(fn)
+    def wrapper(*args: object, **kwargs: object) -> object:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"This process \(pid=\d+\) is multi-threaded, use of "
+                    r"fork\(\) may lead to deadlocks in the child"
+                ),
+                category=DeprecationWarning,
+            )
+            return fn(*args, **kwargs)
+
+    # pyre-ignore[7]
+    return wrapper
 
 
 class TestDistributedSamplerInterface(unittest.TestCase):
@@ -44,39 +68,57 @@ class TestDistributedSamplerDeterministic(unittest.TestCase):
     def test_deterministic_iter_distributed(self) -> None:
         """deterministic iteration behaves same as `range(rank, M, world_size)`"""
         N = 26
-        for world_size in range(1, N + 1):
-            len_ = N // world_size
-            max_ = len_ * world_size
-            c = Counter()
-            for rank in range(world_size):
-                print(f"{N=}, {world_size=}, {rank=}, {len_=}, {max_=}")
-                sampler = DistributedDeterministicSampler(
-                    N, rank=rank, world_size=world_size
-                )
-                self.assertEqual(len(sampler), len_)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"The size of dataset \(\d+\) is not divisible by the "
+                    r"world size \(\d+\)\. Some samples are never visited\."
+                ),
+                category=UserWarning,
+            )
+            for world_size in range(1, N + 1):
+                len_ = N // world_size
+                max_ = len_ * world_size
+                c = Counter()
+                for rank in range(world_size):
+                    print(f"{N=}, {world_size=}, {rank=}, {len_=}, {max_=}")
+                    sampler = DistributedDeterministicSampler(
+                        N, rank=rank, world_size=world_size
+                    )
+                    self.assertEqual(len(sampler), len_)
 
-                indices = list(sampler)
-                self.assertEqual(indices, list(range(rank, max_, world_size)))
-                c.update(indices)
+                    indices = list(sampler)
+                    self.assertEqual(indices, list(range(rank, max_, world_size)))
+                    c.update(indices)
 
-            # Check that together, the samplers covered the whole dataset
-            num_iters = N // world_size * world_size
-            self.assertEqual(c.total(), num_iters)
-            self.assertEqual(len(c.keys()), num_iters)
-            self.assertEqual(set(c.keys()), set(range(num_iters)))
-            self.assertTrue(all(v == 1 for v in c.values()))
+                # Check that together, the samplers covered the whole dataset
+                num_iters = N // world_size * world_size
+                self.assertEqual(c.total(), num_iters)
+                self.assertEqual(len(c.keys()), num_iters)
+                self.assertEqual(set(c.keys()), set(range(num_iters)))
+                self.assertTrue(all(v == 1 for v in c.values()))
 
     def test_deterministic_iter_stable_across_epochs(self) -> None:
         """Deterministic sampler produces the same sequence on every iteration."""
         N = 30
         world_size = 4
-        for rank in range(world_size):
-            sampler = DistributedDeterministicSampler(
-                N, rank=rank, world_size=world_size
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"The size of dataset \(\d+\) is not divisible by the "
+                    r"world size \(\d+\)\. Some samples are never visited\."
+                ),
+                category=UserWarning,
             )
-            first_epoch = list(sampler)
-            for _ in range(5):
-                self.assertEqual(list(sampler), first_epoch)
+            for rank in range(world_size):
+                sampler = DistributedDeterministicSampler(
+                    N, rank=rank, world_size=world_size
+                )
+                first_epoch = list(sampler)
+                for _ in range(5):
+                    self.assertEqual(list(sampler), first_epoch)
 
 
 class TestDistributedSamplerRandom(unittest.TestCase):
@@ -279,6 +321,7 @@ class TestDistributedSamplerEmbedShuffle(unittest.TestCase):
 
 
 class TestDistributedSamplerIterateInSubprocess(unittest.TestCase):
+    @_ignore_fork_warning
     def test_iterate_in_subprocess(self) -> None:
         """Iterating in a subprocess generates identical result"""
         N = 10

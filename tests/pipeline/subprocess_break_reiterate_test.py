@@ -9,11 +9,37 @@
 """Regression test for D101554675: breaking out of a subprocess iterable
 must not kill the worker, so subsequent iterations still work."""
 
+import functools
 import unittest
+import warnings
 from collections.abc import Iterator
 from functools import partial
 
 from spdl.pipeline import iterate_in_subprocess
+
+
+def _ignore_fork_warning(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"This process \(pid=\d+\) is multi-threaded, use of "
+                    r"fork\(\) may lead to deadlocks in the child"
+                ),
+                category=DeprecationWarning,
+            )
+            return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def _ignore_fork_warning_in_class(cls):
+    for name, member in list(vars(cls).items()):
+        if name.startswith("test_") and callable(member):
+            setattr(cls, name, _ignore_fork_warning(member))
+    return cls
 
 
 class SourceIterable:
@@ -24,6 +50,7 @@ class SourceIterable:
         yield from range(self.n)
 
 
+@_ignore_fork_warning_in_class
 class TestSubprocessBreakAndReiterate(unittest.TestCase):
     def test_break_then_reiterate(self) -> None:
         """Breaking out of a subprocess iterable must not prevent re-iteration.
