@@ -14,6 +14,22 @@ Add logging for the following metrics if not already present:
 
 4. **Available CPU cores**: At startup (before the training loop), log the number of CPU cores available to this process. Use `os.sched_getaffinity(0)` (preferred, reflects cgroup/taskset restrictions) with a fallback to `os.cpu_count()`. Log it once.
 
+5. **Garbage collection alignment**: Disable automatic garbage collection and run it at a fixed step interval. This prevents random GC pauses from causing DDP synchronization jitter across ranks, and produces more stable per-step timing measurements. Add the following at the beginning of the training function (before the training loop):
+
+   ```python
+   import gc
+   gc.disable()
+   ```
+
+   Then inside the training loop, after each step:
+
+   ```python
+   if step % 50 == 0:
+       gc.collect()
+   ```
+
+   If the code already has manual GC management (e.g., `gc.disable()`, `gc.collect()`, or a TorchTNT `GarbageCollector` callback), do NOT add duplicate GC handling — leave the existing logic in place.
+
 Use Python's `time.monotonic()` for timing. Print metrics to stdout in a parseable format like:
 ```
 [autoresearch] cpu_cores=32
@@ -31,8 +47,8 @@ __PIPELINE_CODE__
 
 ## Instructions
 
-1. Add the timing instrumentation with minimal changes to the existing code structure.
-2. Do NOT change any pipeline configuration, model setup, or training logic — only add timing measurements and logging.
+1. Add the timing instrumentation and GC alignment with minimal changes to the existing code structure.
+2. Do NOT change any pipeline configuration, model setup, or training logic — only add timing measurements, logging, and GC alignment.
 3. Preserve all existing functionality exactly.
 4. **TorchTNT scripts**: If the code uses TorchTNT (`torchtnt.framework.fit`, `torchtnt.framework.train`, `AutoUnit`, etc.), the training loop is managed by TorchTNT — you CANNOT wrap timing around `for batch in dataloader:` directly. The code typically has a wrapper class around the SPDL Pipeline with `__iter__` that calls `pipeline.get_iterator(timeout=...)`. To add instrumentation:
    - **TTFB**: Add timing inside the wrapper's existing `__iter__` method. If there is no wrapper (Pipeline passed directly to TorchTNT), introduce one. Example:
@@ -71,6 +87,11 @@ __PIPELINE_CODE__
                  print(f"[autoresearch] step={self._step_count} step_time_ms={elapsed*1000:.1f} fetch_time_ms={self._fetch_time*1000:.1f}")
      ```
    - Pass `callbacks=[AutoresearchTimingCallback()]` to the `fit()` or `train()` call.
+   - **GC alignment for TorchTNT**: If TorchTNT does not already have a `GarbageCollector` callback registered, add one:
+     ```python
+     from torchtnt.framework.callbacks import GarbageCollector
+     ```
+     Then add `GarbageCollector(step_interval=50)` to the callbacks list.
 
 **CRITICAL: You MUST output the ENTIRE modified file in a single ```python code block below. Do NOT summarize the changes. Do NOT describe what you would change. Do NOT output a diff. Output ONLY the complete file content with instrumentation added.**
 

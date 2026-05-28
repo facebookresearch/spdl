@@ -118,6 +118,14 @@ for epoch in range(num_epochs):
 
 Benefits: isolates CPU work from GPU kernel launches, avoids the noisy-neighbour effect. Dedicated thread and CUDA stream for transferring the batch to GPU.
 
+### When MTP Adds Overhead Instead of Helping
+
+MTP introduces subprocess serialization and IPC overhead on every batch. This cost is fixed regardless of how much work the pipeline does per item. When per-item pipeline work is heavy (large decode, expensive preprocessing), MTP's isolation benefit far outweighs this overhead. But when per-item work becomes cheap — due to optimizations like subclipping (reducing decode work 10×), low-resolution inputs, lightweight preprocessing, or aggressive caching — the IPC overhead can become a significant fraction of the total per-batch time, and **running the pipeline in the main process with low concurrency can outperform MTP**.
+
+**Rule of thumb:** if the pipeline's per-batch production time (source-to-sink) drops below ~50ms after optimization, benchmark with and without MTP. The noisy-neighbour effect that MTP prevents is only relevant when CPU utilization is high; if optimized stages use little CPU, MTP's isolation is unnecessary and its overhead hurts.
+
+**Recommendation:** always test MTP as a best practice, but also test the best configuration *without* MTP. Report both results and let the data decide. Do not assume MTP is universally beneficial.
+
 ## The Noisy-Neighbour Effect
 
 When CPU utilization exceeds ~40%, the OS cannot schedule GPU kernel launches promptly, causing GPU idle time even when data is available. **Keep total CPU utilization at or below 40%.** Using all CPUs for data loading is an anti-pattern.
@@ -126,9 +134,9 @@ When CPU utilization exceeds ~40%, the OS cannot schedule GPU kernel launches pr
 
 Python's GC can cause periodic spikes in step time by pausing threads. When data loading uses multi-threading in the main process, GC runs more frequently due to higher object allocation rates.
 
-**Mitigation by scale:**
-- **Medium scale**: Using MTP (subprocess architecture) naturally reduces GC impact in the main process, since most object-heavy work runs in the subprocess.
-- **Large scale** (many GPUs/nodes): In distributed training, all ranks synchronize at `nccl:all_reduce` — the slowest rank determines the step time. GC is inevitable and must happen occasionally, but if ranks trigger GC at random times, multiple training steps are slowed down (each time a different rank pauses). By aligning GC to a fixed step interval, all ranks pause at roughly the same time, so only one step is affected instead of many. This effect is most visible in long-running jobs with many distributed nodes — for short training runs or small-scale setups the impact is negligible.
+**Mitigation:**
+
+Disable automatic GC and run it at a fixed step interval. This ensures all ranks pause at roughly the same time during distributed training, so only one step is affected instead of many:
 
 ```python
 import gc
@@ -142,7 +150,9 @@ for step, batch in enumerate(dataloader):
 
 If using TorchTNT, use `torchtnt.framework.callbacks.GarbageCollector(step_interval=N)` instead of manual GC management.
 
-When diagnosing step time spikes that appear at irregular intervals (not correlated with epochs), GC is a likely cause.
+This technique is most impactful at large scale (many GPUs/nodes), where random GC pauses across ranks cause repeated synchronization delays. However, it can also help at smaller scale by improving cross-rank data readiness uniformity — random GC pauses can create a bimodal starvation pattern where some ranks are paused while others are ready, causing DDP synchronization jitter.
+
+**Diagnosing GC stalls:** When step time spikes appear at irregular intervals (not correlated with epochs), GC is a likely cause. Another telltale sign is a **large discrepancy between p50 and p90/p99 latencies** in pipeline stage metrics — GC pauses affect only the unlucky iterations that coincide with a collection, inflating the tail latencies while leaving the median relatively unaffected. If you observe p90 ≫ p50 for a stage that should have stable per-item cost, suspect GC before investigating other causes.
 
 ## Why `next(dataloader)` Time Is Misleading
 
@@ -172,11 +182,83 @@ This is a key reason to use MTP (subprocess mode) — it eliminates GIL contenti
 5. **Use coalesced data access**: Batching I/O requests (reading multiple samples per call) can be significantly faster than single-sample access.
 6. **Combine MTP with GPU decode**: `VideoPackets` are now picklable, so you can demux in a subprocess and decode with NVDEC in the main process. This combines the CPU-isolation benefits of MTP with the decode throughput of GPU hardware decoders. See the "GPU Video Decoding" section for details.
 
-## Video Decoder Thread Tuning
+## Concurrency Tuning: Less Can Be More
+
+For stages where the per-item operation is very fast (e.g., demuxing, which is mostly data copying), **reducing concurrency below the default can improve throughput**. When the operation itself is cheap, the overhead of thread scheduling and contention can dominate the actual work, and fewer concurrent tasks means less contention per item.
+
+### Why lower concurrency can be faster
+
+When multiple concurrent tasks share a thread pool (as in MTP subprocess pipelines), each task competes for thread scheduling, locks, and cache lines. For fast operations, this contention overhead is large relative to the work itself. Effective throughput (concurrency / per-item-latency) can decrease as concurrency rises:
+
+```
+Concurrency 8:  per-item = 0.13s  →  throughput = 8 / 0.13 = 62 items/s
+Concurrency 6:  per-item = 0.065s →  throughput = 6 / 0.065 = 92 items/s  ← 48% faster
+```
+
+This effect is most pronounced for operations that are inherently fast (data copying, demuxing, disaggregation), where the operation itself is cheap but contention from concurrent scheduling inflates the observed per-item latency. For slow operations (network I/O, heavy CPU compute), higher concurrency is still beneficial because the parallelism gains outweigh the contention cost.
+
+### Search strategy
+
+When tuning a stage's concurrency — especially for fast operations:
+
+1. Start with the default (e.g., c=8)
+2. Test higher values: c=10, c=12, c=16
+3. **Also test lower values**: c=6, c=4 — particularly for stages whose underlying operation is fast (e.g., demuxing, data copying)
+4. Monitor per-item latency (from pipeline stats) — if it increases faster than concurrency, you're in the contention regime
+5. The sweet spot is where `concurrency / per_item_latency` is maximized
+
+## Video Pipeline Optimization
+
+### Subclipping: Truncate Before Decode
+
+For video workloads where only a fraction of frames are needed (e.g., sampling 16 frames from a 10-second clip), **truncating the video to a short subclip before decoding** can dramatically reduce decode work.
+
+```python
+# Limit demuxed video to first 0.5 seconds before decoding
+packets = spdl.io.demux_video(data, timestamp=(0, 0.5))
+```
+
+**Why this matters:**
+- If a video is 10s at 30fps, that's ~300 frames, but temporal sampling may only need 16
+- Decoding all frames then discarding most of them wastes decode compute proportional to the discard ratio
+- This optimization is orthogonal to decoder choice (NvDec vs CPU) and concurrency tuning
+
+**Tuning the subclip duration:**
+- Set `subclip_duration` so that `fps × subclip_duration ≥ num_frames_needed`
+- Going too short forces frame padding/repetition, which adds CPU overhead and may reduce quality
+- The sweet spot depends on the specific fps and frame count requirements — aim for the shortest duration that still provides enough frames without excessive padding
+
+**Multiple subclips from one video:** When videos are significantly longer than the subclip duration, you can extract multiple non-overlapping subclips from a single video to make better use of the downloaded data. Use `Demuxer.streaming_demux(duration=...)` to stream packets in chunks without re-instantiating the demuxer for each subclip. A generator pipeline stage will emit each chunk as a separate item downstream, amortizing the I/O cost of fetching the video across multiple training samples:
+
+```python
+def extract_subclips(video_data, subclip_duration=0.5):
+    """Generator that yields subclip packets from one video in streaming fashion."""
+    demuxer = spdl.io.Demuxer(video_data)
+    for packets in demuxer.streaming_demux(
+        demuxer.video_stream_index, duration=subclip_duration
+    ):
+        yield packets
+```
+
+### GPU Video Decoding with NvDec
+
+When using NvDec hardware decoders, be aware that GPUs have a **fixed number of NvDec engines** (typically 7 on A100/H100). Setting decode concurrency above this number means tasks queue for hardware access:
+
+```python
+# Match hardware: 7 NvDec engines on A100/H100
+# Use a dedicated thread pool for CUDA context management
+exec = ThreadPoolExecutor(max_workers=7)
+
+.pipe(nvdec_decode, executor=exec)
+```
+
+Higher concurrency values (e.g., c=16) still work — excess tasks wait for an engine — but waste thread resources on waiting. Setting concurrency to match the hardware count (c=7) is marginally more efficient.
+
+### Video Decoder Thread Tuning
 
 When the pipeline decodes video with `spdl.io.load_video` / `spdl.io.decode_packets`, the underlying FFmpeg decoder uses **a single thread by default**. This is a deliberate SPDL design choice — concurrency is expected to come from running many decoders in parallel at the pipeline level — but for some workloads (high-resolution video, low pipeline concurrency, or CPU headroom available) raising the per-decoder thread count is faster overall.
 
-### How to set it
+#### How to set it
 
 Pass `decoder_options={"threads": "X"}` via `spdl.io.decode_config`:
 
@@ -190,7 +272,7 @@ Valid values for `X` (passed as a string):
 - `"2"`, `"4"`, `"8"`, ... — fixed thread count per decoder. Higher = faster single-video decode at the cost of more CPU.
 - `"0"` — let FFmpeg choose automatically. Often gives the **fastest** single-video decode but uses **the most CPU** (may grab many cores per decode).
 
-### The Trade-Off
+#### The Trade-Off
 
 Decoder threads multiply with pipeline concurrency for total CPU pressure:
 
@@ -202,7 +284,7 @@ effective_CPU_load ≈ pipe_concurrency × decoder_threads
 - `"0"` is tempting because it benchmarks fastest in isolation, but in a real pipeline it can blow past the 40% CPU budget, trigger the noisy-neighbour effect, and slow training overall.
 - The right value depends on resolution (4K benefits more from threads than SD), codec, pipeline `concurrency`, and total CPU budget.
 
-### Search Space for Autoresearch
+#### Search Space for Autoresearch
 
 When the pipeline contains a video decode stage, treat decoder threads as a tunable parameter alongside `concurrency`:
 
@@ -213,6 +295,21 @@ When the pipeline contains a video decode stage, treat decoder threads as a tuna
 5. **Optimize for end-to-end metric** (step time / SM utilization / total throughput), not for single-decode latency. `"0"` often wins microbenchmarks and loses real pipelines.
 
 See `examples/benchmark_video.py` (`load_video_with_config`) for a reference benchmark harness that sweeps decoder threads × worker counts × resolutions.
+
+### NvDec vs CPU Decode
+
+NvDec hardware decode is almost always faster than CPU (FFmpeg) decode for video pipelines. Even at small resolutions (112×112), NvDec decoded at ~0.6s/item while CPU FFmpeg took ~0.8s/item with 16 concurrent threads — and the CPU decode pushed CPU utilization to 60%, collapsing SM utilization from ~15% to 3.9% via the noisy-neighbour effect.
+
+**When CPU decode might be considered:** only when NvDec engines are fully saturated AND the video is already subclipped to very short durations (where per-frame overhead dominates over decode throughput). Even then, empirical validation is essential.
+
+## torch.compile
+
+`torch.compile` can improve GPU compute efficiency by fusing kernels and reducing launch overhead. However, for short training runs (< 1000 steps), the compilation overhead may outweigh the gains — the model spends significant time in the compile phase before reaching steady-state throughput.
+
+**Guidance for autoresearch:**
+- `torch.compile` benefits are most visible when data loading is no longer the bottleneck (i.e., after pipeline optimization has reduced headspace significantly)
+- Prefer `torch.compile(model)` without `fullgraph=True` — fullgraph mode is more fragile and frequently crashes with complex models
+- When the job has short duration (e.g., 500 steps for benchmarking), the compile warmup cost can dominate; in this case, compare steady-state step times (excluding the first ~100 steps) rather than overall throughput
 
 ## Pickling Constraints (Subprocess Mode)
 
@@ -359,8 +456,19 @@ Compare cached vs uncached `step_time`:
 
 When tuning parameters like concurrency, num_threads, batch_size:
 1. **Start with exploration**: test a spread of values (e.g., concurrency in {4, 8, 16, 32})
-2. **Model the response**: from results so far, estimate which region of the parameter space yields best metrics
-3. **Exploit the best region**: test values near the current best, with small perturbations
-4. **Balance explore/exploit**: occasionally test values far from the best to avoid local optima
-5. **Consider interactions**: parameters can interact (e.g., high concurrency + high num_threads may exceed CPU budget)
-6. **Respect constraints**: total CPU usage ≤ 40%, concurrency ≤ num_CPU_cores / 8
+2. **Search below the default too**: lower concurrency can outperform higher when thread contention dominates (see "Concurrency Tuning: Less Can Be More")
+3. **Model the response**: from results so far, estimate which region of the parameter space yields best metrics
+4. **Exploit the best region**: test values near the current best, with small perturbations
+5. **Balance explore/exploit**: occasionally test values far from the best to avoid local optima
+6. **Consider interactions**: parameters can interact (e.g., high concurrency + high num_threads may exceed CPU budget)
+7. **Respect constraints**: total CPU usage ≤ 40%, concurrency ≤ num_CPU_cores / 8
+
+### Batch Size Helps Even When Data-Loading-Bound
+
+Increasing batch size can improve throughput even when data loading — not GPU compute — is the bottleneck. This is counter-intuitive: if the GPU is idle waiting for data, processing more samples per step shouldn't help. But larger batches amortize **per-step fixed costs** across more samples:
+
+- **DDP synchronization**: each `all_reduce` has fixed latency regardless of batch size. Doubling batch size halves the number of syncs per sample.
+- **Pipeline drain/refill cycles**: each step boundary causes a brief pipeline stall as the training loop consumes the batch and requests the next one. Fewer steps per epoch means fewer stalls.
+- **CUDA kernel launch overhead**: fewer, larger kernels are more efficient than many small ones.
+
+**Guidance:** when headspace is large (>50%), try doubling the batch size as an early experiment. It is a zero-code-change parameter that often yields 5-25% improvement. Test 2-3 batch sizes (e.g., 2×, 3×, 4× the default) and stop when throughput plateaus.
