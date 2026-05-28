@@ -38,6 +38,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import gc
 import logging
 import os
 import time
@@ -90,6 +91,7 @@ def train(
     local_rank: int = int(os.environ.get("LOCAL_RANK", 0))
     device = torch.device(f"cuda:{local_rank}")
     torch.cuda.set_device(device)
+    gc.disable()
 
     _LG.info("Rank %d/%d on device %s", rank, world_size, device)
 
@@ -132,6 +134,9 @@ def train(
             optimizer.step()
             optimizer.zero_grad()
 
+            if global_step % 50 == 0:
+                gc.collect()
+
             epoch_loss += loss.item()
             num_batches += 1
             global_step += 1
@@ -159,6 +164,8 @@ def train(
                 elapsed,
                 num_batches * batch_size * world_size / elapsed,
             )
+
+    gc.enable()
 
 
 def parse_args() -> argparse.Namespace:

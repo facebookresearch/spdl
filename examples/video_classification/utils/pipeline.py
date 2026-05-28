@@ -23,9 +23,11 @@ import argparse
 import os
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from typing import Protocol
 
 import spdl.io
+import spdl.pipeline
 import spdl.source.utils
 import torch
 from spdl.pipeline import PipelineBuilder
@@ -122,6 +124,10 @@ def collate(
     }
 
 
+def _fetch(index: int, *, dataset: VideoDataset) -> list[dict[str, object]]:
+    return dataset[index]
+
+
 def build_pipeline(
     *,
     args: argparse.Namespace,
@@ -130,15 +136,16 @@ def build_pipeline(
     rank: int,
     world_size: int,
 ) -> Iterator[_TBatch]:
-    """Build a multithreaded SPDL pipeline with GPU NVDEC video decoding.
+    """Build an MTP SPDL pipeline with GPU NVDEC video decoding.
 
-    Uses the GPU's dedicated NVDEC hardware decoders instead of CPU FFmpeg,
-    with a split demux/decode architecture. Each stage runs on a dedicated
-    thread executor to eliminate pool contention.
+    Runs CPU-bound stages (fetch, demux) in a subprocess to isolate them
+    from GPU kernel launches, then decodes with NVDEC hardware decoders
+    in the main process.
 
-    Pipeline stages::
+    Pipeline architecture::
 
-        sample → fetch → disaggregate → demux (CPU) → decode (NVDEC) → aggregate → collate
+        Subprocess:  sample → fetch → disaggregate → demux (CPU) → sink
+        Main:        source → decode (NVDEC) → aggregate → collate → sink
 
     Args:
         args: CLI args providing ``num_fetch_threads``, ``num_decode_threads``,
@@ -155,14 +162,6 @@ def build_pipeline(
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     device = torch.device(f"cuda:{local_rank}")
 
-    cuda_cfg = spdl.io.cuda_config(
-        device_index=local_rank,
-        allocator=(
-            torch.cuda.caching_allocator_alloc,
-            torch.cuda.caching_allocator_delete,
-        ),
-    )
-
     num_fetch_threads = args.num_fetch_threads
     num_decode_threads = args.num_decode_threads
 
@@ -172,10 +171,37 @@ def build_pipeline(
         )  # pyre-ignore[6]
     )
 
-    fetch_executor = ThreadPoolExecutor(max_workers=num_fetch_threads)
-    demux_executor = ThreadPoolExecutor(max_workers=8)
-    decode_executor = ThreadPoolExecutor(max_workers=num_decode_threads)
+    # Backend (subprocess): CPU-only stages
+    backend = (
+        PipelineBuilder()
+        .add_source(source, continuous=True)
+        .pipe(
+            partial(_fetch, dataset=dataset),
+            concurrency=num_fetch_threads,
+        )
+        .disaggregate()
+        .pipe(
+            Demux(label_to_index, subclip_duration=args.subclip_duration),
+            concurrency=8,
+        )
+        .add_sink(buffer_size=3)
+    )
 
+    subprocess_source = spdl.pipeline.run_pipeline_in_subprocess(
+        backend.get_config(),
+        num_threads=num_fetch_threads,
+        mp_context="forkserver",
+    )
+
+    # Frontend (main process): GPU NVDEC decode + aggregate + collate
+    cuda_cfg = spdl.io.cuda_config(
+        device_index=local_rank,
+        allocator=(
+            torch.cuda.caching_allocator_alloc,
+            torch.cuda.caching_allocator_delete,
+        ),
+    )
+    decode_executor = ThreadPoolExecutor(max_workers=num_decode_threads)
     nvdec_decode = NvdecDecode(
         num_frames=args.num_frames,
         cuda_cfg=cuda_cfg,
@@ -184,20 +210,9 @@ def build_pipeline(
         device=device,
     )
 
-    pipeline = (
+    frontend = (
         PipelineBuilder()
-        .add_source(source, continuous=True)
-        .pipe(
-            dataset.__getitem__,
-            concurrency=num_fetch_threads,
-            executor=fetch_executor,
-        )  # pyre-ignore[6]
-        .disaggregate()
-        .pipe(
-            Demux(label_to_index, subclip_duration=args.subclip_duration),
-            concurrency=8,
-            executor=demux_executor,
-        )
+        .add_source(subprocess_source, continuous=True)
         .pipe(
             nvdec_decode,
             concurrency=num_decode_threads,
@@ -206,7 +221,7 @@ def build_pipeline(
         .aggregate(args.batch_size, drop_last=True)
         .pipe(collate)
         .add_sink(buffer_size=3)
-        .build(num_threads=2)
     )
+    pipeline = frontend.build(num_threads=2)
 
     return pipeline.get_iterator(timeout=300)
