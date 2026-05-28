@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import shlex
+import sys
 import tempfile
 import time
 import unittest
@@ -24,6 +26,20 @@ from spdl.autoresearch.pipeline_optimization._platform._agents import (
 )
 
 __all__: list[str] = []
+
+
+def _echo_marker_command(line: str) -> str:
+    """Build a cross-platform shell one-liner that prints ``line`` to stdout.
+
+    Tests previously used POSIX ``printf``; on Windows ``cmd.exe`` lacks it,
+    so we shell out to the current Python interpreter instead.
+    """
+    py = (
+        shlex.quote(sys.executable)
+        if sys.platform != "win32"
+        else f'"{sys.executable}"'
+    )
+    return f'{py} -c "print({line!r})"'
 
 
 class _PlatformTest(unittest.TestCase):
@@ -48,7 +64,7 @@ class _PlatformTest(unittest.TestCase):
             platform = create_platform("local", workdir)
 
             job_id = platform.execution.launch(
-                "printf '[autoresearch] step=1\\n'",
+                _echo_marker_command("[autoresearch] step=1"),
                 workdir,
             )
             self.assertIsNotNone(job_id)
@@ -79,7 +95,9 @@ class _PlatformTest(unittest.TestCase):
                 workdir,
             )
 
-            job_id = platform.execution.launch("printf 'not executed\\n'", workdir)
+            job_id = platform.execution.launch(
+                _echo_marker_command("not executed"), workdir
+            )
             self.assertIsNotNone(job_id)
             assert job_id is not None
 
@@ -93,12 +111,16 @@ class _PlatformTest(unittest.TestCase):
                 {
                     "platform": "local",
                     "local_execution_mode": "dataloader_only",
-                    "local_dataloader_command": "printf '[autoresearch] dataloader\\n'",
+                    "local_dataloader_command": _echo_marker_command(
+                        "[autoresearch] dataloader"
+                    ),
                 },
                 workdir,
             )
 
-            job_id = platform.execution.launch("printf 'training\\n'", workdir)
+            job_id = platform.execution.launch(
+                _echo_marker_command("training"), workdir
+            )
             self.assertIsNotNone(job_id)
             assert job_id is not None
 
