@@ -19,7 +19,10 @@ def main():
     with open(THIS_DIR / "VERSION", 'r') as f:
         version = f.read().strip()
 
-    packages = find_packages(where="src", exclude=["spdl.io*"])
+    packages = find_packages(
+        where="src",
+        exclude=["spdl.io*", "*tests*", "*tests.*"],
+    )
 
     setup(
         name="spdl_core",

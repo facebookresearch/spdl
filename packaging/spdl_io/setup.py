@@ -206,7 +206,7 @@ def main():
         version = f.read().strip()
 
     exclude = find_packages(where="src", exclude=["spdl.io*"])
-    packages = find_packages(where="src", exclude=exclude)
+    packages = find_packages(where="src", exclude=exclude + ["*tests*", "*tests.*"])
 
     if "bdist_wheel" in sys.argv:
         print("*" * 40)
