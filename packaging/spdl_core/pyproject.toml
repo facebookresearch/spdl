@@ -19,3 +19,6 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 spdl = "spdl.__main__:main"
+
+[tool.setuptools.package-data]
+"*" = ["**/*.md"]
