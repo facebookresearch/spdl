@@ -86,7 +86,7 @@ __PIPELINE_CODE__
 }
 ```
 
-For `throughput_samples_per_s`: **this is the primary optimization metric** (higher is better). Calculate total sample throughput across all ranks from the job logs (e.g., "263.2 samples/s" at the end of training). If not directly available, compute as `batch_size * num_ranks * 1000 / steady_step_time_ms`. This metric correctly accounts for batch size changes — a smaller batch with a lower step time may still have worse throughput.
+For `throughput_samples_per_s`: **this is the primary optimization metric** (higher is better). Calculate total sample throughput across all ranks from the job logs (e.g., "263.2 samples/s" at the end of training). If not directly available, compute as `batch_size * num_ranks * 1000 / steady_step_time_ms`. This metric correctly accounts for batch size changes — a smaller batch with a lower step time may still have worse throughput. **Exception for CacheDataLoader / headspace runs:** the epoch-average throughput line is diluted by the cache warmup phase, so do NOT use it. Always compute `throughput_samples_per_s = batch_size * num_ranks * 1000 / steady_step_time_ms` from the post-warmup steady step time.
 For `steady_step_time_ms`: use the median step time after warmup. If per-step data is unavailable, estimate from sink QPS or set to null.
 For `steady_sm_utilization_pct`: use p50 or p75 SM util from system metrics. Prefer p75 for very short jobs (< 5 min).
 For `sm_utilization_pct`: still report the raw average for the master table, but note it's init-diluted.

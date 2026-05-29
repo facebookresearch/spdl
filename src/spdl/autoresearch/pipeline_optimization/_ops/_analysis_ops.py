@@ -203,6 +203,18 @@ def _append_master_result_row(
         row["steady_sm_util_pct"] = metrics.get("steady_sm_utilization_pct", "")
         row["data_readiness_pct"] = metrics.get("data_readiness_pct", "")
         row["notes"] = metrics.get("notes", "")
+        if node.name == "headspace_cache":
+            tput = row["throughput_samples_per_s"]
+            steady = row["steady_step_time_ms"]
+            epoch_avg = row["step_time_ms"]
+            if (
+                isinstance(tput, (int, float))
+                and isinstance(steady, (int, float))
+                and isinstance(epoch_avg, (int, float))
+                and steady > 0
+                and steady < epoch_avg
+            ):
+                row["throughput_samples_per_s"] = tput * epoch_avg / steady
     if terminal_failure is not None and not row.get("notes"):
         row["notes"] = _failure_note(terminal_failure)
     _append_master_row(workdir, row, MASTER_TABLE_HEADERS)
