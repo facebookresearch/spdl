@@ -11,9 +11,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-import shlex
 import signal
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -110,6 +110,7 @@ class _LocalExecution:
         self._root: Path | None = None
         self._mode = mode
         self._dataloader_command = dataloader_command
+        self._processes: dict[str, subprocess.Popen] = {}
 
     def bind_workdir(self, workdir: Path) -> _LocalExecution:
         self._root = workdir / "local_jobs"
@@ -148,20 +149,27 @@ class _LocalExecution:
         stdout = (local_dir / "stdout.log").open("w")
         stderr = (local_dir / "stderr.log").open("w")
         rc_file = local_dir / "returncode.txt"
-        wrapped_command = (
-            f"{run_command}; "
-            f"rc=$?; "
-            f"printf '%s\\n' \"$rc\" > {shlex.quote(str(rc_file))}; "
-            "exit $rc"
-        )
         process = subprocess.Popen(
-            wrapped_command,
+            run_command,
             shell=True,
             cwd=str(workdir),
             stdout=stdout,
             stderr=stderr,
             text=True,
         )
+        self._processes[job_id] = process
+
+        def _await_returncode() -> None:
+            try:
+                returncode = process.wait()
+            finally:
+                stdout.close()
+                stderr.close()
+            tmp = rc_file.with_suffix(rc_file.suffix + ".tmp")
+            tmp.write_text(f"{returncode}\n")
+            os.replace(tmp, rc_file)
+
+        threading.Thread(target=_await_returncode, daemon=True).start()
         _write_json(
             local_dir / "job.json",
             {
@@ -190,7 +198,22 @@ class _LocalExecution:
                 _LG.warning("Invalid local return code in %s", rc_file)
         returncode = data.get("returncode")
         if isinstance(returncode, int):
+            self._processes.pop(job_id, None)
             return "SUCCEEDED" if returncode == 0 else "FAILED"
+        process = self._processes.get(job_id)
+        if process is not None:
+            # Prefer the in-memory Popen: poll() returns the authoritative
+            # returncode the moment the OS reaps the process, avoiding the race
+            # window where the PID is gone but the daemon thread has not yet
+            # written returncode.txt.
+            poll_rc = process.poll()
+            if poll_rc is None:
+                return "RUNNING"
+            data["returncode"] = poll_rc
+            data["ended_at"] = time.time()
+            _write_json(self._job_path(job_id), data)
+            self._processes.pop(job_id, None)
+            return "SUCCEEDED" if poll_rc == 0 else "FAILED"
         pid = int(data["pid"])
         if _process_alive(pid):
             return "RUNNING"
@@ -215,12 +238,35 @@ class _LocalExecution:
             return False
         if isinstance(data.get("returncode"), int):
             return True
+        process = self._processes.get(job_id)
+        if process is not None:
+            try:
+                process.terminate()
+                try:
+                    process.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=1)
+            except OSError:
+                pass
+            data["returncode"] = (
+                process.returncode
+                if process.returncode is not None
+                else -signal.SIGTERM
+            )
+            data["ended_at"] = time.time()
+            _write_json(self._job_path(job_id), data)
+            self._processes.pop(job_id, None)
+            return True
         pid = int(data["pid"])
         try:
             os.kill(pid, signal.SIGTERM)
             time.sleep(1)
             if _process_alive(pid):
-                os.kill(pid, signal.SIGKILL)
+                if hasattr(signal, "SIGKILL"):
+                    os.kill(pid, signal.SIGKILL)
+                else:
+                    os.kill(pid, signal.SIGTERM)
             data["returncode"] = data.get("returncode", -signal.SIGTERM)
             data["ended_at"] = time.time()
             _write_json(self._job_path(job_id), data)

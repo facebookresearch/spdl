@@ -159,5 +159,7 @@ def load_prompt_directory(relative_dir: str) -> str:
     if not root.is_dir():
         return ""
     return "\n\n".join(
-        path.read_text() for path in sorted(root.rglob("*.md")) if path.is_file()
+        path.read_text(encoding="utf-8")
+        for path in sorted(root.rglob("*.md"))
+        if path.is_file()
     )

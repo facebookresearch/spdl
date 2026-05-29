@@ -55,7 +55,10 @@ def get_sample(cmd: str) -> SrcInfo:
 
 
 def get_samples(cmd: str) -> list[SrcInfo]:
-    tmp_dir = TemporaryDirectory()
+    # ``ignore_cleanup_errors`` keeps Windows from raising
+    # ``PermissionError`` at GC time when ffmpeg/test handles linger past
+    # the ``with`` block (the file is unlinked best-effort).
+    tmp_dir = TemporaryDirectory(ignore_cleanup_errors=True)
     tmp_path = Path(tmp_dir.name)
 
     _run_in_tmpdir(cmd.strip(), tmp_path)
