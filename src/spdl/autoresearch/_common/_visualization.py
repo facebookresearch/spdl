@@ -137,19 +137,11 @@ def _load_tsv(tsv_path: Path) -> list[dict]:
 
 
 def _format_label(exp: dict, metrics: list[MetricSpec]) -> str:
-    """Build a compact annotation string from the first few metrics."""
+    """Build a compact annotation string — just the experiment name."""
     name = exp["description"]
-    parts = []
-    for m in metrics:
-        val = exp.get(m.key)
-        if val is not None and val > 0:
-            val_str = format(val, m.fmt)
-            parts.append(f"{val_str} {m.unit}".rstrip())
-    suffix = f" ({', '.join(parts)})" if parts else ""
-    label = name + suffix
-    if len(label) > 55:
-        label = name[:35] + "..." + suffix
-    return label
+    if len(name) > 45:
+        name = name[:42] + "..."
+    return name
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +260,15 @@ def _plot_headspace_line(
     for exp in experiments:
         if exp["status"] == "HEADSPACE" and exp.get(metric.key) is not None:
             val = exp[metric.key]
+            steady = exp.get("steady_step_time_ms")
+            epoch_avg = exp.get("step_time_ms")
+            if (
+                not metric.lower_is_better
+                and steady
+                and epoch_avg
+                and steady < epoch_avg
+            ):
+                val = val * epoch_avg / steady
             kind = "floor" if metric.lower_is_better else "ceiling"
             val_str = format(val, metric.fmt)
             if metric.unit:
@@ -286,8 +287,13 @@ def _plot_headspace_line(
             break
 
 
-def _plot_crashes(ax, crashes, valid, y_key):
-    crash_y = max(e[y_key] for e in valid) * 1.1 if valid else 0
+def _plot_crashes(ax, crashes, valid, y_key, lower_is_better=True):
+    if not valid:
+        crash_y = 0
+    elif lower_is_better:
+        crash_y = max(e[y_key] for e in valid) * 1.1
+    else:
+        crash_y = min(e[y_key] for e in valid) * 0.9
     ax.scatter(
         [e["idx"] for e in crashes],
         [crash_y] * len(crashes),
@@ -322,12 +328,23 @@ def _partition_experiments(experiments, y_key):
     return valid, crashes, kept, discarded
 
 
-def _collect_y_values(experiments, valid, y_key):
+def _collect_y_values(experiments, valid, metric):
     """Gather all y values including headspace for axis limits."""
+    y_key = metric.key
     all_y = [e[y_key] for e in valid]
     for e in experiments:
         if e["status"] == "HEADSPACE" and e.get(y_key):
-            all_y.append(e[y_key])
+            val = e[y_key]
+            steady = e.get("steady_step_time_ms")
+            epoch_avg = e.get("step_time_ms")
+            if (
+                not metric.lower_is_better
+                and steady
+                and epoch_avg
+                and steady < epoch_avg
+            ):
+                val = val * epoch_avg / steady
+            all_y.append(val)
             break
     return all_y
 
@@ -350,7 +367,7 @@ def _plot_metric(
     valid, crashes, kept, discarded = _partition_experiments(experiments, y_key)
 
     if crashes:
-        _plot_crashes(ax, crashes, valid, y_key)
+        _plot_crashes(ax, crashes, valid, y_key, lower_is_better)
     if discarded:
         _plot_discarded(ax, discarded, y_key)
     if kept:
@@ -367,11 +384,10 @@ def _plot_metric(
 
     ax.set_ylabel(metric.label, fontsize=12)
     if show_legend:
-        loc = "upper right" if lower_is_better else "lower right"
-        ax.legend(loc=loc, fontsize=9)
+        ax.legend(loc="upper left", fontsize=9)
     ax.grid(True, alpha=0.2)
 
-    all_y = _collect_y_values(experiments, valid, y_key)
+    all_y = _collect_y_values(experiments, valid, metric)
     _set_y_limits(ax, all_y, lower_is_better, bool(crashes))
 
 
