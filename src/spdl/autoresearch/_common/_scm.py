@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-strict
+
 """Source control abstraction for autoresearch.
 
 Detects whether the source directory uses Sapling (sl) or Git, and
@@ -32,7 +34,7 @@ __all__ = [
 ]
 
 
-def _run(cmd: list[str], cwd: str) -> subprocess.CompletedProcess:
+def _run(cmd: list[str], cwd: str) -> subprocess.CompletedProcess[str]:
     _LG.debug("scm: %s (cwd=%s)", cmd, cwd)
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
     _LG.debug("scm: rc=%d stdout=%s", result.returncode, result.stdout.strip()[:200])
