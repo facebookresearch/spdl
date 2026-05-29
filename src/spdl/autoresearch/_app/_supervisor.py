@@ -151,7 +151,7 @@ def _build_engine_command(
         prefix = ["spdl", "autoresearch", "engine"]
     command = list(prefix)
     command.extend(["--workflow", workflow_spec])
-    command.extend(["--workdir", str(workdir)])
+    command.extend(["--workdir", workdir.as_posix()])
     command.extend(framework_flags)
     if workflow_argv_tail:
         command.append("--")
