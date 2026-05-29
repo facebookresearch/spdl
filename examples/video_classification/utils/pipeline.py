@@ -9,9 +9,14 @@
 """SPDL pipeline construction for video classification.
 
 Provides ``build_pipeline`` which assembles a GPU NVDEC-accelerated SPDL
-pipeline with a split demux/decode architecture::
+pipeline using Multi-Threading in subprocess (MTP)::
 
-    sample → fetch → disaggregate → demux (CPU) → decode (NVDEC) → aggregate → collate
+    Backend (subprocess): sample → fetch → disaggregate → demux (CPU)
+    Frontend (main process): GPU decode (NVDEC) → aggregate → collate
+
+Demuxed packets are serialized across the process boundary, isolating
+CPU-intensive demux work from CUDA kernel scheduling in the training
+process.
 
 The pipeline is dataset-agnostic: any dataset whose ``__getitem__`` returns
 ``list[{"video_bytes": bytes, "label": str}]`` can be used.
@@ -20,16 +25,21 @@ The pipeline is dataset-agnostic: any dataset whose ``__getitem__`` returns
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from typing import Protocol
 
 import spdl.io
+import spdl.pipeline
 import spdl.source.utils
 import torch
 from spdl.pipeline import PipelineBuilder
 from spdl.source import DistributedRandomSampler
+
+_LG: logging.Logger = logging.getLogger(__name__)
 
 type _TBatch = dict[str, torch.Tensor]
 
@@ -39,24 +49,36 @@ class VideoDataset(Protocol):
     def __getitem__(self, index: int) -> list[dict[str, object]]: ...
 
 
-class Demux:
-    """Demux video bytes into packets and resolve label to index."""
+# ---------------------------------------------------------------------------
+# Backend (subprocess) stage functions — must be picklable.
+# Using module-level functions + functools.partial.
+# ---------------------------------------------------------------------------
 
-    def __init__(
-        self, label_to_index: dict[str, int], subclip_duration: float | None = None
-    ) -> None:
-        self.label_to_index = label_to_index
-        self.subclip_duration = subclip_duration
 
-    def __call__(self, sample: dict[str, object]) -> dict[str, object] | None:
-        video_bytes = sample["video_bytes"]
-        try:
-            timestamp = (0.0, self.subclip_duration) if self.subclip_duration else None
-            packets = spdl.io.demux_video(video_bytes, timestamp=timestamp)
-        except RuntimeError:
-            return None
-        label = self.label_to_index[sample["label"]]  # pyre-ignore[6]
-        return {"packets": packets, "label": label}
+def _fetch_sample(index: int, *, dataset: object) -> list[dict[str, object]]:
+    return dataset[index]  # pyre-ignore[16]
+
+
+def _demux_sample(
+    sample: dict[str, object],
+    *,
+    label_to_index: dict[str, int],
+    subclip_duration: float | None = None,
+) -> dict[str, object] | None:
+    video_bytes = sample["video_bytes"]
+    try:
+        timestamp = (0.0, subclip_duration) if subclip_duration else None
+        packets = spdl.io.demux_video(video_bytes, timestamp=timestamp)
+    except RuntimeError as e:
+        _LG.warning("Demux failed: %s", e)
+        return None
+    label = label_to_index[sample["label"]]  # pyre-ignore[6]
+    return {"packets": packets, "label": label}
+
+
+# ---------------------------------------------------------------------------
+# Frontend (main process) — GPU decode, runs in the training process.
+# ---------------------------------------------------------------------------
 
 
 class NvdecDecode:
@@ -92,7 +114,8 @@ class NvdecDecode:
                 pix_fmt="rgb",
             )
             tensor = spdl.io.to_torch(buffer)  # [T, C, H, W], already on GPU
-        except RuntimeError:
+        except RuntimeError as e:
+            _LG.warning("NVDEC decode failed: %s", e)
             return None
 
         # Frame sampling
@@ -130,20 +153,22 @@ def build_pipeline(
     rank: int,
     world_size: int,
 ) -> Iterator[_TBatch]:
-    """Build a multithreaded SPDL pipeline with GPU NVDEC video decoding.
+    """Build an MTP pipeline with subprocess demux and GPU NVDEC decode.
 
-    Uses the GPU's dedicated NVDEC hardware decoders instead of CPU FFmpeg,
-    with a split demux/decode architecture. Each stage runs on a dedicated
-    thread executor to eliminate pool contention.
+    Splits the pipeline into a backend subprocess (CPU-only: fetch,
+    disaggregate, demux) and a frontend main process (GPU NVDEC decode,
+    aggregate, collate).  Demuxed packets are serialized across the
+    process boundary, isolating CPU work from CUDA kernel scheduling.
 
     Pipeline stages::
 
-        sample → fetch → disaggregate → demux (CPU) → decode (NVDEC) → aggregate → collate
+        Backend (subprocess): sample → fetch → disaggregate → demux
+        Frontend (main process): NVDEC decode → aggregate → collate
 
     Args:
         args: CLI args providing ``num_fetch_threads``, ``num_decode_threads``,
-            ``num_frames``, ``frame_width``, ``frame_height``, ``batch_size``,
-            and ``subclip_duration``.
+            ``num_demux_threads``, ``num_frames``, ``frame_width``,
+            ``frame_height``, ``batch_size``, and ``subclip_duration``.
         dataset: Any object implementing the ``VideoDataset`` protocol.
         label_to_index: Mapping from label string to class index.
         rank: Current distributed rank.
@@ -165,17 +190,44 @@ def build_pipeline(
 
     num_fetch_threads = args.num_fetch_threads
     num_decode_threads = args.num_decode_threads
+    num_demux_threads = args.num_demux_threads
 
     source = spdl.source.utils.embed_shuffle(
         DistributedRandomSampler(
-            len(dataset), rank=rank, world_size=world_size
-        )  # pyre-ignore[6]
+            len(dataset),
+            rank=rank,
+            world_size=world_size,  # pyre-ignore[6]
+        )
     )
 
-    fetch_executor = ThreadPoolExecutor(max_workers=num_fetch_threads)
-    demux_executor = ThreadPoolExecutor(max_workers=8)
-    decode_executor = ThreadPoolExecutor(max_workers=num_decode_threads)
+    # Backend (subprocess) — CPU-only stages: fetch → disaggregate → demux
+    backend = (
+        PipelineBuilder()
+        .add_source(source, continuous=True)
+        .pipe(
+            partial(_fetch_sample, dataset=dataset),
+            concurrency=num_fetch_threads,
+        )
+        .disaggregate()
+        .pipe(
+            partial(
+                _demux_sample,
+                label_to_index=label_to_index,
+                subclip_duration=args.subclip_duration,
+            ),
+            concurrency=num_demux_threads,
+        )
+        .add_sink(buffer_size=3)
+    )
 
+    source2 = spdl.pipeline.run_pipeline_in_subprocess(
+        backend.get_config(),
+        num_threads=max(num_fetch_threads, num_demux_threads),
+        mp_context="forkserver",
+    )
+
+    # Frontend (main process) — GPU NVDEC decode → aggregate → collate
+    decode_executor = ThreadPoolExecutor(max_workers=num_decode_threads)
     nvdec_decode = NvdecDecode(
         num_frames=args.num_frames,
         cuda_cfg=cuda_cfg,
@@ -184,29 +236,13 @@ def build_pipeline(
         device=device,
     )
 
-    pipeline = (
+    frontend = (
         PipelineBuilder()
-        .add_source(source, continuous=True)
-        .pipe(
-            dataset.__getitem__,
-            concurrency=num_fetch_threads,
-            executor=fetch_executor,
-        )  # pyre-ignore[6]
-        .disaggregate()
-        .pipe(
-            Demux(label_to_index, subclip_duration=args.subclip_duration),
-            concurrency=8,
-            executor=demux_executor,
-        )
-        .pipe(
-            nvdec_decode,
-            concurrency=num_decode_threads,
-            executor=decode_executor,
-        )
+        .add_source(source2, continuous=True)
+        .pipe(nvdec_decode, concurrency=num_decode_threads, executor=decode_executor)
         .aggregate(args.batch_size, drop_last=True)
         .pipe(collate)
-        .add_sink(buffer_size=3)
-        .build(num_threads=2)
+        .add_sink(buffer_size=5)
     )
-
+    pipeline = frontend.build(num_threads=2)
     return pipeline.get_iterator(timeout=300)

@@ -15,9 +15,10 @@ transfer.
 SPDL Data Pipeline
 ^^^^^^^^^^^^^^^^^^
 
-Uses GPU NVDEC hardware decoding in a multithreaded pipeline:
+Uses Multi-Threading in subprocess (MTP) with GPU NVDEC hardware decoding:
 
-  Sampling → fetch → demux → GPU decode (NVDEC) → aggregate → collate.
+  Backend (subprocess): Sampling → fetch → disaggregate → demux (CPU)
+  Frontend (main process): GPU decode (NVDEC) → aggregate → collate
 
 The data source is pluggable: local video files (OSS) or WarmStorage
 via BulkDataset (Meta-internal), selected automatically via the
@@ -38,6 +39,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import gc
 import logging
 import os
 import time
@@ -92,6 +94,8 @@ def train(
     torch.cuda.set_device(device)
 
     _LG.info("Rank %d/%d on device %s", rank, world_size, device)
+
+    gc.disable()
 
     # --- Model ---
     _LG.info("Building R3D-18 model with %d classes", num_classes)
@@ -149,6 +153,8 @@ def train(
                         num_batches * batch_size * world_size / elapsed,
                     )
 
+        gc.collect()
+
         elapsed = time.monotonic() - t0
         if rank == 0:
             avg_loss = epoch_loss / max(num_batches, 1)
@@ -179,7 +185,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--subclip-duration",
         type=float,
-        default=None,
+        default=0.5,
         help="Temporal subclip duration in seconds. If set, only the first N seconds of each video are demuxed and decoded.",
     )
     # Training
@@ -205,8 +211,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--num-decode-threads",
         type=int,
-        default=16,
+        default=7,
         help="Concurrent video decode threads",
+    )
+    parser.add_argument(
+        "--num-demux-threads",
+        type=int,
+        default=3,
+        help="Concurrent demux threads in the backend subprocess",
     )
     # Dataset-specific args (OSS or FB, depending on which module is available)
     add_dataset_args(parser)
