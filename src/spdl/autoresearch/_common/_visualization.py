@@ -256,10 +256,18 @@ def _plot_headspace_line(
     experiments: list[dict],
     metric: MetricSpec,
 ) -> None:
-    """Draw a horizontal dashed line at the headspace (CacheDataLoader) value."""
+    """Draw a horizontal dashed line at the headspace (CacheDataLoader) value.
+
+    For throughput metrics (higher-is-better), the raw
+    ``throughput_samples_per_s`` from the headspace run is diluted by
+    the cache-filling phase.  When ``steady_step_time_ms`` and
+    ``step_time_ms`` are both available we rescale to the steady-state
+    throughput so the ceiling reflects the true compute floor.
+    """
     for exp in experiments:
         if exp["status"] == "HEADSPACE" and exp.get(metric.key) is not None:
             val = exp[metric.key]
+            # Correct for cache-warmup dilution when possible.
             steady = exp.get("steady_step_time_ms")
             epoch_avg = exp.get("step_time_ms")
             if (

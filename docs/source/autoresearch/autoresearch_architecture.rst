@@ -16,21 +16,21 @@ testable, and infrastructure swappable.
 .. mermaid::
 
    flowchart TB
-       CLI["python cli.py"]
+       CLI["spdl autoresearch"]
        Supervisor["Supervisor agent<br>(interactive)"]
-       Engine["Orchestrator<br>(runner.py)"]
-       Adapter["AutoresearchAdapter<br>(workflow/)"]
-       Policy["policy.py"]
-       Store["store.py"]
-       Platform["AutoresearchPlatform<br>(platform/)"]
+       Engine["Orchestrator<br>(core/_orchestrator.py)"]
+       Workflow["PipelineOptimizationWorkflow<br>(pipeline_optimization/)"]
+       Policy["_policy.py"]
+       Store["_store.py"]
+       Platform["AutoresearchPlatform<br>(pipeline_optimization/_platform/)"]
        Agent["_CodingAgent"]
 
        CLI --> Supervisor
        Supervisor --> Engine
-       Engine --> Adapter
-       Adapter --> Policy
-       Adapter --> Store
-       Adapter --> Platform
+       Engine --> Workflow
+       Workflow --> Policy
+       Workflow --> Store
+       Workflow --> Platform
        Platform --> Agent
 
 
@@ -43,7 +43,7 @@ the code alone.
 **The engine must remain domain-neutral.** The async work engine must
 not grow SPDL, coding-agent, source-control, metrics,
 hypothesis-planning, or experiment-phase logic. If a behavior depends
-on what an experiment is, it belongs in the workflow adapter, the
+on what an experiment is, it belongs in the workflow, the
 policy module, or behind a platform capability — never in the runner.
 
 **Stop criteria live in the planner, not the engine.** The engine
@@ -64,7 +64,7 @@ known job ID resumes polling rather than re-launching, and an
 cancels asyncio tasks on ``SIGINT``/``SIGTERM``, but each coroutine
 decides what state to persist before re-raising ``CancelledError``.
 Remote jobs are not automatically cancelled by the engine — if remote
-cancellation is needed, the coroutine or adapter must do it explicitly.
+cancellation is needed, the coroutine or workflow must do it explicitly.
 
 **Failures are structured domain data.** Every failure path (prepare,
 build, launch, poll, analyze, plan) produces a ``FailureRecord`` with a
@@ -80,27 +80,28 @@ Async Work Engine
 
 The generic runner (``core/_orchestrator.py``) knows nothing about SPDL,
 training jobs, source control, metrics, or hypothesis planning. It
-operates on serializable ``TaskSpec`` objects and a ``WorkflowProtocol``
+operates on serializable ``WorkSpec`` objects and a ``WorkflowProtocol``
 protocol:
 
-- Maintains a priority queue of pending ``TaskSpec`` objects.
-- Starts up to ``max_concurrency`` coroutines via the adapter.
+- Maintains a priority queue of pending ``WorkSpec`` objects.
+- Starts up to ``max_concurrency`` coroutines via the workflow.
 - Waits for the first coroutine to complete.
-- Passes completed ``TaskResult`` objects (which may contain child
-  specs) back to the adapter and re-queues children.
+- Passes completed results (which may contain child specs) back to the
+  workflow and re-queues children.
 - Checkpoints queued and running specs on cancellation.
 
 The runner does not inspect experiment payloads. Infrastructure-specific
 work belongs in the platform capability layer, and domain decisions
-belong in the workflow adapter.
+belong in the workflow.
 
 
 Workflow
 --------
 
-The autoresearch workflow (``utils/workflow/``) is the domain side of
-the boundary. It turns an experiment ``TaskSpec`` into a coroutine
-that performs the full experiment lifecycle:
+The pipeline optimization workflow
+(``pipeline_optimization/_ops/``) is the domain side of the boundary.
+It turns an experiment ``WorkSpec`` into a coroutine that performs the
+full experiment lifecycle:
 
 - Restore or prepare the source tree.
 - Apply code changes when the experiment requires a rebuild.
@@ -109,34 +110,36 @@ that performs the full experiment lifecycle:
 - Collect metrics and run coding agent analysis.
 - Record state, master-table rows, findings, and plots.
 - Ask the coding agent for follow-up experiments and return them as
-  child ``TaskSpec`` objects.
+  child ``WorkSpec`` objects.
 
 The workflow is split into focused modules:
 
-- **adapter.py** -- the ``AutoresearchAdapter`` that implements
-  ``WorkflowProtocol`` and orchestrates the experiment coroutine.
-- **policy.py** -- deterministic decisions (planning gates, duplicate
-  filtering, stall detection) expressed as pure functions that can be
-  unit tested without infrastructure.
-- **store.py** -- durable state persistence (master table, findings,
-  tree visualization).
-- **analysis_ops.py** / **planning_ops.py** / **source_ops.py** --
-  individual workflow operations that interact with the platform.
+- **_workflow.py** -- the ``PipelineOptimizationWorkflow`` that
+  implements ``WorkflowProtocol`` and orchestrates experiment
+  coroutines.
+- **_ops/_policy.py** -- deterministic decisions (planning gates,
+  duplicate filtering, stall detection) expressed as pure functions
+  that can be unit tested without infrastructure.
+- **_ops/_store.py** -- durable state persistence (master table,
+  findings, tree visualization).
+- **_ops/_analysis_ops.py** / **_ops/_planning_ops.py** /
+  **_ops/_source_ops.py** -- individual workflow operations that
+  interact with the platform.
 
 
 Platform Capabilities
 ---------------------
 
-The platform layer (``utils/platform/``) provides a capability boundary
-between the workflow and infrastructure. ``AutoresearchPlatform``
-bundles five capability objects:
+The platform layer (``pipeline_optimization/_platform/``) provides a
+capability boundary between the workflow and infrastructure.
+``AutoresearchPlatform`` bundles capability objects for:
 
-- ``_Workspace`` -- source control operations (detect SCM, commit,
+- **Workspace** -- source control operations (detect SCM, commit,
   restore, check for changes).
-- ``_Artifacts`` -- image building and tagging.
-- ``_Execution`` -- job launch, status polling, and cancellation.
-- ``_Evidence`` -- metrics collection and system profiling.
-- ``_CodingAgent`` -- stateless coding agent invocations (analysis,
+- **Artifacts** -- image building and tagging.
+- **Execution** -- job launch, status polling, and cancellation.
+- **Evidence** -- metrics collection and system profiling.
+- **CodingAgent** -- stateless coding agent invocations (analysis,
   planning, code changes).
 
 The workflow can swap local, remote, Claude, Codex, or test
@@ -146,13 +149,13 @@ any orchestration code.
 .. mermaid::
 
    flowchart LR
-       Workflow["AutoresearchAdapter"]
+       Workflow["PipelineOptimizationWorkflow"]
        Platform["AutoresearchPlatform"]
-       Workspace["_Workspace"]
-       Artifacts["_Artifacts"]
-       Execution["_Execution"]
-       Evidence["_Evidence"]
-       Agent["_CodingAgent"]
+       Workspace["Workspace"]
+       Artifacts["Artifacts"]
+       Execution["Execution"]
+       Evidence["Evidence"]
+       Agent["CodingAgent"]
 
        Workflow --> Platform
        Platform --> Workspace
