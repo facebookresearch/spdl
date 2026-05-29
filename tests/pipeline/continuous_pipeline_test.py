@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-unsafe
+# pyre-strict
 
 import functools
 import os
@@ -14,7 +14,7 @@ import time
 import unittest
 import warnings
 import weakref
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 from spdl.pipeline import (
     build_pipeline,
@@ -26,9 +26,9 @@ from spdl.pipeline import (
 from spdl.pipeline.defs import Merge, PipelineConfig, SinkConfig
 
 
-def _ignore_fork_warning(fn):
+def _ignore_fork_warning(fn: Callable[..., object]) -> Callable[..., object]:
     @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: object, **kwargs: object) -> object:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
