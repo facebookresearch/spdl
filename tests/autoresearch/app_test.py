@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-strict
+
 from __future__ import annotations
 
 import importlib
@@ -12,6 +14,7 @@ import tempfile
 import unittest
 from collections.abc import Callable
 from pathlib import Path
+from types import ModuleType
 from typing import get_origin
 
 from spdl.autoresearch._app._engine import _parse_engine_args
@@ -267,7 +270,7 @@ class _MainImportTest(unittest.TestCase):
         spdl.autoresearch``), at which point ``__name__ ==
         "__main__"`` and the lazy import inside the guard fires.
         """
-        removed = {}
+        removed: dict[str, ModuleType] = {}
         for mod_name in [
             name
             for name in list(sys.modules)
