@@ -136,6 +136,19 @@ def _convert_time_window(window: TimeWindow) -> tuple[tuple[int, int], tuple[int
 class Demuxer:
     """Demuxer can demux audio, video and image from the source.
 
+    .. note::
+
+       When running multiple ``Demuxer`` instances concurrently, keep the
+       concurrency low (2--3 threads).  ``Demuxer`` construction calls
+       FFmpeg's ``avformat_find_stream_info``, which opens a decoder via
+       ``avcodec_open2`` to probe each stream.  For codecs backed by
+       external libraries (e.g. libvpx, libaom, libopus) whose
+       thread-safety guarantees are unknown to FFmpeg, this initialization
+       is guarded by a process-wide ``codec_mutex``
+       (``FF_CODEC_CAP_NOT_INIT_THREADSAFE``).  At higher concurrency
+       threads serialize on this lock and per-item latency rises without
+       improving throughput.
+
     Args:
         src: Source identifier.
             If `str` type, it is interpreted as a source location,
@@ -757,6 +770,12 @@ def decode_packets_nvdec(
     .. note::
 
        Unlike FFmpeg-based decoding, NVDEC returns GPU buffer directly.
+
+    .. note::
+
+       When feeding packets from concurrent demux workers, keep demux
+       concurrency low (2--3 threads).  See :py:class:`~spdl.io.Demuxer`
+       for details.
 
     .. seealso::
 
