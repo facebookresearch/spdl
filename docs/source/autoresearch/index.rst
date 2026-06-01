@@ -31,4 +31,5 @@ and GC alignment:
 
    autoresearch
    autoresearch_example
+   autoresearch_example_v2
    autoresearch_architecture
