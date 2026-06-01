@@ -5,6 +5,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-strict
+
 """Common utilities for benchmark scripts.
 
 This module provides a standardized framework for running benchmarks with:
@@ -51,6 +53,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from functools import partial
 from sys import version_info
+from types import TracebackType
 from typing import Any, Generic, TypeVar
 
 import numpy as np
@@ -69,8 +72,8 @@ def _is_free_threaded() -> bool:
         return False
 
 
-_PYTHON_VERSION = f"{version_info.major}.{version_info.minor}.{version_info.micro}"
-_FREE_THREADED = _is_free_threaded()
+_PYTHON_VERSION: str = f"{version_info.major}.{version_info.minor}.{version_info.micro}"
+_FREE_THREADED: bool = _is_free_threaded()
 
 
 @dataclass
@@ -246,7 +249,12 @@ class BenchmarkRunner:
         """Enter context manager."""
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Exit context manager and shutdown executor."""
         self._executor.shutdown(wait=True)
 
