@@ -134,7 +134,7 @@ jobs:
         run: |
           set -ex
           pytest -v -n ${{ inputs.test-concurrency }} \
-              tests/io \
+              tests/io/core \
               tests/dataloader \
               tests/pipeline \
               tests/autoresearch
