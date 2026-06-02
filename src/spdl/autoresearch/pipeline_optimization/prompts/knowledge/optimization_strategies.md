@@ -197,6 +197,26 @@ Concurrency 6:  per-item = 0.065s →  throughput = 6 / 0.065 = 92 items/s  ← 
 
 This effect is most pronounced for operations that are inherently fast (data copying, demuxing, disaggregation), where the operation itself is cheap but contention from concurrent scheduling inflates the observed per-item latency. For slow operations (network I/O, heavy CPU compute), higher concurrency is still beneficial because the parallelism gains outweigh the contention cost.
 
+### Demux contention: FFmpeg's `codec_mutex`
+
+Demuxing contention is not just generic thread scheduling overhead — there is a specific root cause inside FFmpeg. Every `Demuxer` construction calls `avformat_find_stream_info`, which probes each stream by opening a decoder via `avcodec_open2`. For codecs backed by external libraries (e.g. libvpx, libaom, libopus) whose thread-safety guarantees are unknown to FFmpeg, this initialization is guarded by a process-wide `codec_mutex` (`FF_CODEC_CAP_NOT_INIT_THREADSAFE` flag). At even modest concurrency (4+ threads), demux threads serialize on this lock and per-item latency rises sharply without improving throughput.
+
+**Recommendation:** always split demuxing and decoding into separate pipeline stages with independent concurrency, and assign **at most 3 concurrency** to the demux stage. This allows the decode stage to use higher concurrency independently (or leverage NVDEC hardware decoders) without being bottlenecked by the demux lock:
+
+```python
+# Split demux and decode with independent concurrency
+pipeline = (
+    PipelineBuilder()
+    .add_source(source)
+    .pipe(fetch, concurrency=16)
+    .pipe(demux, concurrency=3)          # at most 3 — codec_mutex contention
+    .pipe(decode, concurrency=8)         # decode can scale independently
+    .aggregate(batch_size)
+    .pipe(collate)
+    .add_sink(buffer_size=3)
+)
+```
+
 ### Search strategy
 
 When tuning a stage's concurrency — especially for fast operations:
@@ -253,6 +273,31 @@ exec = ThreadPoolExecutor(max_workers=7)
 ```
 
 Higher concurrency values (e.g., c=16) still work — excess tasks wait for an engine — but waste thread resources on waiting. Setting concurrency to match the hardware count (c=7) is marginally more efficient.
+
+**Always split demux and decode into separate stages** (see "Demux contention" above). Demuxing should be limited to 2-3 concurrency due to FFmpeg's `codec_mutex`, while decode — whether CPU or NvDec — can scale independently. Combining them in a single stage forces decode concurrency to match the demux bottleneck. With NvDec, the MTP pattern works particularly well because demuxed packets are picklable and can cross the subprocess boundary:
+
+```python
+# MTP backend (subprocess) — demux only, low concurrency
+backend = (
+    PipelineBuilder()
+    .add_source(source, continuous=True)
+    .pipe(fetch, concurrency=num_fetch_threads)
+    .pipe(demux, concurrency=3)          # codec_mutex limits scaling
+    .add_sink(buffer_size=3)
+)
+source2 = spdl.pipeline.run_pipeline_in_subprocess(backend.get_config(), ...)
+
+# Frontend (main process) — NvDec decode at hardware concurrency
+decode_exec = ThreadPoolExecutor(max_workers=7)
+frontend = (
+    PipelineBuilder()
+    .add_source(source2, continuous=True)
+    .pipe(nvdec_decode, concurrency=7, executor=decode_exec)
+    .aggregate(batch_size)
+    .pipe(collate)
+    .add_sink(buffer_size=3)
+)
+```
 
 ### Video Decoder Thread Tuning
 
