@@ -84,6 +84,12 @@ class NvDecDecoder:
 
     .. note::
 
+       When feeding packets from concurrent demux workers, keep demux
+       concurrency low (2--3 threads).  See :py:class:`~spdl.io.Demuxer`
+       for details.
+
+    .. note::
+
        To decode H264 and HEVC videos, packets must be in Annex B format.
        Use :py:func:`~spdl.io.apply_bsf` to convert:
 
