@@ -1,0 +1,293 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+# pyre-strict
+
+import unittest
+import warnings
+
+import numpy as np
+import spdl.io
+import torch
+from parameterized import parameterized
+from spdl.io import VideoPackets
+from spdl.io.tests.fixture import FFMPEG_CLI, get_sample
+
+
+class TestDemuxer(unittest.TestCase):
+    @parameterized.expand(
+        [
+            (
+                f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=duration=3 -c:a pcm_s16le sample.wav",
+                True,
+            ),
+            (
+                f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4",
+                True,
+            ),
+            (
+                f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4",
+                False,
+            ),
+            (
+                f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg",
+                False,
+            ),
+        ]
+    )
+    def test_demuxer_has_audio(self, cmd: str, expected: bool) -> None:
+        """has_audio returns true for audio stream"""
+        sample = get_sample(cmd)
+
+        with spdl.io.Demuxer(sample.path) as demuxer:
+            self.assertEqual(demuxer.has_audio(), expected)
+
+    def test_demuxer_accept_numpy_array(self) -> None:
+        """Can instantiate Demuxer with numpy array as source without copying data."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
+        sample = get_sample(cmd)
+
+        with open(sample.path, "rb") as f:
+            data = f.read()
+
+        src = np.frombuffer(data, dtype=np.uint8)
+
+        with spdl.io.Demuxer(src) as demuxer:
+            packets = demuxer.demux_video()
+
+        self.assertIsNotNone(packets)
+
+    def test_demuxer_accept_torch_tensor(self) -> None:
+        """Can instantiate Demuxer with torch tensor as source without copying data."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
+        sample = get_sample(cmd)
+
+        with open(sample.path, "rb") as f:
+            data = f.read()
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"The given buffer is not writable.*",
+                category=UserWarning,
+            )
+            src = torch.frombuffer(data, dtype=torch.uint8)
+
+        with spdl.io.Demuxer(src) as demuxer:
+            packets = demuxer.demux_video()
+
+        self.assertIsNotNone(packets)
+
+
+class TestStreamingVideoDemuxing(unittest.TestCase):
+    def test_streaming_video_demuxing_smoke_test(self) -> None:
+        """`streaming_demux` can decode packets in streaming fashion."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 10 sample.mp4"
+        sample = get_sample(cmd)
+
+        demuxer = spdl.io.Demuxer(sample.path)
+        num_packets = 0
+        for packets in demuxer.streaming_demux(
+            demuxer.video_stream_index, num_packets=5
+        ):
+            assert isinstance(packets, VideoPackets)
+            num_packets += len(packets)
+
+        demuxer = spdl.io.Demuxer(sample.path)
+        packets = demuxer.demux_video()
+
+        self.assertEqual(num_packets, len(packets))
+
+    def test_streaming_video_demuxing_parity(self) -> None:
+        """`streaming_demux` can decode packets in streaming fashion."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -frames:v 30 sample.mp4"
+        sample = get_sample(cmd)
+
+        demuxer = spdl.io.Demuxer(sample.path)
+        decoder = spdl.io.Decoder(demuxer.video_codec)
+        buffers = []
+        for packets in demuxer.streaming_demux(
+            demuxer.video_stream_index, num_packets=30
+        ):
+            print(packets)
+            assert isinstance(packets, VideoPackets)
+            for frames in decoder.streaming_decode_packets(packets):
+                print(frames)
+                buffer = spdl.io.convert_frames(frames)
+                buffers.append(spdl.io.to_numpy(buffer))
+        for frames in decoder.flush():
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
+
+        hyp = np.concatenate(buffers)
+        print(hyp.shape, hyp.dtype)
+
+        packets = spdl.io.demux_video(sample.path)
+        frames = spdl.io.decode_packets(packets)
+        buffer = spdl.io.convert_frames(frames)
+        ref = spdl.io.to_numpy(buffer)
+        print(ref.shape, ref.dtype)
+
+        # from PIL import Image
+
+        # for i in [0, -1]:
+        #     Image.fromarray(hyp[i]).save(f"hyp_{i}.png")
+        #     Image.fromarray(ref[i]).save(f"ref_{i}.png")
+        #     Image.fromarray(hyp[i] - ref[i]).save(f"diff_{i}.png")
+
+        self.assertTrue(np.array_equal(hyp, ref))
+
+    def test_demuxer_get_codec(self) -> None:
+        cmd = f'{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine=sample_rate=48000 -af "pan=stereo|c0=FR|c1=FR" -frames:v 30 sample.mp4'
+
+        sample = get_sample(cmd)
+        demuxer = spdl.io.Demuxer(sample.path)
+
+        audio_codec = demuxer.audio_codec
+        video_codec = demuxer.video_codec
+
+        self.assertEqual(audio_codec.name, "aac")
+        self.assertEqual(audio_codec.sample_rate, 48000)
+        self.assertEqual(audio_codec.num_channels, 2)
+        self.assertEqual(video_codec.name, "h264")
+        self.assertEqual(video_codec.width, 320)
+        self.assertEqual(video_codec.height, 240)
+
+
+class TestStreamingDecoding(unittest.TestCase):
+    def test_streaming_decoding_simple(self) -> None:
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 60 sample.mp4"
+        )
+
+        N = 10
+        sample = get_sample(cmd)
+
+        buffer = spdl.io.load_video(sample.path)
+        ref = spdl.io.to_numpy(buffer)
+
+        demuxer = spdl.io.Demuxer(sample.path)
+        decoder = spdl.io.Decoder(demuxer.video_codec)
+        ite = demuxer.streaming_demux(demuxer.video_stream_index, num_packets=N)
+
+        buffers = []
+        for i in range(6):
+            packets = next(ite)
+            print(f"{i}: {packets=}", flush=True)
+            assert isinstance(packets, VideoPackets)
+            self.assertEqual(len(packets), N)
+            for frames in decoder.streaming_decode_packets(packets):
+                print(f"{i}: {frames=}", flush=True)
+                buffer = spdl.io.convert_frames(frames)
+                buffers.append(spdl.io.to_numpy(buffer))
+
+        for frames in decoder.flush():
+            print(f"^: {frames=}", flush=True)
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
+        hyp = np.concatenate(buffers)
+
+        np.testing.assert_array_equal(hyp, ref)
+
+    def test_streaming_decoding_multi(self) -> None:
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine -t 15 sample.mp4"
+
+        sample = get_sample(cmd)
+
+        demuxer = spdl.io.Demuxer(sample.path)
+
+        video_index = demuxer.video_stream_index
+        audio_index = demuxer.audio_stream_index
+
+        audio_decoder = spdl.io.Decoder(demuxer.audio_codec)
+        video_decoder = spdl.io.Decoder(demuxer.video_codec)
+
+        packet_stream = demuxer.streaming_demux(
+            indices=[video_index, audio_index], duration=5.0
+        )
+
+        audio_buffer = []
+        video_buffer = []
+        for packets in packet_stream:
+            if audio_index in packets:
+                audio_packets = packets[audio_index]
+                print(audio_packets)
+                assert isinstance(audio_packets, spdl.io.AudioPackets)
+                for frames in audio_decoder.streaming_decode_packets(audio_packets):
+                    print(frames)
+                    self.assertGreater(len(frames), 44100 * 3)
+                    buffer = spdl.io.convert_frames(frames)
+                    audio_buffer.append(spdl.io.to_numpy(buffer).T)
+            if video_index in packets:
+                video_packets = packets[video_index]
+                print(video_packets)
+                assert isinstance(video_packets, VideoPackets)
+                for frames in video_decoder.streaming_decode_packets(video_packets):
+                    print(frames)
+                    self.assertGreater(len(frames), 25 * 3)
+                    buffer = spdl.io.convert_frames(frames)
+                    video_buffer.append(spdl.io.to_numpy(buffer))
+
+        for frames in audio_decoder.flush():
+            buffer = spdl.io.convert_frames(frames)
+            audio_buffer.append(spdl.io.to_numpy(buffer).T)
+
+        for frames in video_decoder.flush():
+            buffer = spdl.io.convert_frames(frames)
+            video_buffer.append(spdl.io.to_numpy(buffer))
+
+        hyp_audio = np.concatenate(audio_buffer).T
+        hyp_video = np.concatenate(video_buffer)
+
+        ref_audio = spdl.io.to_numpy(spdl.io.load_audio(sample.path))
+        ref_video = spdl.io.to_numpy(spdl.io.load_video(sample.path))
+
+        np.testing.assert_array_equal(hyp_audio, ref_audio)
+        np.testing.assert_array_equal(hyp_video, ref_video)
+
+    def test_set_buffer_size(self) -> None:
+        """Test that set_buffer_size limits the number of frames yielded per iteration."""
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 90 sample.mp4"
+        )
+
+        sample = get_sample(cmd)
+
+        buffer_size = 10
+
+        demuxer = spdl.io.Demuxer(sample.path)
+        decoder = spdl.io.Decoder(demuxer.video_codec)
+        decoder.set_buffer_size(buffer_size)
+
+        buffers = []
+        frame_counts = []
+        for packets in demuxer.streaming_demux(
+            demuxer.video_stream_index, num_packets=30
+        ):
+            assert isinstance(packets, VideoPackets)
+            for frames in decoder.streaming_decode_packets(packets):
+                frame_counts.append(len(frames))
+                buffer = spdl.io.convert_frames(frames)
+                buffers.append(spdl.io.to_numpy(buffer))
+
+        for frames in decoder.flush():
+            frame_counts.append(len(frames))
+            buffer = spdl.io.convert_frames(frames)
+            buffers.append(spdl.io.to_numpy(buffer))
+
+        # Each yielded frames batch should have at most buffer_size frames
+        for count in frame_counts[:-1]:  # Last batch may have fewer frames
+            self.assertLessEqual(count, buffer_size)
+
+        hyp = np.concatenate(buffers)
+
+        # Verify parity with non-streaming decode
+        packets = spdl.io.demux_video(sample.path)
+        frames = spdl.io.decode_packets(packets)
+        buffer = spdl.io.convert_frames(frames)
+        ref = spdl.io.to_numpy(buffer)
+
+        np.testing.assert_array_equal(hyp, ref)

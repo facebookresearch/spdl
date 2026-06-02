@@ -221,7 +221,6 @@ jobs:
               python -c 'import spdl.io.utils;assert spdl.io.utils.built_with_nvcodec()'
           fi
           pytest -v -n ${{ inputs.test-concurrency }} \
-              tests/cuda/ \
               tests/io/
 
   test-cpu:
@@ -284,7 +283,7 @@ jobs:
           set -ex
 
           pytest -v -n ${{ inputs.test-concurrency }} \
-              tests/io \
+              tests/io/core \
               tests/dataloader \
               tests/pipeline \
               tests/autoresearch

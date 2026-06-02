@@ -5,6 +5,7 @@ on:
   pull_request:
     paths-ignore:
       - "tests/**"
+      - "src/spdl/**/tests/**"
       - "third_party/**"
       - "*.md"
     branches:
@@ -12,6 +13,7 @@ on:
   push:
     paths-ignore:
       - "tests/**"
+      - "src/spdl/**/tests/**"
       - "third_party/**"
       - "*.md"
     branches:
