@@ -27,9 +27,9 @@ class _LazilyImportedModule(ModuleType):
     # Note:
     # Python caches what was retrieved with `__getattr__`, so this method will not be
     # called again for the same item.
-    def __getattr__(self, item: str) -> Any:
+    def __getattr__(self, name: str) -> Any:
         self._import_once()
-        return getattr(self.module, item)
+        return getattr(self.module, name)
 
     def __repr__(self) -> str:
         if self.module is None:
@@ -60,7 +60,7 @@ def lazy_import(name: str) -> ModuleType:
         1.26.2
     """
 
-    def _import():
+    def _import() -> ModuleType:
         return importlib.import_module(name)
 
     return _LazilyImportedModule(name, _import)
