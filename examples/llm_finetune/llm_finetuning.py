@@ -167,11 +167,18 @@ def train(
     progress_fn: Callable[[int, int], None] | None = None,
 ) -> None:
     """Main training function, called per-rank."""
-    rank: int = dist.get_rank()
-    world_size: int = dist.get_world_size()
+    if dist.is_initialized():
+        rank = dist.get_rank()
+        world_size = dist.get_world_size()
+    else:
+        rank = 0
+        world_size = 1
     local_rank: int = int(os.environ.get("LOCAL_RANK", 0))
-    device = torch.device(f"cuda:{local_rank}")
-    torch.cuda.set_device(device)
+    if torch.cuda.is_available():
+        device = torch.device(f"cuda:{local_rank}")
+        torch.cuda.set_device(device)
+    else:
+        device = torch.device("cpu")
 
     _LG.info(
         "Rank %d/%d on device %s (dataloader=%s)",
@@ -198,7 +205,13 @@ def train(
         lora_alpha=lora_alpha,
         lora_dropout=lora_dropout,
     )
-    ddp_model = DDP(model, device_ids=[local_rank])
+    if dist.is_initialized():
+        ddp_model = DDP(
+            model,
+            device_ids=[local_rank] if torch.cuda.is_available() else None,
+        )
+    else:
+        ddp_model = model
 
     # --- Optimizer ---
     optimizer = torch.optim.AdamW(
@@ -310,7 +323,7 @@ def train(
     if rank == 0 and output_dir:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
-        ddp_model.module.save_pretrained(output_path)
+        model.save_pretrained(output_path)  # pyre-ignore[29]
         tokenizer.save_pretrained(output_path)
         _LG.info("Model saved to %s", output_path)
 
@@ -384,7 +397,10 @@ def init_logging() -> None:
 
 
 def main(args: argparse.Namespace) -> None:
-    dist.init_process_group(backend="nccl", timeout=timedelta(minutes=3))
+    use_distributed = "RANK" in os.environ
+    if use_distributed:
+        backend = "nccl" if torch.cuda.is_available() else "gloo"
+        dist.init_process_group(backend=backend, timeout=timedelta(minutes=3))
     try:
         train(
             model_path=resolve_model_path(args.model_path),
@@ -406,7 +422,8 @@ def main(args: argparse.Namespace) -> None:
             progress_fn=report_progress,
         )
     finally:
-        dist.destroy_process_group()
+        if use_distributed:
+            dist.destroy_process_group()
 
 
 if __name__ == "__main__":

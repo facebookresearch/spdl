@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 import spdl.pipeline
 import spdl.source.utils
+import torch
 from spdl.io import transfer_tensor
 from spdl.pipeline import PipelineBuilder
 from spdl.source import DistributedRandomSampler
@@ -146,10 +147,8 @@ def build_spdl_dataloader(
         mp_context=mp_context,
     )
 
-    frontend = (
-        PipelineBuilder()
-        .add_source(source2, continuous=True)
-        .pipe(transfer_tensor)
-        .add_sink(buffer_size=3)
-    )
+    frontend = PipelineBuilder().add_source(source2, continuous=True)
+    if torch.cuda.is_available():
+        frontend = frontend.pipe(transfer_tensor)
+    frontend = frontend.add_sink(buffer_size=3)
     return frontend.build(num_threads=1)
