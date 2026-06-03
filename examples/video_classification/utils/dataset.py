@@ -18,6 +18,8 @@ import argparse
 import logging
 from pathlib import Path
 
+from .pipeline import _RawSample
+
 _LG: logging.Logger = logging.getLogger(__name__)
 
 _VIDEO_EXTENSIONS: set[str] = {".avi", ".mp4", ".mkv", ".webm", ".mov"}
@@ -60,11 +62,11 @@ class LocalVideoDataset:
     def __len__(self) -> int:
         return len(self.samples)
 
-    def __getitem__(self, index: int) -> list[dict[str, object]]:
+    def __getitem__(self, index: int) -> list[_RawSample]:
         path, label = self.samples[index]
         with open(path, "rb") as f:
             video_bytes = f.read()
-        return [{"video_bytes": video_bytes, "label": label}]
+        return [_RawSample(video_bytes=video_bytes, label=label)]
 
 
 def create_dataset(args: argparse.Namespace) -> LocalVideoDataset:

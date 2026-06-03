@@ -30,7 +30,7 @@ import os
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from typing import Protocol
+from typing import Protocol, TypedDict
 
 import spdl.io
 import spdl.pipeline
@@ -44,9 +44,19 @@ _LG: logging.Logger = logging.getLogger(__name__)
 type _TBatch = dict[str, torch.Tensor]
 
 
+class _RawSample(TypedDict):
+    video_bytes: bytes
+    label: str
+
+
+class _DemuxedSample(TypedDict):
+    packets: "spdl.io.VideoPackets"
+    label: int
+
+
 class VideoDataset(Protocol):
     def __len__(self) -> int: ...
-    def __getitem__(self, index: int) -> list[dict[str, object]]: ...
+    def __getitem__(self, index: int) -> list[_RawSample]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -55,16 +65,16 @@ class VideoDataset(Protocol):
 # ---------------------------------------------------------------------------
 
 
-def _fetch_sample(index: int, *, dataset: object) -> list[dict[str, object]]:
+def _fetch_sample(index: int, *, dataset: object) -> list[_RawSample]:
     return dataset[index]  # pyre-ignore[16]
 
 
 def _demux_sample(
-    sample: dict[str, object],
+    sample: _RawSample,
     *,
     label_to_index: dict[str, int],
     subclip_duration: float | None = None,
-) -> dict[str, object] | None:
+) -> _DemuxedSample | None:
     video_bytes = sample["video_bytes"]
     try:
         timestamp = (0.0, subclip_duration) if subclip_duration else None
@@ -72,7 +82,7 @@ def _demux_sample(
     except RuntimeError as e:
         _LG.warning("Demux failed: %s", e)
         return None
-    label = label_to_index[sample["label"]]  # pyre-ignore[6]
+    label = label_to_index[sample["label"]]
     return {"packets": packets, "label": label}
 
 
@@ -87,7 +97,7 @@ class NvdecDecode:
     def __init__(
         self,
         num_frames: int,
-        cuda_cfg: object,
+        cuda_cfg: "spdl.io.CUDAConfig",
         width: int,
         height: int,
         device: torch.device,
@@ -98,9 +108,7 @@ class NvdecDecode:
         self.height = height
         self.device = device
 
-    def __call__(
-        self, sample: dict[str, object] | None
-    ) -> dict[str, torch.Tensor] | None:
+    def __call__(self, sample: _DemuxedSample | None) -> dict[str, torch.Tensor] | None:
         if sample is None:
             return None
 
@@ -129,7 +137,7 @@ class NvdecDecode:
         # [T, C, H, W] -> [C, T, H, W], normalize
         tensor = tensor.permute(1, 0, 2, 3).float() / 255.0
 
-        label = sample["label"]  # pyre-ignore[6]
+        label = sample["label"]
         return {
             "video": tensor,
             "label": torch.tensor(label, dtype=torch.long, device=self.device),
