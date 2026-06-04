@@ -26,6 +26,53 @@ from ._failures import _make_failure, _raise_failure
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
+_MAX_TITLE_LEN = 72
+
+
+def _build_commit_message(
+    run_id: str,
+    exp: dict,
+    *,
+    extra_lines: list[str] | None = None,
+) -> str:
+    """Build a commit message with a short title and detailed body.
+
+    Format follows the Git/GitHub convention:
+    - Line 1: title (≤72 chars) describing the delta
+    - Line 2: blank
+    - Line 3+: body with description, hypothesis, and context
+
+    Works with both ``git commit -m`` and ``sl commit -m``.
+    """
+    name = exp.get("change_summary") or exp.get("name", run_id)
+    prefix = f"ar: {run_id}: "
+    max_name_len = _MAX_TITLE_LEN - len(prefix)
+    if len(name) > max_name_len:
+        name = name[: max_name_len - 1] + "…"
+    title = prefix + name
+
+    body_parts: list[str] = []
+
+    description = exp.get("description", "")
+    if description:
+        body_parts.append(description)
+
+    hypothesis = exp.get("hypothesis", "")
+    if hypothesis:
+        body_parts.append(f"Hypothesis: {hypothesis}")
+
+    changes = exp.get("changes")
+    if changes:
+        body_parts.append(f"Changes: {', '.join(changes)}")
+
+    if extra_lines:
+        body_parts.extend(extra_lines)
+
+    if not body_parts:
+        return title
+
+    return title + "\n\n" + "\n\n".join(body_parts)
+
 
 def _extract_code_block(text: str) -> str | None:
     for pattern in [
@@ -240,7 +287,7 @@ def _apply_code_changes(
 
     scm = config.get("scm", "")
     if scm and source_dir and platform.workspace.has_changes(scm, source_dir):
-        msg = f"[autoresearch] {run_id}: {exp.get('description', exp['name'])}"
+        msg = _build_commit_message(run_id, exp)
         try:
             commit_hash = platform.workspace.commit(scm, source_dir, msg)
         except Exception as error:
@@ -312,7 +359,9 @@ def _prepare_node(
     node.commit = exp.get("commit")
 
     if scm and source_dir and platform.workspace.has_changes(scm, source_dir):
-        msg = f"[autoresearch] {run_id} changes"
+        msg = _build_commit_message(
+            run_id, exp, extra_lines=["Residual changes after lint/build."]
+        )
         try:
             platform.workspace.commit(scm, source_dir, msg)
         except Exception as error:

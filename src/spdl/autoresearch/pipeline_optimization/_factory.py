@@ -450,9 +450,85 @@ def _instrument_pipeline(
     source_dir = config.get("source_dir", "")
     if scm and source_dir and platform.workspace.has_changes(scm, source_dir):
         commit_hash = platform.workspace.commit(
-            scm, source_dir, "[autoresearch] Add TTFB/step-time instrumentation"
+            scm, source_dir, "ar: Add TTFB/step-time instrumentation"
         )
         _LG.info("Committed instrumentation: %s", commit_hash[:12])
+        print(f"  Committed: {commit_hash[:12]}")
+
+    if config.get("dataloader_only"):
+        _instrument_dataloader_only(workdir, config, platform)
+
+
+def _instrument_dataloader_only(
+    workdir: Path,
+    config: dict,
+    platform: AutoresearchPlatform,
+) -> None:
+    """Make model forward/backward/optimizer no-op for dataloader-only benchmarking."""
+    pipeline_script = config.get("pipeline_script", "")
+    if not pipeline_script or not Path(pipeline_script).exists():
+        return
+
+    pipeline_code = Path(pipeline_script).read_text()
+    _LG.info("Applying dataloader-only modifications to %s", pipeline_script)
+    print("Making model parts no-op for dataloader-only benchmarking...")
+
+    prompt = platform.agent._load_prompt(
+        "instrument_dataloader_only",
+        PIPELINE_SCRIPT=pipeline_script,
+        PIPELINE_CODE=pipeline_code,
+    )
+    output = _run_instrument_agent(
+        workdir, platform, prompt, "instrument_dataloader_only"
+    )
+    if output is None:
+        return
+
+    modified_code = _extract_python_block(output)
+    if modified_code is None:
+        _LG.warning(
+            "Dataloader-only instrument attempt returned no code block, retrying"
+        )
+        retry_prompt = (
+            prompt + "\n\n**You MUST output the ENTIRE modified file in a single "
+            "```python code block. Do NOT describe changes in prose. "
+            "Output ONLY code.**\n"
+        )
+        output = _run_instrument_agent(
+            workdir, platform, retry_prompt, "instrument_dataloader_only_retry"
+        )
+        if output is None:
+            return
+        modified_code = _extract_python_block(output)
+
+    if modified_code is None:
+        _LG.warning(
+            "Dataloader-only instrumentation failed — no code block in response"
+        )
+        print("  Warning: dataloader-only instrumentation failed")
+        _record_setup_failure(
+            workdir,
+            read_state(workdir),
+            _make_failure(
+                FailureKind.SETUP_INSTRUMENTATION_FAILED,
+                FailurePhase.INSTRUMENTATION,
+                "Coding agent did not return a Python code block for "
+                "dataloader-only instrumentation",
+            ),
+        )
+        return
+
+    Path(pipeline_script).write_text(modified_code)
+    _LG.info("Wrote dataloader-only code to %s", pipeline_script)
+    print(f"  Wrote dataloader-only code to {pipeline_script}")
+
+    scm = config.get("scm", "")
+    source_dir = config.get("source_dir", "")
+    if scm and source_dir and platform.workspace.has_changes(scm, source_dir):
+        commit_hash = platform.workspace.commit(
+            scm, source_dir, "ar: Make model no-op for dataloader-only mode"
+        )
+        _LG.info("Committed dataloader-only modifications: %s", commit_hash[:12])
         print(f"  Committed: {commit_hash[:12]}")
 
 
