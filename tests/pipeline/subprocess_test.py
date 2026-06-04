@@ -19,7 +19,12 @@ from collections.abc import Iterable, Iterator
 from functools import partial
 
 from spdl.pipeline import iterate_in_subprocess as _iterate_in_subprocess
-from spdl.pipeline._iter_utils._common import _Cmd, _execute_iterable, _Status
+from spdl.pipeline._iter_utils._common import (
+    _Cmd,
+    _execute_iterable,
+    _FlushableQueue,
+    _Status,
+)
 
 
 def _ignore_fork_warning(fn):
@@ -235,7 +240,7 @@ def noop() -> None:
 
 class TestExecuteIterable(unittest.TestCase):
     def test_execute_iterable_initializer_failure(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue, data_queue = mp.Queue(), _FlushableQueue(mp.Queue())
 
         def src_fn() -> Iterable[int]:
             return SourceIterable(10)
@@ -253,7 +258,7 @@ class TestExecuteIterable(unittest.TestCase):
         self.assertTrue(data_queue.empty())
 
     def test_execute_iterable_iterator_initialize_failure(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue, data_queue = mp.Queue(), _FlushableQueue(mp.Queue())
 
         def src_fn() -> Iterator[int]:
             raise ValueError("Failed!")
@@ -268,7 +273,7 @@ class TestExecuteIterable(unittest.TestCase):
         self.assertTrue(data_queue.empty())
 
     def test_execute_iterable_quite_immediately(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue, data_queue = mp.Queue(), _FlushableQueue(mp.Queue())
 
         msg_queue.put(_Cmd.ABORT)
         time.sleep(1)
@@ -285,7 +290,7 @@ class TestExecuteIterable(unittest.TestCase):
         self.assertTrue(data_queue.empty())
 
     def test_execute_iterable_generator_fail(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue, data_queue = mp.Queue(), _FlushableQueue(mp.Queue())
 
         class SourceIterableFails(SourceIterable):
             def __iter__(self) -> Iterator[int]:
@@ -311,7 +316,7 @@ class TestExecuteIterable(unittest.TestCase):
         self.assertTrue(data_queue.empty())
 
     def test_execute_iterable_generator_fail_after_n(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue, data_queue = mp.Queue(), _FlushableQueue(mp.Queue())
 
         class SourceIterableFails(SourceIterable):
             def __iter__(self) -> Iterator[int]:
@@ -343,7 +348,7 @@ class TestExecuteIterable(unittest.TestCase):
         self.assertTrue(data_queue.empty())
 
     def test_execute_iterator_generator_success(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue, data_queue = mp.Queue(), _FlushableQueue(mp.Queue())
 
         def src_fn() -> Iterable[int]:
             return SourceIterable(3)

@@ -22,9 +22,10 @@ from typing import Generic, TypeVar
 
 from spdl.pipeline._iter_utils._common import (
     _Cmd,
-    _drain,
+    _drain_queue,
     _enter_iteration_mode,
     _execute_iterable,
+    _FlushableQueue,
     _iterate_results,
     _wait_for_init,
 )
@@ -61,12 +62,12 @@ else:
         thread: threading.Thread
         interpreter: "concurrent.interpreters.Interpreter"
         cmd_q: "concurrent.interpreters.Queue"
-        data_q: "concurrent.interpreters.Queue"
+        data_q: _FlushableQueue
         timeout: float
 
         def terminate(self) -> None:
             self.cmd_q.put(_Cmd.ABORT)
-            _drain(self.data_q)
+            _drain_queue(self.data_q)
             self.thread.join(timeout=3)
             if self.thread.is_alive():
                 _LG.warning("Thread did not terminate gracefully")
@@ -123,7 +124,9 @@ else:
         )
 
         cmd_q = concurrent.interpreters.create_queue()
-        data_q = concurrent.interpreters.create_queue(maxsize=buffer_size)
+        data_q = _FlushableQueue(
+            concurrent.interpreters.create_queue(maxsize=buffer_size)
+        )
         interp = concurrent.interpreters.create()
 
         thread = interp.call_in_thread(

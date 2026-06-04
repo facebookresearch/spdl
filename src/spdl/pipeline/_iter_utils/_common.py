@@ -13,6 +13,7 @@ and iterate_in_subinterpreter implementations.
 """
 
 import enum
+import logging
 import multiprocessing as mp
 import queue
 import time
@@ -20,11 +21,14 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any, Generic, Protocol, TypeVar
 
+_LG: logging.Logger = logging.getLogger(__name__)
+
 __all__ = [
     "_Cmd",
     "_Status",
     "_Msg",
-    "_drain",
+    "_FlushableQueue",
+    "_drain_queue",
     "_wait_for_init",
     "_enter_iteration_mode",
     "_iterate_results",
@@ -40,6 +44,11 @@ class _Queue(Protocol[T]):
     This protocol defines the common interface for both multiprocessing.Queue
     and concurrent.interpreters.Queue, allowing code reuse between subprocess
     and subinterpreter implementations.
+
+    Implementations whose ``put`` is asynchronous (returns before the bytes
+    are actually on the wire) must override :py:meth:`flush` to block until
+    every previously-submitted ``put`` has been completed. Synchronous
+    implementations may leave it as a no-op.
     """
 
     def put(self, item: T, block: bool = True, timeout: float | None = None) -> None:
@@ -57,6 +66,74 @@ class _Queue(Protocol[T]):
     def empty(self) -> bool:
         """Return True if the queue is empty, False otherwise."""
         ...
+
+    def flush(self) -> None:
+        """Block until every previously-submitted ``put`` has actually been
+        delivered to the consumer side, then declare no further ``put`` will
+        happen on this end.
+
+        ``put`` on common queue implementations is **not** synchronous up to
+        the OS pipe — :py:class:`multiprocessing.Queue` enqueues into a
+        per-process ``_buffer`` and lets a daemon feeder thread serialize
+        items into the pipe. Returning from ``put`` therefore does not
+        guarantee the item has been delivered. Implementations must close
+        any feeder thread and wait for it, or perform the equivalent
+        producer-side drain, so that the worker can exit losslessly.
+
+        Called once by :py:func:`_execute_iterable` at the end of the
+        worker's lifetime (every exit path runs through ``finally``). It is
+        therefore allowed to be a one-shot operation that closes the
+        producer end of the queue.
+        """
+        ...
+
+
+class _FlushableQueue(Generic[T]):
+    """Wraps :py:class:`multiprocessing.Queue` or
+    :py:class:`concurrent.interpreters.Queue` to satisfy the
+    :py:class:`_Queue` Protocol — most importantly its
+    :py:meth:`flush` contract.
+
+    Used by :py:func:`~spdl.pipeline.iterate_in_subprocess` and
+    :py:func:`~spdl.pipeline.iterate_in_subinterpreter` so that
+    :py:func:`_execute_iterable` can call ``data_q.flush()`` uniformly
+    on every shutdown path. Implements ``flush`` as ``close()`` followed
+    by ``join_thread()`` (when the inner queue exposes them — vanilla
+    :py:class:`multiprocessing.Queue` does, vanilla
+    :py:class:`concurrent.interpreters.Queue` does not). Both are a
+    one-shot teardown of the producer end and are exactly what's needed
+    at worker exit.
+    """
+
+    def __init__(self, inner: object) -> None:
+        self._inner = inner
+
+    def put(self, item: T, block: bool = True, timeout: float | None = None) -> None:
+        self._inner.put(item, block, timeout)  # pyre-ignore[16]
+
+    def get(self, block: bool = True, timeout: float | None = None) -> T:
+        return self._inner.get(block, timeout)  # pyre-ignore[16]
+
+    def get_nowait(self) -> T:
+        return self._inner.get_nowait()  # pyre-ignore[16]
+
+    def empty(self) -> bool:
+        return self._inner.empty()  # pyre-ignore[16]
+
+    def flush(self) -> None:
+        # mp.Queue: close() flips a flag that tells the feeder thread no
+        # more items will arrive, then drains the in-process buffer onto
+        # the pipe; join_thread() then waits for the feeder thread to
+        # exit. This pair is the canonical lossless-shutdown idiom for
+        # mp.Queue producer ends.
+        # interpreters.Queue: neither method exists today (no feeder
+        # thread to flush), so the calls are skipped.
+        close = getattr(self._inner, "close", None)
+        if close is not None:
+            close()
+        join_thread = getattr(self._inner, "join_thread", None)
+        if join_thread is not None:
+            join_thread()
 
 
 # Command from parent to worker
@@ -147,8 +224,11 @@ class _Msg(Generic[T]):
     message: T | str = ""
 
 
-def _drain(q: _Queue[Any]) -> None:
-    """Drain a queue by removing all items.
+def _drain_queue(q: _Queue[Any]) -> None:
+    """Drain a queue by consuming all items currently in it.
+
+    This is a consumer-side teardown helper — it does not affect any
+    pending producer-side work (see :py:meth:`_Queue.flush` for that).
 
     Works with both :py:class:`multiprocessing.Queue`
     and :py:class:`concurrent.interpreters.Queue`.
@@ -162,7 +242,7 @@ def _drain(q: _Queue[Any]) -> None:
 
 def _execute_iterable(
     cmd_q: mp.Queue,
-    data_q: mp.Queue,
+    data_q: _Queue[_Msg[T]],
     fn: Callable[[], Iterable[T]],
     initializers: Sequence[Callable[[], None]] | None,
 ) -> None:
@@ -231,6 +311,35 @@ def _execute_iterable(
            j3 --> Done : ABORT
            j6 --> Done
            i5 --> i2: Iteration completed without an error
+    """
+    # The state machine itself lives in :py:func:`_drive_iteration`. We wrap
+    # it here so that every exit path (clean, error, abort) flushes
+    # ``data_q``. This matters for asynchronous queue implementations whose
+    # ``put`` returns before bytes are on the wire — without flush, the
+    # worker can exit while writes are still pending.
+    try:
+        _drive_iteration(cmd_q, data_q, fn, initializers)
+    finally:
+        try:
+            data_q.flush()
+        except Exception:
+            # Don't propagate — the worker is exiting and there's no
+            # caller to surface it to — but log so cleanup failures
+            # aren't invisible.
+            _LG.exception("data_q.flush() failed during worker shutdown")
+
+
+def _drive_iteration(
+    cmd_q: mp.Queue,
+    data_q: _Queue[_Msg[T]],
+    fn: Callable[[], Iterable[T]],
+    initializers: Sequence[Callable[[], None]] | None,
+) -> None:
+    """The state machine driven by :py:func:`_execute_iterable`.
+
+    Extracted so that :py:func:`_execute_iterable` can wrap the entire
+    body in a single ``try/finally`` for the producer-side flush without
+    burying the state-machine logic under an extra indentation level.
     """
     if initializers is not None:
         try:

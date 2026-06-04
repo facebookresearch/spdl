@@ -22,9 +22,10 @@ from typing import Generic, TypeVar
 
 from spdl.pipeline._iter_utils._common import (
     _Cmd,
-    _drain,
+    _drain_queue,
     _enter_iteration_mode,
     _execute_iterable,
+    _FlushableQueue,
     _iterate_results,
     _Msg,
     _wait_for_init,
@@ -60,12 +61,12 @@ def _join(process: mp.Process) -> None:
 class _ipc(Generic[T]):
     process: mp.Process
     cmd_q: queue.Queue[_Cmd]
-    data_q: queue.Queue[_Msg[T]]
+    data_q: _FlushableQueue[_Msg[T]]
     timeout: float
 
     def terminate(self) -> None:
         self.cmd_q.put(_Cmd.ABORT)
-        _drain(self.data_q)
+        _drain_queue(self.data_q)
         _join(self.process)
 
 
@@ -172,7 +173,7 @@ def iterate_in_subprocess(
 
     ctx = mp.get_context(mp_context)
     cmd_q: queue.Queue[_Cmd] = ctx.Queue()
-    data_q: queue.Queue[_Msg[T]] = ctx.Queue(maxsize=buffer_size)
+    data_q: _FlushableQueue[_Msg[T]] = _FlushableQueue(ctx.Queue(maxsize=buffer_size))
     process = ctx.Process(
         target=_execute_iterable,
         args=(cmd_q, data_q, fn, initializers),

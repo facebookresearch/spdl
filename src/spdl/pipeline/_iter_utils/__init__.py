@@ -32,9 +32,10 @@ def __getattr__(name: str) -> object:
             "_execute_iterable",
             "_Cmd",
             "_Status",
-            "_drain",
+            "_drain_queue",
             "_enter_iteration_mode",
             "_iterate_results",
+            "_FlushableQueue",
         ):
             from . import _common
 

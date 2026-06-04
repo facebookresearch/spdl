@@ -76,11 +76,14 @@ and it is helpful to have them in the documentation, so they are listed here.
 .. autoclass:: _Status()
    :members:
 
+.. autoclass:: _FlushableQueue()
+   :members:
+
 .. autofunction:: _enter_iteration_mode()
 
 .. autofunction:: _execute_iterable()
 
-.. autofunction:: _drain()
+.. autofunction:: _drain_queue()
 
 .. autofunction:: _iterate_results()
 
