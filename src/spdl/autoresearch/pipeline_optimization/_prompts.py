@@ -27,10 +27,10 @@ must not explicitly request extension subdirectories.
 from __future__ import annotations
 
 import sys
-from pathlib import Path
+from importlib.resources import files
+from importlib.resources.abc import Traversable
 
-_SCRIPT_DIR = Path(__file__).resolve().parent
-_PROMPTS_DIR = _SCRIPT_DIR / "prompts"
+_PROMPTS_ROOT = files(__package__) / "prompts"
 
 __all__ = [
     "load_knowledge",
@@ -76,11 +76,11 @@ def load_prompt(name: str, **kwargs: str) -> str:
     Raises:
         SystemExit: If the template file does not exist.
     """
-    path = _PROMPTS_DIR / f"{name}.md"
-    if not path.exists():
+    path = _PROMPTS_ROOT / f"{name}.md"
+    if not path.is_file():
         print(f"Error: prompt template not found: {path}", file=sys.stderr)
         sys.exit(1)
-    template = path.read_text()
+    template = path.read_text(encoding="utf-8")
     for key, value in kwargs.items():
         template = template.replace(f"__{key.upper()}__", str(value))
     return template
@@ -155,11 +155,22 @@ def load_prompt_directory(relative_dir: str) -> str:
         not exist.
     """
 
-    root = _PROMPTS_DIR / relative_dir
+    root = _PROMPTS_ROOT / relative_dir
     if not root.is_dir():
         return ""
-    return "\n\n".join(
-        path.read_text(encoding="utf-8")
-        for path in sorted(root.rglob("*.md"))
-        if path.is_file()
-    )
+
+    def _walk(
+        node: Traversable, parts: tuple[str, ...]
+    ) -> list[tuple[tuple[str, ...], Traversable]]:
+        collected: list[tuple[tuple[str, ...], Traversable]] = []
+        for child in node.iterdir():
+            child_parts = parts + (child.name,)
+            if child.is_dir():
+                collected.extend(_walk(child, child_parts))
+            elif child.is_file() and child.name.endswith(".md"):
+                collected.append((child_parts, child))
+        return collected
+
+    entries = _walk(root, ())
+    entries.sort(key=lambda item: item[0])
+    return "\n\n".join(resource.read_text(encoding="utf-8") for _, resource in entries)
