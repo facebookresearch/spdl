@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-strict
+
 """Default JSON-backed engine-state persistence helpers.
 
 The :py:class:`~spdl.autoresearch.core.Orchestrator` lets each workflow
@@ -174,7 +176,7 @@ def load_or_init(
 
 
 def _specs_from_field(
-    data: dict,
+    data: dict[str, object],
     field: str,
     path: Path,
 ) -> list[TaskSpec]:
