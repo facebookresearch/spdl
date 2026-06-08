@@ -60,6 +60,23 @@ class AudioPackets:
             The reconstructed packets.
         """
 
+    @staticmethod
+    def deserialize_view(data: memoryview) -> AudioPackets:
+        """
+        Reconstruct packets as a zero-copy view into ``data``.
+
+        The bytes are not copied: the packets point directly into ``data``,
+        which is kept alive for their lifetime. ``data`` must come from
+        ``__getstate__`` and must not be modified while the packets (or
+        non-clone references to them) are alive.
+
+        Args:
+            data: A memoryview over the serialized packets.
+
+        Returns:
+            The packets viewing ``data``.
+        """
+
     def __repr__(self) -> str: ...
 
     def __len__(self) -> int: ...
@@ -111,6 +128,23 @@ class VideoPackets:
 
         Returns:
             The reconstructed packets.
+        """
+
+    @staticmethod
+    def deserialize_view(data: memoryview) -> VideoPackets:
+        """
+        Reconstruct packets as a zero-copy view into ``data``.
+
+        The bytes are not copied: the packets point directly into ``data``,
+        which is kept alive for their lifetime. ``data`` must come from
+        ``__getstate__`` and must not be modified while the packets (or
+        non-clone references to them) are alive.
+
+        Args:
+            data: A memoryview over the serialized packets.
+
+        Returns:
+            The packets viewing ``data``.
         """
 
     def get_timestamps(self, *, raw: bool = False) -> list[float]:
@@ -199,6 +233,23 @@ class ImagePackets:
 
         Returns:
             The reconstructed packets.
+        """
+
+    @staticmethod
+    def deserialize_view(data: memoryview) -> ImagePackets:
+        """
+        Reconstruct packets as a zero-copy view into ``data``.
+
+        The bytes are not copied: the packets point directly into ``data``,
+        which is kept alive for their lifetime. ``data`` must come from
+        ``__getstate__`` and must not be modified while the packets (or
+        non-clone references to them) are alive.
+
+        Args:
+            data: A memoryview over the serialized packets.
+
+        Returns:
+            The packets viewing ``data``.
         """
 
     @property

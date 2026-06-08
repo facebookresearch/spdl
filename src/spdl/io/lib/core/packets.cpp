@@ -12,6 +12,8 @@
 #include <libspdl/core/rational_utils.h>
 #include <libspdl/core/types.h>
 
+#include "memoryview_utils.h"
+
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
@@ -76,7 +78,10 @@ void register_packets(nb::module_& m) {
       m,
       "AudioPackets",
       "Packets object containing audio samples.\n\n"
-      "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.")
+      "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.",
+      // Weak-referenceable so the memory arena can use a restored (view)
+      // packets object as the lifetime anchor for its shared-memory segment.
+      nb::is_weak_referenceable())
       .def(
           "__getstate__",
           [](const AudioPackets& self) {
@@ -102,6 +107,26 @@ void register_packets(nb::module_& m) {
           "    data: The serialized packets.\n\n"
           "Returns:\n"
           "    The reconstructed packets.")
+      .def_static(
+          "deserialize_view",
+          [](const nb::memoryview& data) -> AudioPacketsPtr {
+            auto sv = ::spdl::detail::memoryview_to_sv(data);
+            const auto* p = reinterpret_cast<const uint8_t*>(sv.data());
+            auto n = sv.size();
+            nb::gil_scoped_release g;
+            return deserialize_packets_view<MediaType::Audio>(p, n);
+          },
+          nb::arg("data"),
+          nb::keep_alive<0, 1>(),
+          "Reconstruct packets as a zero-copy view into ``data``.\n\n"
+          "The bytes are not copied: the packets point directly into ``data``,\n"
+          "which is kept alive for their lifetime. ``data`` must come from\n"
+          "``__getstate__`` and must not be modified while the packets (or\n"
+          "non-clone references to them) are alive.\n\n"
+          "Args:\n"
+          "    data: A memoryview over the serialized packets.\n\n"
+          "Returns:\n"
+          "    The packets viewing ``data``.")
       .def(
           "__repr__",
           [](const AudioPackets& self) {
@@ -178,7 +203,10 @@ void register_packets(nb::module_& m) {
       m,
       "VideoPackets",
       "Packets object containing video frames.\n\n"
-      "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.")
+      "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.",
+      // Weak-referenceable so the memory arena can use a restored (view)
+      // packets object as the lifetime anchor for its shared-memory segment.
+      nb::is_weak_referenceable())
       .def(
           "__getstate__",
           [](const VideoPackets& self) {
@@ -204,6 +232,26 @@ void register_packets(nb::module_& m) {
           "    data: The serialized packets.\n\n"
           "Returns:\n"
           "    The reconstructed packets.")
+      .def_static(
+          "deserialize_view",
+          [](const nb::memoryview& data) -> VideoPacketsPtr {
+            auto sv = ::spdl::detail::memoryview_to_sv(data);
+            const auto* p = reinterpret_cast<const uint8_t*>(sv.data());
+            auto n = sv.size();
+            nb::gil_scoped_release g;
+            return deserialize_packets_view<MediaType::Video>(p, n);
+          },
+          nb::arg("data"),
+          nb::keep_alive<0, 1>(),
+          "Reconstruct packets as a zero-copy view into ``data``.\n\n"
+          "The bytes are not copied: the packets point directly into ``data``,\n"
+          "which is kept alive for their lifetime. ``data`` must come from\n"
+          "``__getstate__`` and must not be modified while the packets (or\n"
+          "non-clone references to them) are alive.\n\n"
+          "Args:\n"
+          "    data: A memoryview over the serialized packets.\n\n"
+          "Returns:\n"
+          "    The packets viewing ``data``.")
       .def(
           "get_timestamps",
           [](const VideoPackets& self, bool raw) -> std::vector<double> {
@@ -322,7 +370,10 @@ void register_packets(nb::module_& m) {
       m,
       "ImagePackets",
       "Packets object contain an image frame.\n\n"
-      "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.")
+      "See :doc:`../io/packets_frames_concepts` for information about the Packets base concept.",
+      // Weak-referenceable so the memory arena can use a restored (view)
+      // packets object as the lifetime anchor for its shared-memory segment.
+      nb::is_weak_referenceable())
       .def(
           "__getstate__",
           [](const ImagePackets& self) {
@@ -348,6 +399,26 @@ void register_packets(nb::module_& m) {
           "    data: The serialized packets.\n\n"
           "Returns:\n"
           "    The reconstructed packets.")
+      .def_static(
+          "deserialize_view",
+          [](const nb::memoryview& data) -> ImagePacketsPtr {
+            auto sv = ::spdl::detail::memoryview_to_sv(data);
+            const auto* p = reinterpret_cast<const uint8_t*>(sv.data());
+            auto n = sv.size();
+            nb::gil_scoped_release g;
+            return deserialize_packets_view<MediaType::Image>(p, n);
+          },
+          nb::arg("data"),
+          nb::keep_alive<0, 1>(),
+          "Reconstruct packets as a zero-copy view into ``data``.\n\n"
+          "The bytes are not copied: the packets point directly into ``data``,\n"
+          "which is kept alive for their lifetime. ``data`` must come from\n"
+          "``__getstate__`` and must not be modified while the packets (or\n"
+          "non-clone references to them) are alive.\n\n"
+          "Args:\n"
+          "    data: A memoryview over the serialized packets.\n\n"
+          "Returns:\n"
+          "    The packets viewing ``data``.")
       .def_prop_ro(
           "pix_fmt",
           [](const ImagePackets& self) {

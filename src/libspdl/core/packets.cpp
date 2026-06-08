@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cstring>
 #include <stdexcept>
+#include <utility>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -141,6 +142,7 @@ Packets<media>& Packets<media>::operator=(Packets<media>&& other) noexcept {
   swap(time_base, other.time_base);
   swap(timestamp, other.timestamp);
   swap(codec, other.codec);
+  swap(is_view, other.is_view);
   return *this;
 }
 
@@ -348,6 +350,12 @@ namespace {
 constexpr uint32_t SERIALIZATION_MAGIC = 0x53504B54; // "SPKT"
 constexpr uint8_t SERIALIZATION_VERSION = 1;
 
+// Each serialized packet payload is followed by this many zeroed bytes. FFmpeg
+// decoders may over-read up to AV_INPUT_BUFFER_PADDING_SIZE past the end of
+// packet data, so the padding lets a payload be restored as a zero-copy view
+// (deserialize_packets_view) without copying it into an av_malloc'd buffer.
+constexpr size_t SERIALIZATION_PADDING = AV_INPUT_BUFFER_PADDING_SIZE;
+
 class ByteWriter {
   std::vector<uint8_t>& buf_;
 
@@ -380,6 +388,18 @@ class ByteWriter {
     if (!s.empty()) {
       write_raw(s.data(), s.size());
     }
+  }
+
+  // Write a packet payload: size, raw bytes, then SERIALIZATION_PADDING zeroed
+  // bytes so the payload can be restored as a zero-copy view.
+  void write_payload(const uint8_t* data, int size) {
+    if (!data || size <= 0) {
+      write<int32_t>(0);
+      return;
+    }
+    write<int32_t>(size);
+    write_raw(data, size);
+    buf_.insert(buf_.end(), SERIALIZATION_PADDING, 0);
   }
 };
 
@@ -429,6 +449,48 @@ class ByteReader {
     }
     return result;
   }
+
+  // Pointer to the current read position; valid while the buffer is alive.
+  const uint8_t* peek() const {
+    return data_ + offset_;
+  }
+
+  void skip(size_t size) {
+    if (offset_ + size > size_) {
+      throw std::runtime_error("Deserialization buffer underflow");
+    }
+    offset_ += size;
+  }
+
+  // Copy out a payload written by ByteWriter::write_payload (consumes the
+  // trailing padding).
+  std::vector<uint8_t> read_payload() {
+    auto size = read<int32_t>();
+    if (size < 0) {
+      throw std::runtime_error("Deserialization error: negative size");
+    }
+    std::vector<uint8_t> result(size);
+    if (size > 0) {
+      read_raw(result.data(), size);
+      skip(SERIALIZATION_PADDING);
+    }
+    return result;
+  }
+
+  // Return a pointer to a payload in place and advance past it (and its
+  // padding) without copying. The pointer is valid while the buffer is alive.
+  std::pair<const uint8_t*, int> view_payload() {
+    auto size = read<int32_t>();
+    if (size < 0) {
+      throw std::runtime_error("Deserialization error: negative size");
+    }
+    if (size == 0) {
+      return {nullptr, 0};
+    }
+    const uint8_t* p = peek();
+    skip(static_cast<size_t>(size) + SERIALIZATION_PADDING);
+    return {p, size};
+  }
 };
 
 void serialize_packet(ByteWriter& w, const AVPacket* pkt) {
@@ -447,7 +509,7 @@ void serialize_packet(ByteWriter& w, const AVPacket* pkt) {
   w.write<int64_t>(pkt->dts);
   w.write<int32_t>(pkt->flags);
   w.write<int64_t>(pkt->duration);
-  w.write_bytes(pkt->data, pkt->size);
+  w.write_payload(pkt->data, pkt->size);
 
   w.write<int32_t>(pkt->side_data_elems);
   for (int i = 0; i < pkt->side_data_elems; ++i) {
@@ -467,12 +529,55 @@ AVPacket* deserialize_packet(ByteReader& r) {
   auto flags = r.read<int32_t>();
   auto duration = r.read<int64_t>();
 
-  auto data = r.read_bytes();
+  auto data = r.read_payload();
   if (!data.empty()) {
     if (av_new_packet(pkt.get(), static_cast<int>(data.size())) < 0) {
       throw std::runtime_error("Failed to allocate packet data");
     }
     std::memcpy(pkt->data, data.data(), data.size());
+  }
+
+  pkt->pts = pts;
+  pkt->dts = dts;
+  pkt->flags = flags;
+  pkt->duration = duration;
+
+  auto num_side_data = r.read<int32_t>();
+  for (int32_t i = 0; i < num_side_data; ++i) {
+    auto type = static_cast<AVPacketSideDataType>(r.read<int32_t>());
+    auto sd_data = r.read_bytes();
+    auto* sd = av_packet_new_side_data(
+        pkt.get(), type, static_cast<int>(sd_data.size()));
+    if (!sd) {
+      throw std::runtime_error("Failed to allocate packet side data");
+    }
+    std::memcpy(sd, sd_data.data(), sd_data.size());
+  }
+
+  return pkt.release();
+}
+
+// Like deserialize_packet, but the payload is a non-owning view into the
+// reader's buffer: pkt->data points into it and pkt->buf stays NULL. Side data
+// is still copied (owned). The caller must keep the buffer alive for the
+// packet's life.
+AVPacket* deserialize_view_packet(ByteReader& r) {
+  detail::AVPacketPtr pkt(av_packet_alloc());
+  if (!pkt) {
+    throw std::runtime_error("Failed to allocate AVPacket");
+  }
+
+  auto pts = r.read<int64_t>();
+  auto dts = r.read<int64_t>();
+  auto flags = r.read<int32_t>();
+  auto duration = r.read<int64_t>();
+
+  auto [data_ptr, size] = r.view_payload();
+  if (size > 0) {
+    // Non-owning view: point at the buffer and leave buf == NULL so FFmpeg
+    // treats the data as unreferenced (clones/refs deep-copy).
+    pkt->data = const_cast<uint8_t*>(data_ptr);
+    pkt->size = size;
   }
 
   pkt->pts = pts;
@@ -731,11 +836,11 @@ std::vector<uint8_t> serialize_packets(const Packets<media>& packets) {
   return buf;
 }
 
+// Read everything up to (but not including) the packet count: the header,
+// src/stream_index/time_base, timestamp and codec. Shared by the copy and view
+// deserializers; leaves `r` positioned at the int32 packet count.
 template <MediaType media>
-std::unique_ptr<Packets<media>> deserialize_packets(
-    const std::vector<uint8_t>& data) {
-  ByteReader r(data.data(), data.size());
-
+static std::unique_ptr<Packets<media>> read_packets_header(ByteReader& r) {
   auto magic = r.read<uint32_t>();
   if (magic != SERIALIZATION_MAGIC) {
     throw std::runtime_error("Invalid serialization magic number");
@@ -783,11 +888,35 @@ std::unique_ptr<Packets<media>> deserialize_packets(
     avcodec_parameters_free(&par);
   }
 
-  // Packets
+  return result;
+}
+
+template <MediaType media>
+std::unique_ptr<Packets<media>> deserialize_packets(
+    const std::vector<uint8_t>& data) {
+  ByteReader r(data.data(), data.size());
+  auto result = read_packets_header<media>(r);
+
   auto num_packets = r.read<int32_t>();
   for (int32_t i = 0; i < num_packets; ++i) {
     result->pkts.push(deserialize_packet(r));
   }
+
+  return result;
+}
+
+template <MediaType media>
+std::unique_ptr<Packets<media>> deserialize_packets_view(
+    const uint8_t* data,
+    size_t size) {
+  ByteReader r(data, size);
+  auto result = read_packets_header<media>(r);
+
+  auto num_packets = r.read<int32_t>();
+  for (int32_t i = 0; i < num_packets; ++i) {
+    result->pkts.push(deserialize_view_packet(r));
+  }
+  result->is_view = true;
 
   return result;
 }
@@ -802,5 +931,12 @@ template std::unique_ptr<VideoPackets> deserialize_packets<MediaType::Video>(
     const std::vector<uint8_t>&);
 template std::unique_ptr<ImagePackets> deserialize_packets<MediaType::Image>(
     const std::vector<uint8_t>&);
+
+template std::unique_ptr<AudioPackets>
+deserialize_packets_view<MediaType::Audio>(const uint8_t*, size_t);
+template std::unique_ptr<VideoPackets>
+deserialize_packets_view<MediaType::Video>(const uint8_t*, size_t);
+template std::unique_ptr<ImagePackets>
+deserialize_packets_view<MediaType::Image>(const uint8_t*, size_t);
 
 } // namespace spdl::core

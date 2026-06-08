@@ -140,6 +140,15 @@ struct Packets {
   /// For streaming demuxing, codec must be fetched from demuxer directly.
   std::optional<Codec<media>> codec;
 
+  /// When true, the AVPacket payloads are non-owning *views* into external
+  /// memory (e.g. a shared-memory segment), built by
+  /// ``deserialize_packets_view``. The caller guarantees that backing memory
+  /// outlives this object — analogous to ``std::string_view``. Cloning or
+  /// re-serializing a view materializes an owning copy (FFmpeg copies when
+  /// ``AVPacket::buf == NULL``), so derived objects are safe to outlive the
+  /// backing memory.
+  bool is_view{false};
+
   /// Default constructor.
   Packets() = default;
 
@@ -225,6 +234,15 @@ std::vector<double> get_timestamps(
 
 /// Serialize Packets to a byte vector for IPC (e.g., multiprocessing).
 ///
+/// NOTE: This byte format is **internal and process-local**. It is only ever
+/// produced and consumed by the same build (e.g. an `iterate_in_subprocess`
+/// worker and its parent), and is **not** stable for on-disk persistence or
+/// cross-version exchange. The layout may change without a version bump; the
+/// embedded magic/version bytes are an internal sanity check, not a
+/// compatibility contract. Each packet payload is written followed by
+/// `AV_INPUT_BUFFER_PADDING_SIZE` zeroed bytes so it can be restored as a
+/// zero-copy view (see `deserialize_packets_view`).
+///
 /// Throws std::runtime_error if any non-serializable pointer field
 /// (AVPacket::opaque, AVPacket::opaque_ref) is non-NULL.
 ///
@@ -234,13 +252,36 @@ std::vector<double> get_timestamps(
 template <MediaType media>
 std::vector<uint8_t> serialize_packets(const Packets<media>& packets);
 
-/// Deserialize byte vector back to Packets.
+/// Deserialize a byte buffer (produced by `serialize_packets`) back to Packets,
+/// copying each payload into a freshly owned AVPacket buffer.
+///
+/// See `serialize_packets` for the note that the format is
+/// internal/process-local.
 ///
 /// @tparam media Media type (Audio, Video, or Image).
 /// @param data Serialized byte vector.
-/// @return Deserialized Packets.
+/// @return Deserialized Packets (owning their payloads).
 template <MediaType media>
 std::unique_ptr<Packets<media>> deserialize_packets(
     const std::vector<uint8_t>& data);
+
+/// Deserialize a byte buffer **without copying payloads**: each AVPacket points
+/// directly into `data` (`AVPacket::buf == NULL`, non-owning). The returned
+/// Packets has `is_view == true`.
+///
+/// The caller MUST keep `data` alive and unmodified for the entire lifetime of
+/// the returned Packets (and of any non-clone references taken from it). The
+/// buffer must have been produced by `serialize_packets` (which writes the
+/// required trailing payload padding). Cloning/re-referencing a view packet
+/// deep-copies (FFmpeg copies when `buf == NULL`), so derived packets are safe.
+///
+/// @tparam media Media type (Audio, Video, or Image).
+/// @param data Pointer to the serialized buffer.
+/// @param size Size of the serialized buffer in bytes.
+/// @return Deserialized Packets viewing `data`.
+template <MediaType media>
+std::unique_ptr<Packets<media>> deserialize_packets_view(
+    const uint8_t* data,
+    size_t size);
 
 } // namespace spdl::core

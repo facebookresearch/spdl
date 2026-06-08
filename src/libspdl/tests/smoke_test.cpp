@@ -10,6 +10,7 @@
 #include <libspdl/core/decoder.h>
 #include <libspdl/core/demuxing.h>
 #include <libspdl/core/frames.h>
+#include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
 #include <libspdl/core/utils.h>
 
@@ -243,6 +244,44 @@ TEST(SmokeTest, DecodeVideoWithChainedFilters) {
   auto buf = convert_frames<MediaType::Video>(frames.get());
   ASSERT_NE(buf, nullptr);
   EXPECT_GT(buf->shape.size(), 0);
+}
+
+TEST(SmokeTest, DecodeVideoFromSerializedView) {
+  std::string videoPath = getTestDataPath("test_video.mp4");
+
+  auto demuxer = make_demuxer(videoPath);
+  ASSERT_NE(demuxer, nullptr);
+  auto codec = demuxer->get_default_codec<MediaType::Video>();
+  auto packets = demuxer->demux_window<MediaType::Video>();
+  ASSERT_NE(packets, nullptr);
+  EXPECT_GT(packets->pkts.get_packets().size(), 0);
+
+  // Serialize, then decode (a) the original packets and (b) packets restored as
+  // a zero-copy view into the serialized buffer. Both must decode identically.
+  auto buf = serialize_packets(*packets);
+
+  Decoder<MediaType::Video> ref_decoder(codec, std::nullopt, std::nullopt);
+  auto ref_frames =
+      ref_decoder.decode_packets(std::make_unique<VideoPackets>(*packets));
+  ASSERT_NE(ref_frames, nullptr);
+  EXPECT_GT(ref_frames->get_num_frames(), 0);
+
+  auto view =
+      deserialize_packets_view<MediaType::Video>(buf.data(), buf.size());
+  ASSERT_NE(view, nullptr);
+  EXPECT_TRUE(view->is_view);
+
+  Decoder<MediaType::Video> view_decoder(codec, std::nullopt, std::nullopt);
+  auto view_frames = view_decoder.decode_packets(std::move(view));
+  ASSERT_NE(view_frames, nullptr);
+
+  EXPECT_EQ(view_frames->get_num_frames(), ref_frames->get_num_frames());
+
+  auto ref_buf = convert_frames<MediaType::Video>(ref_frames.get());
+  auto view_buf = convert_frames<MediaType::Video>(view_frames.get());
+  ASSERT_NE(ref_buf, nullptr);
+  ASSERT_NE(view_buf, nullptr);
+  EXPECT_EQ(view_buf->shape, ref_buf->shape);
 }
 
 TEST(SmokeTest, ConfigInitialization) {
