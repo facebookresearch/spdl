@@ -120,6 +120,86 @@ class TestDistributedSamplerDeterministic(unittest.TestCase):
                 for _ in range(5):
                     self.assertEqual(list(sampler), first_epoch)
 
+    def test_deterministic_keep_tail_covers_all_indices(self) -> None:
+        """Retaining the tail covers each deterministic index exactly once."""
+        N = 26
+        world_size = 4
+        all_indices: list[int] = []
+        per_rank_counts: list[int] = []
+        for rank in range(world_size):
+            sampler = DistributedDeterministicSampler(
+                N,
+                rank=rank,
+                world_size=world_size,
+                ddp_drop_last_distributed_round=False,
+            )
+            indices = list(sampler)
+            self.assertEqual(indices, list(range(rank, N, world_size)))
+            self.assertEqual(len(sampler), len(indices))
+            per_rank_counts.append(len(indices))
+            all_indices.extend(indices)
+
+        self.assertEqual(per_rank_counts, [7, 7, 6, 6])
+        self.assertEqual(sorted(all_indices), list(range(N)))
+        self.assertEqual(len(all_indices), len(set(all_indices)))
+
+    def test_deterministic_default_drops_tail(self) -> None:
+        """Default deterministic sampler preserves floor/drop tail behavior."""
+        N = 26
+        world_size = 4
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            all_indices = [
+                idx
+                for rank in range(world_size)
+                for idx in DistributedDeterministicSampler(
+                    N, rank=rank, world_size=world_size
+                )
+            ]
+
+        self.assertEqual(len(all_indices), 24)
+        self.assertEqual(sorted(all_indices), list(range(24)))
+        self.assertNotIn(24, all_indices)
+        self.assertNotIn(25, all_indices)
+
+    def test_deterministic_keep_tail_allows_fewer_samples_than_ranks(
+        self,
+    ) -> None:
+        """Retaining the tail permits datasets smaller than world size."""
+        N = 3
+        world_size = 5
+        all_indices: list[int] = []
+        per_rank_counts: list[int] = []
+        for rank in range(world_size):
+            sampler = DistributedDeterministicSampler(
+                N,
+                rank=rank,
+                world_size=world_size,
+                ddp_drop_last_distributed_round=False,
+            )
+            indices = list(sampler)
+            self.assertEqual(indices, list(range(rank, N, world_size)))
+            self.assertEqual(len(sampler), len(indices))
+            per_rank_counts.append(len(indices))
+            all_indices.extend(indices)
+
+        self.assertEqual(per_rank_counts, [1, 1, 1, 0, 0])
+        self.assertEqual(sorted(all_indices), list(range(N)))
+        self.assertEqual(len(all_indices), len(set(all_indices)))
+
+    def test_deterministic_keep_tail_suppresses_tail_warning(self) -> None:
+        """Retaining the tail does not warn about unvisited tail samples."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            DistributedDeterministicSampler(
+                26, rank=0, world_size=4, ddp_drop_last_distributed_round=False
+            )
+
+        messages = [str(w.message) for w in caught]
+        self.assertFalse(
+            any("Some samples are never visited" in message for message in messages)
+        )
+
 
 class TestDistributedSamplerRandom(unittest.TestCase):
     def test_shuffle(self) -> None:
@@ -139,7 +219,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
             previous = indices
 
     def test_shuffle_epoch_loop(self) -> None:
-        """Calling shuffle(seed=epoch) on a single sampler produces different sequences each epoch."""
+        """shuffle(seed=epoch) produces different sequences each epoch."""
         N = 640
         world_size = 8
 
@@ -173,7 +253,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
             self.assertEqual(after_many, from_fresh)
 
     def test_shuffle_epoch_loop_mutual_exclusive(self) -> None:
-        """All ranks together cover the full dataset at each epoch when using shuffle(seed=epoch)."""
+        """All ranks together cover the full dataset for each epoch seed."""
         N = 640
         world_size = 8
 
@@ -242,6 +322,68 @@ class TestDistributedSamplerRandom(unittest.TestCase):
             self.assertEqual(set(c.keys()), set(range(N)))
             self.assertTrue(all(v == 1 for v in c.values()))
 
+    def test_keep_tail_uses_all_draws(self) -> None:
+        """Retaining the tail preserves the full random draw count."""
+        N = 26
+        world_size = 4
+        c = Counter()
+        per_rank_counts: list[int] = []
+        for rank in range(world_size):
+            sampler = DistributedRandomSampler(
+                N,
+                rank=rank,
+                world_size=world_size,
+                ddp_drop_last_distributed_round=False,
+            )
+            indices = list(sampler)
+            self.assertEqual(len(sampler), len(indices))
+            per_rank_counts.append(len(indices))
+            c.update(indices)
+
+        self.assertEqual(per_rank_counts, [7, 7, 6, 6])
+        self.assertEqual(c.total(), N)
+        self.assertEqual(len(c.keys()), N)
+        self.assertEqual(set(c.keys()), set(range(N)))
+        self.assertTrue(all(v == 1 for v in c.values()))
+
+    def test_keep_tail_allows_fewer_samples_than_ranks(self) -> None:
+        """Retaining the tail permits datasets smaller than world size."""
+        N = 3
+        world_size = 5
+        c = Counter()
+        per_rank_counts: list[int] = []
+        for rank in range(world_size):
+            sampler = DistributedRandomSampler(
+                N,
+                rank=rank,
+                world_size=world_size,
+                ddp_drop_last_distributed_round=False,
+            )
+            indices = list(sampler)
+            self.assertEqual(len(sampler), len(indices))
+            per_rank_counts.append(len(indices))
+            c.update(indices)
+
+        self.assertEqual(per_rank_counts, [1, 1, 1, 0, 0])
+        self.assertEqual(c.total(), N)
+        self.assertEqual(len(c.keys()), N)
+        self.assertEqual(set(c.keys()), set(range(N)))
+        self.assertTrue(all(v == 1 for v in c.values()))
+
+    def test_default_random_sampler_drops_tail(self) -> None:
+        """Default random sampler preserves floor/drop tail behavior."""
+        N = 26
+        world_size = 4
+        c = Counter()
+        for rank in range(world_size):
+            sampler = DistributedRandomSampler(N, rank=rank, world_size=world_size)
+            self.assertEqual(len(sampler), N // world_size)
+            c.update(sampler)
+
+        self.assertEqual(c.total(), 24)
+        self.assertEqual(len(c.keys()), 24)
+        self.assertTrue(all(v == 1 for v in c.values()))
+
     @parameterized.expand(
         [
             (True,),
@@ -268,6 +410,31 @@ class TestDistributedSamplerRandom(unittest.TestCase):
             self.assertEqual(c.total(), m)
             self.assertEqual(len(c.keys()), m)
             self.assertTrue(all(v == 1 for v in c.values()))
+
+    def test_keep_tail_allows_fewer_draws_than_ranks(self) -> None:
+        """Retaining the tail permits draw counts smaller than world size."""
+        N = 10
+        num_draws = 3
+        world_size = 5
+        c = Counter()
+        per_rank_counts: list[int] = []
+        for rank in range(world_size):
+            sampler = DistributedRandomSampler(
+                N,
+                rank=rank,
+                world_size=world_size,
+                num_draws=num_draws,
+                ddp_drop_last_distributed_round=False,
+            )
+            indices = list(sampler)
+            self.assertEqual(len(sampler), len(indices))
+            per_rank_counts.append(len(indices))
+            c.update(indices)
+
+        self.assertEqual(per_rank_counts, [1, 1, 1, 0, 0])
+        self.assertEqual(c.total(), num_draws)
+        self.assertEqual(len(c.keys()), num_draws)
+        self.assertTrue(all(v == 1 for v in c.values()))
 
 
 class TestDistributedSamplerWeighted(unittest.TestCase):
