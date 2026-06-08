@@ -6,10 +6,11 @@
 
 """Tests for PathVariants feature."""
 
-# pyre-unsafe
+# pyre-strict
 
 import asyncio
 import unittest
+from collections.abc import AsyncIterator, Iterable
 
 from spdl.pipeline import build_pipeline
 from spdl.pipeline._components._node import PipelineFailure
@@ -25,14 +26,16 @@ from spdl.pipeline.defs import (
 )
 
 
-def _run_pipeline(config, num_threads=2, timeout=5):
+def _run_pipeline(
+    config: PipelineConfig[object], num_threads: int = 2, timeout: int = 5
+) -> list[object]:
     """Helper to build, run, and collect results from a pipeline."""
     pipeline = build_pipeline(config, num_threads=num_threads)
     with pipeline.auto_stop():
         return list(pipeline.get_iterator(timeout=timeout))
 
 
-async def _slow_source(items, delay=0.1):
+async def _slow_source(items: Iterable[int], delay: float = 0.1) -> AsyncIterator[int]:
     """Yield items with a delay between them.
 
     Each item is fully processed before the next one is dispatched,
@@ -527,7 +530,7 @@ class PathVariantsErrorHandlingTest(unittest.TestCase):
         are collected. The failing path's items are dropped.
         """
 
-        def fail_on_odd(x):
+        def fail_on_odd(x: int) -> int:
             if x % 2 == 1:
                 raise ValueError(f"odd item {x}")
             return x * 10
@@ -553,7 +556,7 @@ class PathVariantsErrorHandlingTest(unittest.TestCase):
     def test_one_path_fails_with_max_failures(self) -> None:
         """One path's pipe raises with max_failures=0; pipeline fails."""
 
-        def fail_always(x):
+        def fail_always(x: int) -> int:
             raise ValueError("fail")
 
         config = PipelineConfig(
@@ -575,7 +578,7 @@ class PathVariantsErrorHandlingTest(unittest.TestCase):
     def test_all_paths_fail(self) -> None:
         """All paths fail with max_failures=0 — pipeline raises PipelineFailure."""
 
-        def always_fail(x):
+        def always_fail(x: int) -> int:
             raise ValueError("boom")
 
         config = PipelineConfig(
@@ -615,7 +618,7 @@ class PathVariantsErrorHandlingTest(unittest.TestCase):
         """When a path fails with max_failures=0, the router is cancelled and
         the pipeline shuts down cleanly without hanging."""
 
-        def fail_immediately(x):
+        def fail_immediately(x: int) -> int:
             raise ValueError("boom")
 
         config = PipelineConfig(
@@ -641,7 +644,7 @@ class PathVariantsErrorHandlingTest(unittest.TestCase):
     def test_path_failure_cancels_router_all_to_failing_path(self) -> None:
         """All items routed to the failing path — router cancelled, no hang."""
 
-        def fail_immediately(x):
+        def fail_immediately(x: int) -> int:
             raise ValueError("boom")
 
         config = PipelineConfig(
@@ -663,7 +666,7 @@ class PathVariantsErrorHandlingTest(unittest.TestCase):
     def test_router_raises_exception(self) -> None:
         """Router function itself raises — pipeline fails cleanly."""
 
-        def bad_router(x):
+        def bad_router(x: int) -> int:
             raise RuntimeError("router error")
 
         config = PipelineConfig(
