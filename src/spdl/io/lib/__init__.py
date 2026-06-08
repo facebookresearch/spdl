@@ -104,19 +104,21 @@ def _import_libspdl() -> ModuleType:
     raise RuntimeError(msg)
 
 
+# These thin module-level functions are the targets the copyreg reducers below
+# pickle by reference (a nanobind static method is not itself picklable by
+# reference, so the reducer cannot point at it directly). They delegate to the
+# public ``Packets.deserialize`` static method, the single deserialization entry
+# point shared with the memory-arena offload path.
 def _deserialize_audio_packets(data: bytes):  # type: ignore[no-untyped-def]
-    ext = _import_libspdl()
-    return ext._deserialize_audio_packets(data)
+    return _import_libspdl().AudioPackets.deserialize(data)
 
 
 def _deserialize_video_packets(data: bytes):  # type: ignore[no-untyped-def]
-    ext = _import_libspdl()
-    return ext._deserialize_video_packets(data)
+    return _import_libspdl().VideoPackets.deserialize(data)
 
 
 def _deserialize_image_packets(data: bytes):  # type: ignore[no-untyped-def]
-    ext = _import_libspdl()
-    return ext._deserialize_image_packets(data)
+    return _import_libspdl().ImagePackets.deserialize(data)
 
 
 def _register_pickle(ext: ModuleType) -> None:

@@ -88,6 +88,20 @@ void register_packets(nb::module_& m) {
             return nb::bytes(
                 reinterpret_cast<const char*>(bytes.data()), bytes.size());
           })
+      .def_static(
+          "deserialize",
+          [](const nb::bytes& state) -> AudioPacketsPtr {
+            std::vector<uint8_t> data(
+                state.c_str(), state.c_str() + state.size());
+            nb::gil_scoped_release g;
+            return deserialize_packets<MediaType::Audio>(data);
+          },
+          nb::arg("data"),
+          "Reconstruct packets from the bytes returned by ``__getstate__``.\n\n"
+          "Args:\n"
+          "    data: The serialized packets.\n\n"
+          "Returns:\n"
+          "    The reconstructed packets.")
       .def(
           "__repr__",
           [](const AudioPackets& self) {
@@ -176,6 +190,20 @@ void register_packets(nb::module_& m) {
             return nb::bytes(
                 reinterpret_cast<const char*>(bytes.data()), bytes.size());
           })
+      .def_static(
+          "deserialize",
+          [](const nb::bytes& state) -> VideoPacketsPtr {
+            std::vector<uint8_t> data(
+                state.c_str(), state.c_str() + state.size());
+            nb::gil_scoped_release g;
+            return deserialize_packets<MediaType::Video>(data);
+          },
+          nb::arg("data"),
+          "Reconstruct packets from the bytes returned by ``__getstate__``.\n\n"
+          "Args:\n"
+          "    data: The serialized packets.\n\n"
+          "Returns:\n"
+          "    The reconstructed packets.")
       .def(
           "get_timestamps",
           [](const VideoPackets& self, bool raw) -> std::vector<double> {
@@ -290,33 +318,6 @@ void register_packets(nb::module_& m) {
       nb::arg("packets"),
       nb::arg("indices"));
 
-  m.def(
-      "_deserialize_audio_packets",
-      [](const nb::bytes& state) -> AudioPacketsPtr {
-        std::vector<uint8_t> data(state.c_str(), state.c_str() + state.size());
-        nb::gil_scoped_release g;
-        return deserialize_packets<MediaType::Audio>(data);
-      },
-      nb::arg("data"));
-
-  m.def(
-      "_deserialize_video_packets",
-      [](const nb::bytes& state) -> VideoPacketsPtr {
-        std::vector<uint8_t> data(state.c_str(), state.c_str() + state.size());
-        nb::gil_scoped_release g;
-        return deserialize_packets<MediaType::Video>(data);
-      },
-      nb::arg("data"));
-
-  m.def(
-      "_deserialize_image_packets",
-      [](const nb::bytes& state) -> ImagePacketsPtr {
-        std::vector<uint8_t> data(state.c_str(), state.c_str() + state.size());
-        nb::gil_scoped_release g;
-        return deserialize_packets<MediaType::Image>(data);
-      },
-      nb::arg("data"));
-
   nb::class_<ImagePackets>(
       m,
       "ImagePackets",
@@ -333,6 +334,20 @@ void register_packets(nb::module_& m) {
             return nb::bytes(
                 reinterpret_cast<const char*>(bytes.data()), bytes.size());
           })
+      .def_static(
+          "deserialize",
+          [](const nb::bytes& state) -> ImagePacketsPtr {
+            std::vector<uint8_t> data(
+                state.c_str(), state.c_str() + state.size());
+            nb::gil_scoped_release g;
+            return deserialize_packets<MediaType::Image>(data);
+          },
+          nb::arg("data"),
+          "Reconstruct packets from the bytes returned by ``__getstate__``.\n\n"
+          "Args:\n"
+          "    data: The serialized packets.\n\n"
+          "Returns:\n"
+          "    The reconstructed packets.")
       .def_prop_ro(
           "pix_fmt",
           [](const ImagePackets& self) {

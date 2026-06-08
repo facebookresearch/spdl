@@ -48,6 +48,18 @@ class AudioPackets:
 
     def __getstate__(self) -> bytes: ...
 
+    @staticmethod
+    def deserialize(data: bytes) -> AudioPackets:
+        """
+        Reconstruct packets from the bytes returned by ``__getstate__``.
+
+        Args:
+            data: The serialized packets.
+
+        Returns:
+            The reconstructed packets.
+        """
+
     def __repr__(self) -> str: ...
 
     def __len__(self) -> int: ...
@@ -88,6 +100,18 @@ class VideoPackets:
     """
 
     def __getstate__(self) -> bytes: ...
+
+    @staticmethod
+    def deserialize(data: bytes) -> VideoPackets:
+        """
+        Reconstruct packets from the bytes returned by ``__getstate__``.
+
+        Args:
+            data: The serialized packets.
+
+        Returns:
+            The reconstructed packets.
+        """
 
     def get_timestamps(self, *, raw: bool = False) -> list[float]:
         """
@@ -164,6 +188,18 @@ class ImagePackets:
     """
 
     def __getstate__(self) -> bytes: ...
+
+    @staticmethod
+    def deserialize(data: bytes) -> ImagePackets:
+        """
+        Reconstruct packets from the bytes returned by ``__getstate__``.
+
+        Args:
+            data: The serialized packets.
+
+        Returns:
+            The reconstructed packets.
+        """
 
     @property
     def pix_fmt(self) -> str:
