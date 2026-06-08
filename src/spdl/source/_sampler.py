@@ -32,20 +32,25 @@ else:
 _LG: logging.Logger = logging.getLogger(__name__)
 
 
-def _validate_args_det(n: int, rank: int, world_size: int) -> None:
+def _validate_args_det(
+    n: int,
+    rank: int,
+    world_size: int,
+    ddp_drop_last_distributed_round: bool,
+) -> None:
     if n <= 0:
         raise ValueError(f"The size of dataset must be larger than 0. Found: {n}")
 
     if rank >= world_size:
         raise ValueError(f"rank ({rank}) must be with the range of [0, {world_size=}).")
 
-    if n < world_size:
+    if ddp_drop_last_distributed_round and n < world_size:
         raise ValueError(
             f"The size of dataset ({n}) must be larger than or equal to "
-            f"the world size ({world_size})"
+            f"the world size ({world_size}) when ddp_drop_last_distributed_round=True"
         )
 
-    if n % world_size:
+    if ddp_drop_last_distributed_round and n % world_size:
         warnings.warn(
             f"The size of dataset ({n}) is not divisible by "
             f"the world size ({world_size}). Some samples are never visited.",
@@ -65,6 +70,25 @@ class DistributedDeterministicSampler:
     produces the identical sequence. If you need a different order each epoch,
     use :py:class:`DistributedRandomSampler` instead.
 
+    .. code-block:: text
+
+       Dataset indices, N = 11, world_size = 4
+       ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+       │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │10 │
+       └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+
+       ddp_drop_last_distributed_round=True (default)
+       rank 0: 0, 4
+       rank 1: 1, 5
+       rank 2: 2, 6
+       rank 3: 3, 7       (8, 9, 10 are dropped)
+
+       ddp_drop_last_distributed_round=False
+       rank 0: 0, 4, 8
+       rank 1: 1, 5, 9
+       rank 2: 2, 6, 10
+       rank 3: 3, 7       (all indices are covered)
+
     Args:
         n: The size of the dataset.
 
@@ -73,6 +97,11 @@ class DistributedDeterministicSampler:
 
         world_size: The number of ranks in the distributed communication config.
             You can fetch the values with :py:func:`torch.distributed.get_world_size`.
+
+        ddp_drop_last_distributed_round: If ``True`` (default), drop the final
+            incomplete distributed round so every rank receives the same number
+            of indices. If ``False``, cover every sample exactly once across
+            ranks; rank lengths may differ by at most one.
     """
 
     def __init__(
@@ -82,13 +111,19 @@ class DistributedDeterministicSampler:
         *,
         rank: int,
         world_size: int,
+        ddp_drop_last_distributed_round: bool = True,
     ) -> None:
-        _validate_args_det(n, rank, world_size)
+        _validate_args_det(n, rank, world_size, ddp_drop_last_distributed_round)
 
         self._rank = rank
         self._world_size = world_size
 
-        self._len: int = n // world_size
+        if ddp_drop_last_distributed_round:
+            self._len: int = n // world_size
+            self._total: int = self._len * world_size
+        else:
+            self._len = n // world_size + int(rank < n % world_size)
+            self._total = n
 
     def __len__(self) -> int:
         """The number of indices returned by this sampler."""
@@ -100,8 +135,7 @@ class DistributedDeterministicSampler:
         Yields:
             Individual indices assigned to the current rank.
         """
-        max_ = self._len * self._world_size
-        yield from range(self._rank, max_, self._world_size)
+        yield from range(self._rank, self._total, self._world_size)
 
 
 def _weighted_choice(
@@ -138,6 +172,7 @@ def _validate_args_random(
     world_size: int,
     num_draws: int | None,
     weights: list[float] | None,
+    ddp_drop_last_distributed_round: bool,
 ) -> FloatArray | None:
     if n <= 0:
         raise ValueError(f"The size of dataset must be larger than 0. Found: {n}")
@@ -145,10 +180,10 @@ def _validate_args_random(
     if rank >= world_size:
         raise ValueError(f"rank ({rank}) must be with the range of [0, {world_size=}).")
 
-    if n < world_size:
+    if ddp_drop_last_distributed_round and n < world_size:
         raise ValueError(
             f"The size of dataset ({n}) must be larger than or equal to "
-            f"the world size ({world_size})"
+            f"the world size ({world_size}) when ddp_drop_last_distributed_round=True"
         )
 
     if num_draws is not None:
@@ -157,10 +192,10 @@ def _validate_args_random(
                 f"`num_draws` must be greater than zero. Found: {num_draws}"
             )
 
-        if num_draws < world_size:
+        if ddp_drop_last_distributed_round and num_draws < world_size:
             raise ValueError(
-                "``num_draws` must be greater than `world_size`. "
-                f"Found: {num_draws=}, {world_size=}"
+                "`num_draws` must be greater than or equal to `world_size` "
+                f"when ddp_drop_last_distributed_round=True. Found: {num_draws=}, {world_size=}"
             )
 
     if weights is None:
@@ -288,6 +323,25 @@ class DistributedRandomSampler:
        >>> list(sampler)
        [2, 4, 3, 3, 2, 4, 3, 2, 4, 2]
 
+    .. code-block:: text
+
+       Draw positions, num_draws = 11, world_size = 4
+       ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+       │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │10 │
+       └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+
+       ddp_drop_last_distributed_round=True (default)
+       rank 0 draws positions: 0, 4
+       rank 1 draws positions: 1, 5
+       rank 2 draws positions: 2, 6
+       rank 3 draws positions: 3, 7       (8, 9, 10 are not drawn)
+
+       ddp_drop_last_distributed_round=False
+       rank 0 draws positions: 0, 4, 8
+       rank 1 draws positions: 1, 5, 9
+       rank 2 draws positions: 2, 6, 10
+       rank 3 draws positions: 3, 7       (all draw positions are used)
+
     Args:
         n: The size of the dataset.
 
@@ -308,6 +362,11 @@ class DistributedRandomSampler:
             Indices are drawn with replacement when weights are provided.
 
         seed: The seed value for generating the sequence.
+
+        ddp_drop_last_distributed_round: If ``True`` (default), draw only a
+            world-size multiple of samples so every rank receives the same
+            number of indices. If ``False``, draw exactly ``num_draws`` or
+            ``n`` samples; rank lengths may differ by at most one.
     """
 
     def __init__(
@@ -320,13 +379,22 @@ class DistributedRandomSampler:
         num_draws: int | None = None,
         weights: list[float] | None = None,
         seed: int = 0,
+        ddp_drop_last_distributed_round: bool = True,
     ) -> None:
-        w = _validate_args_random(n, rank, world_size, num_draws, weights)
+        w = _validate_args_random(
+            n, rank, world_size, num_draws, weights, ddp_drop_last_distributed_round
+        )
 
+        total_draws = num_draws or n
         self._n = n
         self._rank = rank
         self._world_size = world_size
-        self._len: int = (num_draws or n) // world_size
+        if ddp_drop_last_distributed_round:
+            self._len: int = total_draws // world_size
+            self._num_draws: int = self._len * world_size
+        else:
+            self._len = total_draws // world_size + int(rank < total_draws % world_size)
+            self._num_draws = total_draws
         self._weights: FloatArray | None = w
         self._seed = seed
 
@@ -342,7 +410,7 @@ class DistributedRandomSampler:
         """
         indices = _weighted_choice(
             population_size=self._n,
-            num_draws=self._len * self._world_size,
+            num_draws=self._num_draws,
             weights=self._weights,
             replace=self._weights is not None,
             seed=self._seed,
