@@ -14,6 +14,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
+#include <algorithm>
 #include <cstring>
 #include <stdexcept>
 #include <vector>
@@ -151,6 +152,91 @@ TEST(PacketsSerializationTest, MediaTypeMismatchThrows) {
 
   auto data = serialize_packets(packets);
   EXPECT_THROW(deserialize_packets<MediaType::Video>(data), std::runtime_error);
+}
+
+TEST(PacketsSerializationTest, ViewAliasesBufferWithPadding) {
+  Packets<MediaType::Audio> packets;
+  packets.src = "test://view";
+  packets.stream_index = 0;
+  packets.time_base = Rational{1, 44100};
+  packets.pkts.push(make_packet(
+      {1, 2, 3, 4, 5, 6, 7, 8},
+      /*pts=*/10,
+      /*dts=*/8,
+      AV_PKT_FLAG_KEY,
+      /*duration=*/2));
+  packets.pkts.push(make_packet(
+      {100, 101, 102},
+      /*pts=*/20,
+      /*dts=*/18,
+      /*flags=*/0,
+      /*duration=*/2));
+
+  auto buf = serialize_packets(packets);
+  auto restored =
+      deserialize_packets_view<MediaType::Audio>(buf.data(), buf.size());
+
+  ASSERT_NE(restored, nullptr);
+  EXPECT_TRUE(restored->is_view);
+
+  const auto& orig = packets.pkts.get_packets();
+  const auto& got = restored->pkts.get_packets();
+  ASSERT_EQ(got.size(), orig.size());
+
+  const uint8_t* lo = buf.data();
+  const uint8_t* hi = buf.data() + buf.size();
+  for (size_t i = 0; i < got.size(); ++i) {
+    // Non-owning view pointing inside the serialized buffer.
+    EXPECT_EQ(got[i]->buf, nullptr);
+    EXPECT_GE(got[i]->data, lo);
+    EXPECT_LT(got[i]->data, hi);
+    ASSERT_EQ(got[i]->size, orig[i]->size);
+    EXPECT_EQ(0, std::memcmp(got[i]->data, orig[i]->data, got[i]->size));
+
+    // The trailing padding decoders may over-read is present and zeroed.
+    ASSERT_LE(got[i]->data + got[i]->size + AV_INPUT_BUFFER_PADDING_SIZE, hi);
+    for (int p = 0; p < AV_INPUT_BUFFER_PADDING_SIZE; ++p) {
+      EXPECT_EQ(got[i]->data[got[i]->size + p], 0);
+    }
+  }
+}
+
+TEST(PacketsSerializationTest, ViewCloneDeepCopiesAndOutlivesBuffer) {
+  Packets<MediaType::Audio> packets;
+  packets.src = "test://view-clone";
+  packets.time_base = Rational{1, 1000};
+  const std::vector<uint8_t> payload = {9, 8, 7, 6, 5};
+  packets.pkts.push(
+      make_packet(payload, /*pts=*/1, /*dts=*/1, /*flags=*/0, /*duration=*/1));
+
+  auto buf = serialize_packets(packets);
+
+  AVPacket* clone = nullptr;
+  {
+    auto view =
+        deserialize_packets_view<MediaType::Audio>(buf.data(), buf.size());
+    ASSERT_EQ(view->pkts.get_packets().size(), 1u);
+    AVPacket* vp = view->pkts.get_packets()[0];
+    EXPECT_EQ(vp->buf, nullptr); // non-owning view
+
+    // Cloning a buf==NULL packet must deep-copy.
+    clone = av_packet_clone(vp);
+    ASSERT_NE(clone, nullptr);
+    EXPECT_NE(clone->buf, nullptr); // clone owns its data
+    EXPECT_NE(clone->data, vp->data); // different memory
+    // `view` is destroyed here (it never owned the payload).
+  }
+
+  // Scribble over and free the backing buffer; a lingering view would be a
+  // use-after-free under ASAN.
+  std::fill(buf.begin(), buf.end(), static_cast<uint8_t>(0xAB));
+  buf.clear();
+  buf.shrink_to_fit();
+
+  // The clone still holds a valid, independent copy.
+  ASSERT_EQ(clone->size, static_cast<int>(payload.size()));
+  EXPECT_EQ(0, std::memcmp(clone->data, payload.data(), payload.size()));
+  av_packet_free(&clone);
 }
 
 } // namespace

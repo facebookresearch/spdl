@@ -208,3 +208,83 @@ class TestImagePacketsSerialization(unittest.TestCase):
         result = spdl.io.to_numpy(restored_buf)
 
         np.testing.assert_array_equal(original, result, strict=True)
+
+
+class TestPacketsDeserializeView(unittest.TestCase):
+    """Zero-copy ``deserialize_view``: packets point into the source buffer."""
+
+    def test_video_view_decodes_identically(self) -> None:
+        """A video view decodes to the same frames as the original packets."""
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y "
+            "-f lavfi -i testsrc=duration=1:size=64x64:rate=10 "
+            "-c:v libx264 -pix_fmt yuv420p sample.mp4"
+        )
+        sample = get_sample(cmd)
+        packets = spdl.io.demux_video(sample.path)
+        original = spdl.io.to_numpy(
+            spdl.io.convert_frames(spdl.io.decode_packets(packets.clone()))
+        )
+
+        state = packets.__getstate__()
+        view = spdl.io.VideoPackets.deserialize_view(memoryview(state))
+        result = spdl.io.to_numpy(spdl.io.convert_frames(spdl.io.decode_packets(view)))
+
+        np.testing.assert_array_equal(original, result, strict=True)
+
+    def test_audio_view_decodes_identically(self) -> None:
+        """An audio view decodes to the same samples as the original packets."""
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y "
+            "-f lavfi -i sine=frequency=440:duration=1 -c:a aac sample.mp4"
+        )
+        sample = get_sample(cmd)
+        packets = spdl.io.demux_audio(sample.path)
+        original = spdl.io.to_numpy(
+            spdl.io.convert_frames(spdl.io.decode_packets(packets.clone()))
+        )
+
+        state = packets.__getstate__()
+        view = spdl.io.AudioPackets.deserialize_view(memoryview(state))
+        result = spdl.io.to_numpy(spdl.io.convert_frames(spdl.io.decode_packets(view)))
+
+        np.testing.assert_array_equal(original, result, strict=True)
+
+    def test_image_view_decodes_identically(self) -> None:
+        """An image view decodes to the same pixels as the original packets."""
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y "
+            "-f lavfi -i testsrc=size=64x64 -frames:v 1 sample.png"
+        )
+        sample = get_sample(cmd)
+        packets = spdl.io.demux_image(sample.path)
+        original = spdl.io.to_numpy(
+            spdl.io.convert_frames(spdl.io.decode_packets(packets.clone()))
+        )
+
+        state = packets.__getstate__()
+        view = spdl.io.ImagePackets.deserialize_view(memoryview(state))
+        result = spdl.io.to_numpy(spdl.io.convert_frames(spdl.io.decode_packets(view)))
+
+        np.testing.assert_array_equal(original, result, strict=True)
+
+    def test_view_clone_survives_buffer_release(self) -> None:
+        """A clone of a view decodes even after the source buffer is dropped."""
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y "
+            "-f lavfi -i sine=frequency=440:duration=1 -c:a aac sample.mp4"
+        )
+        sample = get_sample(cmd)
+        packets = spdl.io.demux_audio(sample.path)
+        original = spdl.io.to_numpy(
+            spdl.io.convert_frames(spdl.io.decode_packets(packets.clone()))
+        )
+
+        state = packets.__getstate__()
+        view = spdl.io.AudioPackets.deserialize_view(memoryview(state))
+        clone = view.clone()  # deep-copies (view payloads are buf == NULL)
+        # Drop the view (releasing the kept-alive memoryview) and the bytes.
+        del view, state
+
+        result = spdl.io.to_numpy(spdl.io.convert_frames(spdl.io.decode_packets(clone)))
+        np.testing.assert_array_equal(original, result, strict=True)
