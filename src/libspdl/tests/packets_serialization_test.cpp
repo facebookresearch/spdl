@@ -193,6 +193,11 @@ TEST(PacketsSerializationTest, ViewAliasesBufferWithPadding) {
     ASSERT_EQ(got[i]->size, orig[i]->size);
     EXPECT_EQ(0, std::memcmp(got[i]->data, orig[i]->data, got[i]->size));
 
+    // Payload sits on a 64-byte-aligned blob offset, so it lands on an aligned
+    // address once the arena writer places the blob on an aligned boundary
+    // (matches SERIALIZATION_ALIGNMENT in packets.cpp).
+    EXPECT_EQ((got[i]->data - lo) % 64, 0);
+
     // The trailing padding decoders may over-read is present and zeroed.
     ASSERT_LE(got[i]->data + got[i]->size + AV_INPUT_BUFFER_PADDING_SIZE, hi);
     for (int p = 0; p < AV_INPUT_BUFFER_PADDING_SIZE; ++p) {
