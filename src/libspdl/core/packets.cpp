@@ -356,6 +356,13 @@ constexpr uint8_t SERIALIZATION_VERSION = 1;
 // (deserialize_packets_view) without copying it into an av_malloc'd buffer.
 constexpr size_t SERIALIZATION_PADDING = AV_INPUT_BUFFER_PADDING_SIZE;
 
+// Each payload is aligned to this many bytes *within the serialized blob*. When
+// the arena writer also places the blob on an aligned boundary, a zero-copy
+// view lands on an aligned address (some SIMD-optimized decoders need this). 64
+// bytes matches av_malloc and the widest SIMD. Keep in sync with the arena
+// writer's alignment (spdl/pipeline/_arena/_pool.py).
+constexpr size_t SERIALIZATION_ALIGNMENT = 64;
+
 class ByteWriter {
   std::vector<uint8_t>& buf_;
 
@@ -390,14 +397,25 @@ class ByteWriter {
     }
   }
 
-  // Write a packet payload: size, raw bytes, then SERIALIZATION_PADDING zeroed
-  // bytes so the payload can be restored as a zero-copy view.
+  // Pad the buffer with zeros up to the next SERIALIZATION_ALIGNMENT boundary
+  // (offsets are relative to the blob start).
+  void pad_to_alignment() {
+    if (auto rem = buf_.size() % SERIALIZATION_ALIGNMENT; rem != 0) {
+      buf_.insert(buf_.end(), SERIALIZATION_ALIGNMENT - rem, 0);
+    }
+  }
+
+  // Write a packet payload: size, alignment padding, raw bytes, then
+  // SERIALIZATION_PADDING zeroed bytes. The alignment padding places the
+  // payload on an aligned blob offset, and the trailing padding lets it be
+  // restored as a zero-copy view (decoders over-read the trailing padding).
   void write_payload(const uint8_t* data, int size) {
     if (!data || size <= 0) {
       write<int32_t>(0);
       return;
     }
     write<int32_t>(size);
+    pad_to_alignment();
     write_raw(data, size);
     buf_.insert(buf_.end(), SERIALIZATION_PADDING, 0);
   }
@@ -462,8 +480,16 @@ class ByteReader {
     offset_ += size;
   }
 
+  // Advance to the next SERIALIZATION_ALIGNMENT boundary (mirrors
+  // ByteWriter::pad_to_alignment).
+  void align_to_alignment() {
+    if (auto rem = offset_ % SERIALIZATION_ALIGNMENT; rem != 0) {
+      skip(SERIALIZATION_ALIGNMENT - rem);
+    }
+  }
+
   // Copy out a payload written by ByteWriter::write_payload (consumes the
-  // trailing padding).
+  // alignment padding and the trailing padding).
   std::vector<uint8_t> read_payload() {
     auto size = read<int32_t>();
     if (size < 0) {
@@ -471,6 +497,7 @@ class ByteReader {
     }
     std::vector<uint8_t> result(size);
     if (size > 0) {
+      align_to_alignment();
       read_raw(result.data(), size);
       skip(SERIALIZATION_PADDING);
     }
@@ -478,7 +505,8 @@ class ByteReader {
   }
 
   // Return a pointer to a payload in place and advance past it (and its
-  // padding) without copying. The pointer is valid while the buffer is alive.
+  // padding) without copying. The pointer sits on an aligned blob offset and is
+  // valid while the buffer is alive.
   std::pair<const uint8_t*, int> view_payload() {
     auto size = read<int32_t>();
     if (size < 0) {
@@ -487,6 +515,7 @@ class ByteReader {
     if (size == 0) {
       return {nullptr, 0};
     }
+    align_to_alignment();
     const uint8_t* p = peek();
     skip(static_cast<size_t>(size) + SERIALIZATION_PADDING);
     return {p, size};
