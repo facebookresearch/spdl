@@ -70,6 +70,12 @@ class DistributedDeterministicSampler:
     produces the identical sequence. If you need a different order each epoch,
     use :py:class:`DistributedRandomSampler` instead.
 
+    When the dataset size is not divisible by ``world_size``, the final round is
+    incomplete. The ``ddp_drop_last_distributed_round`` argument controls how this
+    leftover is handled: when ``True`` (default), the incomplete final round is
+    dropped so every rank receives the same number of indices; when ``False``,
+    every sample is covered, so some ranks receive one more index than others.
+
     .. code-block:: text
 
        Dataset indices, N = 11, world_size = 4
@@ -323,24 +329,37 @@ class DistributedRandomSampler:
        >>> list(sampler)
        [2, 4, 3, 3, 2, 4, 3, 2, 4, 2]
 
-    .. code-block:: text
+    The draws are distributed across ranks in a round-robin fashion. When the
+    total number of draws is not divisible by ``world_size``, the final round is
+    incomplete. The ``ddp_drop_last_distributed_round`` argument controls how this
+    leftover is handled.
 
-       Draw positions, num_draws = 11, world_size = 4
-       ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-       │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │10 │
-       └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    .. admonition:: Example - Dropping the last distributed round
+       :class: note
 
-       ddp_drop_last_distributed_round=True (default)
-       rank 0 draws positions: 0, 4
-       rank 1 draws positions: 1, 5
-       rank 2 draws positions: 2, 6
-       rank 3 draws positions: 3, 7       (8, 9, 10 are not drawn)
+       When ``ddp_drop_last_distributed_round=True`` (default), the incomplete
+       final round is dropped so every rank draws the same number of indices.
+       When ``False``, every draw position is used, so some ranks draw one more
+       index than others.
 
-       ddp_drop_last_distributed_round=False
-       rank 0 draws positions: 0, 4, 8
-       rank 1 draws positions: 1, 5, 9
-       rank 2 draws positions: 2, 6, 10
-       rank 3 draws positions: 3, 7       (all draw positions are used)
+       .. code-block:: text
+
+          Draw positions, num_draws = 11, world_size = 4
+          ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+          │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │10 │
+          └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+
+          ddp_drop_last_distributed_round=True (default)
+          rank 0 draws positions: 0, 4
+          rank 1 draws positions: 1, 5
+          rank 2 draws positions: 2, 6
+          rank 3 draws positions: 3, 7       (8, 9, 10 are not drawn)
+
+          ddp_drop_last_distributed_round=False
+          rank 0 draws positions: 0, 4, 8
+          rank 1 draws positions: 1, 5, 9
+          rank 2 draws positions: 2, 6, 10
+          rank 3 draws positions: 3, 7       (all draw positions are used)
 
     Args:
         n: The size of the dataset.
