@@ -8,6 +8,7 @@
 
 # pyre-strict
 
+from ._arena import SharedMemorySegmentPool
 from ._bg_task import BackgroundTask, BackgroundTaskFactory
 from ._build import (
     build_pipeline,
@@ -77,6 +78,7 @@ __all__ = [
     "iterate_in_subprocess",
     "run_pipeline_in_subprocess",
     "run_pipeline_in_subinterpreter",
+    "SharedMemorySegmentPool",
 ]
 
 
