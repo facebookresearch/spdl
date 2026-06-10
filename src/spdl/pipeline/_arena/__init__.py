@@ -11,11 +11,13 @@
 from ._arena import _Arena
 from ._pool import SharedMemorySegmentPool
 from ._protocol import ArenaProtocol, ArenaReaderProtocol, ArenaWriterProtocol
+from ._ring import SharedMemoryRingBuffer
 
 __all__ = [
     "ArenaProtocol",
     "ArenaReaderProtocol",
     "ArenaWriterProtocol",
+    "SharedMemoryRingBuffer",
     "SharedMemorySegmentPool",
     "_Arena",
 ]
