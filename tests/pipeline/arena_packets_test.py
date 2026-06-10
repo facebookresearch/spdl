@@ -13,7 +13,11 @@ from typing import Any, cast
 
 import numpy as np
 import spdl.io
-from spdl.pipeline import iterate_in_subprocess, SharedMemorySegmentPool
+from spdl.pipeline import (
+    iterate_in_subprocess,
+    SharedMemoryRingBuffer,
+    SharedMemorySegmentPool,
+)
 from spdl.pipeline._arena._offload import _offload, _restore
 from spdl.pipeline._arena._registry import _default_registry
 
@@ -66,6 +70,24 @@ class PacketsOffloadTest(unittest.TestCase):
     def test_image_packets_round_trip(self) -> None:
         """ImagePackets offload to / restore from the arena unchanged."""
         self._assert_round_trips(_demux("image"))
+
+    def _ring(self, capacity: int) -> SharedMemoryRingBuffer:
+        buf = SharedMemoryRingBuffer(capacity=capacity)
+        self.addCleanup(buf.unlink)
+        self.addCleanup(buf.close)
+        return buf
+
+    def test_round_trips_through_ring_buffer(self) -> None:
+        """The ring copies payloads out, so restored Packets reconstruct the
+        original concrete type (unlike the pool's zero-copy view)."""
+        buf = self._ring(1 << 20)
+        writer, reader = buf.open_writer(), buf.open_reader()
+        registry = _default_registry()
+        original = _demux("video")
+        out = _restore(_offload({"p": original}, writer, registry), reader, registry)
+        restored = cast(dict[str, Any], out)["p"]
+        self.assertIs(type(restored), type(original))
+        self.assertEqual(restored.__getstate__(), original.__getstate__())
 
     def test_restored_view_decodes_like_original(self) -> None:
         """Decoding pool-restored (zero-copy view) packets matches the original."""
