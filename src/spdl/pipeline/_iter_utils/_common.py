@@ -18,7 +18,9 @@ import queue
 import time
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Any, cast, Generic, Protocol, TypeVar
+
+from spdl.pipeline._arena import _Arena, ArenaProtocol
 
 __all__ = [
     "_Cmd",
@@ -165,6 +167,7 @@ def _execute_iterable(
     data_q: mp.Queue,
     fn: Callable[[], Iterable[T]],
     initializers: Sequence[Callable[[], None]] | None,
+    arena: ArenaProtocol | None = None,
 ) -> None:
     """Worker implementation for :py:func:`~spdl.pipeline.iterate_in_subprocess`
     and :py:func:`~spdl.pipeline.iterate_in_subinterpreter`.
@@ -258,6 +261,11 @@ def _execute_iterable(
 
     data_q.put(_Msg(_Status.INITIALIZATION_SUCCEEDED))
 
+    # Optional shared-memory arena: the writer endpoint is the last step in the
+    # worker; large fields of each item are offloaded to it and replaced by
+    # markers before the (now small) item is put on data_q.
+    helper = _Arena(arena) if arena is not None else None
+
     while True:
         # Stan-by: Waiting for a command from parent
         try:
@@ -267,6 +275,10 @@ def _execute_iterable(
         else:
             match cmd:
                 case _Cmd.START_ITERATION:
+                    if helper is not None:
+                        # Iteration boundary: reclaim leaked arena space. The
+                        # parent is quiescent (waiting for ITERATION_STARTED).
+                        helper.writer.reset()
                     data_q.put(_Msg(_Status.ITERATION_STARTED))
                 case _Cmd.STOP_ITERATION:
                     continue
@@ -307,6 +319,8 @@ def _execute_iterable(
 
             try:
                 item = next(gen)
+                if helper is not None:
+                    item = cast(T, helper.offload(item))
                 data_q.put(_Msg(_Status.ITERATOR_SUCCESS, message=item))
             except StopIteration:
                 data_q.put(_Msg(_Status.ITERATION_FINISHED))

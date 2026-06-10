@@ -18,8 +18,9 @@ import queue
 import weakref
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import cast, Generic, TypeVar
 
+from spdl.pipeline._arena import _Arena, ArenaProtocol
 from spdl.pipeline._iter_utils._common import (
     _Cmd,
     _drain,
@@ -62,11 +63,21 @@ class _ipc(Generic[T]):
     cmd_q: queue.Queue[_Cmd]
     data_q: queue.Queue[_Msg[T]]
     timeout: float
+    arena: ArenaProtocol | None = None
 
     def terminate(self) -> None:
         self.cmd_q.put(_Cmd.ABORT)
         _drain(self.data_q)
         _join(self.process)
+        # Unlink the shared-memory arena only after the worker is confirmed
+        # dead, so nothing touches the segment afterwards. ``unlink`` runs in
+        # ``finally`` so a failing ``close`` never leaves the OS-level shm
+        # segment behind — teardown is the only place that calls ``unlink``.
+        if (arena := self.arena) is not None:
+            try:
+                arena.close()
+            finally:
+                arena.unlink()
 
 
 class _SubprocessIterable(Iterable[T]):
@@ -82,6 +93,11 @@ class _SubprocessIterable(Iterable[T]):
     def __init__(self, interface: _ipc[T]) -> None:
         self._interface: _ipc[T] | None = interface
         self._finalizer = weakref.finalize(self, interface.terminate)
+        # First step in the parent: restore arena-offloaded fields, if an arena
+        # is in use.
+        self._arena: _Arena | None = (
+            _Arena(interface.arena) if interface.arena is not None else None
+        )
 
     def __iter__(self) -> Iterator[T]:
         """Instruct the worker process to enter iteration mode and iterate on the results."""
@@ -91,7 +107,14 @@ class _SubprocessIterable(Iterable[T]):
         try:
             # pyre-ignore[6]
             _enter_iteration_mode(if_.cmd_q, if_.data_q, if_.timeout, "subprocess")
-            yield from _iterate_results(if_.data_q, if_.timeout, "subprocess")
+            if (arena := self._arena) is None:
+                yield from _iterate_results(if_.data_q, if_.timeout, "subprocess")
+            else:
+                # Reset the reader's per-iteration cursors (the worker has reset
+                # its side and is quiescent until we start consuming).
+                arena.reader.reset()
+                for blob in _iterate_results(if_.data_q, if_.timeout, "subprocess"):
+                    yield cast(T, arena.restore(cast(bytes, blob)))
         except GeneratorExit:
             return
         except BaseException:
@@ -113,6 +136,7 @@ def iterate_in_subprocess(
     mp_context: str | None = None,
     timeout: float | None = None,
     daemon: bool = False,
+    arena: ArenaProtocol | None = None,
 ) -> Iterable[T]:
     """**[Experimental]** Run the given ``iterable`` in a subprocess.
 
@@ -149,6 +173,16 @@ def iterate_in_subprocess(
         timeout: Timeout for inactivity. If the generator function does not yield
             any item for this amount of time, the process is terminated.
         daemon: Whether to run the process as a daemon. Use it only for debugging.
+        arena: Optional shared-memory arena, e.g.
+            :py:class:`~spdl.pipeline.SharedMemoryRingBuffer` or
+            :py:class:`~spdl.pipeline.SharedMemorySegmentPool`. When provided, large
+            binary fields (large ``bytes``, NumPy arrays, Torch tensors) of each
+            yielded item are written into this pre-allocated shared-memory arena.
+            PyTorch and NumPy already move such payloads through shared memory for
+            inter-process transfer by default, but allocate a fresh segment per
+            object; the arena reuses one pre-allocated buffer instead. Ownership
+            transfers to the returned iterable, which closes and unlinks the arena
+            at teardown, so do not reuse the arena afterwards.
 
     Returns:
         Iterator over the results of the generator function.
@@ -175,11 +209,17 @@ def iterate_in_subprocess(
     data_q: queue.Queue[_Msg[T]] = ctx.Queue(maxsize=buffer_size)
     process = ctx.Process(
         target=_execute_iterable,
-        args=(cmd_q, data_q, fn, initializers),
+        args=(cmd_q, data_q, fn, initializers, arena),
         daemon=daemon,
     )
 
-    if_ = _ipc(process, cmd_q, data_q, float("inf") if timeout is None else timeout)
+    if_ = _ipc(
+        process,
+        cmd_q,
+        data_q,
+        float("inf") if timeout is None else timeout,
+        arena,
+    )
 
     process.start()
 
