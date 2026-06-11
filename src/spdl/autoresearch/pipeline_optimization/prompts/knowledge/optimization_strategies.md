@@ -118,6 +118,30 @@ for epoch in range(num_epochs):
 
 Benefits: isolates CPU work from GPU kernel launches, avoids the noisy-neighbour effect. Dedicated thread and CUDA stream for transferring the batch to GPU.
 
+### Cut IPC CPU with a Shared-Memory Arena
+
+MTP ships every batch across the subprocess boundary. By default the payload is pickled and copied through a multiprocessing queue, which costs CPU on **both** the producer and consumer sides, scaling with payload size. For large per-item payloads (NumPy arrays, Torch tensors, `bytes`, `spdl.io` `VideoPackets` — anything ≳ 1 MiB) this IPC CPU is itself a noisy-neighbour contributor.
+
+Pass a shared-memory **arena** to `run_pipeline_in_subprocess` to move large binaries through shared memory by reference instead of pickling + copying them:
+
+```python
+from spdl.pipeline import SharedMemorySegmentPool, run_pipeline_in_subprocess
+
+# segment_size: the largest single item; count: a few in-flight units (>= buffer_size + 2)
+arena = SharedMemorySegmentPool(segment_size=64 << 20, count=8)
+source2 = run_pipeline_in_subprocess(
+    backend.get_config(), num_threads=num_threads, arena=arena
+)
+```
+
+Two backends (both importable from `spdl.pipeline`):
+- **`SharedMemorySegmentPool`** — the reader restores a zero-copy view directly over shared memory. Lowest CPU, and it **blocks** the producer when full (safe under a slow consumer). **Prefer this.**
+- **`SharedMemoryRingBuffer`** — the reader copies each payload out of the ring. Still far cheaper than pickle, but it is **non-blocking**: it raises `shared-memory arena full` if its `capacity` is too small for the in-flight high-water, so size it generously (roughly `(buffer_size + 2) × max_item_bytes`).
+
+Measured effect (recv-only, 32 MiB payloads): plain IPC spent several CPU-seconds per config pickling + copying, while the segment pool dropped that to ~0 (zero-copy) — simultaneously raising throughput and lowering peak memory. The win is largest for `bytes` / NumPy / `VideoPackets`; **Torch tensors already transfer via shared memory** (their multiprocessing reducer), so the arena helps them least.
+
+**Why it matters for the CPU budget:** lower IPC CPU means more host-CPU headroom for timely GPU kernel launches — directly easing the noisy-neighbour effect (keep total CPU ≤ 40%). Reach for the arena whenever MTP moves large payloads; for tiny payloads the benefit is negligible, so skip it. See `examples/benchmark_arena_transport.py` for the benchmark this guidance is based on.
+
 ### When MTP Adds Overhead Instead of Helping
 
 MTP introduces subprocess serialization and IPC overhead on every batch. This cost is fixed regardless of how much work the pipeline does per item. When per-item pipeline work is heavy (large decode, expensive preprocessing), MTP's isolation benefit far outweighs this overhead. But when per-item work becomes cheap — due to optimizations like subclipping (reducing decode work 10×), low-resolution inputs, lightweight preprocessing, or aggressive caching — the IPC overhead can become a significant fraction of the total per-batch time, and **running the pipeline in the main process with low concurrency can outperform MTP**.
@@ -177,7 +201,7 @@ This is a key reason to use MTP (subprocess mode) — it eliminates GIL contenti
 
 1. **Adjust concurrency**: Usually 4-8 is enough. Never exceed `num_CPU_cores / 8`. Over-concurrency triggers noisy-neighbour.
 2. **Split monolithic stages**: Separate I/O-bound, CPU-bound, and memory-bound operations into distinct `.pipe()` stages with independent concurrency.
-3. **Move to subprocess**: Use `run_pipeline_in_subprocess()` to isolate CPU work.
+3. **Move to subprocess**: Use `run_pipeline_in_subprocess()` to isolate CPU work. When it ships large payloads, also pass a shared-memory `arena` to cut the pickle/copy IPC CPU (see "Cut IPC CPU with a Shared-Memory Arena").
 4. **Profile the function**: Look for GIL contention (use `spdl.io.load_npz` instead of numpy NPZ), unnecessary `asyncio.run()` wrappers (pass async functions directly), or expensive serialization.
 5. **Use coalesced data access**: Batching I/O requests (reading multiple samples per call) can be significantly faster than single-sample access.
 6. **Combine MTP with GPU decode**: `VideoPackets` are now picklable, so you can demux in a subprocess and decode with NVDEC in the main process. This combines the CPU-isolation benefits of MTP with the decode throughput of GPU hardware decoders. See the "GPU Video Decoding" section for details.
