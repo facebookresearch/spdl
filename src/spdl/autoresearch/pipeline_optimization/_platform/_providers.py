@@ -151,12 +151,14 @@ def _discover_extension_providers() -> list[_AutoresearchPlatformProvider]:
 
     for entry_point in importlib.metadata.entry_points(group=_ENTRY_POINT_GROUP):
         loaded = entry_point.load()
+        # pyrefly: ignore [bad-argument-type]
         providers.append(loaded() if callable(loaded) else loaded)
     providers.extend(_discover_convention_providers())
     return providers
 
 
 def _discover_convention_providers() -> list[_AutoresearchPlatformProvider]:
+    # pyrefly: ignore [missing-attribute]
     parent_package = __package__.rsplit(".", 1)[0]
     root = importlib.import_module(parent_package)
     package_paths = getattr(root, "__path__", None)

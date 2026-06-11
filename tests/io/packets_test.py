@@ -77,6 +77,7 @@ class TestDemuxWithoutCodec(unittest.TestCase):
             else:
                 raise RuntimeError("Unexpected packet type")
 
+            # pyrefly: ignore [missing-attribute]
             codec = packets.codec
             self.assertIsNone(codec)
         self.assertGreater(num_packets, 10)

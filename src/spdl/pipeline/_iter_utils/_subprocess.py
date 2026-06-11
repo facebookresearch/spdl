@@ -205,8 +205,11 @@ def iterate_in_subprocess(
     )
 
     ctx = mp.get_context(mp_context)
+    # pyrefly: ignore [bad-assignment]
     cmd_q: queue.Queue[_Cmd] = ctx.Queue()
+    # pyrefly: ignore [bad-assignment]
     data_q: queue.Queue[_Msg[T]] = ctx.Queue(maxsize=buffer_size)
+    # pyrefly: ignore [missing-attribute]
     process = ctx.Process(
         target=_execute_iterable,
         args=(cmd_q, data_q, fn, initializers, arena),

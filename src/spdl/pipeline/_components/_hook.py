@@ -315,6 +315,7 @@ class TaskStatsHook(TaskHook):
             yield
         finally:
             if self.interval > 0:
+                # pyrefly: ignore [unbound-name]
                 done.set()
                 await report  # pyre-ignore: [61]
             self._log_stats(

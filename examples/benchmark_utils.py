@@ -337,7 +337,9 @@ class BenchmarkRunner:
             config=config,
             executor_type=self.executor_type.value,
             qps=float(qps_mean),
+            # pyrefly: ignore [bad-argument-type]
             ci_lower=float(confidence_interval[0]),
+            # pyrefly: ignore [bad-argument-type]
             ci_upper=float(confidence_interval[1]),
             date=date,
             cpu_percent=float(cpu_mean),
@@ -492,11 +494,13 @@ def load_results_from_csv(
                 if field_type is int or field_type == "int":
                     typed_config_dict[field_name] = int(value)
                 elif field_type is float or field_type == "float":
+                    # pyrefly: ignore [unsupported-operation]
                     typed_config_dict[field_name] = float(value)
                 elif field_type is bool or field_type == "bool":
                     typed_config_dict[field_name] = value.lower() in TRUES
                 else:
                     # Keep as string or use the value as-is
+                    # pyrefly: ignore [unsupported-operation]
                     typed_config_dict[field_name] = value
 
             result = BenchmarkResult(

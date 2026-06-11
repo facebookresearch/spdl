@@ -36,9 +36,11 @@ class TestRecursiveApply(unittest.TestCase):
         self.assertEqual(_recursive_apply(fn, obj), (2, 4, 6))
 
         obj = [4, 5, 6]
+        # pyrefly: ignore [bad-argument-type]
         self.assertEqual(_recursive_apply(fn, obj), [8, 10, 12])
 
         obj = {"a": 7, "b": 8}
+        # pyrefly: ignore [bad-argument-type]
         self.assertEqual(_recursive_apply(fn, obj), {"a": 14, "b": 16})
 
         obj = defaultdict(list)
@@ -49,11 +51,13 @@ class TestRecursiveApply(unittest.TestCase):
         ref["a"].append(18)
         ref["b"].append(20)
 
+        # pyrefly: ignore [bad-argument-type]
         self.assertEqual(_recursive_apply(fn, obj), ref)
 
         obj = _Item(11, 12)
         ref = _Item(22, 24)
         ref.z = fn(cast(int, ref.z))
+        # pyrefly: ignore [bad-argument-type]
         self.assertEqual(_recursive_apply(fn, obj), ref)
 
     def test_recursive_apply_nested(self) -> None:
@@ -61,21 +65,28 @@ class TestRecursiveApply(unittest.TestCase):
         self.assertEqual(_recursive_apply(fn, obj), (2, 4, (6, 8, 10), 12))
 
         obj = [1, 2, [3, 4, 5], 6]
+        # pyrefly: ignore [bad-argument-type]
         self.assertEqual(_recursive_apply(fn, obj), [2, 4, [6, 8, 10], 12])
 
         obj = {"a": 1, "b": 2, "c": [3, 4, 5], "d": 6}
         self.assertEqual(
-            _recursive_apply(fn, obj), {"a": 2, "b": 4, "c": [6, 8, 10], "d": 12}
+            # pyrefly: ignore [bad-argument-type]
+            _recursive_apply(fn, obj),
+            {"a": 2, "b": 4, "c": [6, 8, 10], "d": 12},
         )
 
         obj = (1, 2, (3, 4, (5, 6, 7), 8), 9)
         self.assertEqual(
-            _recursive_apply(fn, obj), (2, 4, (6, 8, (10, 12, 14), 16), 18)
+            # pyrefly: ignore [bad-argument-type]
+            _recursive_apply(fn, obj),
+            (2, 4, (6, 8, (10, 12, 14), 16), 18),
         )
 
         obj = [1, 2, [3, 4, [5, 6, [7, 8, 9]]], 10]
         self.assertEqual(
-            _recursive_apply(fn, obj), [2, 4, [6, 8, [10, 12, [14, 16, 18]]], 20]
+            # pyrefly: ignore [bad-argument-type]
+            _recursive_apply(fn, obj),
+            [2, 4, [6, 8, [10, 12, [14, 16, 18]]], 20],
         )
 
         obj = {
@@ -85,6 +96,7 @@ class TestRecursiveApply(unittest.TestCase):
             "j": 8,
         }
         self.assertEqual(
+            # pyrefly: ignore [bad-argument-type]
             _recursive_apply(fn, obj),
             {
                 "a": 2,
@@ -99,6 +111,7 @@ class TestRecursiveApply(unittest.TestCase):
         ref = _Item(2, 4)
         ref.z = _Item(10, 12)
         cast(_Item, ref.z).z = 2
+        # pyrefly: ignore [bad-argument-type]
         self.assertEqual(_recursive_apply(fn, obj), ref)
 
 

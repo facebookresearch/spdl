@@ -140,6 +140,7 @@ class SharedMemorySegmentPool:
         self._count: int = count
         self._acquire_timeout: float = acquire_timeout
         ctrl = shared_memory.SharedMemory(create=True, size=_CTRL.size)
+        # pyrefly: ignore [bad-argument-type]
         _CTRL.pack_into(ctrl.buf, 0, 0, 0)
         segs = [
             shared_memory.SharedMemory(create=True, size=segment_size)
@@ -149,7 +150,9 @@ class SharedMemorySegmentPool:
         self._seg_names: list[str] = [s.name for s in segs]
         self._ctrl: shared_memory.SharedMemory | None = ctrl
         self._segs: list[shared_memory.SharedMemory] | None = segs
+        # pyrefly: ignore [bad-assignment]
         self._ctrl_buf: "memoryview[bytes] | None" = ctrl.buf
+        # pyrefly: ignore [bad-assignment]
         self._seg_bufs: "list[memoryview[bytes]] | None" = [s.buf for s in segs]
 
     # -- pickling: carry only the spec; attach lazily, once, per process --
@@ -187,13 +190,17 @@ class SharedMemorySegmentPool:
     def _ctrl_view(self) -> "memoryview[bytes]":
         if self._ctrl_buf is None:
             self._ctrl = _attach(self._ctrl_name)
+            # pyrefly: ignore [bad-assignment]
             self._ctrl_buf = self._ctrl.buf
+        # pyrefly: ignore [bad-return]
         return self._ctrl_buf
 
     def _segment(self, index: int) -> "memoryview[bytes]":
         if self._seg_bufs is None:
             self._segs = [_attach(n) for n in self._seg_names]
+            # pyrefly: ignore [bad-assignment]
             self._seg_bufs = [s.buf for s in self._segs]
+        # pyrefly: ignore [unsupported-operation]
         return self._seg_bufs[index % self._count]
 
     @property

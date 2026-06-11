@@ -202,10 +202,12 @@ class DataLoader(Generic[Source, Output]):
         src: Iterable[Source] | AsyncIterable[Source],
         *,
         # Pre-processing
+        # pyrefly: ignore [invalid-param-spec]
         preprocessor: Callables[[Source], T] | None = None,
         # Aggregation
         batch_size: int | None = None,
         drop_last: bool = False,
+        # pyrefly: ignore [invalid-param-spec]
         aggregator: Functions[[list[T]], Output] | None = None,
         # Device transfer
         transfer_fn: Callable[[Output], Output] | None = None,
@@ -219,6 +221,7 @@ class DataLoader(Generic[Source, Output]):
         log_api_usage_once("spdl.dataloader.DataLoader")
 
         self._src = src
+        # pyrefly: ignore [invalid-type-var]
         self._preprocessor = preprocessor
         self._aggregator = aggregator
         self._transfer_fn = transfer_fn

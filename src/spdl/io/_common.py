@@ -19,11 +19,14 @@ def _resolve_src(obj: object) -> "str | memoryview[bytes]":
 
     match obj:
         case str() | memoryview():
+            # pyrefly: ignore [bad-return]
             return obj
         case _ if hasattr(obj, "__fspath__"):
+            # pyrefly: ignore [no-matching-overload]
             return os.fspath(obj)
         case _:
             try:
+                # pyrefly: ignore [bad-argument-type, bad-return]
                 return memoryview(obj)
             except TypeError as e:
                 raise TypeError(

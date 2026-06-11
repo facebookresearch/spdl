@@ -146,7 +146,9 @@ def get_mock_data(format: str, compressed: bool = False) -> tuple[bytes, bytes] 
         Serialized mock arrays. If ``"npy"`` then arrays are serialized
         separately. Otherwise arrays are bundled together.
     """
+    # pyrefly: ignore [no-matching-overload]
     img = np.random.randint(256, size=(3, 640, 480), dtype=np.uint8)
+    # pyrefly: ignore [no-matching-overload]
     lbl = np.random.randint(256, size=(640, 480), dtype=np.uint8)
 
     match format:

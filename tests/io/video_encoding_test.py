@@ -36,6 +36,7 @@ class TestEncodeVideoMultiColor(unittest.TestCase):
                 shape = (num_frames, 3, height, width)
             case _:
                 shape = (num_frames, height, width, 3)
+        # pyrefly: ignore [no-matching-overload]
         ref = np.random.randint(0, 255, size=shape, dtype=np.uint8)
 
         with NamedTemporaryFile(suffix=".raw") as f:
@@ -98,6 +99,7 @@ class TestEncodeVideoGray(unittest.TestCase):
         num_frames = int(frame_rate[0] / frame_rate[1] * duration)
         shape = (num_frames, height, width)
         dtype = np.uint8 if pix_fmt == "gray8" else np.int16
+        # pyrefly: ignore [no-matching-overload]
         ref = np.random.randint(0, 255, size=shape, dtype=dtype)
 
         with NamedTemporaryFile(suffix=".raw") as f:

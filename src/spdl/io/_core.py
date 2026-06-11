@@ -177,6 +177,7 @@ class Demuxer:
         name: str | None = None,
         **kwargs: Any,
     ) -> None:
+        # pyrefly: ignore [no-matching-overload]
         self._demuxer: _libspdl.Demuxer = _libspdl.make_demuxer(
             _resolve_src(src),  # pyre-ignore[6]
             demux_config=demux_config,
@@ -535,6 +536,7 @@ def apply_bsf(
     """
     if packets.codec is None:
         raise ValueError("The packets object does not have codec.")
+    # pyrefly: ignore [bad-return]
     return BSF(packets.codec, bsf).filter(packets, flush=True)
 
 
@@ -903,6 +905,7 @@ def decode_image_nvjpeg(
         data = [_resolve_src2(s) for s in src]
     else:
         data = _resolve_src2(src)
+    # pyrefly: ignore [no-matching-overload]
     return _libspdl_cuda.decode_image_nvjpeg(
         data,  # pyre-ignore[6]
         device_config=device_config,
@@ -1055,6 +1058,7 @@ def convert_array(
     Returns:
         A Buffer object.
     """
+    # pyrefly: ignore [bad-argument-type]
     return _libspdl.convert_array(vals, storage=storage)
 
 
@@ -1101,6 +1105,7 @@ def create_reference_audio_frame(
        Frames object that references the memory region of the input data.
     """
     frame = _libspdl.create_reference_audio_frame(
+        # pyrefly: ignore [bad-argument-type]
         array=array,
         sample_fmt=sample_fmt,
         sample_rate=sample_rate,
@@ -1147,6 +1152,7 @@ def create_reference_video_frame(
        Frames object that references the memory region of the input data.
     """
     frame = _libspdl.create_reference_video_frame(
+        # pyrefly: ignore [bad-argument-type]
         array=array,
         pix_fmt=pix_fmt,
         frame_rate=frame_rate,
@@ -1185,6 +1191,7 @@ def transfer_buffer_cpu(buffer: "CUDABuffer") -> "CPUBuffer":
     Returns:
         Buffer data on CPU.
     """
+    # pyrefly: ignore [bad-argument-type]
     return _libspdl_cuda.transfer_buffer_cpu(buffer)
 
 
@@ -1521,6 +1528,7 @@ def encode_image(
         >>> encode(data)
         >>>
     """
+    # pyrefly: ignore [missing-attribute]
     return _libspdl.encode_image(
         path, data, pix_fmt=pix_fmt, encode_config=encode_config
     )

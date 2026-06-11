@@ -38,6 +38,7 @@ class TestLoadNpy(unittest.TestCase):
         rng = np.random.default_rng()
         shape = (2, 3, 4, 5)
         info = np.iinfo(dtype)
+        # pyrefly: ignore [no-matching-overload]
         ref = rng.integers(low=info.min, high=info.max, size=shape, dtype=dtype)
         ref[0, 0, 0, 0] = info.min
         ref[-1, -1, -1, -1] = info.max
@@ -70,6 +71,7 @@ class TestLoadNpy(unittest.TestCase):
         rng = np.random.default_rng()
         shape = (2, 3, 4, 5)
         info = np.finfo(dtype)
+        # pyrefly: ignore [no-matching-overload]
         ref = rng.random(size=shape, dtype=dtype)
         ref[0, 0, 0, 0] = info.min
         ref[-1, -1, -1, -1] = info.max

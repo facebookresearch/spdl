@@ -632,6 +632,7 @@ class ProcessGroupStatsMonitor(BackgroundTask):
         and ``CancelledError`` is re-raised.
         """
         ctx = self._mp_context or multiprocessing.get_context()
+        # pyrefly: ignore [missing-attribute]
         proc = ctx.Process(
             target=_pgrp_monitor_subprocess,
             args=(self._interval, self._callback),

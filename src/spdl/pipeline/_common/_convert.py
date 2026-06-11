@@ -63,12 +63,14 @@ def _to_async(
 
         async def afunc(item: T) -> U:
             loop = asyncio.get_running_loop()
+            # pyrefly: ignore [bad-argument-type]
             return await loop.run_in_executor(executor, _func_in_subprocess, func, item)
 
     else:
 
         async def afunc(item: T) -> U:
             loop = asyncio.get_running_loop()
+            # pyrefly: ignore [bad-argument-type]
             return await loop.run_in_executor(executor, func, item)
 
     return afunc

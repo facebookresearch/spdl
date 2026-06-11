@@ -232,6 +232,7 @@ class StatsQueue(AsyncQueue):
             yield
         finally:
             if self.interval > 0:
+                # pyrefly: ignore [unbound-name]
                 done.set()
                 await report  # pyre-ignore: [61]
 

@@ -68,7 +68,9 @@ class SharedMemoryRingBuffer:
         shm = shared_memory.SharedMemory(create=True, size=_HEADER_SIZE + capacity)
         self._shm_name: str = shm.name
         self._shm: shared_memory.SharedMemory | None = shm
+        # pyrefly: ignore [bad-assignment]
         self._buf: "memoryview[bytes] | None" = shm.buf
+        # pyrefly: ignore [bad-argument-type]
         _HEADER.pack_into(shm.buf, 0, 0, 0)
 
     # -- pickling: carry only the spec; attach lazily, once, per process --
@@ -95,7 +97,9 @@ class SharedMemoryRingBuffer:
     def _ensure(self) -> "memoryview[bytes]":
         if self._buf is None:
             self._shm = _attach(self._shm_name)
+            # pyrefly: ignore [bad-assignment]
             self._buf = self._shm.buf
+        # pyrefly: ignore [bad-return]
         return self._buf
 
     @property

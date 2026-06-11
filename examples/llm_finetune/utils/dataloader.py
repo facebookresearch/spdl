@@ -39,6 +39,7 @@ class _InstructDataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         return len(self.samples)
 
+    # pyrefly: ignore [bad-override-param-name]
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         return _tokenize_sample(self.samples[idx], self.tokenizer, self.max_seq_len)
 

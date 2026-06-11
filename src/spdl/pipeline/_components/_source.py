@@ -43,6 +43,7 @@ async def _source(
         so this coroutine does not explicitly send EOF.
     """
     src_: AsyncIterable[T] = (  # pyre-ignore: [9]
+        # pyrefly: ignore [bad-assignment, no-matching-overload]
         src if hasattr(src, "__aiter__") else _to_async_gen(iter, None)(src)
     )
 
@@ -74,6 +75,7 @@ async def _source_continuous(
     async with _queue_stage_hook(queue):
         while True:
             src_: AsyncIterable[T] = (  # pyre-ignore: [9]
+                # pyrefly: ignore [bad-assignment, no-matching-overload]
                 src if hasattr(src, "__aiter__") else _to_async(src)
             )
             async for item in src_:

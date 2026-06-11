@@ -113,6 +113,7 @@ class TaskSpec:
             payload = {}
         return cls(
             id=str(data["id"]),
+            # pyrefly: ignore [bad-argument-type]
             priority=float(data.get("priority", 0.0)),
             kind=str(data.get("kind", "default")),
             payload=payload,

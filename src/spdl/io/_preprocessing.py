@@ -272,6 +272,7 @@ def get_filter_desc(
     match type(packets):
         case _libspdl.AudioPackets:
             # When audio packets have `timestamp` attribute, we delegate to `atrim` filter.
+            # pyrefly: ignore [missing-attribute]
             return get_audio_filter_desc(timestamp=packets.timestamp, **filter_args)
         case _libspdl.VideoPackets:
             # When video packets have `timestamp` attribute, we manually filter the frame

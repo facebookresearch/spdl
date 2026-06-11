@@ -46,6 +46,7 @@ class TestLoadAudio(unittest.TestCase):
         # fmt: on
         sample = get_sample(cmd)
 
+        # pyrefly: ignore [not-iterable]
         dtype, format = _get_format(sample_fmt)
         shape = (40000, 2)
 
