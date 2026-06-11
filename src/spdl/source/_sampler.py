@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     import numpy as np
     from numpy.typing import NDArray
 
+    # pyrefly: ignore [bad-specialization]
     FloatArray: TypeAlias = NDArray[np.floating[Any]]
 
 

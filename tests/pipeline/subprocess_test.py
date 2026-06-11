@@ -387,6 +387,7 @@ def _init1() -> None:
 def _src2() -> Iterator[int]:
     if True:
         raise ValueError("Failed!")
+    # pyrefly: ignore [bad-return]
     return SourceIterable(10)
 
 

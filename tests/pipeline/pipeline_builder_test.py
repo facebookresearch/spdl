@@ -1558,6 +1558,7 @@ class TestPipelineType(unittest.TestCase):
         pipeline = (
             PipelineBuilder()
             .add_source(range(10))
+            # pyrefly: ignore [bad-argument-type]
             .pipe(wrong_sig)
             .add_sink(1000)
             .build(num_threads=1)
@@ -1650,6 +1651,7 @@ class TestPipelineFail(unittest.TestCase):
             PipelineBuilder()
             .add_source(range(10))
             .pipe(passthrough)
+            # pyrefly: ignore [bad-argument-type]
             .pipe(fail)
             .pipe(pwc)
             .add_sink(1)
@@ -2640,6 +2642,7 @@ class TestOverrideStage(unittest.TestCase):
 
             def __init__(self, name, *, buffer_size: int = 1) -> None:
                 print(name)
+                # pyrefly: ignore [missing-attribute]
                 id = re.match(r"\d+:(\d+):.*", str(name)).group(1)
                 assert id == str(self.index)
                 CheckNameQueue.index += 1

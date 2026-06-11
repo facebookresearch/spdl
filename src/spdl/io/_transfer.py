@@ -51,6 +51,7 @@ def _recursive_apply(fn: Callable[[T], T], obj: T) -> T:
             return Class(_recursive_apply(fn, v) for v in obj)
         case tuple():
             if hasattr(obj, "_asdict") and hasattr(obj, "_fields"):  # namedtuple
+                # pyrefly: ignore [bad-unpacking]
                 return Class(**_recursive_apply(fn, obj._asdict()))
             return Class(_recursive_apply(fn, v) for v in obj)
         case defaultdict():
@@ -82,6 +83,7 @@ def _transfer(obj: T, device: "TDevice", pinned_memory_cache: "set[Tensor]") -> 
     if isinstance(obj, torch.Tensor) and obj.is_cpu:
         pinned = obj.pin_memory()
         pinned_memory_cache.add(pinned)
+        # pyrefly: ignore [bad-assignment]
         obj = pinned.to(device, non_blocking=True)
     return obj
 

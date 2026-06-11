@@ -18,6 +18,7 @@ class TestReferenceAudioFrame(unittest.TestCase):
     def test_audio_frame_keeps_reference_alive(self) -> None:
         """Test that AudioFrame keeps the original array alive even after deletion."""
         # Setup: Create an array and a weak reference to it
+        # pyrefly: ignore [no-matching-overload]
         array = np.random.randint(0, 255, size=(100, 2), dtype=np.uint8)
         weak_ref = weakref.ref(array)
 
@@ -48,6 +49,7 @@ class TestReferenceAudioFrame(unittest.TestCase):
 
     def test_audio_frame_can_be_converted(self) -> None:
         """Test that reference audio frame can be converted to buffer."""
+        # pyrefly: ignore [no-matching-overload]
         array = np.random.randint(0, 255, size=(100, 2), dtype=np.uint8)
 
         frame = spdl.io.create_reference_audio_frame(
@@ -65,6 +67,7 @@ class TestReferenceAudioFrame(unittest.TestCase):
     def test_audio_frame_planar_format(self) -> None:
         """Test that planar format audio frames work correctly."""
         # Setup: Create planar format data (channels first)
+        # pyrefly: ignore [no-matching-overload]
         array = np.random.randint(0, 255, size=(2, 100), dtype=np.uint8)
 
         # Execute: Create reference frame with planar format
@@ -85,6 +88,7 @@ class TestReferenceVideoFrame(unittest.TestCase):
     def test_video_frame_keeps_reference_alive(self) -> None:
         """Test that VideoFrame keeps the original array alive even after deletion."""
         # Setup: Create an array and a weak reference to it
+        # pyrefly: ignore [no-matching-overload]
         array = np.random.randint(0, 255, size=(5, 128, 128, 3), dtype=np.uint8)
         weak_ref = weakref.ref(array)
 
@@ -115,6 +119,7 @@ class TestReferenceVideoFrame(unittest.TestCase):
 
     def test_video_frame_can_be_converted(self) -> None:
         """Test that reference video frame can be converted to buffer."""
+        # pyrefly: ignore [no-matching-overload]
         array = np.random.randint(0, 255, size=(5, 128, 128, 3), dtype=np.uint8)
 
         frame = spdl.io.create_reference_video_frame(
@@ -132,6 +137,7 @@ class TestReferenceVideoFrame(unittest.TestCase):
     def test_video_frame_grayscale(self) -> None:
         """Test that grayscale video frames work correctly."""
         # Setup: Create grayscale data
+        # pyrefly: ignore [no-matching-overload]
         array = np.random.randint(0, 255, size=(5, 128, 128), dtype=np.uint8)
 
         # Execute: Create reference frame with grayscale format
@@ -150,6 +156,7 @@ class TestReferenceVideoFrame(unittest.TestCase):
     def test_video_frame_yuv_format(self) -> None:
         """Test that YUV planar format video frames work correctly."""
         # Setup: Create YUV planar format data (channels first)
+        # pyrefly: ignore [no-matching-overload]
         array = np.random.randint(0, 255, size=(5, 3, 128, 128), dtype=np.uint8)
 
         # Execute: Create reference frame with YUV planar format

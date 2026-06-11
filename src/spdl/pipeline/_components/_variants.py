@@ -112,6 +112,7 @@ def _path_variants_router(
     arouter: Callable[[Any], Awaitable[int]] = _make_async_router(router)
 
     @_queue_stage_hook(path_queues)
+    # pyrefly: ignore [not-callable]
     @_stage_hooks(task_hooks)
     async def _router() -> None:
         while True:

@@ -23,12 +23,14 @@ class TestEncodeImageParity(unittest.TestCase):
     @parameterized.expand(list(product(["rgb24", "gray"], [False, True])))
     def test_encode_image_parity_simple(self, pix_fmt: str, torch_tensor: bool) -> None:
         shape = (16, 16, 3) if pix_fmt == "rgb24" else (16, 16)
+        # pyrefly: ignore [no-matching-overload]
         ref = np.random.randint(256, size=shape, dtype=np.uint8)
 
         with NamedTemporaryFile(suffix=".png") as f:
             f.close()  # for windows
             spdl.io.save_image(
                 f.name,
+                # pyrefly: ignore [bad-argument-type]
                 torch.from_numpy(ref) if torch_tensor else ref,
                 pix_fmt=pix_fmt,
             )
@@ -39,6 +41,7 @@ class TestEncodeImageParity(unittest.TestCase):
     def test_encode_image_parity_png_gray16be(self) -> None:
         shape = (32, 64)
 
+        # pyrefly: ignore [no-matching-overload]
         ref = np.random.randint(256, size=shape, dtype=np.uint16)
         if sys.byteorder == "little":
             ref = ref.byteswap()

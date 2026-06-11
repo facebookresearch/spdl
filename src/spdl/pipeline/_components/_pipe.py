@@ -276,6 +276,7 @@ def _pipe(
         raise ValueError("input queue and output queue must be different.")
 
     afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
+        # pyrefly: ignore [bad-assignment]
         convert_to_async(args.op, args.executor)
     )
 
@@ -295,6 +296,7 @@ def _pipe(
         raise ValueError(f"{afunc=} must be either async function or async generator.")
 
     @_queue_stage_hook(output_queue)
+    # pyrefly: ignore [not-callable]
     @_stage_hooks(hooks)
     async def pipe() -> None:
         i, tasks = 0, set()
@@ -314,6 +316,7 @@ def _pipe(
             # note: Make sure that `afunc` is called directly in this function,
             # so as to detect user error. (incompatible `afunc` and `iterator` combo)
             task = create_task(
+                # pyrefly: ignore [bad-argument-type]
                 _wrap(afunc(item), item),
                 name=f"{info}:{(i := i + 1)}",
             )
@@ -406,6 +409,7 @@ def _ordered_pipe(
     assert not inspect.isasyncgenfunction(args.op)
 
     afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
+        # pyrefly: ignore [bad-assignment]
         convert_to_async(args.op, args.executor)
     )
 
@@ -472,6 +476,7 @@ def _ordered_pipe(
             pass
 
     @_queue_stage_hook(output_queue)
+    # pyrefly: ignore [not-callable]
     @_stage_hooks(task_hooks)
     async def ordered_pipe() -> None:
         await asyncio.wait({create_task(get_run_put()), create_task(get_check_put())})
@@ -562,6 +567,7 @@ def _merge(
     op: _TMergeOp = merge_op or _default_merge
 
     @_queue_stage_hook(output_queue)
+    # pyrefly: ignore [not-callable]
     @_stage_hooks(hooks)
     async def merge() -> None:
         await op(info, input_queues, output_queue)

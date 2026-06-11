@@ -45,11 +45,13 @@ _DATASET: "torch.utils.data.dataset.Dataset[T]" = None  # pyre-ignore: [15]
 _COLLATE_FN: Callable = None  # pyre-ignore: [15]
 
 
+# pyrefly: ignore [invalid-annotation]
 def _get_item(index: K) -> ...:
     global _DATASET, _COLLATE_FN
     return _COLLATE_FN(_DATASET[index])
 
 
+# pyrefly: ignore [invalid-annotation]
 def _get_items(indices: list[K]) -> ...:
     global _DATASET, _COLLATE_FN
     if hasattr(_DATASET, "__getitems__"):
@@ -61,6 +63,7 @@ def _init_dataset(name: str, collate_fn: Callable) -> None:
     _LG.info("[%s] Initializing dataset.", os.getpid())
     shmem = SharedMemory(name=name)
     global _DATASET, _COLLATE_FN
+    # pyrefly: ignore [bad-argument-type]
     _DATASET = pickle.loads(shmem.buf)
     _COLLATE_FN = collate_fn
 
@@ -85,6 +88,7 @@ def _serialize_dataset(dataset: "torch.utils.data.dataset.Dataset[T]") -> Shared
     t0 = time.monotonic()
     data = pickle.dumps(dataset)
     shmem = SharedMemory(create=True, size=len(data))
+    # pyrefly: ignore [unsupported-operation]
     shmem.buf[:] = data
     elapsed = time.monotonic() - t0
     _LG.info(
@@ -138,10 +142,14 @@ class PyTorchDataLoader(Iterable[V]):
     ) -> None:
         log_api_usage_once("spdl.dataloader.PyTorchDataLoader")
 
+        # pyrefly: ignore [invalid-type-var]
         self.dataset = dataset  # For external access.
         self._shmem: SharedMemory = shmem
+        # pyrefly: ignore [invalid-type-var]
         self._sampler = sampler
+        # pyrefly: ignore [invalid-type-var]
         self._fetch_fn = fetch_fn
+        # pyrefly: ignore [invalid-type-var]
         self._collate_fn = collate_fn
         self._transfer_fn = transfer_fn
         self._mp_ctx = mp_ctx
@@ -256,6 +264,7 @@ def _resolve_sampler(
         _fetch_fn = _get_item
         _collate_fn = collate_fn or default_convert
 
+    # pyrefly: ignore [bad-return]
     return _sampler, _fetch_fn, _collate_fn
 
 
@@ -348,7 +357,9 @@ def get_pytorch_dataloader(
         shmem=shmem,
         sampler=_sampler,
         fetch_fn=_fetch_fn,  # pyre-ignore: [6]
+        # pyrefly: ignore [bad-argument-type]
         collate_fn=_collate_fn,
+        # pyrefly: ignore [bad-argument-type]
         transfer_fn=transfer_fn,
         mp_ctx=mp_ctx,
         num_workers=num_workers,

@@ -74,6 +74,7 @@ def _aggregate(
     wrapper: _AggregatorWrapper = _AggregatorWrapper(op)
 
     @_queue_stage_hook(output_queue)
+    # pyrefly: ignore [not-callable]
     @_stage_hooks(hooks)
     async def aggregate_pipe() -> None:
         while not fail_counter.too_many_failures():

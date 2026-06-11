@@ -102,6 +102,7 @@ class Preprocessing(torch.nn.Module):
             The normalized image batch.
         """
         x = x.float() / 255.0
+        # pyrefly: ignore [unsupported-operation]
         return (x - self.mean) / self.std
 
 
@@ -370,6 +371,7 @@ def benchmark(
         elapsed = time.monotonic() - t0
         if num_frames != 0:
             num_correct_top1 = num_correct_top1.item()  # pyre-ignore[16]
+            # pyrefly: ignore [missing-attribute]
             num_correct_top5 = num_correct_top5.item()
             fps = num_frames / elapsed
             _LG.info(f"FPS={fps:.2f} ({num_frames}/{elapsed:.2f})")
@@ -421,6 +423,7 @@ def entrypoint(args_: list[str] | None = None) -> None:
         benchmark(dataloader, model, args.max_batches)
 
     if args.trace:
+        # pyrefly: ignore [missing-attribute]
         prof.export_chrome_trace(f"{trace_path}.json")
 
 

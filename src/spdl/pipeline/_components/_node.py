@@ -338,6 +338,7 @@ def _convert_pipes(
                 out_q = q_class(info, buffer_size=_BUFFER_SIZE)
                 n = _Node(info, cfg, [n], input_queue=in_q, output_queue=out_q)
         ret = n
+    # pyrefly: ignore [unbound-name]
     return ret
 
 
@@ -681,6 +682,7 @@ def _default_hook_factory(
     if (hook_class := get_default_hook_class()) is not None:
 
         def _hook_factory(stage_info: StageInfo) -> list[TaskHook]:
+            # pyrefly: ignore [bad-argument-count, unexpected-keyword]
             return [hook_class(stage_info, interval=report_stats_interval)]
 
     else:
@@ -810,6 +812,7 @@ def _gather_error(
     for n in node.upstream:
         errs.extend(_gather_error(n, _visited))
     errs.sort(key=lambda i: i[0])
+    # pyrefly: ignore [bad-return]
     return errs
 
 

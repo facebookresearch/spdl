@@ -172,8 +172,10 @@ class _BytesHandler:
         # the common contiguous case (write_binary performs the single copy into
         # shared memory); a non-contiguous memoryview is flattened into a copy.
         # meta carries the original type so the ring backend can reconstruct it.
+        # pyrefly: ignore [bad-argument-type]
         mv = memoryview(obj)
         src = mv.cast("B") if mv.contiguous else memoryview(mv.tobytes())
+        # pyrefly: ignore [bad-return]
         return src, (type(obj),)
 
     def from_buffer(
@@ -216,6 +218,7 @@ class _NumpyHandler:
         arr: Any = np.ascontiguousarray(obj)
         # memoryview over the array's own buffer — no copy (the single copy into
         # shared memory happens in the arena's write_binary).
+        # pyrefly: ignore [bad-return]
         return memoryview(arr).cast("B"), (arr.dtype.str, tuple(arr.shape))
 
     def from_buffer(
@@ -252,6 +255,7 @@ class _TorchHandler:
         t: Any = obj.detach().contiguous().cpu()  # type: ignore[attr-defined]
         # t.numpy() shares the tensor's storage (no copy for a contiguous CPU
         # tensor); memoryview over it stays a view.
+        # pyrefly: ignore [bad-return]
         return memoryview(t.numpy()).cast("B"), (str(t.dtype), tuple(t.shape))
 
     def from_buffer(
@@ -332,6 +336,7 @@ class _PacketsHandler:
         # memoryview over the bytes — no copy; write_binary performs the single
         # copy into shared memory. meta carries the class so restore can call
         # its ``deserialize_view`` (pickled by reference in the marker).
+        # pyrefly: ignore [bad-argument-type, bad-return]
         return memoryview(data), (type(obj),)
 
     def from_buffer(

@@ -184,6 +184,7 @@ def _append_master_result_row(
     structured: dict | None,
     terminal_failure,
 ) -> None:
+    # pyrefly: ignore [bad-assignment]
     row: dict[str, str | float] = {
         "run_id": node.node_id,
         "name": node.name,

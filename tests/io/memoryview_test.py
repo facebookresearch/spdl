@@ -58,6 +58,7 @@ class TestLoadWavMemoryview(unittest.TestCase):
         mv = memoryview(wav_data)
 
         result_bytes = spdl.io.load_wav(wav_data)
+        # pyrefly: ignore [bad-argument-type]
         result_mv = spdl.io.load_wav(mv)
 
         samples_bytes = spdl.io.to_numpy(result_bytes)
@@ -69,6 +70,7 @@ class TestLoadWavMemoryview(unittest.TestCase):
         wav_data = _create_wav_data(sample_rate=8000, num_samples=8000)
         mv = memoryview(wav_data)
 
+        # pyrefly: ignore [bad-argument-type]
         result = spdl.io.load_wav(mv, time_offset_seconds=0.5, duration_seconds=0.5)
         samples = spdl.io.to_numpy(result)
 
@@ -81,6 +83,7 @@ class TestParseWavMemoryview(unittest.TestCase):
         mv = memoryview(wav_data)
 
         header_bytes = spdl.io.parse_wav(wav_data)
+        # pyrefly: ignore [bad-argument-type]
         header_mv = spdl.io.parse_wav(mv)
 
         self.assertEqual(header_mv.sample_rate, header_bytes.sample_rate)
@@ -95,6 +98,7 @@ class TestIterTarfileMemoryview(unittest.TestCase):
         mv = memoryview(tar_data)
 
         entries_bytes = list(spdl.io.iter_tarfile(tar_data))
+        # pyrefly: ignore [no-matching-overload]
         entries_mv = list(spdl.io.iter_tarfile(mv))
 
         self.assertEqual(len(entries_mv), len(entries_bytes))
@@ -110,5 +114,6 @@ class TestLoadNpzMemoryview(unittest.TestCase):
         npz_data = _create_npz_data()
         mv = memoryview(npz_data)
 
+        # pyrefly: ignore [bad-argument-type]
         data = spdl.io.load_npz(mv)
         np.testing.assert_array_equal(data["x"], np.arange(5))

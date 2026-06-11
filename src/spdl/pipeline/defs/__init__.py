@@ -49,7 +49,9 @@ from ._defs import (
 __all__ = [
     "_PipeArgs",
     "_PipeType",
+    # pyrefly: ignore [bad-dunder-all]
     "_TAsyncCallables",
+    # pyrefly: ignore [bad-dunder-all]
     "_TCallables",
     "_TPipeInputs",
     "Aggregate",

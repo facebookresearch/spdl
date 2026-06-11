@@ -183,6 +183,7 @@ def main(args: list[str] | None = None) -> None:
                 )
             )
 
+        # pyrefly: ignore [bad-argument-type]
         run(ns.input_file, ns.device_index, post_process, prof, ns.plot_dir)
 
 

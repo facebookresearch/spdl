@@ -163,6 +163,7 @@ class TestArrayTransfer(unittest.TestCase):
 
         for dtype in [np.uint8, np.int32, np.int64]:
             max_val = np.iinfo(dtype).max
+            # pyrefly: ignore [no-matching-overload]
             array = np.random.randint(0, max_val, size=(1, 128_000), dtype=dtype)
             test(array)
 
@@ -183,6 +184,7 @@ class TestArrayTransfer(unittest.TestCase):
 
         for dtype in [np.uint8, np.int32, np.int64]:
             max_val = np.iinfo(dtype).max
+            # pyrefly: ignore [no-matching-overload]
             array = np.random.randint(0, max_val, size=(1, 128_000), dtype=dtype)
             test(torch.from_numpy(array))
 
@@ -225,6 +227,7 @@ class TestArrayTransfer(unittest.TestCase):
     def test_array_transfer_smoke_test(self) -> None:
         """smoke test for transferring multiple arrays concurrently"""
 
+        # pyrefly: ignore [no-matching-overload]
         array = np.random.randint(0, 256, size=(1, 64_000), dtype=np.uint8)
         device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
         for _ in range(100):
@@ -237,6 +240,7 @@ class TestTransferCpu(unittest.TestCase):
 
         for dtype in [np.uint8, np.int32, np.int64]:
             max_val = np.iinfo(dtype).max
+            # pyrefly: ignore [no-matching-overload]
             array = np.random.randint(0, max_val, size=(1, 128_000), dtype=dtype)
             ref = torch.from_numpy(array)
             cuda_tensor = ref.cuda(device=DEFAULT_CUDA)

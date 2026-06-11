@@ -76,6 +76,7 @@ def iter_tarfile(
     if isinstance(src, (bytes, memoryview)):
         mv = memoryview(src)
         for name, offset, size in _libspdl._archive.parse_tar(mv):
+            # pyrefly: ignore [invalid-yield]
             yield name, mv[offset : offset + size]
     else:
         yield from _libspdl._archive.parse_tar(src)

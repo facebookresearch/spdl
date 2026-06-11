@@ -51,6 +51,7 @@ class TestEncodeAudioInteger(unittest.TestCase):
 
         shape = (sample_rate * duration, num_channels)
         ii = np.iinfo(dtype)
+        # pyrefly: ignore [no-matching-overload]
         ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
 
         with NamedTemporaryFile(suffix=".wav") as f:
@@ -177,6 +178,7 @@ class TestEncodeAudioIntegerPlanar(unittest.TestCase):
 
         shape = (num_channels, sample_rate * duration)
         ii = np.iinfo(dtype)
+        # pyrefly: ignore [no-matching-overload]
         ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
 
         with NamedTemporaryFile(suffix=".nut") as f:
@@ -260,6 +262,7 @@ class TestEncodeAudioSmokeTest(unittest.TestCase):
 
         if sample_fmt.startswith("s"):
             ii = np.iinfo(dtype)
+            # pyrefly: ignore [no-matching-overload]
             ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
         else:
             ref = np.random.random(shape).astype(dtype)

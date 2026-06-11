@@ -486,6 +486,7 @@ class PathVariantsConfig(Generic[T]):
 
     paths: tuple[
         tuple[
+            # pyrefly: ignore [not-a-type]
             "PipeConfig[Any, Any]"
             " | AggregateConfig[Any]"
             " | DisaggregateConfig[Any]"
@@ -692,6 +693,7 @@ def Merge(
        :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
+    # pyrefly: ignore [bad-argument-type]
     return MergeConfig(tuple(pipeline_configs), op=op)
 
 

@@ -751,6 +751,7 @@ def sample_decode_video(
         filter_desc = _preprocessing.get_video_filter_desc()
 
     ret: "list[ImageFrames]" = []
+    # pyrefly: ignore [missing-attribute]
     for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
         frames = _decode_partial(split, idxes, decode_config, filter_desc)
         ret.extend([frames[i] for i in idxes])  # type: ignore[arg-type]
