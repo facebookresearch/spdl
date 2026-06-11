@@ -415,8 +415,10 @@ def _run_config(size_mb: int, kind: str, args: argparse.Namespace) -> list[Row]:
     payload_nbytes = _payload_nbytes(kind, size, vb)
     dataset = _Dataset(kind, size, args.num_items, vb)
     factor = payload_nbytes / 1e6  # items/s -> MB/s
-    rows: list[Row] = []
-    baseline = 0.0
+    # First pass: run each transport in the requested order (order is preserved so
+    # the --duration-sec window markers stay aligned with an external sampler) and
+    # collect its mean + CI.
+    measured: list[tuple[str, float, float, float]] = []
     for i, transport in enumerate(args.transports):
         if i and args.gap_sec:
             time.sleep(args.gap_sec)  # idle valley between per-transport windows
@@ -443,21 +445,24 @@ def _run_config(size_mb: int, kind: str, args: argparse.Namespace) -> list[Row]:
             )
         mean = statistics.mean(samples)
         lo, hi = _confidence_interval(samples)
-        if transport == "no-arena":
-            baseline = mean
-        rows.append(
-            Row(
-                size_mb=size_mb,
-                kind=kind,
-                transport=transport,
-                items_per_s=mean,
-                mb_per_s=mean * factor,
-                mb_per_s_lo=lo * factor,
-                mb_per_s_hi=hi * factor,
-                speedup=mean / baseline if baseline else 1.0,
-            )
+        measured.append((transport, mean, lo, hi))
+    # Second pass: resolve the no-arena baseline after every transport is measured,
+    # so speedup does not depend on the order transports were run (and defaults to
+    # 1.0 when no-arena was not among --transports).
+    baseline = next((m for (t, m, _lo, _hi) in measured if t == "no-arena"), 0.0)
+    return [
+        Row(
+            size_mb=size_mb,
+            kind=kind,
+            transport=transport,
+            items_per_s=mean,
+            mb_per_s=mean * factor,
+            mb_per_s_lo=lo * factor,
+            mb_per_s_hi=hi * factor,
+            speedup=mean / baseline if baseline else 1.0,
         )
-    return rows
+        for transport, mean, lo, hi in measured
+    ]
 
 
 def _cpu_now() -> float:
@@ -566,8 +571,8 @@ def _run_config_isolated(
     vb = create_video_data(size) if kind == "packets" else None
     payload_nbytes = _payload_nbytes(kind, size, vb)
     factor = payload_nbytes / 1e6  # items/s -> MB/s
-    rows: list[Row] = []
-    baseline = 0.0
+    # First pass: measure each transport in its own process.
+    measured: list[tuple[str, float, float, float, float, float]] = []
     for transport in args.transports:
         samples, cpu, rss = _run_isolated(
             mp_ctx,
@@ -582,23 +587,26 @@ def _run_config_isolated(
         )
         mean = statistics.mean(samples)
         lo, hi = _confidence_interval(samples)
-        if transport == "no-arena":
-            baseline = mean
-        rows.append(
-            Row(
-                size_mb=size_mb,
-                kind=kind,
-                transport=transport,
-                items_per_s=mean,
-                mb_per_s=mean * factor,
-                mb_per_s_lo=lo * factor,
-                mb_per_s_hi=hi * factor,
-                speedup=mean / baseline if baseline else 1.0,
-                peak_rss_mb=rss,
-                cpu_sec=cpu,
-            )
+        measured.append((transport, mean, lo, hi, cpu, rss))
+    # Second pass: resolve the no-arena baseline after every transport is measured,
+    # so speedup is order-independent (and defaults to 1.0 when no-arena was not
+    # among --transports).
+    baseline = next((m for (t, m, *_rest) in measured if t == "no-arena"), 0.0)
+    return [
+        Row(
+            size_mb=size_mb,
+            kind=kind,
+            transport=transport,
+            items_per_s=mean,
+            mb_per_s=mean * factor,
+            mb_per_s_lo=lo * factor,
+            mb_per_s_hi=hi * factor,
+            speedup=mean / baseline if baseline else 1.0,
+            peak_rss_mb=rss,
+            cpu_sec=cpu,
         )
-    return rows
+        for transport, mean, lo, hi, cpu, rss in measured
+    ]
 
 
 def _table_header() -> str:

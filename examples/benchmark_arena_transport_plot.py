@@ -67,12 +67,19 @@ def _bar_panel(
 
     Bars are grouped by payload size; within a group the three transports
     (no-arena / ring / pool) sit side by side so they can be read off directly.
+    A missing (size, transport) — e.g. a config that was skipped or failed mid-run
+    — is drawn as a zero-height (absent) bar rather than raising ``KeyError``.
     """
     width = 0.26
     x = list(range(len(sizes)))
     for i, transport in enumerate(_TRANSPORTS):
         offset = (i - 1) * width  # centre the 3-bar group on each tick
-        vals = [getattr(idx[(s, kind, transport)], attr) for s in sizes]
+        vals = [
+            getattr(r, attr)
+            if (r := idx.get((s, kind, transport))) is not None
+            else 0.0
+            for s in sizes
+        ]
         ax.bar(
             [xi + offset for xi in x],
             vals,
