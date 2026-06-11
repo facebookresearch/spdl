@@ -363,3 +363,42 @@ class TestDemuxerNameParameter(unittest.TestCase):
         # Assert: Verify demux succeeded - this shows the name parameter flows through correctly
         self.assertIsNotNone(packets)
         self.assertGreater(len(packets), 0)
+
+
+class TestHevcSeekUpstreamBug(unittest.TestCase):
+    """Documents an FFmpeg-side bug where seeking HEVC streams fails.
+
+    FFmpeg's ``av_seek_frame`` does not work on HEVC: historically it
+    returned ``Operation not permitted``, and in newer FFmpeg releases
+    (and the version pinned in fbsource) the call hangs indefinitely
+    instead of failing fast. Tracking: https://trac.ffmpeg.org/ticket/9412
+    and T240178461.
+
+    The test below would assert the working behavior — demuxing an HEVC
+    sample with a non-None ``timestamp`` should yield packets — but it
+    is decorated ``@unittest.skip`` rather than ``@unittest.expectedFailure``
+    because the current upstream behavior is a hang, and an
+    ``expectedFailure``-decorated test would block until the per-test
+    timeout (600s on the CUDA CI host) and re-break the
+    ``bento_kernel_spdl`` contbuild. When FFmpeg ticket 9412 is resolved,
+    remove the skip decorator and verify the test passes.
+    """
+
+    @unittest.skip(
+        "FFmpeg cannot seek HEVC: the call hangs in the pinned FFmpeg "
+        "version, so we can't even use expectedFailure. See "
+        "https://trac.ffmpeg.org/ticket/9412 and T240178461. Re-enable "
+        "this test once FFmpeg fixes upstream HEVC seek."
+    )
+    def test_demux_hevc_with_timestamp_is_broken_upstream(self) -> None:
+        """Demuxing HEVC with a timestamp is expected to work upstream."""
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p "
+            f"-c:v libx265 -t 2 -vtag hvc1 sample.mp4"
+        )
+        sample = get_sample(cmd)
+
+        packets = spdl.io.demux_video(sample.path, timestamp=(0, 1.0))
+
+        self.assertIsNotNone(packets)
+        self.assertGreater(len(packets), 0)
