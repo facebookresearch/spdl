@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import spdl.io
 import spdl.io.utils
 import torch
+from parameterized import parameterized
 
 from ..fixture import FFMPEG_CLI, get_sample
 
@@ -39,6 +40,52 @@ def _decode_video(src, timestamp=None, allocator=None, **decode_options):
 def _get_dummy_sample():
     cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 2 sample.mp4"
     return get_sample(cmd)
+
+
+# ffmpeg lavfi commands to generate a sample for each NVDEC-supported codec.
+# Default `testsrc` is 320x240 @ 25fps; `-t 2` gives the seek-window test
+# room to start at t=0 with a 1-second window and still end before EOF.
+# MPEG4 and AV1 are intentionally absent: NVDEC's CodecID switch maps them
+# but `decode_packet` raises `SPDL_FAIL("NOT IMPLEMENTED.")` for both
+# (see fbcode/libspdl/cuda/nvdec/detail/decoder.cpp).
+_CODEC_SAMPLES = {
+    "h264": (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p "
+        f"-c:v libx264 -t 2 sample.mp4"
+    ),
+    "hevc": (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p "
+        f"-c:v libx265 -t 2 -vtag hvc1 sample.mp4"
+    ),
+    "vp9": (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p "
+        f"-c:v libvpx-vp9 -t 2 sample.webm"
+    ),
+    "vp8": (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p "
+        f"-c:v libvpx -t 2 sample.webm"
+    ),
+    "mpeg2": (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p "
+        f"-c:v mpeg2video -t 2 sample.mpg"
+    ),
+    "mjpeg": (
+        f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuvj420p "
+        f"-c:v mjpeg -t 2 sample.mov"
+    ),
+}
+
+# Codecs whose container FFmpeg can seek reliably. HEVC is excluded because
+# of an FFmpeg upstream bug (https://trac.ffmpeg.org/ticket/9412, T240178461)
+# that makes `av_seek_frame` fail / hang on HEVC streams. The HEVC row
+# remains in `_CODEC_SAMPLES` so GPU-decode coverage of HEVC is preserved
+# via the no-seek matrix; the seek failure is documented as a skipped test
+# in fbcode/spdl/tests/io/demuxer_test.py::TestHevcSeekUpstreamBug.
+_SEEKABLE_CODECS = ["h264", "vp9", "vp8", "mpeg2", "mjpeg"]
+
+
+def _get_codec_sample(codec_key):
+    return get_sample(_CODEC_SAMPLES[codec_key])
 
 
 class TestNvdecBasic(unittest.TestCase):
@@ -114,23 +161,47 @@ def _get_h264_sample():
     return get_sample(cmd)
 
 
-class TestNvdecH264(unittest.TestCase):
-    def test_nvdec_decode_h264_420p_basic(self) -> None:
-        """NVDEC can decode YUV420P video."""
-        h264 = _get_h264_sample()
-        array = _decode_video(h264.path, timestamp=(0, 1.0))
+class TestNvdecCodecCoverage(unittest.TestCase):
+    """GPU-decoder format coverage, split into two independent axes.
 
-        # y, u, v = split_nv12(array)
-        # _save(array, "./base")
-        # _save(y, "./base_y")
-        # _save(u, "./base_u")
-        # _save(v, "./base_v")
+    ``test_nvdec_decode_no_seek`` runs the codec-format axis: every
+    NVDEC-supported codec listed in ``_CODEC_SAMPLES`` is decoded with no
+    timestamp passed to demux, so codec coverage is independent of seek
+    behavior. ``test_nvdec_decode_with_seek`` runs the decode-after-seek
+    axis: packets demuxed from a non-zero seek point carry pre-seek
+    frames needed for reference but redundant after decode, and the GPU
+    decoder must handle that.
+
+    HEVC is omitted from the seek matrix because FFmpeg cannot seek HEVC
+    upstream (https://trac.ffmpeg.org/ticket/9412, T240178461). HEVC
+    GPU-decode coverage is still exercised via the no-seek row; the seek
+    failure itself is documented in
+    ``fbcode/spdl/tests/io/demuxer_test.py::TestHevcSeekUpstreamBug``.
+    """
+
+    @parameterized.expand(sorted(_CODEC_SAMPLES.keys()))
+    def test_nvdec_decode_no_seek(self, codec_key) -> None:
+        """NVDEC decodes the given codec without any demuxer seek."""
+        sample = _get_codec_sample(codec_key)
+        array = _decode_video(sample.path)
 
         self.assertEqual(array.dtype, torch.uint8)
-        self.assertEqual(array.shape, (25, 3, 240, 320))
+        # testsrc default is 320x240; NVDEC outputs 3-channel by default.
+        self.assertEqual(array.shape[1:], (3, 240, 320))
+        self.assertGreater(array.shape[0], 0)
 
-    # TODO: Test other formats like MJPEG, MPEG, HEVC, VC1 AV1 etc...
+    @parameterized.expand(sorted(_SEEKABLE_CODECS))
+    def test_nvdec_decode_with_seek(self, codec_key) -> None:
+        """NVDEC decodes packets obtained from a seeked demux."""
+        sample = _get_codec_sample(codec_key)
+        array = _decode_video(sample.path, timestamp=(0, 1.0))
 
+        self.assertEqual(array.dtype, torch.uint8)
+        self.assertEqual(array.shape[1:], (3, 240, 320))
+        self.assertGreater(array.shape[0], 0)
+
+
+class TestNvdecH264(unittest.TestCase):
     def test_nvdec_decode_video_torch_allocator(self) -> None:
         """NVDEC can decode YUV420P video."""
         h264 = _get_h264_sample()
@@ -165,23 +236,6 @@ class TestNvdecH264(unittest.TestCase):
 
         gc.collect()
         self.assertTrue(deleter_called)
-
-    @unittest.expectedFailure  # FFmpeg seems to have issue with seeking HEVC. It returns 'Operation not permitted'. See https://trac.ffmpeg.org/ticket/9412
-    def test_nvdec_decode_hevc_P010_basic(self) -> None:
-        """NVDEC can decode HEVC video."""
-        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -t 3 -c:v libx265 -pix_fmt yuv420p10le -vtag hvc1 -y sample.hevc"
-        sample = get_sample(cmd)
-
-        array = _decode_video(
-            sample.path,
-            timestamp=(0, 1.0),
-        )
-
-        # testsrc default height is 240, so height = 240 + 240 // 2 = 360
-        height = 360
-
-        self.assertEqual(array.dtype, torch.uint8)
-        self.assertEqual(array.shape, (25, 1, height, 320))
 
     def test_nvdec_decode_h264_420p_resize(self) -> None:
         """Check NVDEC decoder with resizing."""
