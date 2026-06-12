@@ -54,6 +54,8 @@ class SharedMemoryRingBuffer:
     :py:func:`spdl.pipeline.iterate_in_subprocess` via the ``arena`` argument;
     ownership transfers to that call, which closes and unlinks it at teardown.
 
+    .. versionadded:: 0.5.0
+
     Args:
         capacity: Size of the payload arena in bytes. Must be at least as large
             as the biggest single pipeline unit (the sum of the binaries

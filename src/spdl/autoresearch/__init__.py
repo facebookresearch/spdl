@@ -6,6 +6,8 @@
 
 """Framework for automated, LLM-driven experiment workflows.
 
+.. versionadded:: 0.5.0
+
 Autoresearch is an automated experiment engine that uses a coding agent
 to analyze metrics, identify bottlenecks, propose parameter and code
 changes, and iterate toward an objective (for the SPDL pipeline

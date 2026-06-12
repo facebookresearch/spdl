@@ -106,7 +106,8 @@ void register_packets(nb::module_& m) {
           "Args:\n"
           "    data: The serialized packets.\n\n"
           "Returns:\n"
-          "    The reconstructed packets.")
+          "    The reconstructed packets.\n\n"
+          ".. versionadded:: 0.5.0")
       .def_static(
           "deserialize_view",
           [](const nb::memoryview& data) -> AudioPacketsPtr {
@@ -126,7 +127,8 @@ void register_packets(nb::module_& m) {
           "Args:\n"
           "    data: A memoryview over the serialized packets.\n\n"
           "Returns:\n"
-          "    The packets viewing ``data``.")
+          "    The packets viewing ``data``.\n\n"
+          ".. versionadded:: 0.5.0")
       .def(
           "__repr__",
           [](const AudioPackets& self) {
@@ -231,7 +233,8 @@ void register_packets(nb::module_& m) {
           "Args:\n"
           "    data: The serialized packets.\n\n"
           "Returns:\n"
-          "    The reconstructed packets.")
+          "    The reconstructed packets.\n\n"
+          ".. versionadded:: 0.5.0")
       .def_static(
           "deserialize_view",
           [](const nb::memoryview& data) -> VideoPacketsPtr {
@@ -251,7 +254,8 @@ void register_packets(nb::module_& m) {
           "Args:\n"
           "    data: A memoryview over the serialized packets.\n\n"
           "Returns:\n"
-          "    The packets viewing ``data``.")
+          "    The packets viewing ``data``.\n\n"
+          ".. versionadded:: 0.5.0")
       .def(
           "get_timestamps",
           [](const VideoPackets& self, bool raw) -> std::vector<double> {
@@ -398,7 +402,8 @@ void register_packets(nb::module_& m) {
           "Args:\n"
           "    data: The serialized packets.\n\n"
           "Returns:\n"
-          "    The reconstructed packets.")
+          "    The reconstructed packets.\n\n"
+          ".. versionadded:: 0.5.0")
       .def_static(
           "deserialize_view",
           [](const nb::memoryview& data) -> ImagePacketsPtr {
@@ -418,7 +423,8 @@ void register_packets(nb::module_& m) {
           "Args:\n"
           "    data: A memoryview over the serialized packets.\n\n"
           "Returns:\n"
-          "    The packets viewing ``data``.")
+          "    The packets viewing ``data``.\n\n"
+          ".. versionadded:: 0.5.0")
       .def_prop_ro(
           "pix_fmt",
           [](const ImagePackets& self) {

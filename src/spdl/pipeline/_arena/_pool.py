@@ -93,6 +93,8 @@ class SharedMemorySegmentPool:
     teardown. Restored NumPy/Torch payloads are zero-copy views over shared
     memory; the pool keeps each segment until its views are released.
 
+    .. versionadded:: 0.5.0
+
     .. note::
 
        **Performance.** Because each unit is restored as a zero-copy view directly
