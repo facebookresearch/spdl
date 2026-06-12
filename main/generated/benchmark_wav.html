@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Benchmark tarfile" href="benchmark_tarfile.html" /><link rel="prev" title="Benchmark numpy" href="benchmark_numpy.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Benchmark wav - SPDL 0.5.0 documentation</title>
+        <title>Benchmark wav - SPDL 0.6.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.5.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.5.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -222,6 +222,8 @@
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/stages.html">Pipeline Stages</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/concurrency.html">Concurrency</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/parallelism.html">Pipeline Parallelism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/execution_models.html">Execution Models: MT, MTP, and MP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/gil.html">Working Around the GIL</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/logging.html">Collecting Runtime Statistics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/pytorch.html">Building High-Performance DataLoaders</a></li>
 </ul>
@@ -260,6 +262,7 @@
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/data_format.html">Data Format and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
@@ -299,9 +302,9 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
@@ -332,9 +335,13 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1DecodeConfig.html">Struct DecodeConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1DemuxConfig.html">Struct DemuxConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1EncodeConfigBase.html">Template Struct EncodeConfigBase</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html">Template Struct EncodeConfigBase&lt; MediaType::Audio &gt;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html">Template Struct EncodeConfigBase&lt; MediaType::Video &gt;</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Generator_1_1iterator.html">Struct Generator::iterator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Packets.html">Template Struct Packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1RawPacketData.html">Struct RawPacketData</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1SourceAdaptor.html">Struct SourceAdaptor</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/structspdl_1_1core_1_1Storage.html">Struct Storage</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1BSF.html">Template Class BSF</a></li>
@@ -349,6 +356,7 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1Frames.html">Template Class Frames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1PacketSeries.html">Class PacketSeries</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
@@ -359,9 +367,13 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa.html">Function spdl::core::cpu_buffer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1a295b42ad20d2569806d9a15009a44ca8.html">Function spdl::core::create_reference_audio_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe.html">Template Function spdl::core::deserialize_packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a17e80346c554363a3ca0f92f23f35d61.html">Template Function spdl::core::deserialize_packets_view</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a375c1c657bca786016f8a705e3f2a624.html">Template Function spdl::core::get_timestamps</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
@@ -370,6 +382,7 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74.html">Function spdl::core::make_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1ad4aa4f4b9667a0155f404046973ec2ee.html">Template Function spdl::core::serialize_packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a49d051162e06f26b896c8aef4605524b.html">Function spdl::core::set_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420.html">Function spdl::core::to_double</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d.html">Function spdl::core::to_rational</a></li>
@@ -379,6 +392,7 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1ac39ed67e74a726de6b86fbcc91e57971.html">Typedef spdl::core::AnyPackets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html">Typedef spdl::core::AnyPacketsGenerator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
@@ -386,6 +400,8 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_encoder_8h_1a0dfcc06d4bbea67c7f45399be8719fa6.html">Typedef spdl::core::AudioEncoderPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf.html">Typedef spdl::core::AudioFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62.html">Typedef spdl::core::AudioFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1a9644f8aa13f0e4db02d8ab60673563a3.html">Typedef spdl::core::AudioPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c.html">Typedef spdl::core::AudioPacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_buffer_8h_1ab6e5b43497adbd35e9fbc35cf5be7101.html">Typedef spdl::core::CPUBufferPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_adaptor_8h_1adcb670a31326eb24268b384396736cd6.html">Typedef spdl::core::DataInterfacePtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_decoder_8h_1a4b0502ea20d1dda958a67deeb582a74b.html">Typedef spdl::core::DecoderPtr</a></li>
@@ -396,8 +412,12 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f.html">Typedef spdl::core::ImageCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a.html">Typedef spdl::core::ImageFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7.html">Typedef spdl::core::ImageFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1af018ade1cd38831c342686abbcb787a8.html">Typedef spdl::core::ImagePackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1.html">Typedef spdl::core::ImagePacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_muxer_8h_1aaa76352d246819df02bc407729f69dda.html">Typedef spdl::core::MuxerPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20.html">Typedef spdl::core::OptionDict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1a331b599d0eceb00ebef166d64623c71a.html">Typedef spdl::core::PacketSeriesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html">Typedef spdl::core::PacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
@@ -407,6 +427,8 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_encoder_8h_1a39ace4ea741767fa3d802040a9bc22e1.html">Typedef spdl::core::VideoEncoderPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1af1892953097f3723455403752ef79fc5.html">Typedef spdl::core::VideoFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d.html">Typedef spdl::core::VideoFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1a7be7c9faccc623d12fb33ec966f84b4c.html">Typedef spdl::core::VideoPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691.html">Typedef spdl::core::VideoPacketsPtr</a></li>
 </ul>
 </li>
 </ul>
@@ -442,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
@@ -547,6 +570,204 @@ it does not release the GIL majority of the time.</p>
 <p>The <a class="reference internal" href="spdl.io.load_audio.html#spdl.io.load_audio" title="spdl.io.load_audio"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.load_audio()</span></code></a> function (the generic FFmpeg-based implementation) does
 a lot of work so its overall performance is not as good,
 but it scales in multi-threading as it releases the GIL almost entirely.</p>
+<p><strong>Free-threaded Python</strong></p>
+<p>The cases above where multi-threading does not help are caused by contention on
+the GIL — most visibly <code class="docutils literal notranslate"><span class="pre">soundfile</span></code>, which holds the GIL for most of its work,
+so a single thread ends up being the fastest. This contention disappears on a
+free-threaded (no-GIL) build of Python (e.g. <code class="docutils literal notranslate"><span class="pre">3.14t</span></code>). The following is the
+same benchmark run on <code class="docutils literal notranslate"><span class="pre">3.14t</span></code>.</p>
+<img alt="../_static/data/example-benchmark-wav-freethreading.png" src="../_static/data/example-benchmark-wav-freethreading.png" />
+<p>Without the GIL, <code class="docutils literal notranslate"><span class="pre">soundfile</span></code> now scales with the number of threads instead of
+slowing down, improving its throughput at 16 threads by more than an order of
+magnitude. <a class="reference internal" href="spdl.io.load_audio.html#spdl.io.load_audio" title="spdl.io.load_audio"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.load_audio()</span></code></a>, which already releases the GIL, is
+essentially unchanged.</p>
+<p>The numbers from both runs are tabulated below.</p>
+<p><strong>Soundfile</strong></p>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Duration</p></th>
+<th class="head" colspan="2"><p>1s</p></th>
+<th class="head" colspan="2"><p>10s</p></th>
+<th class="head" colspan="2"><p>60s</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Build</p></th>
+<th class="head"><p>3.14</p></th>
+<th class="head"><p>3.14t</p></th>
+<th class="head"><p>3.14</p></th>
+<th class="head"><p>3.14t</p></th>
+<th class="head"><p>3.14</p></th>
+<th class="head"><p>3.14t</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>9,904</p></td>
+<td><p>11,910</p></td>
+<td><p>5,864</p></td>
+<td><p>6,500</p></td>
+<td><p>1,869</p></td>
+<td><p>2,054</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>5,481</p></td>
+<td><p>19,120</p></td>
+<td><p>4,188</p></td>
+<td><p>10,645</p></td>
+<td><p>1,481</p></td>
+<td><p>3,599</p></td>
+</tr>
+<tr class="row-odd"><td><p>4</p></td>
+<td><p>3,142</p></td>
+<td><p>30,447</p></td>
+<td><p>2,491</p></td>
+<td><p>16,438</p></td>
+<td><p>1,201</p></td>
+<td><p>6,280</p></td>
+</tr>
+<tr class="row-even"><td><p>8</p></td>
+<td><p>2,375</p></td>
+<td><p>45,220</p></td>
+<td><p>1,993</p></td>
+<td><p>25,208</p></td>
+<td><p>1,163</p></td>
+<td><p>10,725</p></td>
+</tr>
+<tr class="row-odd"><td><p>16</p></td>
+<td><p>2,643</p></td>
+<td><p>54,900</p></td>
+<td><p>2,121</p></td>
+<td><p>40,948</p></td>
+<td><p>1,017</p></td>
+<td><p>14,103</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>spdl.io.load_audio</strong></p>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Duration</p></th>
+<th class="head" colspan="2"><p>1s</p></th>
+<th class="head" colspan="2"><p>10s</p></th>
+<th class="head" colspan="2"><p>60s</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Build</p></th>
+<th class="head"><p>3.14</p></th>
+<th class="head"><p>3.14t</p></th>
+<th class="head"><p>3.14</p></th>
+<th class="head"><p>3.14t</p></th>
+<th class="head"><p>3.14</p></th>
+<th class="head"><p>3.14t</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>116</p></td>
+<td><p>119</p></td>
+<td><p>43</p></td>
+<td><p>45</p></td>
+<td><p>38</p></td>
+<td><p>38</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>258</p></td>
+<td><p>271</p></td>
+<td><p>85</p></td>
+<td><p>88</p></td>
+<td><p>74</p></td>
+<td><p>75</p></td>
+</tr>
+<tr class="row-odd"><td><p>4</p></td>
+<td><p>512</p></td>
+<td><p>511</p></td>
+<td><p>168</p></td>
+<td><p>176</p></td>
+<td><p>144</p></td>
+<td><p>152</p></td>
+</tr>
+<tr class="row-even"><td><p>8</p></td>
+<td><p>1,011</p></td>
+<td><p>1,035</p></td>
+<td><p>337</p></td>
+<td><p>352</p></td>
+<td><p>286</p></td>
+<td><p>296</p></td>
+</tr>
+<tr class="row-odd"><td><p>16</p></td>
+<td><p>1,915</p></td>
+<td><p>2,012</p></td>
+<td><p>652</p></td>
+<td><p>698</p></td>
+<td><p>538</p></td>
+<td><p>574</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>spdl.io.load_wav</strong></p>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Duration</p></th>
+<th class="head" colspan="2"><p>1s</p></th>
+<th class="head" colspan="2"><p>10s</p></th>
+<th class="head" colspan="2"><p>60s</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Build</p></th>
+<th class="head"><p>3.14</p></th>
+<th class="head"><p>3.14t</p></th>
+<th class="head"><p>3.14</p></th>
+<th class="head"><p>3.14t</p></th>
+<th class="head"><p>3.14</p></th>
+<th class="head"><p>3.14t</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>51,585</p></td>
+<td><p>79,572</p></td>
+<td><p>47,905</p></td>
+<td><p>107,119</p></td>
+<td><p>49,404</p></td>
+<td><p>76,757</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>49,882</p></td>
+<td><p>98,500</p></td>
+<td><p>49,057</p></td>
+<td><p>97,641</p></td>
+<td><p>45,787</p></td>
+<td><p>98,364</p></td>
+</tr>
+<tr class="row-odd"><td><p>4</p></td>
+<td><p>51,084</p></td>
+<td><p>87,790</p></td>
+<td><p>49,228</p></td>
+<td><p>91,243</p></td>
+<td><p>50,026</p></td>
+<td><p>94,748</p></td>
+</tr>
+<tr class="row-even"><td><p>8</p></td>
+<td><p>48,710</p></td>
+<td><p>77,335</p></td>
+<td><p>49,124</p></td>
+<td><p>73,603</p></td>
+<td><p>47,977</p></td>
+<td><p>76,574</p></td>
+</tr>
+<tr class="row-odd"><td><p>16</p></td>
+<td><p>38,366</p></td>
+<td><p>65,094</p></td>
+<td><p>37,587</p></td>
+<td><p>62,512</p></td>
+<td><p>38,210</p></td>
+<td><p>63,498</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <section id="source">
 <h2>Source<a class="headerlink" href="#source" title="Link to this heading">¶</a></h2>
 <p class="rubric">Source</p>
@@ -615,293 +836,367 @@ but it scales in multi-threading as it releases the GIL almost entirely.</p>
 <span class="linenos"> 62</span><span class="sd">The :py:func:`spdl.io.load_audio` function (the generic FFmpeg-based implementation) does</span>
 <span class="linenos"> 63</span><span class="sd">a lot of work so its overall performance is not as good,</span>
 <span class="linenos"> 64</span><span class="sd">but it scales in multi-threading as it releases the GIL almost entirely.</span>
-<span class="linenos"> 65</span><span class="sd">&quot;&quot;&quot;</span>
-<span class="linenos"> 66</span>
-<span class="linenos"> 67</span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-<span class="linenos"> 68</span>    <span class="s2">&quot;BenchmarkConfig&quot;</span><span class="p">,</span>
-<span class="linenos"> 69</span>    <span class="s2">&quot;create_wav_data&quot;</span><span class="p">,</span>
-<span class="linenos"> 70</span>    <span class="s2">&quot;load_sf&quot;</span><span class="p">,</span>
-<span class="linenos"> 71</span>    <span class="s2">&quot;load_spdl_audio&quot;</span><span class="p">,</span>
-<span class="linenos"> 72</span>    <span class="s2">&quot;load_spdl_wav&quot;</span><span class="p">,</span>
-<span class="linenos"> 73</span>    <span class="s2">&quot;main&quot;</span><span class="p">,</span>
-<span class="linenos"> 74</span><span class="p">]</span>
+<span class="linenos"> 65</span>
+<span class="linenos"> 66</span><span class="sd">**Free-threaded Python**</span>
+<span class="linenos"> 67</span>
+<span class="linenos"> 68</span><span class="sd">The cases above where multi-threading does not help are caused by contention on</span>
+<span class="linenos"> 69</span><span class="sd">the GIL — most visibly ``soundfile``, which holds the GIL for most of its work,</span>
+<span class="linenos"> 70</span><span class="sd">so a single thread ends up being the fastest. This contention disappears on a</span>
+<span class="linenos"> 71</span><span class="sd">free-threaded (no-GIL) build of Python (e.g. ``3.14t``). The following is the</span>
+<span class="linenos"> 72</span><span class="sd">same benchmark run on ``3.14t``.</span>
+<span class="linenos"> 73</span>
+<span class="linenos"> 74</span><span class="sd">.. image:: ../../_static/data/example-benchmark-wav-freethreading.png</span>
 <span class="linenos"> 75</span>
-<span class="linenos"> 76</span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
-<span class="linenos"> 77</span><span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
-<span class="linenos"> 78</span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="linenos"> 79</span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
-<span class="linenos"> 80</span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<span class="linenos"> 81</span>
-<span class="linenos"> 82</span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="linenos"> 83</span><span class="kn">import</span><span class="w"> </span><span class="nn">scipy.io.wavfile</span>
-<span class="linenos"> 84</span><span class="kn">import</span><span class="w"> </span><span class="nn">soundfile</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sf</span>
-<span class="linenos"> 85</span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
-<span class="linenos"> 86</span><span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NDArray</span>
-<span class="linenos"> 87</span>
-<span class="linenos"> 88</span><span class="k">try</span><span class="p">:</span>
-<span class="linenos"> 89</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># pyre-ignore[21]</span>
-<span class="linenos"> 90</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
-<span class="linenos"> 91</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
-<span class="linenos"> 92</span>        <span class="n">ExecutorType</span><span class="p">,</span>
-<span class="linenos"> 93</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
-<span class="linenos"> 94</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
-<span class="linenos"> 95</span>    <span class="p">)</span>
-<span class="linenos"> 96</span><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-<span class="linenos"> 97</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">spdl.examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-<span class="linenos"> 98</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
-<span class="linenos"> 99</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
-<span class="linenos">100</span>        <span class="n">ExecutorType</span><span class="p">,</span>
-<span class="linenos">101</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
-<span class="linenos">102</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
-<span class="linenos">103</span>    <span class="p">)</span>
-<span class="linenos">104</span>
-<span class="linenos">105</span>
-<span class="linenos">106</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">get_default_result_path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
-<span class="linenos">107</span>
-<span class="linenos">108</span>
-<span class="linenos">109</span><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="linenos">110</span><span class="k">class</span><span class="w"> </span><span class="nc">BenchmarkConfig</span><span class="p">:</span>
-<span class="linenos">111</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;BenchmarkConfig()</span>
-<span class="linenos">112</span>
-<span class="linenos">113</span><span class="sd">    Configuration for a single WAV benchmark run.</span>
-<span class="linenos">114</span>
-<span class="linenos">115</span><span class="sd">    Combines both audio file parameters and benchmark execution parameters.</span>
-<span class="linenos">116</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">117</span>
-<span class="linenos">118</span>    <span class="n">function_name</span><span class="p">:</span> <span class="nb">str</span>
-<span class="linenos">119</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Name of the function being tested&quot;&quot;&quot;</span>
-<span class="linenos">120</span>
-<span class="linenos">121</span>    <span class="n">function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">bytes</span><span class="p">],</span> <span class="n">NDArray</span><span class="p">]</span>
-<span class="linenos">122</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;The actual function to benchmark&quot;&quot;&quot;</span>
-<span class="linenos">123</span>
-<span class="linenos">124</span>    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">125</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Audio sample rate in Hz&quot;&quot;&quot;</span>
-<span class="linenos">126</span>
-<span class="linenos">127</span>    <span class="n">num_channels</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">128</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Number of audio channels&quot;&quot;&quot;</span>
-<span class="linenos">129</span>
-<span class="linenos">130</span>    <span class="n">bits_per_sample</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">131</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Bit depth per sample (16 or 32)&quot;&quot;&quot;</span>
-<span class="linenos">132</span>
-<span class="linenos">133</span>    <span class="n">duration_seconds</span><span class="p">:</span> <span class="nb">float</span>
-<span class="linenos">134</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Duration of the audio file in seconds&quot;&quot;&quot;</span>
-<span class="linenos">135</span>
-<span class="linenos">136</span>    <span class="n">num_threads</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">137</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Number of concurrent threads&quot;&quot;&quot;</span>
+<span class="linenos"> 76</span><span class="sd">Without the GIL, ``soundfile`` now scales with the number of threads instead of</span>
+<span class="linenos"> 77</span><span class="sd">slowing down, improving its throughput at 16 threads by more than an order of</span>
+<span class="linenos"> 78</span><span class="sd">magnitude. :py:func:`spdl.io.load_audio`, which already releases the GIL, is</span>
+<span class="linenos"> 79</span><span class="sd">essentially unchanged.</span>
+<span class="linenos"> 80</span>
+<span class="linenos"> 81</span><span class="sd">The numbers from both runs are tabulated below.</span>
+<span class="linenos"> 82</span>
+<span class="linenos"> 83</span><span class="sd">**Soundfile**</span>
+<span class="linenos"> 84</span>
+<span class="linenos"> 85</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos"> 86</span><span class="sd">| Duration |       1s         |       10s       |       60s        |</span>
+<span class="linenos"> 87</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos"> 88</span><span class="sd">|  Build   |  3.14  |   3.14t |   3.14 |  3.14t |  3.14  |   3.14t |</span>
+<span class="linenos"> 89</span><span class="sd">+==========+========+=========+========+========+========+=========+</span>
+<span class="linenos"> 90</span><span class="sd">|        1 |  9,904 |  11,910 |  5,864 |  6,500 |  1,869 |   2,054 |</span>
+<span class="linenos"> 91</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos"> 92</span><span class="sd">|        2 |  5,481 |  19,120 |  4,188 | 10,645 |  1,481 |   3,599 |</span>
+<span class="linenos"> 93</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos"> 94</span><span class="sd">|        4 |  3,142 |  30,447 |  2,491 | 16,438 |  1,201 |   6,280 |</span>
+<span class="linenos"> 95</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos"> 96</span><span class="sd">|        8 |  2,375 |  45,220 |  1,993 | 25,208 |  1,163 |  10,725 |</span>
+<span class="linenos"> 97</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos"> 98</span><span class="sd">|       16 |  2,643 |  54,900 |  2,121 | 40,948 |  1,017 |  14,103 |</span>
+<span class="linenos"> 99</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos">100</span>
+<span class="linenos">101</span>
+<span class="linenos">102</span><span class="sd">**spdl.io.load_audio**</span>
+<span class="linenos">103</span>
+<span class="linenos">104</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos">105</span><span class="sd">| Duration |       1s         |       10s       |       60s        |</span>
+<span class="linenos">106</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos">107</span><span class="sd">|  Build   |  3.14  |   3.14t |   3.14 |  3.14t |  3.14  |   3.14t |</span>
+<span class="linenos">108</span><span class="sd">+==========+========+=========+========+========+========+=========+</span>
+<span class="linenos">109</span><span class="sd">|        1 |    116 |     119 |     43 |     45 |     38 |      38 |</span>
+<span class="linenos">110</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos">111</span><span class="sd">|        2 |    258 |     271 |     85 |     88 |     74 |      75 |</span>
+<span class="linenos">112</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos">113</span><span class="sd">|        4 |    512 |     511 |    168 |    176 |    144 |     152 |</span>
+<span class="linenos">114</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos">115</span><span class="sd">|        8 |  1,011 |   1,035 |    337 |    352 |    286 |     296 |</span>
+<span class="linenos">116</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos">117</span><span class="sd">|       16 |  1,915 |   2,012 |    652 |    698 |    538 |     574 |</span>
+<span class="linenos">118</span><span class="sd">+----------+--------+---------+--------+--------+--------+---------+</span>
+<span class="linenos">119</span>
+<span class="linenos">120</span><span class="sd">**spdl.io.load_wav**</span>
+<span class="linenos">121</span>
+<span class="linenos">122</span><span class="sd">+----------+--------+--------+--------+---------+--------+--------+</span>
+<span class="linenos">123</span><span class="sd">| Duration |       1s        |       10s        |       60s       |</span>
+<span class="linenos">124</span><span class="sd">+----------+--------+--------+--------+---------+--------+--------+</span>
+<span class="linenos">125</span><span class="sd">|  Build   |  3.14  |  3.14t |   3.14 |   3.14t |  3.14  |  3.14t |</span>
+<span class="linenos">126</span><span class="sd">+==========+========+========+========+=========+========+========+</span>
+<span class="linenos">127</span><span class="sd">|        1 | 51,585 | 79,572 | 47,905 | 107,119 | 49,404 | 76,757 |</span>
+<span class="linenos">128</span><span class="sd">+----------+--------+--------+--------+---------+--------+--------+</span>
+<span class="linenos">129</span><span class="sd">|        2 | 49,882 | 98,500 | 49,057 |  97,641 | 45,787 | 98,364 |</span>
+<span class="linenos">130</span><span class="sd">+----------+--------+--------+--------+---------+--------+--------+</span>
+<span class="linenos">131</span><span class="sd">|        4 | 51,084 | 87,790 | 49,228 |  91,243 | 50,026 | 94,748 |</span>
+<span class="linenos">132</span><span class="sd">+----------+--------+--------+--------+---------+--------+--------+</span>
+<span class="linenos">133</span><span class="sd">|        8 | 48,710 | 77,335 | 49,124 |  73,603 | 47,977 | 76,574 |</span>
+<span class="linenos">134</span><span class="sd">+----------+--------+--------+--------+---------+--------+--------+</span>
+<span class="linenos">135</span><span class="sd">|       16 | 38,366 | 65,094 | 37,587 |  62,512 | 38,210 | 63,498 |</span>
+<span class="linenos">136</span><span class="sd">+----------+--------+--------+--------+---------+--------+--------+</span>
+<span class="linenos">137</span>
 <span class="linenos">138</span>
-<span class="linenos">139</span>    <span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">140</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Number of iterations per run&quot;&quot;&quot;</span>
-<span class="linenos">141</span>
-<span class="linenos">142</span>    <span class="n">num_runs</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">143</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Number of runs for statistical analysis&quot;&quot;&quot;</span>
-<span class="linenos">144</span>
-<span class="linenos">145</span>
-<span class="linenos">146</span><span class="k">def</span><span class="w"> </span><span class="nf">create_wav_data</span><span class="p">(</span>
-<span class="linenos">147</span>    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">44100</span><span class="p">,</span>
-<span class="linenos">148</span>    <span class="n">num_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-<span class="linenos">149</span>    <span class="n">bits_per_sample</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
-<span class="linenos">150</span>    <span class="n">duration_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
-<span class="linenos">151</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
-<span class="linenos">152</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a WAV file in memory for benchmarking.</span>
-<span class="linenos">153</span>
-<span class="linenos">154</span><span class="sd">    Args:</span>
-<span class="linenos">155</span><span class="sd">        sample_rate: Sample rate in Hz</span>
-<span class="linenos">156</span><span class="sd">        num_channels: Number of audio channels</span>
-<span class="linenos">157</span><span class="sd">        bits_per_sample: Bits per sample (16 or 32)</span>
-<span class="linenos">158</span><span class="sd">        duration_seconds: Duration of audio in seconds</span>
-<span class="linenos">159</span>
-<span class="linenos">160</span><span class="sd">    Returns:</span>
-<span class="linenos">161</span><span class="sd">        Tuple of (WAV file as bytes, audio samples array)</span>
-<span class="linenos">162</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">163</span>    <span class="n">num_samples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">*</span> <span class="n">duration_seconds</span><span class="p">)</span>
-<span class="linenos">164</span>
-<span class="linenos">165</span>    <span class="n">dtype_map</span> <span class="o">=</span> <span class="p">{</span>
-<span class="linenos">166</span>        <span class="mi">16</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">,</span>
-<span class="linenos">167</span>        <span class="mi">32</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
-<span class="linenos">168</span>    <span class="p">}</span>
-<span class="linenos">169</span>    <span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype_map</span><span class="p">[</span><span class="n">bits_per_sample</span><span class="p">]</span>
-<span class="linenos">170</span>    <span class="n">max_amplitude</span> <span class="o">=</span> <span class="mi">32767</span> <span class="k">if</span> <span class="n">bits_per_sample</span> <span class="o">==</span> <span class="mi">16</span> <span class="k">else</span> <span class="mi">2147483647</span>
-<span class="linenos">171</span>
-<span class="linenos">172</span>    <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">duration_seconds</span><span class="p">,</span> <span class="n">num_samples</span><span class="p">)</span>
-<span class="linenos">173</span>    <span class="n">frequencies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">440.0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">num_channels</span><span class="p">)</span> <span class="o">*</span> <span class="mf">110.0</span><span class="p">)</span>
-<span class="linenos">174</span>    <span class="n">sine_waves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">frequencies</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span>
-<span class="linenos">175</span>    <span class="n">samples</span> <span class="o">=</span> <span class="p">(</span><span class="n">sine_waves</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">max_amplitude</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
-<span class="linenos">176</span>
-<span class="linenos">177</span>    <span class="n">wav_buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
-<span class="linenos">178</span>    <span class="n">scipy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">wavfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">wav_buffer</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">,</span> <span class="n">samples</span><span class="p">)</span>
-<span class="linenos">179</span>    <span class="n">wav_data</span> <span class="o">=</span> <span class="n">wav_buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
-<span class="linenos">180</span>
-<span class="linenos">181</span>    <span class="k">return</span> <span class="n">wav_data</span><span class="p">,</span> <span class="n">samples</span>
+<span class="linenos">139</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="linenos">140</span>
+<span class="linenos">141</span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+<span class="linenos">142</span>    <span class="s2">&quot;BenchmarkConfig&quot;</span><span class="p">,</span>
+<span class="linenos">143</span>    <span class="s2">&quot;create_wav_data&quot;</span><span class="p">,</span>
+<span class="linenos">144</span>    <span class="s2">&quot;load_sf&quot;</span><span class="p">,</span>
+<span class="linenos">145</span>    <span class="s2">&quot;load_spdl_audio&quot;</span><span class="p">,</span>
+<span class="linenos">146</span>    <span class="s2">&quot;load_spdl_wav&quot;</span><span class="p">,</span>
+<span class="linenos">147</span>    <span class="s2">&quot;main&quot;</span><span class="p">,</span>
+<span class="linenos">148</span><span class="p">]</span>
+<span class="linenos">149</span>
+<span class="linenos">150</span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="linenos">151</span><span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="linenos">152</span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="linenos">153</span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+<span class="linenos">154</span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="linenos">155</span>
+<span class="linenos">156</span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="linenos">157</span><span class="kn">import</span><span class="w"> </span><span class="nn">scipy.io.wavfile</span>
+<span class="linenos">158</span><span class="kn">import</span><span class="w"> </span><span class="nn">soundfile</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sf</span>
+<span class="linenos">159</span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+<span class="linenos">160</span><span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NDArray</span>
+<span class="linenos">161</span>
+<span class="linenos">162</span><span class="k">try</span><span class="p">:</span>
+<span class="linenos">163</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># pyre-ignore[21]</span>
+<span class="linenos">164</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
+<span class="linenos">165</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
+<span class="linenos">166</span>        <span class="n">ExecutorType</span><span class="p">,</span>
+<span class="linenos">167</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
+<span class="linenos">168</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
+<span class="linenos">169</span>    <span class="p">)</span>
+<span class="linenos">170</span><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+<span class="linenos">171</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">spdl.examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="linenos">172</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
+<span class="linenos">173</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
+<span class="linenos">174</span>        <span class="n">ExecutorType</span><span class="p">,</span>
+<span class="linenos">175</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
+<span class="linenos">176</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
+<span class="linenos">177</span>    <span class="p">)</span>
+<span class="linenos">178</span>
+<span class="linenos">179</span>
+<span class="linenos">180</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">get_default_result_path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+<span class="linenos">181</span>
 <span class="linenos">182</span>
-<span class="linenos">183</span>
-<span class="linenos">184</span><span class="k">def</span><span class="w"> </span><span class="nf">load_sf</span><span class="p">(</span><span class="n">wav_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
-<span class="linenos">185</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load WAV data using soundfile library.</span>
+<span class="linenos">183</span><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos">184</span><span class="k">class</span><span class="w"> </span><span class="nc">BenchmarkConfig</span><span class="p">:</span>
+<span class="linenos">185</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;BenchmarkConfig()</span>
 <span class="linenos">186</span>
-<span class="linenos">187</span><span class="sd">    Args:</span>
-<span class="linenos">188</span><span class="sd">        wav_data: WAV file data as bytes</span>
-<span class="linenos">189</span>
-<span class="linenos">190</span><span class="sd">    Returns:</span>
-<span class="linenos">191</span><span class="sd">        Audio samples array as int16 numpy array</span>
-<span class="linenos">192</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">193</span>    <span class="n">audio_file</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">wav_data</span><span class="p">)</span>
-<span class="linenos">194</span>    <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">sf</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">audio_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;int16&quot;</span><span class="p">)</span>
-<span class="linenos">195</span>    <span class="k">return</span> <span class="n">data</span>
-<span class="linenos">196</span>
+<span class="linenos">187</span><span class="sd">    Configuration for a single WAV benchmark run.</span>
+<span class="linenos">188</span>
+<span class="linenos">189</span><span class="sd">    Combines both audio file parameters and benchmark execution parameters.</span>
+<span class="linenos">190</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">191</span>
+<span class="linenos">192</span>    <span class="n">function_name</span><span class="p">:</span> <span class="nb">str</span>
+<span class="linenos">193</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Name of the function being tested&quot;&quot;&quot;</span>
+<span class="linenos">194</span>
+<span class="linenos">195</span>    <span class="n">function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">bytes</span><span class="p">],</span> <span class="n">NDArray</span><span class="p">]</span>
+<span class="linenos">196</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;The actual function to benchmark&quot;&quot;&quot;</span>
 <span class="linenos">197</span>
-<span class="linenos">198</span><span class="k">def</span><span class="w"> </span><span class="nf">load_spdl_audio</span><span class="p">(</span><span class="n">wav_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
-<span class="linenos">199</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load WAV data using :py:func:`spdl.io.load_audio` function.</span>
+<span class="linenos">198</span>    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">199</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Audio sample rate in Hz&quot;&quot;&quot;</span>
 <span class="linenos">200</span>
-<span class="linenos">201</span><span class="sd">    Args:</span>
-<span class="linenos">202</span><span class="sd">        wav_data: WAV file data as bytes</span>
+<span class="linenos">201</span>    <span class="n">num_channels</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">202</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Number of audio channels&quot;&quot;&quot;</span>
 <span class="linenos">203</span>
-<span class="linenos">204</span><span class="sd">    Returns:</span>
-<span class="linenos">205</span><span class="sd">        Audio samples array as numpy array</span>
-<span class="linenos">206</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">207</span>    <span class="k">return</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_audio</span><span class="p">(</span><span class="n">wav_data</span><span class="p">,</span> <span class="n">filter_desc</span><span class="o">=</span><span class="kc">None</span><span class="p">))</span>
-<span class="linenos">208</span>
+<span class="linenos">204</span>    <span class="n">bits_per_sample</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">205</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Bit depth per sample (16 or 32)&quot;&quot;&quot;</span>
+<span class="linenos">206</span>
+<span class="linenos">207</span>    <span class="n">duration_seconds</span><span class="p">:</span> <span class="nb">float</span>
+<span class="linenos">208</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Duration of the audio file in seconds&quot;&quot;&quot;</span>
 <span class="linenos">209</span>
-<span class="linenos">210</span><span class="k">def</span><span class="w"> </span><span class="nf">load_spdl_wav</span><span class="p">(</span><span class="n">wav_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
-<span class="linenos">211</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load WAV data using :py:func:`spdl.io.load_wav` function.</span>
+<span class="linenos">210</span>    <span class="n">num_threads</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">211</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Number of concurrent threads&quot;&quot;&quot;</span>
 <span class="linenos">212</span>
-<span class="linenos">213</span><span class="sd">    Args:</span>
-<span class="linenos">214</span><span class="sd">        wav_data: WAV file data as bytes</span>
+<span class="linenos">213</span>    <span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">214</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Number of iterations per run&quot;&quot;&quot;</span>
 <span class="linenos">215</span>
-<span class="linenos">216</span><span class="sd">    Returns:</span>
-<span class="linenos">217</span><span class="sd">        Audio samples array as numpy array</span>
-<span class="linenos">218</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">219</span>    <span class="k">return</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_wav</span><span class="p">(</span><span class="n">wav_data</span><span class="p">))</span>
-<span class="linenos">220</span>
-<span class="linenos">221</span>
-<span class="linenos">222</span><span class="k">def</span><span class="w"> </span><span class="nf">_parse_args</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">:</span>
-<span class="linenos">223</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse command line arguments for the benchmark script.</span>
-<span class="linenos">224</span>
-<span class="linenos">225</span><span class="sd">    Returns:</span>
-<span class="linenos">226</span><span class="sd">        Parsed command line arguments</span>
-<span class="linenos">227</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">228</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Benchmark WAV loading performance&quot;</span><span class="p">)</span>
-<span class="linenos">229</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-<span class="linenos">230</span>        <span class="s2">&quot;--output&quot;</span><span class="p">,</span>
-<span class="linenos">231</span>        <span class="nb">type</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">p</span><span class="p">),</span>
-<span class="linenos">232</span>        <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">,</span>
-<span class="linenos">233</span>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output file path.&quot;</span><span class="p">,</span>
-<span class="linenos">234</span>    <span class="p">)</span>
-<span class="linenos">235</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-<span class="linenos">236</span>
-<span class="linenos">237</span>
-<span class="linenos">238</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">239</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Run comprehensive benchmark suite for WAV loading performance.</span>
-<span class="linenos">240</span>
-<span class="linenos">241</span><span class="sd">    Benchmarks multiple configurations of audio files with different durations,</span>
-<span class="linenos">242</span><span class="sd">    comparing spdl.io.load_wav, spdl.io.load_audio, and soundfile libraries</span>
-<span class="linenos">243</span><span class="sd">    across various thread counts (1, 2, 4, 8, 16).</span>
-<span class="linenos">244</span><span class="sd">    &quot;&quot;&quot;</span>
-<span class="linenos">245</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">_parse_args</span><span class="p">()</span>
-<span class="linenos">246</span>
-<span class="linenos">247</span>    <span class="c1"># Define audio configurations to test</span>
-<span class="linenos">248</span>    <span class="n">audio_configs</span> <span class="o">=</span> <span class="p">[</span>
-<span class="linenos">249</span>        <span class="c1"># (sample_rate, num_channels, bits_per_sample, duration_seconds)</span>
-<span class="linenos">250</span>        <span class="c1"># (8000, 1, 16, 1.0),  # Low quality mono</span>
-<span class="linenos">251</span>        <span class="c1"># (16000, 1, 16, 1.0),  # Speech quality mono</span>
-<span class="linenos">252</span>        <span class="c1"># (48000, 2, 16, 1.0),  # High quality stereo</span>
-<span class="linenos">253</span>        <span class="c1"># (48000, 8, 16, 1.0),  # Multi-channel audio</span>
-<span class="linenos">254</span>        <span class="p">(</span><span class="mi">44100</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>  <span class="c1"># CD quality stereo</span>
-<span class="linenos">255</span>        <span class="p">(</span><span class="mi">44100</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span>  <span class="c1">#</span>
-<span class="linenos">256</span>        <span class="p">(</span><span class="mi">44100</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">),</span>  <span class="c1">#</span>
-<span class="linenos">257</span>        <span class="c1"># (44100, 2, 24, 1.0),  # 24-bit audio</span>
-<span class="linenos">258</span>    <span class="p">]</span>
-<span class="linenos">259</span>
-<span class="linenos">260</span>    <span class="n">thread_counts</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">]</span>
-<span class="linenos">261</span>
-<span class="linenos">262</span>    <span class="c1"># Define benchmark function configurations</span>
-<span class="linenos">263</span>    <span class="c1"># (function_name, function, iterations_multiplier, num_runs)</span>
-<span class="linenos">264</span>    <span class="n">benchmark_functions</span> <span class="o">=</span> <span class="p">[</span>
-<span class="linenos">265</span>        <span class="p">(</span><span class="s2">&quot;3. spdl.io.load_wav&quot;</span><span class="p">,</span> <span class="n">load_spdl_wav</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>  <span class="c1"># Fast but unstable</span>
-<span class="linenos">266</span>        <span class="p">(</span><span class="s2">&quot;2. spdl.io.load_audio&quot;</span><span class="p">,</span> <span class="n">load_spdl_audio</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>  <span class="c1"># Slower but stable</span>
-<span class="linenos">267</span>        <span class="p">(</span><span class="s2">&quot;1. soundfile&quot;</span><span class="p">,</span> <span class="n">load_sf</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>  <span class="c1"># Slower but stable</span>
-<span class="linenos">268</span>    <span class="p">]</span>
-<span class="linenos">269</span>
-<span class="linenos">270</span>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">BenchmarkConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="linenos">216</span>    <span class="n">num_runs</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">217</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Number of runs for statistical analysis&quot;&quot;&quot;</span>
+<span class="linenos">218</span>
+<span class="linenos">219</span>
+<span class="linenos">220</span><span class="k">def</span><span class="w"> </span><span class="nf">create_wav_data</span><span class="p">(</span>
+<span class="linenos">221</span>    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">44100</span><span class="p">,</span>
+<span class="linenos">222</span>    <span class="n">num_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+<span class="linenos">223</span>    <span class="n">bits_per_sample</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
+<span class="linenos">224</span>    <span class="n">duration_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+<span class="linenos">225</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
+<span class="linenos">226</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a WAV file in memory for benchmarking.</span>
+<span class="linenos">227</span>
+<span class="linenos">228</span><span class="sd">    Args:</span>
+<span class="linenos">229</span><span class="sd">        sample_rate: Sample rate in Hz</span>
+<span class="linenos">230</span><span class="sd">        num_channels: Number of audio channels</span>
+<span class="linenos">231</span><span class="sd">        bits_per_sample: Bits per sample (16 or 32)</span>
+<span class="linenos">232</span><span class="sd">        duration_seconds: Duration of audio in seconds</span>
+<span class="linenos">233</span>
+<span class="linenos">234</span><span class="sd">    Returns:</span>
+<span class="linenos">235</span><span class="sd">        Tuple of (WAV file as bytes, audio samples array)</span>
+<span class="linenos">236</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">237</span>    <span class="n">num_samples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">*</span> <span class="n">duration_seconds</span><span class="p">)</span>
+<span class="linenos">238</span>
+<span class="linenos">239</span>    <span class="n">dtype_map</span> <span class="o">=</span> <span class="p">{</span>
+<span class="linenos">240</span>        <span class="mi">16</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">,</span>
+<span class="linenos">241</span>        <span class="mi">32</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+<span class="linenos">242</span>    <span class="p">}</span>
+<span class="linenos">243</span>    <span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype_map</span><span class="p">[</span><span class="n">bits_per_sample</span><span class="p">]</span>
+<span class="linenos">244</span>    <span class="n">max_amplitude</span> <span class="o">=</span> <span class="mi">32767</span> <span class="k">if</span> <span class="n">bits_per_sample</span> <span class="o">==</span> <span class="mi">16</span> <span class="k">else</span> <span class="mi">2147483647</span>
+<span class="linenos">245</span>
+<span class="linenos">246</span>    <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">duration_seconds</span><span class="p">,</span> <span class="n">num_samples</span><span class="p">)</span>
+<span class="linenos">247</span>    <span class="n">frequencies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="mf">440.0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">num_channels</span><span class="p">)</span> <span class="o">*</span> <span class="mf">110.0</span><span class="p">)</span>
+<span class="linenos">248</span>    <span class="n">sine_waves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">frequencies</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span>
+<span class="linenos">249</span>    <span class="n">samples</span> <span class="o">=</span> <span class="p">(</span><span class="n">sine_waves</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">max_amplitude</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+<span class="linenos">250</span>
+<span class="linenos">251</span>    <span class="n">wav_buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+<span class="linenos">252</span>    <span class="n">scipy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">wavfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">wav_buffer</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">,</span> <span class="n">samples</span><span class="p">)</span>
+<span class="linenos">253</span>    <span class="n">wav_data</span> <span class="o">=</span> <span class="n">wav_buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+<span class="linenos">254</span>
+<span class="linenos">255</span>    <span class="k">return</span> <span class="n">wav_data</span><span class="p">,</span> <span class="n">samples</span>
+<span class="linenos">256</span>
+<span class="linenos">257</span>
+<span class="linenos">258</span><span class="k">def</span><span class="w"> </span><span class="nf">load_sf</span><span class="p">(</span><span class="n">wav_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
+<span class="linenos">259</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load WAV data using soundfile library.</span>
+<span class="linenos">260</span>
+<span class="linenos">261</span><span class="sd">    Args:</span>
+<span class="linenos">262</span><span class="sd">        wav_data: WAV file data as bytes</span>
+<span class="linenos">263</span>
+<span class="linenos">264</span><span class="sd">    Returns:</span>
+<span class="linenos">265</span><span class="sd">        Audio samples array as int16 numpy array</span>
+<span class="linenos">266</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">267</span>    <span class="n">audio_file</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">wav_data</span><span class="p">)</span>
+<span class="linenos">268</span>    <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">sf</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">audio_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;int16&quot;</span><span class="p">)</span>
+<span class="linenos">269</span>    <span class="k">return</span> <span class="n">data</span>
+<span class="linenos">270</span>
 <span class="linenos">271</span>
-<span class="linenos">272</span>    <span class="k">for</span> <span class="n">sample_rate</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="n">bits_per_sample</span><span class="p">,</span> <span class="n">duration_seconds</span> <span class="ow">in</span> <span class="n">audio_configs</span><span class="p">:</span>
-<span class="linenos">273</span>        <span class="c1"># Create WAV data for this audio configuration</span>
-<span class="linenos">274</span>        <span class="n">wav_data</span><span class="p">,</span> <span class="n">ref</span> <span class="o">=</span> <span class="n">create_wav_data</span><span class="p">(</span>
-<span class="linenos">275</span>            <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
-<span class="linenos">276</span>            <span class="n">num_channels</span><span class="o">=</span><span class="n">num_channels</span><span class="p">,</span>
-<span class="linenos">277</span>            <span class="n">bits_per_sample</span><span class="o">=</span><span class="n">bits_per_sample</span><span class="p">,</span>
-<span class="linenos">278</span>            <span class="n">duration_seconds</span><span class="o">=</span><span class="n">duration_seconds</span><span class="p">,</span>
-<span class="linenos">279</span>        <span class="p">)</span>
-<span class="linenos">280</span>
-<span class="linenos">281</span>        <span class="nb">print</span><span class="p">(</span>
-<span class="linenos">282</span>            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">sample_rate</span><span class="si">}</span><span class="s2">Hz, </span><span class="si">{</span><span class="n">num_channels</span><span class="si">}</span><span class="s2">ch, </span><span class="si">{</span><span class="n">bits_per_sample</span><span class="si">}</span><span class="s2">bit, </span><span class="si">{</span><span class="n">duration_seconds</span><span class="si">}</span><span class="s2">s&quot;</span>
-<span class="linenos">283</span>        <span class="p">)</span>
-<span class="linenos">284</span>        <span class="nb">print</span><span class="p">(</span>
-<span class="linenos">285</span>            <span class="sa">f</span><span class="s2">&quot;Threads,&quot;</span>
-<span class="linenos">286</span>            <span class="sa">f</span><span class="s2">&quot;SPDL WAV QPS (</span><span class="si">{</span><span class="n">duration_seconds</span><span class="si">}</span><span class="s2"> sec),CI Lower,CI Upper,&quot;</span>
-<span class="linenos">287</span>            <span class="sa">f</span><span class="s2">&quot;SPDL Audio QPS (</span><span class="si">{</span><span class="n">duration_seconds</span><span class="si">}</span><span class="s2"> sec),CI Lower,CI Upper,&quot;</span>
-<span class="linenos">288</span>            <span class="sa">f</span><span class="s2">&quot;soundfile QPS (</span><span class="si">{</span><span class="n">duration_seconds</span><span class="si">}</span><span class="s2"> sec),CI Lower,CI Upper&quot;</span>
-<span class="linenos">289</span>        <span class="p">)</span>
-<span class="linenos">290</span>
-<span class="linenos">291</span>        <span class="k">for</span> <span class="n">num_threads</span> <span class="ow">in</span> <span class="n">thread_counts</span><span class="p">:</span>
-<span class="linenos">292</span>            <span class="n">thread_results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">BenchmarkConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="linenos">293</span>
-<span class="linenos">294</span>            <span class="k">with</span> <span class="n">BenchmarkRunner</span><span class="p">(</span>
-<span class="linenos">295</span>                <span class="n">executor_type</span><span class="o">=</span><span class="n">ExecutorType</span><span class="o">.</span><span class="n">THREAD</span><span class="p">,</span>
-<span class="linenos">296</span>                <span class="n">num_workers</span><span class="o">=</span><span class="n">num_threads</span><span class="p">,</span>
-<span class="linenos">297</span>            <span class="p">)</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
-<span class="linenos">298</span>                <span class="k">for</span> <span class="p">(</span>
-<span class="linenos">299</span>                    <span class="n">function_name</span><span class="p">,</span>
-<span class="linenos">300</span>                    <span class="n">function</span><span class="p">,</span>
-<span class="linenos">301</span>                    <span class="n">iterations_multiplier</span><span class="p">,</span>
-<span class="linenos">302</span>                    <span class="n">num_runs</span><span class="p">,</span>
-<span class="linenos">303</span>                <span class="p">)</span> <span class="ow">in</span> <span class="n">benchmark_functions</span><span class="p">:</span>
-<span class="linenos">304</span>                    <span class="n">config</span> <span class="o">=</span> <span class="n">BenchmarkConfig</span><span class="p">(</span>
-<span class="linenos">305</span>                        <span class="n">function_name</span><span class="o">=</span><span class="n">function_name</span><span class="p">,</span>
-<span class="linenos">306</span>                        <span class="n">function</span><span class="o">=</span><span class="n">function</span><span class="p">,</span>
-<span class="linenos">307</span>                        <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
-<span class="linenos">308</span>                        <span class="n">num_channels</span><span class="o">=</span><span class="n">num_channels</span><span class="p">,</span>
-<span class="linenos">309</span>                        <span class="n">bits_per_sample</span><span class="o">=</span><span class="n">bits_per_sample</span><span class="p">,</span>
-<span class="linenos">310</span>                        <span class="n">duration_seconds</span><span class="o">=</span><span class="n">duration_seconds</span><span class="p">,</span>
-<span class="linenos">311</span>                        <span class="n">num_threads</span><span class="o">=</span><span class="n">num_threads</span><span class="p">,</span>
-<span class="linenos">312</span>                        <span class="n">iterations</span><span class="o">=</span><span class="n">iterations_multiplier</span> <span class="o">*</span> <span class="n">num_threads</span><span class="p">,</span>
-<span class="linenos">313</span>                        <span class="n">num_runs</span><span class="o">=</span><span class="n">num_runs</span><span class="p">,</span>
-<span class="linenos">314</span>                    <span class="p">)</span>
-<span class="linenos">315</span>
-<span class="linenos">316</span>                    <span class="n">result</span><span class="p">,</span> <span class="n">output</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-<span class="linenos">317</span>                        <span class="n">config</span><span class="p">,</span>
-<span class="linenos">318</span>                        <span class="k">lambda</span> <span class="n">fn</span><span class="o">=</span><span class="n">function</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">wav_data</span><span class="p">:</span> <span class="n">fn</span><span class="p">(</span><span class="n">data</span><span class="p">),</span>
-<span class="linenos">319</span>                        <span class="n">config</span><span class="o">.</span><span class="n">iterations</span><span class="p">,</span>
-<span class="linenos">320</span>                        <span class="n">num_runs</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_runs</span><span class="p">,</span>
-<span class="linenos">321</span>                    <span class="p">)</span>
-<span class="linenos">322</span>
-<span class="linenos">323</span>                    <span class="n">output_to_validate</span> <span class="o">=</span> <span class="n">output</span>
-<span class="linenos">324</span>                    <span class="k">if</span> <span class="n">output_to_validate</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-<span class="linenos">325</span>                        <span class="n">output_to_validate</span> <span class="o">=</span> <span class="n">output_to_validate</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
-<span class="linenos">326</span>                    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">output_to_validate</span><span class="p">,</span> <span class="n">ref</span><span class="p">)</span>
-<span class="linenos">327</span>
-<span class="linenos">328</span>                    <span class="n">thread_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-<span class="linenos">329</span>                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-<span class="linenos">330</span>
-<span class="linenos">331</span>            <span class="c1"># Print results for this thread count (all 3 benchmarks)</span>
-<span class="linenos">332</span>            <span class="n">spdl_wav_result</span> <span class="o">=</span> <span class="n">thread_results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="linenos">333</span>            <span class="n">spdl_audio_result</span> <span class="o">=</span> <span class="n">thread_results</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-<span class="linenos">334</span>            <span class="n">soundfile_result</span> <span class="o">=</span> <span class="n">thread_results</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-<span class="linenos">335</span>            <span class="nb">print</span><span class="p">(</span>
-<span class="linenos">336</span>                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">num_threads</span><span class="si">}</span><span class="s2">,&quot;</span>
-<span class="linenos">337</span>                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">spdl_wav_result</span><span class="o">.</span><span class="n">qps</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">spdl_wav_result</span><span class="o">.</span><span class="n">ci_lower</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">spdl_wav_result</span><span class="o">.</span><span class="n">ci_upper</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,&quot;</span>
-<span class="linenos">338</span>                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">spdl_audio_result</span><span class="o">.</span><span class="n">qps</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">spdl_audio_result</span><span class="o">.</span><span class="n">ci_lower</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">spdl_audio_result</span><span class="o">.</span><span class="n">ci_upper</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,&quot;</span>
-<span class="linenos">339</span>                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">soundfile_result</span><span class="o">.</span><span class="n">qps</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">soundfile_result</span><span class="o">.</span><span class="n">ci_lower</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">soundfile_result</span><span class="o">.</span><span class="n">ci_upper</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span>
-<span class="linenos">340</span>            <span class="p">)</span>
-<span class="linenos">341</span>
-<span class="linenos">342</span>    <span class="n">save_results_to_csv</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
-<span class="linenos">343</span>    <span class="nb">print</span><span class="p">(</span>
-<span class="linenos">344</span>        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Benchmark complete. To generate plots, run:</span><span class="se">\n</span><span class="s2">&quot;</span>
-<span class="linenos">345</span>        <span class="sa">f</span><span class="s2">&quot;python benchmark_wav_plot.py --input </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="si">}</span><span class="s2"> &quot;</span>
-<span class="linenos">346</span>        <span class="sa">f</span><span class="s2">&quot;--output </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;.png&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-<span class="linenos">347</span>    <span class="p">)</span>
-<span class="linenos">348</span>
-<span class="linenos">349</span>
-<span class="linenos">350</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-<span class="linenos">351</span>    <span class="n">main</span><span class="p">()</span>
+<span class="linenos">272</span><span class="k">def</span><span class="w"> </span><span class="nf">load_spdl_audio</span><span class="p">(</span><span class="n">wav_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
+<span class="linenos">273</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load WAV data using :py:func:`spdl.io.load_audio` function.</span>
+<span class="linenos">274</span>
+<span class="linenos">275</span><span class="sd">    Args:</span>
+<span class="linenos">276</span><span class="sd">        wav_data: WAV file data as bytes</span>
+<span class="linenos">277</span>
+<span class="linenos">278</span><span class="sd">    Returns:</span>
+<span class="linenos">279</span><span class="sd">        Audio samples array as numpy array</span>
+<span class="linenos">280</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">281</span>    <span class="k">return</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_audio</span><span class="p">(</span><span class="n">wav_data</span><span class="p">,</span> <span class="n">filter_desc</span><span class="o">=</span><span class="kc">None</span><span class="p">))</span>
+<span class="linenos">282</span>
+<span class="linenos">283</span>
+<span class="linenos">284</span><span class="k">def</span><span class="w"> </span><span class="nf">load_spdl_wav</span><span class="p">(</span><span class="n">wav_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
+<span class="linenos">285</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load WAV data using :py:func:`spdl.io.load_wav` function.</span>
+<span class="linenos">286</span>
+<span class="linenos">287</span><span class="sd">    Args:</span>
+<span class="linenos">288</span><span class="sd">        wav_data: WAV file data as bytes</span>
+<span class="linenos">289</span>
+<span class="linenos">290</span><span class="sd">    Returns:</span>
+<span class="linenos">291</span><span class="sd">        Audio samples array as numpy array</span>
+<span class="linenos">292</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">293</span>    <span class="k">return</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_wav</span><span class="p">(</span><span class="n">wav_data</span><span class="p">))</span>
+<span class="linenos">294</span>
+<span class="linenos">295</span>
+<span class="linenos">296</span><span class="k">def</span><span class="w"> </span><span class="nf">_parse_args</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">:</span>
+<span class="linenos">297</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse command line arguments for the benchmark script.</span>
+<span class="linenos">298</span>
+<span class="linenos">299</span><span class="sd">    Returns:</span>
+<span class="linenos">300</span><span class="sd">        Parsed command line arguments</span>
+<span class="linenos">301</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">302</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Benchmark WAV loading performance&quot;</span><span class="p">)</span>
+<span class="linenos">303</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+<span class="linenos">304</span>        <span class="s2">&quot;--output&quot;</span><span class="p">,</span>
+<span class="linenos">305</span>        <span class="nb">type</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">p</span><span class="p">),</span>
+<span class="linenos">306</span>        <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">,</span>
+<span class="linenos">307</span>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output file path.&quot;</span><span class="p">,</span>
+<span class="linenos">308</span>    <span class="p">)</span>
+<span class="linenos">309</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="linenos">310</span>
+<span class="linenos">311</span>
+<span class="linenos">312</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">313</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;Run comprehensive benchmark suite for WAV loading performance.</span>
+<span class="linenos">314</span>
+<span class="linenos">315</span><span class="sd">    Benchmarks multiple configurations of audio files with different durations,</span>
+<span class="linenos">316</span><span class="sd">    comparing spdl.io.load_wav, spdl.io.load_audio, and soundfile libraries</span>
+<span class="linenos">317</span><span class="sd">    across various thread counts (1, 2, 4, 8, 16).</span>
+<span class="linenos">318</span><span class="sd">    &quot;&quot;&quot;</span>
+<span class="linenos">319</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">_parse_args</span><span class="p">()</span>
+<span class="linenos">320</span>
+<span class="linenos">321</span>    <span class="c1"># Define audio configurations to test</span>
+<span class="linenos">322</span>    <span class="n">audio_configs</span> <span class="o">=</span> <span class="p">[</span>
+<span class="linenos">323</span>        <span class="c1"># (sample_rate, num_channels, bits_per_sample, duration_seconds)</span>
+<span class="linenos">324</span>        <span class="c1"># (8000, 1, 16, 1.0),  # Low quality mono</span>
+<span class="linenos">325</span>        <span class="c1"># (16000, 1, 16, 1.0),  # Speech quality mono</span>
+<span class="linenos">326</span>        <span class="c1"># (48000, 2, 16, 1.0),  # High quality stereo</span>
+<span class="linenos">327</span>        <span class="c1"># (48000, 8, 16, 1.0),  # Multi-channel audio</span>
+<span class="linenos">328</span>        <span class="p">(</span><span class="mi">44100</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>  <span class="c1"># CD quality stereo</span>
+<span class="linenos">329</span>        <span class="p">(</span><span class="mi">44100</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span>  <span class="c1">#</span>
+<span class="linenos">330</span>        <span class="p">(</span><span class="mi">44100</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">),</span>  <span class="c1">#</span>
+<span class="linenos">331</span>        <span class="c1"># (44100, 2, 24, 1.0),  # 24-bit audio</span>
+<span class="linenos">332</span>    <span class="p">]</span>
+<span class="linenos">333</span>
+<span class="linenos">334</span>    <span class="n">thread_counts</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">]</span>
+<span class="linenos">335</span>
+<span class="linenos">336</span>    <span class="c1"># Define benchmark function configurations</span>
+<span class="linenos">337</span>    <span class="c1"># (function_name, function, iterations_multiplier, num_runs)</span>
+<span class="linenos">338</span>    <span class="n">benchmark_functions</span> <span class="o">=</span> <span class="p">[</span>
+<span class="linenos">339</span>        <span class="p">(</span><span class="s2">&quot;3. spdl.io.load_wav&quot;</span><span class="p">,</span> <span class="n">load_spdl_wav</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>  <span class="c1"># Fast but unstable</span>
+<span class="linenos">340</span>        <span class="p">(</span><span class="s2">&quot;2. spdl.io.load_audio&quot;</span><span class="p">,</span> <span class="n">load_spdl_audio</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>  <span class="c1"># Slower but stable</span>
+<span class="linenos">341</span>        <span class="p">(</span><span class="s2">&quot;1. soundfile&quot;</span><span class="p">,</span> <span class="n">load_sf</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>  <span class="c1"># Slower but stable</span>
+<span class="linenos">342</span>    <span class="p">]</span>
+<span class="linenos">343</span>
+<span class="linenos">344</span>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">BenchmarkConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="linenos">345</span>
+<span class="linenos">346</span>    <span class="k">for</span> <span class="n">sample_rate</span><span class="p">,</span> <span class="n">num_channels</span><span class="p">,</span> <span class="n">bits_per_sample</span><span class="p">,</span> <span class="n">duration_seconds</span> <span class="ow">in</span> <span class="n">audio_configs</span><span class="p">:</span>
+<span class="linenos">347</span>        <span class="c1"># Create WAV data for this audio configuration</span>
+<span class="linenos">348</span>        <span class="n">wav_data</span><span class="p">,</span> <span class="n">ref</span> <span class="o">=</span> <span class="n">create_wav_data</span><span class="p">(</span>
+<span class="linenos">349</span>            <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
+<span class="linenos">350</span>            <span class="n">num_channels</span><span class="o">=</span><span class="n">num_channels</span><span class="p">,</span>
+<span class="linenos">351</span>            <span class="n">bits_per_sample</span><span class="o">=</span><span class="n">bits_per_sample</span><span class="p">,</span>
+<span class="linenos">352</span>            <span class="n">duration_seconds</span><span class="o">=</span><span class="n">duration_seconds</span><span class="p">,</span>
+<span class="linenos">353</span>        <span class="p">)</span>
+<span class="linenos">354</span>
+<span class="linenos">355</span>        <span class="nb">print</span><span class="p">(</span>
+<span class="linenos">356</span>            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">sample_rate</span><span class="si">}</span><span class="s2">Hz, </span><span class="si">{</span><span class="n">num_channels</span><span class="si">}</span><span class="s2">ch, </span><span class="si">{</span><span class="n">bits_per_sample</span><span class="si">}</span><span class="s2">bit, </span><span class="si">{</span><span class="n">duration_seconds</span><span class="si">}</span><span class="s2">s&quot;</span>
+<span class="linenos">357</span>        <span class="p">)</span>
+<span class="linenos">358</span>        <span class="nb">print</span><span class="p">(</span>
+<span class="linenos">359</span>            <span class="sa">f</span><span class="s2">&quot;Threads,&quot;</span>
+<span class="linenos">360</span>            <span class="sa">f</span><span class="s2">&quot;SPDL WAV QPS (</span><span class="si">{</span><span class="n">duration_seconds</span><span class="si">}</span><span class="s2"> sec),CI Lower,CI Upper,&quot;</span>
+<span class="linenos">361</span>            <span class="sa">f</span><span class="s2">&quot;SPDL Audio QPS (</span><span class="si">{</span><span class="n">duration_seconds</span><span class="si">}</span><span class="s2"> sec),CI Lower,CI Upper,&quot;</span>
+<span class="linenos">362</span>            <span class="sa">f</span><span class="s2">&quot;soundfile QPS (</span><span class="si">{</span><span class="n">duration_seconds</span><span class="si">}</span><span class="s2"> sec),CI Lower,CI Upper&quot;</span>
+<span class="linenos">363</span>        <span class="p">)</span>
+<span class="linenos">364</span>
+<span class="linenos">365</span>        <span class="k">for</span> <span class="n">num_threads</span> <span class="ow">in</span> <span class="n">thread_counts</span><span class="p">:</span>
+<span class="linenos">366</span>            <span class="n">thread_results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">BenchmarkConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="linenos">367</span>
+<span class="linenos">368</span>            <span class="k">with</span> <span class="n">BenchmarkRunner</span><span class="p">(</span>
+<span class="linenos">369</span>                <span class="n">executor_type</span><span class="o">=</span><span class="n">ExecutorType</span><span class="o">.</span><span class="n">THREAD</span><span class="p">,</span>
+<span class="linenos">370</span>                <span class="n">num_workers</span><span class="o">=</span><span class="n">num_threads</span><span class="p">,</span>
+<span class="linenos">371</span>            <span class="p">)</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
+<span class="linenos">372</span>                <span class="k">for</span> <span class="p">(</span>
+<span class="linenos">373</span>                    <span class="n">function_name</span><span class="p">,</span>
+<span class="linenos">374</span>                    <span class="n">function</span><span class="p">,</span>
+<span class="linenos">375</span>                    <span class="n">iterations_multiplier</span><span class="p">,</span>
+<span class="linenos">376</span>                    <span class="n">num_runs</span><span class="p">,</span>
+<span class="linenos">377</span>                <span class="p">)</span> <span class="ow">in</span> <span class="n">benchmark_functions</span><span class="p">:</span>
+<span class="linenos">378</span>                    <span class="n">config</span> <span class="o">=</span> <span class="n">BenchmarkConfig</span><span class="p">(</span>
+<span class="linenos">379</span>                        <span class="n">function_name</span><span class="o">=</span><span class="n">function_name</span><span class="p">,</span>
+<span class="linenos">380</span>                        <span class="n">function</span><span class="o">=</span><span class="n">function</span><span class="p">,</span>
+<span class="linenos">381</span>                        <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
+<span class="linenos">382</span>                        <span class="n">num_channels</span><span class="o">=</span><span class="n">num_channels</span><span class="p">,</span>
+<span class="linenos">383</span>                        <span class="n">bits_per_sample</span><span class="o">=</span><span class="n">bits_per_sample</span><span class="p">,</span>
+<span class="linenos">384</span>                        <span class="n">duration_seconds</span><span class="o">=</span><span class="n">duration_seconds</span><span class="p">,</span>
+<span class="linenos">385</span>                        <span class="n">num_threads</span><span class="o">=</span><span class="n">num_threads</span><span class="p">,</span>
+<span class="linenos">386</span>                        <span class="n">iterations</span><span class="o">=</span><span class="n">iterations_multiplier</span> <span class="o">*</span> <span class="n">num_threads</span><span class="p">,</span>
+<span class="linenos">387</span>                        <span class="n">num_runs</span><span class="o">=</span><span class="n">num_runs</span><span class="p">,</span>
+<span class="linenos">388</span>                    <span class="p">)</span>
+<span class="linenos">389</span>
+<span class="linenos">390</span>                    <span class="n">result</span><span class="p">,</span> <span class="n">output</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+<span class="linenos">391</span>                        <span class="n">config</span><span class="p">,</span>
+<span class="linenos">392</span>                        <span class="k">lambda</span> <span class="n">fn</span><span class="o">=</span><span class="n">function</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">wav_data</span><span class="p">:</span> <span class="n">fn</span><span class="p">(</span><span class="n">data</span><span class="p">),</span>
+<span class="linenos">393</span>                        <span class="n">config</span><span class="o">.</span><span class="n">iterations</span><span class="p">,</span>
+<span class="linenos">394</span>                        <span class="n">num_runs</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_runs</span><span class="p">,</span>
+<span class="linenos">395</span>                    <span class="p">)</span>
+<span class="linenos">396</span>
+<span class="linenos">397</span>                    <span class="n">output_to_validate</span> <span class="o">=</span> <span class="n">output</span>
+<span class="linenos">398</span>                    <span class="k">if</span> <span class="n">output_to_validate</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+<span class="linenos">399</span>                        <span class="n">output_to_validate</span> <span class="o">=</span> <span class="n">output_to_validate</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+<span class="linenos">400</span>                    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">output_to_validate</span><span class="p">,</span> <span class="n">ref</span><span class="p">)</span>
+<span class="linenos">401</span>
+<span class="linenos">402</span>                    <span class="n">thread_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="linenos">403</span>                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="linenos">404</span>
+<span class="linenos">405</span>            <span class="c1"># Print results for this thread count (all 3 benchmarks)</span>
+<span class="linenos">406</span>            <span class="n">spdl_wav_result</span> <span class="o">=</span> <span class="n">thread_results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="linenos">407</span>            <span class="n">spdl_audio_result</span> <span class="o">=</span> <span class="n">thread_results</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="linenos">408</span>            <span class="n">soundfile_result</span> <span class="o">=</span> <span class="n">thread_results</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="linenos">409</span>            <span class="nb">print</span><span class="p">(</span>
+<span class="linenos">410</span>                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">num_threads</span><span class="si">}</span><span class="s2">,&quot;</span>
+<span class="linenos">411</span>                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">spdl_wav_result</span><span class="o">.</span><span class="n">qps</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">spdl_wav_result</span><span class="o">.</span><span class="n">ci_lower</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">spdl_wav_result</span><span class="o">.</span><span class="n">ci_upper</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,&quot;</span>
+<span class="linenos">412</span>                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">spdl_audio_result</span><span class="o">.</span><span class="n">qps</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">spdl_audio_result</span><span class="o">.</span><span class="n">ci_lower</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">spdl_audio_result</span><span class="o">.</span><span class="n">ci_upper</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,&quot;</span>
+<span class="linenos">413</span>                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">soundfile_result</span><span class="o">.</span><span class="n">qps</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">soundfile_result</span><span class="o">.</span><span class="n">ci_lower</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">soundfile_result</span><span class="o">.</span><span class="n">ci_upper</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="linenos">414</span>            <span class="p">)</span>
+<span class="linenos">415</span>
+<span class="linenos">416</span>    <span class="n">save_results_to_csv</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+<span class="linenos">417</span>    <span class="nb">print</span><span class="p">(</span>
+<span class="linenos">418</span>        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Benchmark complete. To generate plots, run:</span><span class="se">\n</span><span class="s2">&quot;</span>
+<span class="linenos">419</span>        <span class="sa">f</span><span class="s2">&quot;python benchmark_wav_plot.py --input </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="si">}</span><span class="s2"> &quot;</span>
+<span class="linenos">420</span>        <span class="sa">f</span><span class="s2">&quot;--output </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;.png&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="linenos">421</span>    <span class="p">)</span>
+<span class="linenos">422</span>
+<span class="linenos">423</span>
+<span class="linenos">424</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="linenos">425</span>    <span class="n">main</span><span class="p">()</span>
 </pre></div>
 </div>
 </details></section>
@@ -910,7 +1205,7 @@ but it scales in multi-threading as it releases the GIL almost entirely.</p>
 <p class="rubric">Functions</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_wav.create_wav_data">
-<span class="sig-name descname"><span class="pre">create_wav_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">44100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_sample</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration_seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v2.4)"><span class="pre">dtype</span></a><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarT</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L146-L181"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.create_wav_data" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_wav_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">44100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_sample</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration_seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L220-L255"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.create_wav_data" title="Link to this definition">¶</a></dt>
 <dd><p>Create a WAV file in memory for benchmarking.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -929,7 +1224,7 @@ but it scales in multi-threading as it releases the GIL almost entirely.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_wav.load_sf">
-<span class="sig-name descname"><span class="pre">load_sf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wav_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v2.4)"><span class="pre">dtype</span></a><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarT</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L184-L195"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.load_sf" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">load_sf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wav_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">NDArray</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L258-L269"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.load_sf" title="Link to this definition">¶</a></dt>
 <dd><p>Load WAV data using soundfile library.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -943,7 +1238,7 @@ but it scales in multi-threading as it releases the GIL almost entirely.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_wav.load_spdl_audio">
-<span class="sig-name descname"><span class="pre">load_spdl_audio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wav_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v2.4)"><span class="pre">dtype</span></a><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarT</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L198-L207"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.load_spdl_audio" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">load_spdl_audio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wav_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">NDArray</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L272-L281"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.load_spdl_audio" title="Link to this definition">¶</a></dt>
 <dd><p>Load WAV data using <a class="reference internal" href="spdl.io.load_audio.html#spdl.io.load_audio" title="spdl.io.load_audio"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.load_audio()</span></code></a> function.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -957,7 +1252,7 @@ but it scales in multi-threading as it releases the GIL almost entirely.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_wav.load_spdl_wav">
-<span class="sig-name descname"><span class="pre">load_spdl_wav</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wav_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v2.4)"><span class="pre">dtype</span></a><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarT</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L210-L219"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.load_spdl_wav" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">load_spdl_wav</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wav_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">NDArray</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L284-L293"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.load_spdl_wav" title="Link to this definition">¶</a></dt>
 <dd><p>Load WAV data using <a class="reference internal" href="spdl.io.load_wav.html#spdl.io.load_wav" title="spdl.io.load_wav"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.load_wav()</span></code></a> function.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -971,7 +1266,7 @@ but it scales in multi-threading as it releases the GIL almost entirely.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_wav.main">
-<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L238-L347"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.main" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L312-L421"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.main" title="Link to this definition">¶</a></dt>
 <dd><p>Run comprehensive benchmark suite for WAV loading performance.</p>
 <p>Benchmarks multiple configurations of audio files with different durations,
 comparing spdl.io.load_wav, spdl.io.load_audio, and soundfile libraries
@@ -981,7 +1276,7 @@ across various thread counts (1, 2, 4, 8, 16).</p>
 <p class="rubric">Classes</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="benchmark_wav.BenchmarkConfig">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BenchmarkConfig</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L109-L143"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.BenchmarkConfig" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BenchmarkConfig</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_wav.py?#L183-L217"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_wav.BenchmarkConfig" title="Link to this definition">¶</a></dt>
 <dd><p>Configuration for a single WAV benchmark run.</p>
 <p>Combines both audio file parameters and benchmark execution parameters.</p>
 <dl class="py attribute">
@@ -998,7 +1293,7 @@ across various thread counts (1, 2, 4, 8, 16).</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="benchmark_wav.BenchmarkConfig.function">
-<span class="sig-name descname"><span class="pre">function</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v2.4)"><span class="pre">dtype</span></a><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarT</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#benchmark_wav.BenchmarkConfig.function" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">function</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#benchmark_wav.BenchmarkConfig.function" title="Link to this definition">¶</a></dt>
 <dd><p>The actual function to benchmark</p>
 </dd></dl>
 
@@ -1132,7 +1427,7 @@ across various thread counts (1, 2, 4, 8, 16).</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=70f82a29"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

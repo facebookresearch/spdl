@@ -1,0 +1,23 @@
+.. _exhale_struct_structspdl_1_1core_1_1Generator_1_1iterator:
+
+Struct Generator::iterator
+==========================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_generator.h`
+
+
+Nested Relationships
+--------------------
+
+This struct is a nested type of :ref:`exhale_struct_structspdl_1_1core_1_1Generator`.
+
+
+Struct Documentation
+--------------------
+
+
+.. doxygenstruct:: spdl::core::Generator::iterator
+   :project: libspdl
+   :members:
+   :protected-members:
+   :undoc-members:

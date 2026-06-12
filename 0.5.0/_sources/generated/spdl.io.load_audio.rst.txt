@@ -1,0 +1,6 @@
+spdl.io.load\_audio
+===================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: load_audio

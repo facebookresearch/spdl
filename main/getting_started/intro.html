@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Pipeline Stages" href="stages.html" /><link rel="prev" title="Getting Started" href="index.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Building and Running Pipeline - SPDL 0.5.0 documentation</title>
+        <title>Building and Running Pipeline - SPDL 0.6.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.5.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.5.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -222,6 +222,8 @@
 <li class="toctree-l2"><a class="reference internal" href="stages.html">Pipeline Stages</a></li>
 <li class="toctree-l2"><a class="reference internal" href="concurrency.html">Concurrency</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parallelism.html">Pipeline Parallelism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="execution_models.html">Execution Models: MT, MTP, and MP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gil.html">Working Around the GIL</a></li>
 <li class="toctree-l2"><a class="reference internal" href="logging.html">Collecting Runtime Statistics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pytorch.html">Building High-Performance DataLoaders</a></li>
 </ul>
@@ -260,6 +262,7 @@
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/data_format.html">Data Format and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
@@ -299,9 +302,9 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
@@ -332,9 +335,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DecodeConfig.html">Struct DecodeConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DemuxConfig.html">Struct DemuxConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase.html">Template Struct EncodeConfigBase</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html">Template Struct EncodeConfigBase&lt; MediaType::Audio &gt;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html">Template Struct EncodeConfigBase&lt; MediaType::Video &gt;</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator_1_1iterator.html">Struct Generator::iterator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Packets.html">Template Struct Packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1RawPacketData.html">Struct RawPacketData</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1SourceAdaptor.html">Struct SourceAdaptor</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Storage.html">Struct Storage</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1BSF.html">Template Class BSF</a></li>
@@ -349,6 +356,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Frames.html">Template Class Frames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1PacketSeries.html">Class PacketSeries</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
@@ -359,9 +367,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa.html">Function spdl::core::cpu_buffer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a295b42ad20d2569806d9a15009a44ca8.html">Function spdl::core::create_reference_audio_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe.html">Template Function spdl::core::deserialize_packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1a17e80346c554363a3ca0f92f23f35d61.html">Template Function spdl::core::deserialize_packets_view</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1a375c1c657bca786016f8a705e3f2a624.html">Template Function spdl::core::get_timestamps</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
@@ -370,6 +382,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74.html">Function spdl::core::make_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1ad4aa4f4b9667a0155f404046973ec2ee.html">Template Function spdl::core::serialize_packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a49d051162e06f26b896c8aef4605524b.html">Function spdl::core::set_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420.html">Function spdl::core::to_double</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d.html">Function spdl::core::to_rational</a></li>
@@ -379,6 +392,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1ac39ed67e74a726de6b86fbcc91e57971.html">Typedef spdl::core::AnyPackets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html">Typedef spdl::core::AnyPacketsGenerator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
@@ -386,6 +400,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a0dfcc06d4bbea67c7f45399be8719fa6.html">Typedef spdl::core::AudioEncoderPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf.html">Typedef spdl::core::AudioFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62.html">Typedef spdl::core::AudioFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a9644f8aa13f0e4db02d8ab60673563a3.html">Typedef spdl::core::AudioPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c.html">Typedef spdl::core::AudioPacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_buffer_8h_1ab6e5b43497adbd35e9fbc35cf5be7101.html">Typedef spdl::core::CPUBufferPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_adaptor_8h_1adcb670a31326eb24268b384396736cd6.html">Typedef spdl::core::DataInterfacePtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_decoder_8h_1a4b0502ea20d1dda958a67deeb582a74b.html">Typedef spdl::core::DecoderPtr</a></li>
@@ -396,8 +412,12 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f.html">Typedef spdl::core::ImageCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a.html">Typedef spdl::core::ImageFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7.html">Typedef spdl::core::ImageFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1af018ade1cd38831c342686abbcb787a8.html">Typedef spdl::core::ImagePackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1.html">Typedef spdl::core::ImagePacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_muxer_8h_1aaa76352d246819df02bc407729f69dda.html">Typedef spdl::core::MuxerPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20.html">Typedef spdl::core::OptionDict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a331b599d0eceb00ebef166d64623c71a.html">Typedef spdl::core::PacketSeriesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html">Typedef spdl::core::PacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
@@ -407,6 +427,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a39ace4ea741767fa3d802040a9bc22e1.html">Typedef spdl::core::VideoEncoderPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1af1892953097f3723455403752ef79fc5.html">Typedef spdl::core::VideoFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d.html">Typedef spdl::core::VideoFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a7be7c9faccc623d12fb33ec966f84b4c.html">Typedef spdl::core::VideoPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691.html">Typedef spdl::core::VideoPacketsPtr</a></li>
 </ul>
 </li>
 </ul>
@@ -442,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
@@ -553,9 +576,13 @@ Finally call <a class="reference internal" href="../generated/spdl.pipeline.Pipe
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pipeline</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>It is important to call <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.stop" title="spdl.pipeline.Pipeline.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.stop()</span></code></a>.
-Forgetting to do so will leave the background thread running,
-which can cause the Python interpreter to hang at exit.</p>
+<p>Calling <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.stop" title="spdl.pipeline.Pipeline.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.stop()</span></code></a> promptly is good practice: it releases the
+background thread and any worker processes as soon as you are done, instead of
+leaving them running until the object is garbage collected. It is no longer
+required to avoid a hang at exit, though — a <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> stops itself when it is
+garbage collected, and <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.start" title="spdl.pipeline.Pipeline.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.start()</span></code></a> additionally registers a hook
+that stops any still-running pipeline at interpreter shutdown (see
+<a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.start" title="spdl.pipeline.Pipeline.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.start()</span></code></a> for details).</p>
 <p>In practice, there is always a possibility that the application is
 interrupted for unexpected reasons.
 To make sure that the pipeline is stopped, it is recommended to use
@@ -578,54 +605,88 @@ To resume the execution, resume consuming the data.</p>
 <span id="pipeline-caveats"></span><h2>⚠ Caveats ⚠<a class="headerlink" href="#caveats" title="Link to this heading">¶</a></h2>
 <p>Unlike processes, threads cannot be killed.
 The <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> object uses a thread pool, which must be shut down properly.</p>
-<p>There are seemingly unharmful patterns, which can cause a deadlock
-at the end of the Python interpreter, preventing Python from exiting.</p>
-<div class="danger admonition">
-<p class="admonition-title">Keeping unnecessary references to <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code></p>
-<p>It is recommended to keep the resulting <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> object as a
-local variable of an iterator, and NOT TO assign it to an object
-attribute.</p>
+<p>The library cleans a <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> up automatically (see below), so these
+patterns no longer hang the interpreter at exit. They can still keep the
+background thread and worker processes alive longer than necessary, so they are
+worth avoiding for prompt resource release.</p>
+<div class="note admonition">
+<p class="admonition-title">Holding a reference to a <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code></p>
+<p>A <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> cleans itself up automatically, so holding a reference to one
+is safe. When the object is garbage collected, a <code class="docutils literal notranslate"><span class="pre">weakref.finalize</span></code> drains
+and stops its background thread — and any worker processes or subinterpreters
+it spawned — even if you never called <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.stop" title="spdl.pipeline.Pipeline.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.stop()</span></code></a>. And if a
+reference survives until the program ends, <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.start" title="spdl.pipeline.Pipeline.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.start()</span></code></a> has
+registered a hook that stops any still-running pipeline at the very start of
+interpreter finalization, so the process does not hang at exit (see
+<a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.start" title="spdl.pipeline.Pipeline.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.start()</span></code></a> for how that ordering works). Holding a reference is
+in fact <strong>required</strong> to re-iterate a <code class="docutils literal notranslate"><span class="pre">continuous=True</span></code> source across epochs:
+the same <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> must stay alive to be iterated again.</p>
+<p>You should still release the reference (or call <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.stop" title="spdl.pipeline.Pipeline.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.stop()</span></code></a>) once
+you are done, so the worker processes and memory are freed promptly rather than
+lingering until GC — but this is resource hygiene, not a requirement to avoid a
+hang.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">DataLoader</span><span class="p">:</span>
-    <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Safe (and, for a continuous source, required) to keep the</span>
+        <span class="c1"># pipeline as an attribute so it is reused across epochs.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pipeline</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span>
-        <span class="c1"># 👍 Leave the `pipeline` variable as a local variable.</span>
-        <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pipeline</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-        <span class="c1"># So that the `pipeline` will get garbage collected after the</span>
-        <span class="c1"># iterator goes out of the scope.</span>
+        <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline</span><span class="o">.</span><span class="n">get_iterator</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
 
-        <span class="k">with</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">auto_stop</span><span class="p">():</span>
-            <span class="k">yield from</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get_iterator</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-
-        <span class="c1"># The reference count of the `pipeline` object goes to zero</span>
-        <span class="c1"># here, so it will be garbage collected.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Optional: drop the reference when done so the pipeline&#39;s</span>
+        <span class="c1"># resources are freed promptly instead of at GC / interpreter exit.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline</span> <span class="o">=</span> <span class="kc">None</span>
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">DataLoader</span><span class="p">:</span>
-    <span class="o">...</span>
+<p>Some frameworks stash the dataloader on a long-lived object.
+<a class="reference external" href="https://pytorch.org/tnt/">TorchTNT</a>, for example, keeps a strong reference
+to the dataloader on its <code class="docutils literal notranslate"><span class="pre">State</span></code> (<code class="docutils literal notranslate"><span class="pre">PhaseState._dataloader</span></code>) until the
+process exits. This no longer hangs the run — the shutdown hook cleans the
+pipeline up at exit — but if you want its worker processes and memory released
+as soon as training ends (e.g. between fit and eval) rather than at exit, you
+can clear those references and force a collection with a callback:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">gc</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span>
-        <span class="c1"># 🚫 Do not assign the pipeline to the object.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pipeline</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-        <span class="c1">#</span>
-        <span class="c1"># The pipeline won&#39;t get garbage collected until</span>
-        <span class="c1"># the DataLoader instance goes out of scope,</span>
-        <span class="c1"># which might cause dead-lock when Python tries to exit.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchtnt.framework.callback</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callback</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchtnt.framework.state</span><span class="w"> </span><span class="kn">import</span> <span class="n">State</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchtnt.framework.unit</span><span class="w"> </span><span class="kn">import</span> <span class="n">TEvalUnit</span><span class="p">,</span> <span class="n">TPredictUnit</span><span class="p">,</span> <span class="n">TTestUnit</span><span class="p">,</span> <span class="n">TTrainUnit</span>
 
-        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">auto_stop</span><span class="p">():</span>
-            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_iterator</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
 
-        <span class="c1"># The `pipeline` object won&#39;t get garbage collected here.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DetachDataloaderCallback</span><span class="p">(</span><span class="n">Callback</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Optional: drop TNT&#39;s dataloader references at the end of training so</span>
+<span class="sd">    the SPDL ``Pipeline`` (and its workers) are released promptly, instead of</span>
+<span class="sd">    lingering on ``State`` until the pipeline is cleaned up at exit.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_train_end</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">,</span> <span class="n">unit</span><span class="p">:</span> <span class="n">TTrainUnit</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_detach</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_exception</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">,</span>
+        <span class="n">unit</span><span class="p">:</span> <span class="n">TTrainUnit</span> <span class="o">|</span> <span class="n">TEvalUnit</span> <span class="o">|</span> <span class="n">TPredictUnit</span> <span class="o">|</span> <span class="n">TTestUnit</span><span class="p">,</span>
+        <span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># on_train_end does not fire on failure/preemption, so reap here too.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_detach</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_detach</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">phase_state</span> <span class="ow">in</span> <span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">train_state</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">eval_state</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">phase_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">phase_state</span><span class="o">.</span><span class="n">_dataloader</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># pyre-ignore[8]</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="danger admonition">
+<div class="note admonition">
 <p class="admonition-title">Calling <code class="docutils literal notranslate"><span class="pre">iter</span></code> on Pipeline</p>
-<p>We recommend to not call the <a class="reference external" href="https://docs.python.org/3/library/functions.html#iter" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">iter()</span></code></a> function
-on a <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> object.
-It can prevent the <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.stop" title="spdl.pipeline.Pipeline.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.stop()</span></code></a> method from being called
-at the right time.
-It in turn might make the Python interpreter hang at exit.</p>
+<p>Prefer not to call the <a class="reference external" href="https://docs.python.org/3/library/functions.html#iter" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">iter()</span></code></a> function on a <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> object and
+keep the resulting iterator around. Doing so delays <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.stop" title="spdl.pipeline.Pipeline.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.stop()</span></code></a>
+until the iterator is collected, keeping the background thread and worker
+processes running longer than necessary. (It will not hang the interpreter at
+exit — the hook registered by <a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.start" title="spdl.pipeline.Pipeline.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.start()</span></code></a> covers that — but it
+holds resources needlessly.)</p>
 <p>Say you wrap a <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> to create a class that resembles conventional
 <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">DataLoader</span><span class="p">(</span><span class="n">Iterable</span><span class="p">[</span><span class="n">T</span><span class="p">]):</span>
@@ -633,9 +694,8 @@ It in turn might make the Python interpreter hang at exit.</p>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span>
         <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pipeline</span><span class="p">()</span>
-        <span class="k">with</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">auto_stop</span><span class="p">():</span>
-            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">item</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">item</span>
 
 <span class="n">dataloader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
 </pre></div>
@@ -662,10 +722,9 @@ the thread pool.</p>
 <span class="c1"># goes out of scope. When does that happen??</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal notranslate"><span class="pre">Pipeline.stop</span></code> is not called until the garbage collector deletes
-the object.
-It might cause a deadlock, and prevents Python interpreter from
-exiting.</p>
+<p>Until then, <code class="docutils literal notranslate"><span class="pre">Pipeline.stop</span></code> is deferred to whenever the garbage collector
+deletes the object, so the background thread and workers keep holding
+resources longer than needed.</p>
 </div>
 </section>
 </section>
@@ -741,7 +800,7 @@ exiting.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=70f82a29"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

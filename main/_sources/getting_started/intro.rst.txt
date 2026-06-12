@@ -66,9 +66,13 @@ Finally call :py:meth:`Pipeline.stop` to stop the background thread.
    [19, 21, 23]
    >>> pipeline.stop()
 
-It is important to call :py:meth:`Pipeline.stop`.
-Forgetting to do so will leave the background thread running,
-which can cause the Python interpreter to hang at exit.
+Calling :py:meth:`Pipeline.stop` promptly is good practice: it releases the
+background thread and any worker processes as soon as you are done, instead of
+leaving them running until the object is garbage collected. It is no longer
+required to avoid a hang at exit, though — a ``Pipeline`` stops itself when it is
+garbage collected, and :py:meth:`Pipeline.start` additionally registers a hook
+that stops any still-running pipeline at interpreter shutdown (see
+:py:meth:`Pipeline.start` for details).
 
 In practice, there is always a possibility that the application is
 interrupted for unexpected reasons.
@@ -97,59 +101,95 @@ To make sure that the pipeline is stopped, it is recommended to use
 Unlike processes, threads cannot be killed.
 The ``Pipeline`` object uses a thread pool, which must be shut down properly.
 
-There are seemingly unharmful patterns, which can cause a deadlock
-at the end of the Python interpreter, preventing Python from exiting.
+The library cleans a ``Pipeline`` up automatically (see below), so these
+patterns no longer hang the interpreter at exit. They can still keep the
+background thread and worker processes alive longer than necessary, so they are
+worth avoiding for prompt resource release.
 
-.. admonition:: Keeping unnecessary references to ``Pipeline``
-   :class: danger
+.. admonition:: Holding a reference to a ``Pipeline``
+   :class: note
 
-   It is recommended to keep the resulting ``Pipeline`` object as a
-   local variable of an iterator, and NOT TO assign it to an object
-   attribute.
+   A ``Pipeline`` cleans itself up automatically, so holding a reference to one
+   is safe. When the object is garbage collected, a ``weakref.finalize`` drains
+   and stops its background thread — and any worker processes or subinterpreters
+   it spawned — even if you never called :py:meth:`Pipeline.stop`. And if a
+   reference survives until the program ends, :py:meth:`Pipeline.start` has
+   registered a hook that stops any still-running pipeline at the very start of
+   interpreter finalization, so the process does not hang at exit (see
+   :py:meth:`Pipeline.start` for how that ordering works). Holding a reference is
+   in fact **required** to re-iterate a ``continuous=True`` source across epochs:
+   the same ``Pipeline`` must stay alive to be iterated again.
 
-   .. code-block::
-
-      class DataLoader:
-          ...
-
-          def __iter__(self) -> Iterator[T]:
-              # 👍 Leave the `pipeline` variable as a local variable.
-              pipeline = self.get_pipeline(...)
-              # So that the `pipeline` will get garbage collected after the
-              # iterator goes out of the scope.
-
-              with pipeline.auto_stop():
-                  yield from pipeline.get_iterator(...)
-
-              # The reference count of the `pipeline` object goes to zero
-              # here, so it will be garbage collected.
+   You should still release the reference (or call :py:meth:`Pipeline.stop`) once
+   you are done, so the worker processes and memory are freed promptly rather than
+   lingering until GC — but this is resource hygiene, not a requirement to avoid a
+   hang.
 
    .. code-block::
 
       class DataLoader:
-          ...
+          def __init__(self) -> None:
+              # Safe (and, for a continuous source, required) to keep the
+              # pipeline as an attribute so it is reused across epochs.
+              self._pipeline = self.get_pipeline(...)
 
           def __iter__(self) -> Iterator[T]:
-              # 🚫 Do not assign the pipeline to the object.
-              self.pipeline = self.get_pipeline(...)
-              #
-              # The pipeline won't get garbage collected until
-              # the DataLoader instance goes out of scope,
-              # which might cause dead-lock when Python tries to exit.
+              yield from self._pipeline.get_iterator(...)
 
-              with self.pipeline.auto_stop():
-                  yield from self.pipeline.get_iterator(...)
+          def close(self) -> None:
+              # Optional: drop the reference when done so the pipeline's
+              # resources are freed promptly instead of at GC / interpreter exit.
+              self._pipeline = None
 
-              # The `pipeline` object won't get garbage collected here.
+   Some frameworks stash the dataloader on a long-lived object.
+   `TorchTNT <https://pytorch.org/tnt/>`_, for example, keeps a strong reference
+   to the dataloader on its ``State`` (``PhaseState._dataloader``) until the
+   process exits. This no longer hangs the run — the shutdown hook cleans the
+   pipeline up at exit — but if you want its worker processes and memory released
+   as soon as training ends (e.g. between fit and eval) rather than at exit, you
+   can clear those references and force a collection with a callback:
+
+   .. code-block:: python
+
+      import gc
+
+      from torchtnt.framework.callback import Callback
+      from torchtnt.framework.state import State
+      from torchtnt.framework.unit import TEvalUnit, TPredictUnit, TTestUnit, TTrainUnit
+
+
+      class DetachDataloaderCallback(Callback):
+          """Optional: drop TNT's dataloader references at the end of training so
+          the SPDL ``Pipeline`` (and its workers) are released promptly, instead of
+          lingering on ``State`` until the pipeline is cleaned up at exit."""
+
+          def on_train_end(self, state: State, unit: TTrainUnit) -> None:
+              self._detach(state)
+
+          def on_exception(
+              self,
+              state: State,
+              unit: TTrainUnit | TEvalUnit | TPredictUnit | TTestUnit,
+              exc: BaseException,
+          ) -> None:
+              # on_train_end does not fire on failure/preemption, so reap here too.
+              self._detach(state)
+
+          def _detach(self, state: State) -> None:
+              for phase_state in (state.train_state, state.eval_state):
+                  if phase_state is not None:
+                      phase_state._dataloader = None  # pyre-ignore[8]
+              gc.collect()
 
 .. admonition:: Calling ``iter`` on Pipeline
-   :class: danger
+   :class: note
 
-   We recommend to not call the :py:func:`iter` function
-   on a ``Pipeline`` object.
-   It can prevent the :py:meth:`Pipeline.stop` method from being called
-   at the right time.
-   It in turn might make the Python interpreter hang at exit.
+   Prefer not to call the :py:func:`iter` function on a ``Pipeline`` object and
+   keep the resulting iterator around. Doing so delays :py:meth:`Pipeline.stop`
+   until the iterator is collected, keeping the background thread and worker
+   processes running longer than necessary. (It will not hang the interpreter at
+   exit — the hook registered by :py:meth:`Pipeline.start` covers that — but it
+   holds resources needlessly.)
 
    Say you wrap a ``Pipeline`` to create a class that resembles conventional
    ``DataLoader``.
@@ -161,9 +201,8 @@ at the end of the Python interpreter, preventing Python from exiting.
 
           def __iter__(self) -> Iterator[T]:
               pipeline = self.get_pipeline()
-              with pipeline.auto_stop():
-                  for item in pipeline:
-                      yield item
+              for item in pipeline:
+                  yield item
 
       dataloader = DataLoader(...)
 
@@ -194,7 +233,6 @@ at the end of the Python interpreter, preventing Python from exiting.
       # the pipeline won't be shutdown until the `ite` variable
       # goes out of scope. When does that happen??
 
-   The ``Pipeline.stop`` is not called until the garbage collector deletes
-   the object.
-   It might cause a deadlock, and prevents Python interpreter from
-   exiting.
+   Until then, ``Pipeline.stop`` is deferred to whenever the garbage collector
+   deletes the object, so the background thread and workers keep holding
+   resources longer than needed.

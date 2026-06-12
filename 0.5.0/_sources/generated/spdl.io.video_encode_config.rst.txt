@@ -1,0 +1,6 @@
+spdl.io.video\_encode\_config
+=============================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: video_encode_config

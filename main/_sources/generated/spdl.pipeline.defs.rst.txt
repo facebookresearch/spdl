@@ -155,6 +155,28 @@ DisaggregateConfig
    DisaggregateConfig
 
 
+ExecutorConfig
+^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ExecutorConfig
+
+
+InterpreterPoolExecutorConfig
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   InterpreterPoolExecutorConfig
+
+
 MergeConfig
 ^^^^^^^^^^^
 .. autosummary::
@@ -197,6 +219,28 @@ PipelineConfig
    :template: _custom_autosummary_class.rst
 
    PipelineConfig
+
+
+PlacementConfig
+^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   PlacementConfig
+
+
+ProcessPoolExecutorConfig
+^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ProcessPoolExecutorConfig
 
 
 SinkConfig
@@ -264,6 +308,29 @@ SourceConfig
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+.. rubric:: Others
+MAIN\_PROCESS
+^^^^^^^^^^^^^
+
+.. autosummary::
+   :template: _custom_autosummary_others.rst
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   MAIN_PROCESS
 
 
 

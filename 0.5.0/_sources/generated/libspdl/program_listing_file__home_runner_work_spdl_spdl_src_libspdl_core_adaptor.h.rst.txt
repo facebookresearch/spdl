@@ -1,0 +1,67 @@
+
+.. _program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_adaptor.h:
+
+Program Listing for File adaptor.h
+==================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file__home_runner_work_spdl_spdl_src_libspdl_core_adaptor.h>` (``/home/runner/work/spdl/spdl/src/libspdl/core/adaptor.h``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   /*
+    * Copyright (c) Meta Platforms, Inc. and affiliates.
+    * All rights reserved.
+    *
+    * This source code is licensed under the BSD-style license found in the
+    * LICENSE file in the root directory of this source tree.
+    */
+   
+   #pragma once
+   
+   #include <libspdl/core/types.h>
+   
+   #include <memory>
+   #include <string>
+   #include <string_view>
+   
+   struct AVFormatContext;
+   
+   namespace spdl::core {
+   
+   struct SourceAdaptor;
+   
+   using SourceAdaptorPtr = std::shared_ptr<SourceAdaptor>;
+   
+   // DataInterface
+   
+   struct DataInterface {
+     virtual ~DataInterface() = default;
+   
+     virtual AVFormatContext* get_fmt_ctx() = 0;
+   };
+   
+   using DataInterfacePtr = std::unique_ptr<DataInterface>;
+   
+   // Adaptor
+   
+   struct SourceAdaptor {
+     virtual ~SourceAdaptor() = default;
+   
+     virtual DataInterfacePtr get_interface(
+         std::string_view url,
+         const DemuxConfig& dmx_cfg,
+         const std::optional<std::string>& name = std::nullopt) const;
+   };
+   
+   // Bytes
+   
+   struct BytesAdaptor : public SourceAdaptor {
+     DataInterfacePtr get_interface(
+         std::string_view data,
+         const DemuxConfig& dmx_cfg,
+         const std::optional<std::string>& name = std::nullopt) const override;
+   };
+   
+   } // namespace spdl::core

@@ -1,0 +1,13 @@
+spdl.source.local\_directory.LocalDirectory
+===========================================
+
+.. currentmodule:: spdl.source.local_directory
+
+.. autoclass:: LocalDirectory
+   :show-inheritance:
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~LocalDirectory.shuffle

@@ -1,0 +1,17 @@
+.. _exhale_class_classspdl_1_1core_1_1FilterGraph:
+
+Class FilterGraph
+=================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_filter_graph.h`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: spdl::core::FilterGraph
+   :project: libspdl
+   :members:
+   :protected-members:
+   :undoc-members:

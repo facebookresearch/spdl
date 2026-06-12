@@ -91,6 +91,10 @@ Classes
 
 - :ref:`exhale_struct_structspdl_1_1core_1_1EncodeConfigBase`
 
+- :ref:`exhale_struct_structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4`
+
+- :ref:`exhale_struct_structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4`
+
 - :ref:`exhale_class_classspdl_1_1core_1_1InternalError`
 
 

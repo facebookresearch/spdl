@@ -85,6 +85,7 @@ Using ``SharedMemory`` for faster inter-process-communication
 -------------------------------------------------------------
 
 The multi-processing does not have the GIL constraint, but it comes with the cost of memory copy between processes.
+(See :ref:`ipc-cost` for why this copy is expensive and how it scales with the payload.)
 Array formats like NumPy's NDArray and PyTorch's Tensor use shared memory to make this performant.
 If you need to pass a large data between processes
 (such as a dataset, though we don't recommend passing around dataset)

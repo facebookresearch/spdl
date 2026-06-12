@@ -6,11 +6,17 @@ Pipeline Parallelism
 .. currentmodule:: spdl.pipeline
 
 The :py:class:`Pipeline` class supports multi-threading and multi-processing.
-You can also use a ``Pipeline`` objects as source iterator of another ``Pipeline``.
+You can also use a ``Pipeline`` object as the source iterator of another
+``Pipeline``.
 When experimenting, this flexibility makes it easy to switch multi-threading,
 multi-processing and mixtures of them.
 
-.. image:: ../_static/data/parallelism_architecture.png
+This page covers the fundamentals: the executor mechanism, dedicated thread
+pools, the cost of crossing a process boundary, the
+:py:meth:`~PipelineBuilder.to` region API, and
+:py:func:`run_pipeline_in_subprocess`. For the higher-level patterns that
+combine these primitives into an efficient data loader (MT, MP and MTP), see
+:ref:`execution-models`.
 
 Specifying an executor
 ----------------------
@@ -98,15 +104,12 @@ method.
 
    **GIL considerations:**
 
-   Before your application can take advantage of free-threaded Python,
-   to properly achieve concurrency, your stage functions must mainly
-   consist of operations that release the GIL.
-
-   Libraries such as PyTorch and NumPy release the GIL when manipulating
-   arrays, so they are usually fine.
-
-   For loading raw byte strings into array format, SPDL offers efficient
-   functions through :py:mod:`spdl.io` module.
+   To take advantage of multi-threading, your stage functions must mainly
+   consist of operations that release the GIL. Libraries such as PyTorch and
+   NumPy release the GIL when manipulating arrays, and SPDL offers efficient
+   GIL-releasing functions for decoding raw bytes through the :py:mod:`spdl.io`
+   module. See :ref:`working-around-the-gil` for which libraries release the GIL,
+   and what to do when a stage's function does not.
 
 .. _pipeline-parallelism-custom-mt:
 
@@ -194,60 +197,35 @@ and the transfer overlaps with the stream executing the model training.
 Multi-processing (stage)
 ------------------------
 
-Similar to the custom multi-threading, by providing an instance of
-:py:class:`~concurrent.futures.ProcessPoolExecutor`, that stage is executed in a
-subprocess.
+What if a function does not release the GIL? If a stage relies on a function
+that takes a long time to execute (for example, a network utility, or a
+long-running pure-Python routine) but does not release the GIL, running it on the
+shared thread pool blocks the other stages. You can instead delegate that single
+stage to a subprocess.
+
+:py:meth:`PipelineBuilder.pipe` takes an optional ``executor`` argument. The
+default behavior is to use the thread pool shared among all stages. If you pass
+an instance of :py:class:`~concurrent.futures.ProcessPoolExecutor`, that stage
+executes the function in a subprocess, free of the GIL.
 
 .. code-block::
 
-   executor = ProcessPoolExecutor(...)
+   executor = ProcessPoolExecutor(max_workers=num_processes)
 
    pipeline = (
        PipelineBuilder()
-       .add_source(...)
-       .pipe(task_function, executor=executor)
-       .add_sink(...)
+       .add_source(src)
+       .pipe(stage1, executor=executor, concurrency=num_processes)
+       .pipe(stage2, ...)
+       .pipe(stage3, ...)
+       .add_sink(1)
+       .build()
    )
 
-.. mermaid::
+This builds a pipeline like the following, where ``stage1`` runs in the process
+pool while ``stage2`` and ``stage3`` stay on the main process's thread pool.
 
-   %%{init: {'theme':'base'}}%%
-   graph TB
-       subgraph MP["Main Process"]
-           EL["Event Loop"]
-           MEM1["Memory Space"]
-       end
-
-       subgraph SP1["Subprocess 1"]
-           W1["Worker"]
-           MEM2["Memory Space"]
-       end
-
-       subgraph SP2["Subprocess 2"]
-           W2["Worker"]
-           MEM3["Memory Space"]
-       end
-
-       subgraph SP3["Subprocess 3"]
-           W3["Worker"]
-           MEM4["Memory Space"]
-       end
-
-       EL -.sends data via IPC.-> W1
-       EL -.sends data via IPC.-> W2
-       EL -.sends data via IPC.-> W3
-       W1 -.returns results via IPC.-> EL
-       W2 -.returns results via IPC.-> EL
-       W3 -.returns results via IPC.-> EL
-
-       style MP fill:#e1f5ff
-       style SP1 fill:#ffe1e1
-       style SP2 fill:#ffe1e1
-       style SP3 fill:#ffe1e1
-       style MEM1 fill:#e8f5e9
-       style MEM2 fill:#e8f5e9
-       style MEM3 fill:#e8f5e9
-       style MEM4 fill:#e8f5e9
+.. include:: ../plots/faq_subprocess_chart.txt
 
 .. note::
 
@@ -259,95 +237,199 @@ subprocess.
    - Slower startup due to process creation
    - Best for CPU-bound tasks that hold the GIL
 
-Note that when you dispatch the stage to subprocess, both the function (callable)
-and the argument are sent from the main process to the subprocess.
-Then the result obtained by passing the argument to the function is sent back
-from the subprocess to the main process.
-Therefore, all of the function (callable), the input argument and the output
-value must be
-`picklable <https://docs.python.org/3/library/pickle.html#pickle-picklable>`_.
+.. note::
 
-If you want to bind extra arguments to a function, you can use
-:py:func:`functools.partial`.
-If you want to pass around an object that's not picklable by default,
-you can define the serialization protocol by providing
-:py:meth:`object.__getstate__` and :py:meth:`object.__setstate__`.
+   Along with the function arguments and the return value, the function
+   (callable) itself is serialized and sent to the subprocess, then the result is
+   sent back. Therefore the function, its input argument, and its output value
+   must all be
+   `picklable <https://docs.python.org/3/library/pickle.html#pickle-picklable>`_.
+   Plain functions work; closures and class methods cannot be passed.
 
-Multi-processing (combined)
----------------------------
+   If you want to bind extra arguments to a function, you can use
+   :py:func:`functools.partial`. If you want to pass around an object that's not
+   picklable by default, you can define the serialization protocol by providing
+   :py:meth:`object.__getstate__` and :py:meth:`object.__setstate__`.
 
-If you have multiple stages that you want to run in subprocess, it is
-inefficient to copy data between processes back and forth.
+.. tip::
 
-One workaround is to combine stages and let each process run processes
-in a batch.
+   If you need to perform one-time initialization in the subprocess, you can use
+   the ``initializer`` and ``initargs`` arguments.
+
+   The values passed as ``initializer`` and ``initargs`` must be picklable.
+   If constructing an object in a process that does not support pickle, then
+   you can pass constructor arguments instead and store the resulting object
+   in global scope. See also https://stackoverflow.com/a/68783184/3670924.
+
+   Example
+
+   .. code-block::
+
+      def init_resource(*args):
+          global rsc
+          rsc = ResourceClass(*args)
+
+      def process_with_resource(item):
+          global rsc
+
+          return rsc.process(item)
+
+      executor = ProcessPoolExecutor(
+          max_workers=4,
+          mp_context=None,
+          initializer=init_resource,
+          initargs=(...),
+      )
+
+      pipeline = (
+          PipelineBuilder()
+          .add_source()
+          .pipe(
+              process_with_resource,
+              executor=executor,
+              concurrency=4,
+          )
+          .add_sink(3)
+          .build()
+      )
+
+The cost of crossing a process boundary
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every time a stage is dispatched to a subprocess, its input is pickled and copied
+into the worker, and the result is pickled and copied back. For a single heavy,
+GIL-holding stage this overhead is easily worth it. See :ref:`ipc-cost` for why
+this pickle-and-copy is expensive and how it scales with the payload.
+
+The *size* of what crosses the boundary matters too, since pickling and copying a
+large payload is costly and is paid on both sides. PyTorch tensors (and NumPy
+arrays) are the exception: their buffers are moved through shared memory and only
+a handle is pickled, so transferring them is far cheaper than their size suggests
+— even though a fresh shared-memory segment is allocated on each pickling. Prefer
+passing a :py:class:`torch.Tensor` across the boundary. To send a raw byte string
+cheaply, write it to shared memory yourself, or wrap it in a 1-D ``uint8`` tensor
+so it rides the same fast path.
+
+To squeeze the last bit of IPC performance,
+:py:class:`~spdl.pipeline.SharedMemorySegmentPool` reuses a pre-allocated pool of
+shared-memory segments instead of allocating one per transfer, edging out a plain
+tensor. See the :ref:`shared-memory arena case study <shared-memory-arena>` and
+the :py:mod:`benchmark_arena_transport` example for the measured numbers.
+
+But if you send several consecutive stages each to a ``ProcessPoolExecutor``, the
+data makes a round trip between the main process and a worker at *every* stage
+boundary. Copying data back and forth like this wastes both time and memory.
+
+To keep several stages running together inside the workers without paying a
+per-stage round trip, mark a region of the pipeline (next section) or run the
+whole pipeline in a subprocess. These are the building blocks behind the
+recommended MP and MTP patterns; see :ref:`execution-models`.
+
+Multi-processing (region)
+-------------------------
+
+Rather than paying a process round trip per stage, you can mark a **region** of
+the pipeline to run together in a worker pool with
+:py:meth:`~spdl.pipeline.PipelineBuilder.to`. Every stage between
+``.to(ProcessPoolExecutorConfig(...))`` and ``.to(MAIN_PROCESS)`` runs
+as one nested :py:class:`Pipeline` inside a pool of worker processes:
 
 .. code-block::
 
-   def preprocess(items: list[T]) -> U:
-       # performs decode/preprocess and collation
-       ...
-
-   executor = ProcessPoolExecutor(...)
+   from spdl.pipeline.defs import MAIN_PROCESS, ProcessPoolExecutorConfig
 
    pipeline = (
        PipelineBuilder()
        .add_source(...)
-       .aggregate(batch_size)
-       .pipe(preprocess, executor=executor, concurrency=...)
+       .to(ProcessPoolExecutorConfig(max_workers=4))
+       .pipe(op1, concurrency=2)          # runs in a worker process
+       .aggregate(batch_size)             # runs in a worker process
+       .pipe(op2, concurrency=3)          # runs in a worker process
+       .to(MAIN_PROCESS)                  # data returns to the main process
        .add_sink(...)
+       .build(num_threads=...)
    )
 
-This approach is similar to the conventional DataLoader.
-One downside with this approach is less robust in error handling than
-the previous approaches. If preprocessing fails for one item, and
-if you want to ensure the size of the batch to be consistent,
-then all items must be dropped too.
-The other approach does not suffer from this.
+Because the region's stages run back-to-back inside one worker, the value handed
+from one stage to the next is **not** copied back to the main process between
+them. This removes the inter-stage IPC entirely, and — unlike the per-stage
+multi-processing above — those intermediate values do **not** need to be
+picklable; only the region's inputs and outputs cross the process boundary. Each
+stage keeps its own ``concurrency`` and its own per-stage performance stats (the
+nested pipeline is built with the usual hooks, so the stats are reported from
+inside the worker).
 
-Multi-threading in subprocess
------------------------------
+.. note::
 
-The multi-threading in subprocess is a paradigm we found effective in
-the case study :ref:`parallelism-performance`.
+   A stage's ``concurrency`` applies *within each worker process*, so the
+   effective concurrency of a stage across the pool is
+   ``concurrency × max_workers``. For example, ``.pipe(op, concurrency=2)`` in a
+   region with ``max_workers=4`` runs up to 8 invocations of ``op`` at once. Size
+   each stage's ``concurrency`` together with ``max_workers`` to stay within your
+   CPU budget.
 
-The :py:func:`spdl.pipeline.run_pipeline_in_subprocess` function moves the given
-instance of :py:class:`PipelineBuilder` to a subprocess, build and execute the
-:py:class:`Pipeline` and put the results to inter-process queue.
+Unlike passing ``executor=`` to individual
+:py:meth:`~spdl.pipeline.PipelineBuilder.pipe` calls, a region also carries
+:py:meth:`~spdl.pipeline.PipelineBuilder.aggregate`,
+:py:meth:`~spdl.pipeline.PipelineBuilder.disaggregate`, and
+:py:meth:`~spdl.pipeline.PipelineBuilder.path_variants` stages into the worker,
+and gives the worker-pool configuration (worker count, ``mp_context``,
+``initializer``) a single home. A pipeline starts on the main process, so a
+region is opened by a ``.to(ProcessPoolExecutorConfig(...))`` and closed by
+``.to(MAIN_PROCESS)``; the region must be closed before
+:py:meth:`~spdl.pipeline.PipelineBuilder.add_sink`.
+
+Inside a region, generator ops and async ops work as usual, a
+:py:meth:`continuous source <spdl.pipeline.PipelineBuilder.add_source>` keeps the
+worker sub-pipelines warm across epochs, and a region composes with
+:py:func:`~spdl.pipeline.run_pipeline_in_subprocess`. Every op must be picklable,
+since the region config is shipped to the worker. See the
+:py:meth:`~spdl.pipeline.PipelineBuilder.to` reference for the details.
+
+To run a region in **subinterpreters** (Python 3.14+) instead of subprocesses,
+pass a :py:class:`~spdl.pipeline.defs.InterpreterPoolExecutorConfig`; the region's ops
+must avoid NumPy/PyTorch, which cannot be imported in a subinterpreter.
+
+.. note::
+
+   A region produces results in completion order across its pool workers, so a
+   stage built with ``output_order="input"`` cannot appear inside a region.
+
+Running a pipeline in a subprocess
+----------------------------------
+
+The :py:func:`spdl.pipeline.run_pipeline_in_subprocess` function moves a given
+:py:class:`PipelineBuilder` configuration to a subprocess, builds and runs the
+:py:class:`Pipeline` there, and delivers the results to the main process through
+an inter-process queue.
 
 .. mermaid::
 
    %%{init: {'theme':'base'}}%%
    graph TB
-       subgraph MP["Main Process"]
-           MEL["Event Loop<br/>(Main Thread)"]
-           subgraph MTP["Thread Pool"]
-               MT1["Worker Thread 1<br/>(e.g., GPU Transfer)"]
-           end
-           MEL -->|schedules| MTP
-       end
-
        subgraph SP["Subprocess"]
            SEL["Event Loop<br/>(Sub Thread)"]
            subgraph STP["Thread Pool"]
-               ST1["Worker Thread 1<br/>(e.g., Download)"]
-               ST2["Worker Thread 2<br/>(e.g., Decode)"]
-               ST3["Worker Thread 3<br/>(e.g., Preprocess)"]
+               ST1["Stage 1"]
+               ST2["Stage 2"]
+               ST3["Stage 3"]
            end
            SEL -->|schedules| STP
        end
 
-       STP -->|batched data| Q["IPC Queue"]
-       Q -->|batched data| MEL
+       subgraph MP["Main Process"]
+           MEL["Iterates results<br/>(Main Thread)"]
+       end
+
+       STP -->|results| Q["IPC Queue"]
+       Q -->|results| MEL
 
        style MP fill:#e1f5ff
        style SP fill:#ffe1e1
        style MEL fill:#b3d9ff
        style SEL fill:#ffb3b3
-       style MTP fill:#fff4e1
        style STP fill:#fff4e1
        style Q fill:#e8f5e9
-       style MT1 fill:#fffacd
        style ST1 fill:#fffacd
        style ST2 fill:#fffacd
        style ST3 fill:#fffacd
@@ -356,11 +438,9 @@ instance of :py:class:`PipelineBuilder` to a subprocess, build and execute the
 
    **How it works:**
 
-   - **Subprocess**: Runs a full pipeline with its own event loop and thread pool
-   - **Data processing**: Download, decode, and preprocessing happen in the subprocess
-   - **IPC Queue**: Batched data is transferred to the main process via inter-process communication
-   - **Main Process**: Receives batched data and performs GPU transfer in a dedicated thread
-   - **Benefit**: Separates data loading from GPU operations, reducing main thread overhead
+   - **Subprocess**: runs the full pipeline with its own event loop and thread pool.
+   - **IPC Queue**: results are transferred to the main process via inter-process communication.
+   - **Main process**: iterates the returned iterable to receive the results.
 
 The following example shows how to use the function.
 
@@ -401,45 +481,6 @@ The following example shows how to use the function.
      the pipeline in a separate interpreter within the same process, providing
      interpreter-level isolation while being lighter weight than a full subprocess.
 
-Since the result of the ``run_pipeline_in_subprocess`` is an ``iterable``,
-you can build a pipeline on top of it.
-
-This allows to build a pipeline that creates a batch object in a subprocess,
-then transfer the batch to the GPU in a background thread in the main process.
-We refer this pattern as MTP ("multi-threading in subprocess").
-
-.. code-block:: python
-
-   # Pipeline that fetches data, loads, then collates.
-   builder = (
-       PipelineBuilder()
-       .add_source(Dataset(...))
-       .pipe(download, concurrency=...)
-       .pipe(load, concurrency=...)
-       .aggregate(batch_size)
-       .pipe(collate)
-       .add_sink(...)
-   )
-   config = builder.get_config()
-
-   src = run_pipeline_in_subprocess(config, num_threads=...)
-
-   # Build another pipeline on top of it, which transfers the data to a
-   # GPU
-   pipeline = (
-       PipelineBuilder()
-       .add_source(src)
-       .pipe(gpu_transfer)
-       .add_sink(...)
-       .build(...)
-   )
-
-   # Iterate
-   for batch in pipeline:
-       ...
-
-
-The MTP mode helps the OS to schedule GPU kernel launches from the main thread
-(where the training loop is running) in timely manner, and reduces the
-number of Python objects that the Python interpreter in the main process
-has to handle.
+Because the result of ``run_pipeline_in_subprocess`` is an ``iterable``, you can
+build another :py:class:`Pipeline` on top of it. See :ref:`execution-models` for
+the execution patterns that build on this primitive.

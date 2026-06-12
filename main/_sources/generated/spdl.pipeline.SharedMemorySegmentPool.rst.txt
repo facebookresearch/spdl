@@ -12,6 +12,7 @@ spdl.pipeline.SharedMemorySegmentPool
       ~SharedMemorySegmentPool.close
       ~SharedMemorySegmentPool.open_reader
       ~SharedMemorySegmentPool.open_writer
+      ~SharedMemorySegmentPool.shutdown_arena
       ~SharedMemorySegmentPool.unlink
 
    .. rubric:: Attributes

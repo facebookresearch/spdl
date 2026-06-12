@@ -1,0 +1,17 @@
+.. _exhale_class_classspdl_1_1core_1_1TracingSession:
+
+Class TracingSession
+====================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: spdl::core::TracingSession
+   :project: libspdl
+   :members:
+   :protected-members:
+   :undoc-members:

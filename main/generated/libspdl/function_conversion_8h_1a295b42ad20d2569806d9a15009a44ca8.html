@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Function spdl::core::create_reference_video_frame" href="function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html" /><link rel="prev" title="Function spdl::core::cpu_buffer" href="function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Function spdl::core::create_reference_audio_frame - SPDL 0.5.0 documentation</title>
+        <title>Function spdl::core::create_reference_audio_frame - SPDL 0.6.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">SPDL 0.5.0 documentation</div></a>
+      <a href="../../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.5.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -222,6 +222,8 @@
 <li class="toctree-l2"><a class="reference internal" href="../../getting_started/stages.html">Pipeline Stages</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../getting_started/concurrency.html">Concurrency</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../getting_started/parallelism.html">Pipeline Parallelism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/execution_models.html">Execution Models: MT, MTP, and MP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/gil.html">Working Around the GIL</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../getting_started/logging.html">Collecting Runtime Statistics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../getting_started/pytorch.html">Building High-Performance DataLoaders</a></li>
 </ul>
@@ -260,6 +262,7 @@
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../case_studies/parallelism.html">Parallelism and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../case_studies/data_format.html">Data Format and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../case_studies/inference.html">Building Inference Pipeline</a></li>
@@ -299,9 +302,9 @@
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../../faq.html">Frequently Asked Questions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul class="current">
@@ -332,9 +335,13 @@
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1DecodeConfig.html">Struct DecodeConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1DemuxConfig.html">Struct DemuxConfig</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1EncodeConfigBase.html">Template Struct EncodeConfigBase</a></li>
+<li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html">Template Struct EncodeConfigBase&lt; MediaType::Audio &gt;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html">Template Struct EncodeConfigBase&lt; MediaType::Video &gt;</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Generator_1_1iterator.html">Struct Generator::iterator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
+<li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Packets.html">Template Struct Packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1RawPacketData.html">Struct RawPacketData</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1SourceAdaptor.html">Struct SourceAdaptor</a></li>
 <li class="toctree-l3"><a class="reference internal" href="structspdl_1_1core_1_1Storage.html">Struct Storage</a></li>
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1BSF.html">Template Class BSF</a></li>
@@ -349,6 +356,7 @@
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1Frames.html">Template Class Frames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1PacketSeries.html">Class PacketSeries</a></li>
 <li class="toctree-l3"><a class="reference internal" href="classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
 <li class="toctree-l3"><a class="reference internal" href="enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
 <li class="toctree-l3"><a class="reference internal" href="enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
@@ -359,9 +367,13 @@
 <li class="toctree-l3"><a class="reference internal" href="function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa.html">Function spdl::core::cpu_buffer</a></li>
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Function spdl::core::create_reference_audio_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe.html">Template Function spdl::core::deserialize_packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1a17e80346c554363a3ca0f92f23f35d61.html">Template Function spdl::core::deserialize_packets_view</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1a375c1c657bca786016f8a705e3f2a624.html">Template Function spdl::core::get_timestamps</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
@@ -370,6 +382,7 @@
 <li class="toctree-l3"><a class="reference internal" href="function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74.html">Function spdl::core::make_rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1ad4aa4f4b9667a0155f404046973ec2ee.html">Template Function spdl::core::serialize_packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a49d051162e06f26b896c8aef4605524b.html">Function spdl::core::set_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420.html">Function spdl::core::to_double</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d.html">Function spdl::core::to_rational</a></li>
@@ -379,6 +392,7 @@
 <li class="toctree-l3"><a class="reference internal" href="define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1ac39ed67e74a726de6b86fbcc91e57971.html">Typedef spdl::core::AnyPackets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html">Typedef spdl::core::AnyPacketsGenerator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
@@ -386,6 +400,8 @@
 <li class="toctree-l3"><a class="reference internal" href="typedef_encoder_8h_1a0dfcc06d4bbea67c7f45399be8719fa6.html">Typedef spdl::core::AudioEncoderPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf.html">Typedef spdl::core::AudioFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62.html">Typedef spdl::core::AudioFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1a9644f8aa13f0e4db02d8ab60673563a3.html">Typedef spdl::core::AudioPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c.html">Typedef spdl::core::AudioPacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_buffer_8h_1ab6e5b43497adbd35e9fbc35cf5be7101.html">Typedef spdl::core::CPUBufferPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_adaptor_8h_1adcb670a31326eb24268b384396736cd6.html">Typedef spdl::core::DataInterfacePtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_decoder_8h_1a4b0502ea20d1dda958a67deeb582a74b.html">Typedef spdl::core::DecoderPtr</a></li>
@@ -396,8 +412,12 @@
 <li class="toctree-l3"><a class="reference internal" href="typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f.html">Typedef spdl::core::ImageCodec</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a.html">Typedef spdl::core::ImageFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7.html">Typedef spdl::core::ImageFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1af018ade1cd38831c342686abbcb787a8.html">Typedef spdl::core::ImagePackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1.html">Typedef spdl::core::ImagePacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_muxer_8h_1aaa76352d246819df02bc407729f69dda.html">Typedef spdl::core::MuxerPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20.html">Typedef spdl::core::OptionDict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1a331b599d0eceb00ebef166d64623c71a.html">Typedef spdl::core::PacketSeriesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html">Typedef spdl::core::PacketsPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
@@ -407,6 +427,8 @@
 <li class="toctree-l3"><a class="reference internal" href="typedef_encoder_8h_1a39ace4ea741767fa3d802040a9bc22e1.html">Typedef spdl::core::VideoEncoderPtr</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_frames_8h_1af1892953097f3723455403752ef79fc5.html">Typedef spdl::core::VideoFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d.html">Typedef spdl::core::VideoFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1a7be7c9faccc623d12fb33ec966f84b4c.html">Typedef spdl::core::VideoPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691.html">Typedef spdl::core::VideoPacketsPtr</a></li>
 </ul>
 </li>
 </ul>
@@ -442,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
@@ -606,7 +629,7 @@
     </aside>
   </div>
 </div>
-    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=70f82a29"></script>
+    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=dda85ae5"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

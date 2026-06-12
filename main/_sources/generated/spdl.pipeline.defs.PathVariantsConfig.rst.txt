@@ -9,6 +9,7 @@ spdl.pipeline.defs.PathVariantsConfig
    .. rubric:: Attributes
 
    .. autosummary::
+      ~PathVariantsConfig.batched
       ~PathVariantsConfig.name
       ~PathVariantsConfig.router
       ~PathVariantsConfig.paths

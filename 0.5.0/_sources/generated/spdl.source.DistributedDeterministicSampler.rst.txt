@@ -1,0 +1,8 @@
+spdl.source.DistributedDeterministicSampler
+===========================================
+
+.. currentmodule:: spdl.source
+
+.. autoclass:: DistributedDeterministicSampler
+   :show-inheritance:
+   :members:

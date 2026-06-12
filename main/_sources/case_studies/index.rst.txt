@@ -9,6 +9,7 @@ we encountered while optimizing production pipelines.
 .. toctree::
 
    parallelism
+   ipc
    shared_memory_arena
    data_format
    inference

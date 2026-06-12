@@ -1,0 +1,6 @@
+spdl.io.get\_filter\_desc
+=========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: get_filter_desc
