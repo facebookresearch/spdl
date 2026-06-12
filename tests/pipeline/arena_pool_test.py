@@ -118,12 +118,58 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
         t = threading.Thread(target=_reclaim_soon)
         t.start()
         try:
-            # Blocks ~0.1s until the reclaim, then succeeds (does not raise).
+            t0 = time.monotonic()
             writer.begin_unit()
+            elapsed = time.monotonic() - t0
         finally:
             t.join()
         off, n = writer.write_binary(b"y" * 10)
         self.assertEqual(writer.commit_unit(), n)
+        # Producer wakes promptly (cv-driven, not poll-bounded).
+        self.assertLess(elapsed, 2.0)
+        self.assertGreaterEqual(elapsed, 0.05)
+
+    def test_begin_unit_timeout_raises(self) -> None:
+        """begin_unit raises BufferError after acquire_timeout when no reclaim."""
+        pool = self._pool(1 << 16, 1, acquire_timeout=0.05)
+        writer = pool.open_writer()
+        writer.begin_unit()
+        writer.write_binary(b"x" * 10)
+        writer.commit_unit()  # pool full
+        t0 = time.monotonic()
+        with self.assertRaises(BufferError):
+            writer.begin_unit()
+        elapsed = time.monotonic() - t0
+        self.assertGreaterEqual(elapsed, 0.04)
+        self.assertLess(elapsed, 2.0)
+
+    def test_shutdown_wakes_blocked_producer(self) -> None:
+        """shutdown_arena() wakes a blocked producer immediately.
+
+        Models the consumer-dies-first scenario: with no reclaim ever happening,
+        flipping the shutdown flag still lets the producer exit so the worker
+        process can shut down without hanging.
+        """
+        pool = self._pool(1 << 16, 1, acquire_timeout=10.0)
+        writer = pool.open_writer()
+        writer.begin_unit()
+        writer.write_binary(b"x" * 10)
+        writer.commit_unit()
+
+        def _shutdown_soon() -> None:
+            time.sleep(0.1)
+            pool.shutdown_arena()
+
+        t = threading.Thread(target=_shutdown_soon)
+        t.start()
+        try:
+            t0 = time.monotonic()
+            with self.assertRaises(BufferError):
+                writer.begin_unit()
+            elapsed = time.monotonic() - t0
+        finally:
+            t.join()
+        self.assertLess(elapsed, 2.0)
 
     def test_unit_larger_than_segment_raises(self) -> None:
         """A unit that does not fit a segment is refused, not truncated."""
