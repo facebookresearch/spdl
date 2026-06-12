@@ -1,0 +1,122 @@
+﻿..
+   Custom template for our custom_autosummary.
+   The purpose of using custom_autosummary is list the entries on
+   the right side bar instead of the left side bar.
+   This is achieved with the combination of custom directive, template and CSS.
+
+   The `custom_autosummary` directive functions mostly like `autosummary`. We
+   pass `:toctree:` option to generate a doc page for each entry, but we use
+   our custom `:hide_from_toctree:` option so as not to attach them in ToC tree.
+
+   This template inserts a section header for each entry, so that they show up
+   in the right-side bar. The headers are hidden by CSS.
+
+   Because each entry will have its own table and their borders no longer match,
+   table borders are hidden by CSS and instead we use horizontal line.
+
+.. raw:: html
+
+   <div class="custom_autosummary">
+
+.. _example-image-dataloading:
+
+Image dataloading
+=================
+
+.. automodule:: image_dataloading
+
+..
+   ############################################################################
+   Source
+   ############################################################################
+
+Source
+------
+
+.. rubric:: Source
+
+.. raw:: html
+
+   <details>
+   <summary><u>Click here to see the source.</u></summary>
+
+.. literalinclude:: ../../../examples/image_dataloading.py
+   :linenos:
+
+.. raw:: html
+
+   </details>
+
+API Reference
+-------------
+
+..
+   ############################################################################
+   Functions
+   ############################################################################
+
+
+
+
+.. rubric:: Functions
+
+
+
+.. autofunction:: image_dataloading.entrypoint
+
+
+
+.. autofunction:: image_dataloading.worker_entrypoint
+
+
+
+.. autofunction:: image_dataloading.benchmark
+
+
+
+.. autofunction:: image_dataloading.source
+
+
+
+.. autofunction:: image_dataloading.batch_decode
+
+
+
+.. autofunction:: image_dataloading.get_pipeline
+
+
+
+
+
+..
+   ############################################################################
+   Attributes
+   ############################################################################
+
+
+
+
+
+..
+   ############################################################################
+   Classes
+   ############################################################################
+
+
+
+
+
+.. rubric:: Classes
+
+
+
+.. autoclass:: image_dataloading.PerfResult
+   :members:
+
+
+
+
+
+.. raw:: html
+
+   </div>

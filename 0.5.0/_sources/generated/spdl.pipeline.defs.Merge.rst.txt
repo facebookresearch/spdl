@@ -1,0 +1,6 @@
+spdl.pipeline.defs.Merge
+========================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autofunction:: Merge

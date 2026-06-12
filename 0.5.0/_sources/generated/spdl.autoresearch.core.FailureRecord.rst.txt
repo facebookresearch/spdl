@@ -1,0 +1,25 @@
+spdl.autoresearch.core.FailureRecord
+====================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoclass:: FailureRecord
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~FailureRecord.from_dict
+      ~FailureRecord.to_dict
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~FailureRecord.created_at
+      ~FailureRecord.exception_type
+      ~FailureRecord.job_id
+      ~FailureRecord.retryable
+      ~FailureRecord.kind
+      ~FailureRecord.phase
+      ~FailureRecord.message
+      ~FailureRecord.details

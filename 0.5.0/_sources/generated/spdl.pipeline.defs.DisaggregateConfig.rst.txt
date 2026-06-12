@@ -1,0 +1,12 @@
+spdl.pipeline.defs.DisaggregateConfig
+=====================================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: DisaggregateConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~DisaggregateConfig.name

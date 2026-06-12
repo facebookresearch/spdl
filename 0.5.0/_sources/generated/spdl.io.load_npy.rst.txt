@@ -1,0 +1,6 @@
+spdl.io.load\_npy
+=================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: load_npy

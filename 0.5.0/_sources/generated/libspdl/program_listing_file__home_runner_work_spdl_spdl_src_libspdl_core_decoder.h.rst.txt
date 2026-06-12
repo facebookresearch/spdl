@@ -1,0 +1,81 @@
+
+.. _program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h:
+
+Program Listing for File decoder.h
+==================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h>` (``/home/runner/work/spdl/spdl/src/libspdl/core/decoder.h``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   /*
+    * Copyright (c) Meta Platforms, Inc. and affiliates.
+    * All rights reserved.
+    *
+    * This source code is licensed under the BSD-style license found in the
+    * LICENSE file in the root directory of this source tree.
+    */
+   
+   #pragma once
+   
+   #include <libspdl/core/codec.h>
+   #include <libspdl/core/frames.h>
+   #include <libspdl/core/generator.h>
+   #include <libspdl/core/packets.h>
+   #include <libspdl/core/types.h>
+   
+   #include <optional>
+   
+   namespace spdl::core {
+   
+   // Decoder
+   namespace detail {
+   template <MediaType media>
+   class DecoderImpl;
+   }
+   
+   template <MediaType media>
+   class Decoder {
+     detail::DecoderImpl<media>* pImpl_;
+   
+    public:
+     Decoder(
+         const Codec<media>& codec,
+         const std::optional<DecodeConfig>& cfg,
+         const std::optional<std::string>& filter_desc);
+   
+     Decoder(const Decoder&) = delete;
+   
+     Decoder& operator=(const Decoder&) = delete;
+   
+     Decoder(Decoder&&) = delete;
+   
+     Decoder& operator=(Decoder&&) = delete;
+   
+     ~Decoder();
+   
+     // One-off decoding
+   
+     FramesPtr<media> decode_packets(
+         PacketsPtr<media> packets,
+         int num_frames = -1);
+   
+     // Streaming decoding
+   
+     void set_buffer_size(size_t num_frames)
+       requires(media == MediaType::Video);
+   
+     Generator<FramesPtr<media>> streaming_decode_packets(
+         PacketsPtr<media> packets)
+       requires(media == MediaType::Video || media == MediaType::Audio);
+   
+     Generator<FramesPtr<media>> flush()
+       requires(media == MediaType::Video || media == MediaType::Audio);
+   };
+   
+   template <MediaType media>
+   using DecoderPtr = std::unique_ptr<Decoder<media>>;
+   
+   } // namespace spdl::core

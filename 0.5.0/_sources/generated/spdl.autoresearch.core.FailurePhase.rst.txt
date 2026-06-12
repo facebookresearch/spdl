@@ -1,0 +1,74 @@
+spdl.autoresearch.core.FailurePhase
+===================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoclass:: FailurePhase
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~FailurePhase.encode
+      ~FailurePhase.replace
+      ~FailurePhase.split
+      ~FailurePhase.rsplit
+      ~FailurePhase.join
+      ~FailurePhase.capitalize
+      ~FailurePhase.casefold
+      ~FailurePhase.title
+      ~FailurePhase.center
+      ~FailurePhase.count
+      ~FailurePhase.expandtabs
+      ~FailurePhase.find
+      ~FailurePhase.partition
+      ~FailurePhase.index
+      ~FailurePhase.ljust
+      ~FailurePhase.lower
+      ~FailurePhase.lstrip
+      ~FailurePhase.rfind
+      ~FailurePhase.rindex
+      ~FailurePhase.rjust
+      ~FailurePhase.rstrip
+      ~FailurePhase.rpartition
+      ~FailurePhase.splitlines
+      ~FailurePhase.strip
+      ~FailurePhase.swapcase
+      ~FailurePhase.translate
+      ~FailurePhase.upper
+      ~FailurePhase.startswith
+      ~FailurePhase.endswith
+      ~FailurePhase.removeprefix
+      ~FailurePhase.removesuffix
+      ~FailurePhase.isascii
+      ~FailurePhase.islower
+      ~FailurePhase.isupper
+      ~FailurePhase.istitle
+      ~FailurePhase.isspace
+      ~FailurePhase.isdecimal
+      ~FailurePhase.isdigit
+      ~FailurePhase.isnumeric
+      ~FailurePhase.isalpha
+      ~FailurePhase.isalnum
+      ~FailurePhase.isidentifier
+      ~FailurePhase.isprintable
+      ~FailurePhase.zfill
+      ~FailurePhase.format
+      ~FailurePhase.format_map
+      ~FailurePhase.maketrans
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~FailurePhase.PREPARE
+      ~FailurePhase.SOURCE
+      ~FailurePhase.CODE_CHANGE
+      ~FailurePhase.BUILD
+      ~FailurePhase.LAUNCH
+      ~FailurePhase.JOB
+      ~FailurePhase.METRICS
+      ~FailurePhase.ANALYSIS
+      ~FailurePhase.PLANNING
+      ~FailurePhase.SETUP
+      ~FailurePhase.INSTRUMENTATION
+      ~FailurePhase.RUNNER

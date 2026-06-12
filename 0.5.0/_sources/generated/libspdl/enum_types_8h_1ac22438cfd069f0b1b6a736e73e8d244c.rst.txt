@@ -1,0 +1,14 @@
+.. _exhale_enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c:
+
+Enum MediaType
+==============
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Enum Documentation
+------------------
+
+
+.. doxygenenum:: spdl::core::MediaType
+   :project: libspdl

@@ -1,0 +1,12 @@
+spdl.pipeline.BackgroundTask
+============================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: BackgroundTask
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~BackgroundTask.run

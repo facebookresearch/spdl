@@ -1,0 +1,7 @@
+spdl.io.CPUBuffer
+=================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: CPUBuffer
+   :members:
