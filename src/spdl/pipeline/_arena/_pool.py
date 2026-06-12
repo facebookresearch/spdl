@@ -24,11 +24,11 @@ the pool once every view into it has been released — tracked with
 ``reclaimed`` (``free = count - (published - reclaimed)``), so it never reuses a
 segment that still has live views.
 
-Backpressure is Mode B (blocking): ``begin_unit`` waits for the consumer to
-reclaim a segment when the pool is full (up to ``acquire_timeout``), throttling a
-fast producer to the consumer's reclaim rate. Set ``acquire_timeout=0`` for
-non-blocking behavior (raise immediately when full). Elastic growth remains
-future work.
+Backpressure is Mode B (blocking): ``begin_unit`` waits on a process-shared
+:py:class:`multiprocessing.Condition` until the consumer reclaims a segment
+(up to ``acquire_timeout``), throttling a fast producer to the consumer's reclaim
+rate. Set ``acquire_timeout=0`` for non-blocking behavior (raise immediately when
+full). Elastic growth remains future work.
 
 .. note::
 
@@ -40,11 +40,12 @@ future work.
 from __future__ import annotations
 
 import logging
+import multiprocessing
 import struct
 import threading
-import time
 import weakref
 from multiprocessing import shared_memory
+from multiprocessing.synchronize import Condition as _Condition
 from typing import TypedDict
 
 from ._shm import _attach
@@ -53,18 +54,15 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = ["SharedMemorySegmentPool"]
 
-# How often ``begin_unit`` polls the (shared-memory) reclaim counter while
-# waiting for a free segment. Small enough to be responsive, large enough to
-# keep the busy-wait cheap.
-_POLL_INTERVAL: float = 0.0005
-
 # Default time ``begin_unit`` waits for the consumer to reclaim a segment before
 # giving up and raising. Generous, so it only fires on a genuinely stalled or
 # dead consumer rather than normal slow-consumer backpressure.
 _DEFAULT_ACQUIRE_TIMEOUT: float = 60.0
 
-# Control segment: published (units published), reclaimed (units returned).
-_CTRL: struct.Struct = struct.Struct("<QQ")
+# Control segment: published (units published, uint64), reclaimed (units
+# returned, uint64), shutdown (uint8 flag set on teardown to wake any blocked
+# producer cleanly).
+_CTRL: struct.Struct = struct.Struct("<QQB")
 
 # Binaries are aligned to this many bytes within a segment so that zero-copy
 # views into them (e.g. ``spdl.io`` Packets payloads) land on aligned addresses.
@@ -82,6 +80,7 @@ class _PoolState(TypedDict):
     segment_size: int
     count: int
     acquire_timeout: float
+    space_cv: _Condition
 
 
 class SharedMemorySegmentPool:
@@ -94,6 +93,11 @@ class SharedMemorySegmentPool:
     memory; the pool keeps each segment until its views are released.
 
     .. versionadded:: 0.5.0
+
+    .. versionchanged:: 0.6.0
+       Backpressure now uses a process-shared
+       :py:class:`multiprocessing.Condition` instead of busy-polling the shared
+       reclaim counter; idle producers no longer consume CPU while waiting.
 
     .. note::
 
@@ -143,7 +147,7 @@ class SharedMemorySegmentPool:
         self._acquire_timeout: float = acquire_timeout
         ctrl = shared_memory.SharedMemory(create=True, size=_CTRL.size)
         # pyrefly: ignore [bad-argument-type]
-        _CTRL.pack_into(ctrl.buf, 0, 0, 0)
+        _CTRL.pack_into(ctrl.buf, 0, 0, 0, 0)
         segs = [
             shared_memory.SharedMemory(create=True, size=segment_size)
             for _ in range(count)
@@ -156,6 +160,11 @@ class SharedMemorySegmentPool:
         self._ctrl_buf: "memoryview[bytes] | None" = ctrl.buf
         # pyrefly: ignore [bad-assignment]
         self._seg_bufs: "list[memoryview[bytes]] | None" = [s.buf for s in segs]
+        # Process-shared condition variable used by ``begin_unit`` to block the
+        # producer until the consumer reclaims a segment (or the arena is shut
+        # down). Picklable through ``Process(args=...)`` spawn, like the rest of
+        # the arena.
+        self._space_cv: _Condition = multiprocessing.Condition()
 
     # -- pickling: carry only the spec; attach lazily, once, per process --
 
@@ -166,6 +175,7 @@ class SharedMemorySegmentPool:
             "segment_size": self._segment_size,
             "count": self._count,
             "acquire_timeout": self._acquire_timeout,
+            "space_cv": self._space_cv,
         }
 
     def __setstate__(self, state: _PoolState) -> None:
@@ -174,6 +184,7 @@ class SharedMemorySegmentPool:
         self._segment_size = state["segment_size"]
         self._count = state["count"]
         self._acquire_timeout = state["acquire_timeout"]
+        self._space_cv = state["space_cv"]
         self._ctrl = None
         self._segs = None
         self._ctrl_buf = None
@@ -222,6 +233,35 @@ class SharedMemorySegmentPool:
     @reclaimed.setter
     def reclaimed(self, value: int) -> None:
         struct.pack_into("<Q", self._ctrl_view(), 8, value)
+        # Wake any producer blocked in ``begin_unit`` waiting for a free segment.
+        # Doing this in the setter (rather than at every call site) means manual
+        # mutations of the counter — including the consumer's ``_unit_released``
+        # path and tests that simulate a reclaim — also wake the producer.
+        with self._space_cv:
+            self._space_cv.notify_all()
+
+    @property
+    def _shutdown(self) -> bool:
+        return bool(_CTRL.unpack_from(self._ctrl_view(), 0)[2])
+
+    @_shutdown.setter
+    def _shutdown(self, value: bool) -> None:
+        struct.pack_into("<B", self._ctrl_view(), 16, 1 if value else 0)
+
+    def shutdown_arena(self) -> None:
+        """Wake any producer blocked in :py:meth:`_PoolWriter.begin_unit`.
+
+        Sets a sticky shutdown flag in the control segment and broadcasts on the
+        space condition variable so a producer that is currently waiting for a
+        free segment exits the wait promptly with a :py:exc:`BufferError`. Safe
+        to call multiple times and from either process.
+        """
+        try:
+            self._shutdown = True
+        except Exception:  # noqa: BLE001 — control buf may already be released
+            return
+        with self._space_cv:
+            self._space_cv.notify_all()
 
     def open_writer(self) -> _PoolWriter:
         """Return the writer endpoint (call in the worker process)."""
@@ -241,6 +281,9 @@ class SharedMemorySegmentPool:
         views are garbage-collected, and :py:meth:`unlink` removes the names
         regardless. Raising here would crash an otherwise-successful run.
         """
+        # First wake any blocked producer so it exits its wait before we tear
+        # down the shared memory it observes.
+        self.shutdown_arena()
         if (ctrl_buf := self._ctrl_buf) is not None:
             ctrl_buf.release()
             self._ctrl_buf = None
@@ -312,17 +355,35 @@ class _PoolWriter:
     def begin_unit(self) -> None:
         """Acquire the next free segment for a new unit.
 
-        Mode B backpressure: if the pool is full, wait (polling the shared
-        reclaim counter) for the consumer to release a segment, up to
+        Mode B backpressure: if the pool is full, wait on the arena's process-
+        shared condition variable for the consumer to release a segment, up to
         ``acquire_timeout`` seconds, then raise. This throttles a fast producer
         to the consumer's reclaim rate instead of failing when a slow consumer
         legitimately holds many zero-copy views.
+
+        Raises:
+            BufferError: when the pool is full and the consumer does not reclaim
+                a segment within ``acquire_timeout``, when the arena is shut
+                down (e.g. the parent has begun teardown), or when
+                ``acquire_timeout=0`` and no segment is currently free.
         """
         p = self._p
         if p.count - (p.published - p.reclaimed) < 1:
-            deadline = time.monotonic() + self._acquire_timeout
-            while p.count - (p.published - p.reclaimed) < 1:
-                if time.monotonic() >= deadline:
+            if self._acquire_timeout == 0:
+                raise BufferError(
+                    "segment pool exhausted: no free segment and "
+                    "acquire_timeout=0. Increase SharedMemorySegmentPool "
+                    "count/segment_size or acquire_timeout, or check the consumer."
+                )
+            with p._space_cv:
+                # Re-check after acquiring the cv: the consumer may have
+                # reclaimed (and notified) between the outer test and now.
+                def _ready() -> bool:
+                    if p._shutdown:
+                        return True
+                    return p.count - (p.published - p.reclaimed) >= 1
+
+                if not p._space_cv.wait_for(_ready, timeout=self._acquire_timeout):
                     raise BufferError(
                         "segment pool exhausted: no free segment after waiting "
                         f"{self._acquire_timeout:g}s — the consumer is releasing "
@@ -330,7 +391,10 @@ class _PoolWriter:
                         "SharedMemorySegmentPool count/segment_size or "
                         "acquire_timeout, or check the consumer."
                     )
-                time.sleep(_POLL_INTERVAL)
+                if p._shutdown:
+                    raise BufferError(
+                        "segment pool shut down while waiting for a free segment"
+                    )
         self._cursor = 0
 
     def write_binary(
@@ -449,4 +513,5 @@ class _PoolReader:
                 self._reclaimed += 1
                 advanced = True
             if advanced:
+                # Setter wakes any blocked producer via the space cv.
                 self._p.reclaimed = self._reclaimed
