@@ -1,0 +1,14 @@
+.. _exhale_enum_types_8h_1a5422694500d2203e301dc182e5f63d22:
+
+Enum CodecID
+============
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`
+
+
+Enum Documentation
+------------------
+
+
+.. doxygenenum:: spdl::core::CodecID
+   :project: libspdl

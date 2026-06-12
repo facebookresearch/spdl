@@ -1,0 +1,6 @@
+spdl.source.imagenet.parse\_wnid
+================================
+
+.. currentmodule:: spdl.source.imagenet
+
+.. autofunction:: parse_wnid

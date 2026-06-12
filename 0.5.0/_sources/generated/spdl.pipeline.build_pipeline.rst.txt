@@ -1,0 +1,6 @@
+spdl.pipeline.build\_pipeline
+=============================
+
+.. currentmodule:: spdl.pipeline
+
+.. autofunction:: build_pipeline

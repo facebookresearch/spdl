@@ -1,0 +1,6 @@
+spdl.pipeline.config.set\_default\_queue\_class
+===============================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: set_default_queue_class

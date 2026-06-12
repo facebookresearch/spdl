@@ -1,0 +1,59 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_rational_utils.h:
+
+File rational_utils.h
+=====================
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/rational_utils.h``)
+------------------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_rational_utils.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``cstdint``
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``tuple``
+
+
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7`
+
+- :ref:`exhale_function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74`
+
+- :ref:`exhale_function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420`
+
+- :ref:`exhale_function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d`
+

@@ -1,0 +1,12 @@
+spdl.pipeline.defs.PipeConfig
+=============================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: PipeConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~PipeConfig.name

@@ -1,0 +1,74 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h:
+
+File codec.h
+============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/codec.h``)
+---------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_codec.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``string``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_bsf.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_decoder.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Codec`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba`
+
+- :ref:`exhale_typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f`
+
+- :ref:`exhale_typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e`
+

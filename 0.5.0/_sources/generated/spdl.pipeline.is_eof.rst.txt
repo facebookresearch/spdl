@@ -1,0 +1,6 @@
+spdl.pipeline.is\_eof
+=====================
+
+.. currentmodule:: spdl.pipeline
+
+.. autofunction:: is_eof

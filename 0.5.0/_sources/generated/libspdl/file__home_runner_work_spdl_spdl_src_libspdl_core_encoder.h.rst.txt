@@ -1,0 +1,84 @@
+
+.. _file__home_runner_work_spdl_spdl_src_libspdl_core_encoder.h:
+
+File encoder.h
+==============
+
+|exhale_lsh| :ref:`Parent directory <dir__home_runner_work_spdl_spdl_src_libspdl_core>` (``/home/runner/work/spdl/spdl/src/libspdl/core``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``/home/runner/work/spdl/spdl/src/libspdl/core/encoder.h``)
+-----------------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file__home_runner_work_spdl_spdl_src_libspdl_core_encoder.h.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``libspdl/core/frames.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_frames.h`)
+
+- ``libspdl/core/packets.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`)
+
+- ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
+
+- ``memory``
+
+- ``optional``
+
+- ``string``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_muxer.h`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_spdl`
+
+- :ref:`namespace_spdl__core`
+
+- :ref:`namespace_spdl__core__detail`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_class_classspdl_1_1core_1_1detail_1_1EncoderImpl`
+
+- :ref:`exhale_class_classspdl_1_1core_1_1Encoder`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_encoder_8h_1a57216492ce017017647dba9d1f6f2a5d`
+
+- :ref:`exhale_typedef_encoder_8h_1a0dfcc06d4bbea67c7f45399be8719fa6`
+
+- :ref:`exhale_typedef_encoder_8h_1aacfba556b86e2d663a004b8677567339`
+
+- :ref:`exhale_typedef_encoder_8h_1a383bf2b0ac1564702f10e3b5f3ef03f6`
+
+- :ref:`exhale_typedef_encoder_8h_1a39ace4ea741767fa3d802040a9bc22e1`
+

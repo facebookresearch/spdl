@@ -1,0 +1,8 @@
+spdl.autoresearch.core.WorkflowFactory
+======================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autodata:: WorkflowFactory
+   :annotation:
+   :no-value:

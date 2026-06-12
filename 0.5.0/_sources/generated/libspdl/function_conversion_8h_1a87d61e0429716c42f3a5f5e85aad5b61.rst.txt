@@ -1,0 +1,14 @@
+.. _exhale_function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61:
+
+Function spdl::core::create_reference_video_frame
+=================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_conversion.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::create_reference_video_frame(const std::string&, const void *, int, const std::vector<size_t>&, const std::vector<int64_t>&, Rational, int64_t)
+   :project: libspdl

@@ -1,0 +1,6 @@
+spdl.autoresearch.core.write\_engine\_state
+===========================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autofunction:: write_engine_state

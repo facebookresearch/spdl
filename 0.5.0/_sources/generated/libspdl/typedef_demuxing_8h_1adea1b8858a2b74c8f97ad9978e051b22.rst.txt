@@ -1,0 +1,14 @@
+.. _exhale_typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22:
+
+Typedef spdl::core::AnyPacketsGenerator
+=======================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_demuxing.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::AnyPacketsGenerator
+   :project: libspdl
