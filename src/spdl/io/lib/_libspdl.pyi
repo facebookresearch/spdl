@@ -58,6 +58,8 @@ class AudioPackets:
 
         Returns:
             The reconstructed packets.
+
+        .. versionadded:: 0.5.0
         """
 
     @staticmethod
@@ -75,6 +77,8 @@ class AudioPackets:
 
         Returns:
             The packets viewing ``data``.
+
+        .. versionadded:: 0.5.0
         """
 
     def __repr__(self) -> str: ...
@@ -128,6 +132,8 @@ class VideoPackets:
 
         Returns:
             The reconstructed packets.
+
+        .. versionadded:: 0.5.0
         """
 
     @staticmethod
@@ -145,6 +151,8 @@ class VideoPackets:
 
         Returns:
             The packets viewing ``data``.
+
+        .. versionadded:: 0.5.0
         """
 
     def get_timestamps(self, *, raw: bool = False) -> list[float]:
@@ -233,6 +241,8 @@ class ImagePackets:
 
         Returns:
             The reconstructed packets.
+
+        .. versionadded:: 0.5.0
         """
 
     @staticmethod
@@ -250,6 +260,8 @@ class ImagePackets:
 
         Returns:
             The packets viewing ``data``.
+
+        .. versionadded:: 0.5.0
         """
 
     @property

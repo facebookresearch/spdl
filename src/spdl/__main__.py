@@ -4,7 +4,10 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Utility CLI for SPDL data processing."""
+"""Utility CLI for SPDL data processing.
+
+.. versionadded:: 0.5.0
+"""
 
 # For quick startup, do not add non-standard import at module level.
 

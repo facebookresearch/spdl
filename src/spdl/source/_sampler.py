@@ -109,6 +109,9 @@ class DistributedDeterministicSampler:
             incomplete distributed round so every rank receives the same number
             of indices. If ``False``, cover every sample exactly once across
             ranks; rank lengths may differ by at most one.
+
+    .. versionadded:: 0.5.0
+       The ``ddp_drop_last_distributed_round`` argument.
     """
 
     def __init__(
@@ -387,6 +390,9 @@ class DistributedRandomSampler:
             world-size multiple of samples so every rank receives the same
             number of indices. If ``False``, draw exactly ``num_draws`` or
             ``n`` samples; rank lengths may differ by at most one.
+
+    .. versionadded:: 0.5.0
+       The ``ddp_drop_last_distributed_round`` argument.
     """
 
     def __init__(

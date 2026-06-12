@@ -187,6 +187,9 @@ def iterate_in_subprocess(
     Returns:
         Iterator over the results of the generator function.
 
+    .. versionadded:: 0.5.0
+       The ``arena`` argument.
+
     .. note::
 
        The function and the values yielded by the iterator of generator must be picklable.
