@@ -6,6 +6,8 @@
 
 # pyre-strict
 
+import threading
+import time
 import unittest
 from typing import Any, cast
 
@@ -15,8 +17,10 @@ from spdl.pipeline._arena._registry import _default_registry
 
 
 class SharedMemoryRingBufferTest(unittest.TestCase):
-    def _ring(self, capacity: int) -> SharedMemoryRingBuffer:
-        buf = SharedMemoryRingBuffer(capacity=capacity)
+    def _ring(
+        self, capacity: int, acquire_timeout: float = 60.0
+    ) -> SharedMemoryRingBuffer:
+        buf = SharedMemoryRingBuffer(capacity=capacity, acquire_timeout=acquire_timeout)
         self.addCleanup(buf.unlink)
         self.addCleanup(buf.close)
         return buf
@@ -75,12 +79,117 @@ class SharedMemoryRingBufferTest(unittest.TestCase):
         reader.end_unit(span, [])
 
     def test_overrun_raises(self) -> None:
-        """A write larger than the free space is refused, not truncated."""
+        """A write larger than the entire ring is refused immediately, not blocked."""
         buf = self._ring(64)
         writer = buf.open_writer()
         writer.begin_unit()
+        # 128 > capacity 64: no consumer reclaim could ever satisfy it, so the
+        # producer must raise promptly rather than block on the cv.
+        t0 = time.monotonic()
         with self.assertRaises(BufferError):
             writer.write_binary(b"x" * 128)
+        self.assertLess(time.monotonic() - t0, 1.0)
+
+    def test_unit_overflow_raises_promptly(self) -> None:
+        """A unit accumulating more bytes than the ring can ever hold raises fast."""
+        buf = self._ring(64)
+        writer = buf.open_writer()
+        writer.begin_unit()
+        writer.write_binary(b"a" * 50)
+        # The in-progress unit (50 + 30 = 80) exceeds capacity 64. Even with a
+        # fully drained tail, committing this unit could never make those bytes
+        # reclaimable, so the producer must raise instead of blocking.
+        t0 = time.monotonic()
+        with self.assertRaises(BufferError):
+            writer.write_binary(b"b" * 30)
+        self.assertLess(time.monotonic() - t0, 1.0)
+
+    def test_nonblocking_full_raises(self) -> None:
+        """With acquire_timeout=0, a write that would not currently fit raises."""
+        buf = self._ring(64, acquire_timeout=0.0)
+        writer = buf.open_writer()
+        writer.begin_unit()
+        writer.write_binary(b"x" * 50)
+        writer.commit_unit()
+        writer.begin_unit()
+        with self.assertRaises(BufferError):
+            writer.write_binary(b"y" * 50)  # 50 > free 14
+
+    def test_blocking_then_resume(self) -> None:
+        """A producer blocked on a full ring resumes when the consumer releases space."""
+        buf = self._ring(64, acquire_timeout=5.0)
+        writer = buf.open_writer()
+        reader = buf.open_reader()
+
+        # Fill the ring with one committed unit.
+        writer.begin_unit()
+        off0, n0 = writer.write_binary(b"x" * 50)
+        span0 = writer.commit_unit()
+
+        def _release_soon() -> None:
+            time.sleep(0.1)
+            reader.read_binary(off0, n0)
+            reader.end_unit(span0, [])
+
+        t = threading.Thread(target=_release_soon)
+        t.start()
+        try:
+            t0 = time.monotonic()
+            writer.begin_unit()
+            # 50 bytes is more than the 14 free; producer blocks until release.
+            off1, n1 = writer.write_binary(b"y" * 50)
+            elapsed = time.monotonic() - t0
+        finally:
+            t.join()
+        writer.commit_unit()
+        # Should have unblocked roughly when the consumer released, well under
+        # the 5s acquire_timeout, and not "instant" (proves it actually waited).
+        self.assertLess(elapsed, 2.0)
+        self.assertGreaterEqual(elapsed, 0.05)
+
+    def test_blocking_timeout_raises(self) -> None:
+        """A producer with no consumer raises BufferError after acquire_timeout."""
+        buf = self._ring(64, acquire_timeout=0.05)
+        writer = buf.open_writer()
+        writer.begin_unit()
+        writer.write_binary(b"x" * 50)
+        writer.commit_unit()
+        writer.begin_unit()
+        t0 = time.monotonic()
+        with self.assertRaises(BufferError):
+            writer.write_binary(b"y" * 50)
+        elapsed = time.monotonic() - t0
+        self.assertGreaterEqual(elapsed, 0.04)
+        self.assertLess(elapsed, 2.0)
+
+    def test_shutdown_wakes_blocked_producer(self) -> None:
+        """shutdown_arena() wakes a blocked producer immediately.
+
+        Models the consumer-dies-first scenario: even though no reclaim ever
+        happens, the parent flipping the shutdown flag must let the producer
+        exit cleanly so the worker process can shut down without hanging.
+        """
+        buf = self._ring(64, acquire_timeout=10.0)
+        writer = buf.open_writer()
+        writer.begin_unit()
+        writer.write_binary(b"x" * 50)
+        writer.commit_unit()
+        writer.begin_unit()
+
+        def _shutdown_soon() -> None:
+            time.sleep(0.1)
+            buf.shutdown_arena()
+
+        t = threading.Thread(target=_shutdown_soon)
+        t.start()
+        try:
+            t0 = time.monotonic()
+            with self.assertRaises(BufferError):
+                writer.write_binary(b"y" * 50)
+            elapsed = time.monotonic() - t0
+        finally:
+            t.join()
+        self.assertLess(elapsed, 2.0)
 
 
 class OffloadRestoreTest(unittest.TestCase):

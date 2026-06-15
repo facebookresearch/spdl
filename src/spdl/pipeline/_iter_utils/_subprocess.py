@@ -67,13 +67,21 @@ class _ipc(Generic[T]):
 
     def terminate(self) -> None:
         self.cmd_q.put(_Cmd.ABORT)
+        # Wake any worker that is currently blocked in ``write_binary`` /
+        # ``begin_unit`` on the arena's space condition variable. Without this,
+        # a producer waiting for a (never-coming) consumer reclaim would stay
+        # blocked through ``_join`` and hang teardown.
+        if (arena := self.arena) is not None:
+            shutdown = getattr(arena, "shutdown_arena", None)
+            if shutdown is not None:
+                shutdown()
         _drain(self.data_q)
         _join(self.process)
         # Unlink the shared-memory arena only after the worker is confirmed
         # dead, so nothing touches the segment afterwards. ``unlink`` runs in
         # ``finally`` so a failing ``close`` never leaves the OS-level shm
         # segment behind — teardown is the only place that calls ``unlink``.
-        if (arena := self.arena) is not None:
+        if arena is not None:
             try:
                 arena.close()
             finally:
