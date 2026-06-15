@@ -19,7 +19,7 @@ on:
         default: 'false'
         type: string
       machine:
-        default: "windows-latest"
+        default: "windows-2022"  # temp: moving to latest reqiures CUDA update
         type: string
       test-concurrency:
         required: false
