@@ -1,17 +1,17 @@
 @echo on
 
-set VC_VERSION_LOWER=17
-set VC_VERSION_UPPER=18
-
-for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -legacy -products * -version [%VC_VERSION_LOWER%^,%VC_VERSION_UPPER%^) -property installationPath`) do (
-    if exist "%%i" if exist "%%i\VC\Auxiliary\Build\vcvarsall.bat" (
+for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath`) do (
+    if exist "%%i\VC\Auxiliary\Build\vcvarsall.bat" (
         set "VS15INSTALLDIR=%%i"
         set "VS15VCVARSALL=%%i\VC\Auxiliary\Build\vcvarsall.bat"
         goto vswhere
     )
 )
-
 :vswhere
+if not defined VS15VCVARSALL (
+   echo ERROR: could not locate Visual Studio via vswhere
+   exit /b 1
+)
 if "%VSDEVCMD_ARGS%" == "" (
     call "%VS15VCVARSALL%" x64 || exit /b 1
 ) else (
