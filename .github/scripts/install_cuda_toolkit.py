@@ -33,8 +33,14 @@ logger = logging.getLogger(__name__)
 DEFAULT_BASE_URL: Final[str] = (
     "https://developer.download.nvidia.com/compute/cuda/redist"
 )
-DEFAULT_CUDA_VERSION: Final[str] = "12.3.2"
-COMPONENTS_TO_DOWNLOAD: Final[list[str]] = ["cuda_cudart", "cuda_nvcc"]
+DEFAULT_CUDA_VERSION: Final[str] = "13.0.3"
+COMPONENTS_TO_DOWNLOAD: Final[list[str]] = [
+    "cuda_cudart",
+    "cuda_nvcc",
+    "cuda_crt",
+    "libnvvm",
+    "cuda_cccl",
+]
 
 
 def detect_platform() -> str:
