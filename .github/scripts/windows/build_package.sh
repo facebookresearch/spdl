@@ -23,7 +23,12 @@ source .venv/Scripts/activate
 cuda_dir="/c/opt/cuda"
 .github/scripts/install_cuda_toolkit.py \
        --base-dir "${cuda_dir}" \
-       --cuda-version "${cuda_ver}"
+       --cuda-version "${cuda_ver}" \
+       --component cuda_cudart \
+       --component cuda_nvcc \
+       --component cuda_crt \
+       --component libnvvm \
+       --component cuda_cccl
 if [ ! -d "${cuda_dir}/lib64" ]; then
     ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
 fi
