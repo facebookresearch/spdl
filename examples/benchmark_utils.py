@@ -185,23 +185,20 @@ def _verify_workers(executor: Executor, expected_workers: int) -> None:
 
 def _warmup_executor(
     executor: Executor, func: Callable[[], T], num_iterations: int
-) -> T:
+) -> None:
     """Warmup the executor by running the function multiple times.
+
+    The function output is intentionally discarded; the warmup only exists to
+    spin up the worker threads/processes before measurement begins.
 
     Args:
         executor: The executor to warmup
         func: Function to run for warmup
         num_iterations: Number of warmup iterations
-
-    Returns:
-        Output from the last warmup iteration
     """
     futures = [executor.submit(func) for _ in range(num_iterations)]
-    last_output: T | None = None
     for future in as_completed(futures):
-        last_output = future.result()
-    assert last_output is not None
-    return last_output
+        future.result()
 
 
 class BenchmarkRunner:
