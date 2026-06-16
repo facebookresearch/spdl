@@ -122,9 +122,9 @@ jobs:
 
           # Install PyTorch and others
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            python -m pip install torch numpy pytest pytest-xdist parameterized matplotlib
+            python -m pip install torch numpy pytest pytest-xdist pytest-isolate parameterized matplotlib
           else
-            python -m pip install torch numpy numba pytest pytest-xdist parameterized matplotlib
+            python -m pip install torch numpy numba pytest pytest-xdist pytest-isolate parameterized matplotlib
           fi
 
           # Install FFmpeg
@@ -133,7 +133,7 @@ jobs:
       - name: Unit test
         run: |
           set -ex
-          pytest -v -n ${{ inputs.test-concurrency }} \
+          pytest -v -n ${{ inputs.test-concurrency }} --isolate \
               tests/io \
               tests/dataloader \
               tests/pipeline \
