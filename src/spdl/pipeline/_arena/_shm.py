@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import sys
 from multiprocessing import resource_tracker, shared_memory
 
 __all__ = ["_attach"]
@@ -30,8 +31,15 @@ def _attach(name: str) -> shared_memory.SharedMemory:
         named segment, detached from this process's resource tracker.
     """
     shm = shared_memory.SharedMemory(name=name)
-    try:
-        resource_tracker.unregister(shm._name, "shared_memory")  # type: ignore[attr-defined]
-    except (KeyError, AttributeError):
-        pass
+    # The ``resource_tracker`` only tracks shared memory on POSIX; Windows
+    # refcounts the mapping handle in the OS and never registers the segment.
+    # Worse, calling ``unregister`` on Windows when the tracker is not already
+    # running forces it to launch, and that launch imports ``_posixsubprocess``
+    # (a POSIX-only module), raising ``ModuleNotFoundError`` and killing the
+    # process. So only unregister where the tracker actually owns the segment.
+    if sys.platform != "win32":
+        try:
+            resource_tracker.unregister(shm._name, "shared_memory")  # type: ignore[attr-defined]
+        except (KeyError, AttributeError):
+            pass
     return shm
