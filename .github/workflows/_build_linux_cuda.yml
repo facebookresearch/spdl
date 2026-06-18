@@ -189,7 +189,7 @@ jobs:
           spdl --help
 
           # Install PyTorch and others
-          conda run -n test_env python -m pip install pytest pytest-xdist parameterized
+          conda run -n test_env python -m pip install pytest pytest-xdist pytest-timeout parameterized
 
           cu_ver="${{ inputs.cuda-version }}"
           cu_ver="${cu_ver//[.]/}"  # Remove dots  12.4.1 -> 1241
@@ -209,13 +209,19 @@ jobs:
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib:${cudart_dir}" >> $GITHUB_ENV
 
       - name: Unit test
+        # Backstop so a hung test fails the job in minutes instead of stalling
+        # until the global Actions limit. The per-test --timeout below fires first.
+        timeout-minutes: 20
         run: |
           set -ex
 
           nvidia-smi
 
           python .github/scripts/check_cuda.py "${{inputs.use-nvdec}}"
+          # --timeout-method=thread works under pytest-xdist and on every
+          # platform; on firing it dumps each thread's stack, pinpointing a hang.
           pytest -v -n ${{ inputs.test-concurrency }} \
+              --timeout=120 --timeout-method=thread \
               tests/cuda/ \
               tests/io/
 
@@ -265,7 +271,7 @@ jobs:
 
           # Install PyTorch and others
           conda run -n test_env python -m pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
-          conda install -q numba pytest pytest-xdist parameterized matplotlib
+          conda install -q numba pytest pytest-xdist pytest-timeout parameterized matplotlib
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
@@ -275,10 +281,16 @@ jobs:
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
 
       - name: Unit test
+        # Backstop so a hung test fails the job in minutes instead of stalling
+        # until the global Actions limit. The per-test --timeout below fires first.
+        timeout-minutes: 20
         run: |
           set -ex
 
+          # --timeout-method=thread works under pytest-xdist and on every
+          # platform; on firing it dumps each thread's stack, pinpointing a hang.
           pytest -v -n ${{ inputs.test-concurrency }} \
+              --timeout=120 --timeout-method=thread \
               tests/io \
               tests/dataloader \
               tests/pipeline \

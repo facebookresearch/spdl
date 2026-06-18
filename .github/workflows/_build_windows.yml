@@ -122,18 +122,25 @@ jobs:
 
           # Install PyTorch and others
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            python -m pip install torch numpy pytest pytest-xdist parameterized matplotlib
+            python -m pip install torch numpy pytest pytest-xdist pytest-timeout parameterized matplotlib
           else
-            python -m pip install torch numpy numba pytest pytest-xdist parameterized matplotlib
+            python -m pip install torch numpy numba pytest pytest-xdist pytest-timeout parameterized matplotlib
           fi
 
           # Install FFmpeg
           conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}"
 
       - name: Unit test
+        # Backstop so a hung test fails the job in minutes instead of stalling
+        # until the global Actions limit. The per-test --timeout below fires first.
+        timeout-minutes: 20
         run: |
           set -ex
+          # --timeout-method=thread works under pytest-xdist and on every
+          # platform (signal-based timeouts are a no-op on Windows); on firing it
+          # dumps each thread's stack, pinpointing a hang.
           pytest -v -n ${{ inputs.test-concurrency }} \
+              --timeout=120 --timeout-method=thread \
               tests/io \
               tests/dataloader \
               tests/pipeline \
