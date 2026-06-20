@@ -6,6 +6,7 @@
 
 # pyre-unsafe
 
+import asyncio
 import functools
 import os
 import sys
@@ -23,7 +24,14 @@ from spdl.pipeline import (
     run_pipeline_in_subinterpreter,
     run_pipeline_in_subprocess,
 )
-from spdl.pipeline.defs import Merge, PipelineConfig, SinkConfig
+from spdl.pipeline.defs import (
+    Aggregate,
+    Merge,
+    PathVariants,
+    Pipe,
+    PipelineConfig,
+    SinkConfig,
+)
 
 
 def _ignore_fork_warning(fn):
@@ -51,6 +59,23 @@ class SourceIterable:
 
     def __iter__(self) -> Iterator[int]:
         yield from range(self.n)
+
+
+class EpochTaggedSource:
+    """Yields a disjoint block of values per epoch (epoch K -> K*100 + range(n)).
+
+    Successive epochs produce non-overlapping value ranges so a test can detect
+    an item leaking across the epoch boundary by value alone.
+    """
+
+    def __init__(self, n: int) -> None:
+        self.n = n
+        self._epoch = 0
+
+    def __iter__(self) -> Iterator[int]:
+        base = self._epoch * 100
+        self._epoch += 1
+        yield from range(base, base + self.n)
 
 
 class TestContinuousPipelineBasic(unittest.TestCase):
@@ -431,6 +456,145 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
         finalizer()
         elapsed = time.monotonic() - t0
         self.assertLess(elapsed, 15, f"finalizer took {elapsed:.1f}s — likely hung")
+
+
+class TestContinuousPipelinePathVariants(unittest.TestCase):
+    def test_continuous_path_variants_multi_epoch(self) -> None:
+        """PathVariants epoch boundary propagates across epochs (no deadlock)."""
+        pipeline = (
+            PipelineBuilder()
+            .add_source(SourceIterable(6), continuous=True)
+            .path_variants(
+                router=lambda x: x % 2,
+                paths=[
+                    [Pipe(lambda x: x * 2)],  # path 0: even items doubled
+                    [Pipe(lambda x: x + 100)],  # path 1: odd items + 100
+                ],
+            )
+            .add_sink(buffer_size=10)
+            .build(num_threads=4)
+        )
+
+        with pipeline.auto_stop():
+            for epoch in range(3):
+                result = sorted(pipeline.get_iterator(timeout=5))
+                self.assertEqual(result, [0, 4, 8, 101, 103, 105], f"epoch {epoch}")
+
+    def test_continuous_path_variants_empty_epoch(self) -> None:
+        """PathVariants handles empty epochs from a continuous source."""
+        pipeline = (
+            PipelineBuilder()
+            .add_source(SourceIterable(0), continuous=True)
+            .path_variants(
+                router=lambda x: x % 2,
+                paths=[
+                    [Pipe(lambda x: x * 2)],
+                    [Pipe(lambda x: x + 100)],
+                ],
+            )
+            .add_sink(buffer_size=10)
+            .build(num_threads=2)
+        )
+
+        with pipeline.auto_stop():
+            for epoch in range(3):
+                result = list(pipeline.get_iterator(timeout=5))
+                self.assertEqual(result, [], f"epoch {epoch}")
+
+    def test_continuous_nested_path_variants_multi_epoch(self) -> None:
+        """Epoch boundary propagates through a PathVariants nested in a path."""
+        pipeline = (
+            PipelineBuilder()
+            .add_source(SourceIterable(8), continuous=True)
+            .path_variants(
+                router=lambda x: x % 2,
+                paths=[
+                    # path 0 (evens): nested PathVariants splitting on x % 4
+                    [
+                        PathVariants(
+                            router=lambda x: 0 if x % 4 == 0 else 1,
+                            paths=[
+                                [Pipe(lambda x: x)],  # multiples of 4 unchanged
+                                [Pipe(lambda x: x * 10)],  # other evens * 10
+                            ],
+                        )
+                    ],
+                    # path 1 (odds): + 100
+                    [Pipe(lambda x: x + 100)],
+                ],
+            )
+            .add_sink(buffer_size=16)
+            .build(num_threads=4)
+        )
+
+        with pipeline.auto_stop():
+            for epoch in range(3):
+                result = sorted(pipeline.get_iterator(timeout=5))
+                # evens 0,4 -> 0,4; evens 2,6 -> 20,60; odds 1,3,5,7 -> 101..107
+                self.assertEqual(
+                    result, [0, 4, 20, 60, 101, 103, 105, 107], f"epoch {epoch}"
+                )
+
+    def test_continuous_path_variants_aggregate_partial_flush(self) -> None:
+        """Partial aggregate batch inside a path is flushed at each epoch end."""
+        pipeline = (
+            PipelineBuilder()
+            .add_source(SourceIterable(6), continuous=True)
+            .path_variants(
+                router=lambda x: x % 2,
+                paths=[
+                    [Aggregate(2)],  # path 0: batch evens (0,2,4) by 2
+                    [Pipe(lambda x: x + 100)],  # path 1: odds + 100
+                ],
+            )
+            .add_sink(buffer_size=10)
+            .build(num_threads=2)
+        )
+
+        with pipeline.auto_stop():
+            for epoch in range(3):
+                result = list(pipeline.get_iterator(timeout=5))
+                # evens -> [0, 2] full batch + [4] partial flushed at epoch end;
+                # odds -> 101, 103, 105. Cross-path order is nondeterministic.
+                self.assertCountEqual(
+                    result, [[0, 2], [4], 101, 103, 105], f"epoch {epoch}"
+                )
+
+    def test_continuous_path_variants_no_epoch_crossing(self) -> None:
+        """Slow/fast path skew must not leak items across the epoch boundary."""
+
+        async def slow(x: int) -> int:
+            await asyncio.sleep(0.05)
+            return x
+
+        async def fast(x: int) -> int:
+            return x
+
+        pipeline = (
+            PipelineBuilder()
+            .add_source(EpochTaggedSource(4), continuous=True)
+            .path_variants(
+                router=lambda x: x % 2,
+                paths=[
+                    [Pipe(slow, concurrency=2)],  # even items: slow path
+                    [Pipe(fast, concurrency=2)],  # odd items: fast path
+                ],
+            )
+            .add_sink(buffer_size=16)
+            .build(num_threads=4)
+        )
+
+        with pipeline.auto_stop():
+            for epoch in range(4):
+                base = epoch * 100
+                result = sorted(pipeline.get_iterator(timeout=10))
+                # Each epoch must contain exactly its own disjoint block. A
+                # next-epoch fast-path item leaking in would show as a value
+                # >= base + 100; the fan-in barrier parks the fast path at the
+                # EOE until the slow path catches up, preventing that.
+                self.assertEqual(
+                    result, [base, base + 1, base + 2, base + 3], f"epoch {epoch}"
+                )
 
 
 class CustomError(ValueError):

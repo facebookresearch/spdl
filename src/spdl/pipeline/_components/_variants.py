@@ -21,7 +21,7 @@ from typing import Any
 
 from spdl.pipeline._common._convert import _to_async
 
-from ._common import _EOF, is_eof
+from ._common import _EOF, _EPOCH_END, is_eof, is_epoch_end
 from ._hook import _stage_hooks, TaskHook
 from ._queue import AsyncQueue
 
@@ -99,6 +99,11 @@ def _path_variants_router(
     On completion (EOF or error), the router sends EOF to ALL path queues in
     a ``finally`` block so that every path shuts down cleanly.
 
+    The epoch-end sentinel (emitted by a continuous source between epochs) is
+    not a routable item, so it is broadcast to ALL path queues rather than
+    passed to ``router``. This lets each path flush its in-flight work and lets
+    the downstream fan-in merge observe the epoch boundary on every input queue.
+
     Args:
         input_queue: The queue to consume items from.
         path_queues: Per-path output queues, one per variant path.
@@ -119,6 +124,11 @@ def _path_variants_router(
             item = await input_queue.get()
             if is_eof(item):
                 return
+
+            if is_epoch_end(item):
+                for q in path_queues:
+                    await q.put(_EPOCH_END)
+                continue
 
             idx = await arouter(item)
             if idx < 0 or idx >= num_paths:
