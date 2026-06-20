@@ -373,6 +373,36 @@ def run_pipeline_in_subprocess(
             for batch in src:
                 train(batch)
 
+    If the given config has a continuous source (built with
+    :py:meth:`PipelineBuilder.add_source(..., continuous=True)
+    <spdl.pipeline.PipelineBuilder.add_source>`), the pipeline is built and
+    started once inside the subprocess and then **reused** across epochs: it
+    keeps running in the background between epochs instead of being torn down
+    and rebuilt. This keeps the prefetch buffer warm and removes the per-epoch
+    rebuild gap, which matters most when the training step is short (e.g. small
+    models)::
+
+        config = (
+            PipelineBuilder()
+            .add_source(dataset, continuous=True)
+            .pipe(load, concurrency=4)
+            .aggregate(batch_size)
+            .add_sink(buffer_size=3)
+            .get_config()
+        )
+        src = run_pipeline_in_subprocess(config, num_threads=4)
+        for epoch in range(num_epochs):
+            for batch in src:  # one epoch; subprocess pipeline stays warm
+                train(batch)
+
+    Each iteration yields exactly one epoch (the epoch boundary is handled
+    internally), so the loop above iterates one epoch per ``for`` pass just as
+    in the non-continuous case. The continuous setting only changes *how* the
+    subprocess manages the pipeline between epochs. To run continuous
+    GPU-transfer stages in the main process, an outer pipeline can wrap ``src``
+    with ``add_source(src, continuous=True)`` (see the MTP pattern in the
+    parallelism guide).
+
     Args:
         config_or_builder: The definition of :py:class:`Pipeline`. Can be either a
             :py:class:`PipelineConfig` or :py:class:`PipelineBuilder`.

@@ -568,6 +568,41 @@ class TestContinuousSubprocessPipelineReuse(unittest.TestCase):
             "Process IDs changed between epoch 1 and 2",
         )
 
+    @_ignore_fork_warning
+    def test_continuous_subprocess_concurrent_aggregate_crisp_boundary(self) -> None:
+        """A continuous subprocess pipeline with a concurrent pipe stage and
+        aggregation keeps crisp epoch boundaries across epochs.
+
+        Concurrency can reorder items and aggregation buffers partial batches,
+        so this guards against epochs bleeding into one another (e.g. a partial
+        batch from one epoch being emitted in the next) when the pipeline is
+        reused across epochs in the subprocess.
+        """
+
+        def double(x: int) -> int:
+            return x * 2
+
+        backend = (
+            PipelineBuilder()
+            .add_source(SourceIterable(10), continuous=True)
+            .pipe(double, concurrency=4)
+            .aggregate(3, drop_last=False)
+            .add_sink(buffer_size=2)
+        )
+        source = run_pipeline_in_subprocess(
+            backend.get_config(),
+            num_threads=4,
+            timeout=10,
+        )
+
+        # 10 items, batch_size=3, drop_last=False -> batches of [3, 3, 3, 1].
+        expected_items = sorted(x * 2 for x in range(10))
+        for epoch in range(3):
+            batches = list(source)
+            self.assertEqual(len(batches), 4, f"epoch {epoch}: batch count")
+            flat = sorted(v for batch in batches for v in batch)
+            self.assertEqual(flat, expected_items, f"epoch {epoch}: items")
+
 
 @unittest.skipIf(
     sys.version_info < (3, 14),
