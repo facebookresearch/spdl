@@ -443,3 +443,12 @@ The MTP mode helps the OS to schedule GPU kernel launches from the main thread
 (where the training loop is running) in timely manner, and reduces the
 number of Python objects that the Python interpreter in the main process
 has to handle.
+
+For multi-epoch training, build the subprocess source with a continuous
+source (``add_source(..., continuous=True)``). The pipeline is then built and
+started once inside the subprocess and reused across epochs, keeping the
+prefetch buffer warm and avoiding a per-epoch rebuild gap. This is especially
+important when the training step is short (e.g. small models), where a rebuild
+gap would otherwise stall the GPU between epochs. The outer (main-process)
+pipeline can likewise use ``continuous=True`` so that the GPU-transfer stage
+keeps running across epoch boundaries.
