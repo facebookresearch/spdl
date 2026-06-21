@@ -1079,6 +1079,9 @@ def PathVariants(
     uncached items go through full data loading, or splitting between local
     and remote processing.
 
+    .. versionchanged:: 0.6.0
+       Fixed to work with a continuous source.
+
     Args:
         router: A callable that takes an item and returns an int index
             selecting which path the item should be routed to. The returned
