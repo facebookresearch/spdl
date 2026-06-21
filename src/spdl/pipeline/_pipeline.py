@@ -572,8 +572,26 @@ class Pipeline(Generic[T]):
     def get_iterator(self, *, timeout: float | None = None) -> Iterator[T]:
         """Get an iterator, which iterates over the pipeline outputs.
 
+        The returned iterator covers a single epoch (one pass over the source),
+        regardless of whether the source is continuous (see the ``continuous``
+        argument of :py:meth:`PipelineBuilder.add_source
+        <spdl.pipeline.PipelineBuilder.add_source>`). Call this method again to
+        iterate each subsequent epoch:
+
+        .. code-block:: python
+
+            for epoch in range(num_epochs):
+                for item in pipeline.get_iterator(timeout=...):
+                    ...
+
         Args:
             timeout: Timeout value used for each `get_item` call.
+
+        .. versionchanged:: 0.6.0
+           Fixed reuse with a continuous source: an iterator that reached its
+           epoch boundary used to resume into the next epoch when reused, but
+           now stays exhausted, consistent with non-continuous sources. Use one
+           iterator per epoch.
         """
         return PipelineIterator(self, timeout)
 
@@ -588,12 +606,20 @@ class PipelineIterator(Generic[T]):
     def __init__(self, pipeline: Pipeline[T], timeout: float | None) -> None:
         self._pipeline = pipeline
         self._timeout = timeout
+        self._epoch_ended: bool = False
 
     def __iter__(self) -> "PipelineIterator[T]":
         return self
 
     def __next__(self) -> T:
+        # Each iterator covers a single epoch and is single-use: once it reaches
+        # the epoch boundary it stays exhausted, so its behavior is the same
+        # whether or not the source is continuous. Iterate the next epoch by
+        # obtaining a fresh iterator via `Pipeline.get_iterator()`.
+        if self._epoch_ended:
+            raise StopIteration
         try:
             return self._pipeline.get_item(timeout=self._timeout)
         except EOFError:
+            self._epoch_ended = True
             raise StopIteration from None
