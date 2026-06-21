@@ -34,6 +34,7 @@ from spdl.pipeline._components import (
     StageInfo,
     TaskHook,
 )
+from spdl.pipeline._executor_proxy import _make_config_executors_picklable
 from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
 from spdl.pipeline.defs import MergeConfig, PipelineConfig, SourceConfig
 
@@ -403,6 +404,19 @@ def run_pipeline_in_subprocess(
     with ``add_source(src, continuous=True)`` (see the MTP pattern in the
     parallelism guide).
 
+    .. note::
+
+       Pipe stages configured with a stdlib
+       :py:class:`concurrent.futures.ThreadPoolExecutor` or (on Python 3.14+)
+       ``InterpreterPoolExecutor`` are explicitly supported, even though these executors are
+       not picklable: their constructor arguments are serialized and an equivalent executor
+       (same type, same ``max_workers``) is reconstructed inside the subprocess. Their workers
+       (threads / subinterpreters) live inside the subprocess and are cleaned up when it
+       exits.
+
+       SPDL's own :py:class:`~spdl.pipeline.PriorityThreadPoolExecutor` and related pool
+       executors are already picklable and pass through unchanged.
+
     Args:
         config_or_builder: The definition of :py:class:`Pipeline`. Can be either a
             :py:class:`PipelineConfig` or :py:class:`PipelineBuilder`.
@@ -418,6 +432,12 @@ def run_pipeline_in_subprocess(
 
     Yields:
         The results yielded from the pipeline.
+
+    .. versionchanged:: 0.6.0
+       Pipe stages configured with a stdlib
+       :py:class:`~concurrent.futures.ThreadPoolExecutor` or (on Python 3.14+)
+       ``InterpreterPoolExecutor`` are now supported; an equivalent executor is reconstructed
+       inside the subprocess.
 
     .. seealso::
 
@@ -437,6 +457,11 @@ def run_pipeline_in_subprocess(
         if isinstance(config_or_builder, PipelineConfig)
         else config_or_builder.get_config()  # pyre-ignore[16]
     )
+
+    # The stdlib thread-based executors (Thread/Interpreter pools, whose workers live inside
+    # the subprocess and die with it) are not picklable, so make them picklable via
+    # lazy-reconstruction proxies before the config is shipped to the subprocess.
+    config = _make_config_executors_picklable(config)
 
     initializer = _get_initializer(kwargs)
     return iterate_in_subprocess(

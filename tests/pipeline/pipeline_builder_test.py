@@ -9,6 +9,7 @@
 import asyncio
 import functools
 import os
+import pickle
 import platform
 import random
 import re
@@ -22,13 +23,14 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from functools import partial
 from multiprocessing import Process
-from typing import TypeVar
+from typing import cast, TypeVar
 
 from parameterized import parameterized
 from spdl.pipeline import (
     AsyncQueue,
     PipelineBuilder,
     PipelineFailure,
+    PriorityThreadPoolExecutor,
     run_pipeline_in_subprocess,
     TaskHook,
     TaskStatsHook,
@@ -44,7 +46,23 @@ from spdl.pipeline._components._pipe import (
 )
 from spdl.pipeline._components._sink import _sink
 from spdl.pipeline._components._source import _source
-from spdl.pipeline.defs import Aggregator
+from spdl.pipeline._executor_proxy import (
+    _ExecutorProxy,
+    _interpreter_pool_kwargs,
+    _make_config_executors_picklable,
+)
+from spdl.pipeline.defs import (
+    Aggregator,
+    Merge,
+    MergeConfig,
+    PathVariants,
+    PathVariantsConfig,
+    Pipe,
+    PipeConfig,
+    PipelineConfig,
+    SinkConfig,
+    SourceConfig,
+)
 from spdl.source.utils import embed_shuffle
 
 T = TypeVar("T")
@@ -2229,6 +2247,42 @@ def plusN(x: int, N: int) -> int:
     return x + N
 
 
+def _sync_double(x: int) -> int:
+    return 2 * x
+
+
+def _route_zero(_: int) -> int:
+    return 0
+
+
+def _noop_initializer(_: int) -> None:
+    pass
+
+
+class _FakeInterpreterWorkerContext:
+    """Mimics an InterpreterPoolExecutor worker context (carries ``initdata``)."""
+
+    def __init__(self, initdata: object) -> None:
+        self.initdata = initdata
+
+
+class _FakeInterpreterPoolExecutor:
+    """Stub with the attributes ``_interpreter_pool_kwargs`` reads (3.14 layout).
+
+    Lets the recovery logic be tested on any Python version without a real
+    InterpreterPoolExecutor (3.14+ only).
+    """
+
+    _max_workers = 3
+    _thread_name_prefix = "interp"
+
+    def __init__(self, initdata: object) -> None:
+        self._initdata = initdata
+
+    def _create_worker_context(self) -> _FakeInterpreterWorkerContext:
+        return _FakeInterpreterWorkerContext(self._initdata)
+
+
 def hook_factory(_: StageInfo) -> list[TaskHook]:
     return [CountHook()]
 
@@ -2629,6 +2683,233 @@ class TestRunPipeline(unittest.TestCase):
 
         for _ in iterable:
             pass
+
+
+def _interpreter_pool_available() -> bool:
+    if sys.version_info < (3, 14):
+        return False
+    try:
+        from concurrent.futures.interpreter import InterpreterPoolExecutor  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def _config_with_executor(executor) -> PipelineConfig:
+    return (
+        PipelineBuilder()
+        .add_source(_PicklableSource(10))
+        .pipe(_sync_double, executor=executor)
+        .add_sink(10)
+        .get_config()
+    )
+
+
+def _pipe_executor(pipe):
+    return cast(PipeConfig, pipe)._args.executor
+
+
+def _first_pipe_executor(config: PipelineConfig):
+    return _pipe_executor(config.pipes[0])
+
+
+class TestExecutorProxy(unittest.TestCase):
+    """Surgery that makes stdlib executors in a config picklable for subprocess."""
+
+    def test_proxy_submit_after_shutdown_raises(self) -> None:
+        """submit() after shutdown() raises, even when the executor was never built."""
+        proxy = _ExecutorProxy(
+            ThreadPoolExecutor,
+            {
+                "max_workers": 2,
+                "thread_name_prefix": "",
+                "initializer": None,
+                "initargs": (),
+            },
+        )
+        # Shut down before any submit, so the underlying executor was never constructed.
+        proxy.shutdown()
+        with self.assertRaises(RuntimeError):
+            proxy.submit(_sync_double, 1)
+        # Nothing should have been constructed by the rejected submit.
+        self.assertIsNone(proxy._executor)
+
+    def test_interpreter_pool_kwargs_recovers_initializer(self) -> None:
+        """initializer/initargs are recovered from an interpreter pool's initdata."""
+        executor = _FakeInterpreterPoolExecutor(initdata=(_noop_initializer, (7,), {}))
+        kwargs = _interpreter_pool_kwargs(executor)
+        self.assertEqual(kwargs["max_workers"], 3)
+        self.assertEqual(kwargs["thread_name_prefix"], "interp")
+        self.assertIs(kwargs["initializer"], _noop_initializer)
+        self.assertEqual(kwargs["initargs"], (7,))
+
+    def test_interpreter_pool_kwargs_without_initializer(self) -> None:
+        """With no initializer (initdata is None), no initializer kwargs are emitted."""
+        executor = _FakeInterpreterPoolExecutor(initdata=None)
+        kwargs = _interpreter_pool_kwargs(executor)
+        self.assertEqual(kwargs, {"max_workers": 3, "thread_name_prefix": "interp"})
+
+    def test_proxy_pickle_roundtrip(self) -> None:
+        """An `_ExecutorProxy` survives pickling and builds the right executor lazily."""
+        proxy = _ExecutorProxy(
+            ThreadPoolExecutor,
+            {
+                "max_workers": 3,
+                "thread_name_prefix": "",
+                "initializer": None,
+                "initargs": (),
+            },
+        )
+        restored = pickle.loads(pickle.dumps(proxy))
+        try:
+            self.assertIsInstance(restored, _ExecutorProxy)
+            self.assertIs(restored._executor_class, ThreadPoolExecutor)
+            self.assertEqual(restored._kwargs["max_workers"], 3)
+            # The underlying executor is built lazily on first use.
+            self.assertEqual(restored.submit(_sync_double, 21).result(), 42)
+            self.assertIsInstance(restored._executor, ThreadPoolExecutor)
+            self.assertEqual(restored._executor._max_workers, 3)
+        finally:
+            restored.shutdown()
+
+    def test_threadpool_replaced_and_original_untouched(self) -> None:
+        """ThreadPoolExecutor on a pipe is replaced; the input config is not mutated."""
+        executor = ThreadPoolExecutor(max_workers=2)
+        try:
+            config = _config_with_executor(executor)
+            new_config = _make_config_executors_picklable(config)
+
+            proxy = _first_pipe_executor(new_config)
+            self.assertIsInstance(proxy, _ExecutorProxy)
+            self.assertIs(proxy._executor_class, ThreadPoolExecutor)
+            self.assertEqual(proxy._kwargs["max_workers"], 2)
+            # Original config is left untouched.
+            self.assertIs(_first_pipe_executor(config), executor)
+            # The whole rewritten config is now picklable.
+            restored = pickle.loads(pickle.dumps(new_config))
+            restored_proxy = _first_pipe_executor(restored)
+            self.assertIsInstance(restored_proxy, _ExecutorProxy)
+            self.assertIs(restored_proxy._executor_class, ThreadPoolExecutor)
+            self.assertEqual(restored_proxy._kwargs["max_workers"], 2)
+        finally:
+            executor.shutdown()
+
+    def test_threadpool_initializer_preserved(self) -> None:
+        """A ThreadPoolExecutor's initializer/initargs survive surgery and pickling.
+
+        Guards the version-specific extraction: Python 3.14 moved these off the executor's
+        ``_initializer``/``_initargs`` attributes into a worker-context factory.
+        """
+        executor = ThreadPoolExecutor(
+            max_workers=2, initializer=_noop_initializer, initargs=(7,)
+        )
+        try:
+            config = _config_with_executor(executor)
+            new_config = _make_config_executors_picklable(config)
+            proxy = _first_pipe_executor(new_config)
+            self.assertIs(proxy._kwargs["initializer"], _noop_initializer)
+            self.assertEqual(proxy._kwargs["initargs"], (7,))
+            # The recovered initializer survives the pickle round-trip too.
+            restored_proxy = pickle.loads(pickle.dumps(proxy))
+            self.assertIs(restored_proxy._kwargs["initializer"], _noop_initializer)
+            self.assertEqual(restored_proxy._kwargs["initargs"], (7,))
+        finally:
+            executor.shutdown()
+
+    def test_priority_executor_left_untouched(self) -> None:
+        """Already-picklable executors (e.g. Priority*) pass through unchanged."""
+        pool = PriorityThreadPoolExecutor(max_workers=2)
+        try:
+            entrypoint = pool.get_executor()
+            config = _config_with_executor(entrypoint)
+            new_config = _make_config_executors_picklable(config)
+            self.assertIs(new_config, config)
+            self.assertIs(_first_pipe_executor(new_config), entrypoint)
+        finally:
+            pool.shutdown()
+
+    def test_no_executor_returns_same_config(self) -> None:
+        """A config with no custom executor is returned unchanged."""
+        config = (
+            PipelineBuilder()
+            .add_source(_PicklableSource(10))
+            .pipe(_sync_double)
+            .add_sink(10)
+            .get_config()
+        )
+        self.assertIs(_make_config_executors_picklable(config), config)
+
+    def test_nested_path_variants_replaced(self) -> None:
+        """Executors inside PathVariants paths are rewritten too."""
+        executor = ThreadPoolExecutor(max_workers=2)
+        try:
+            config = PipelineConfig(
+                src=SourceConfig(_PicklableSource(10)),
+                pipes=[
+                    PathVariants(
+                        router=_route_zero,
+                        paths=[[Pipe(_sync_double, executor=executor)]],
+                    ),
+                ],
+                sink=SinkConfig(buffer_size=10),
+            )
+            new_config = _make_config_executors_picklable(config)
+            nested_pipe = cast(PathVariantsConfig, new_config.pipes[0]).paths[0][0]
+            self.assertIsInstance(_pipe_executor(nested_pipe), _ExecutorProxy)
+            # Original untouched.
+            orig_pipe = cast(PathVariantsConfig, config.pipes[0]).paths[0][0]
+            self.assertIs(_pipe_executor(orig_pipe), executor)
+        finally:
+            executor.shutdown()
+
+    def test_nested_merge_replaced(self) -> None:
+        """Executors inside Merge sub-configs are rewritten too."""
+        executor = ThreadPoolExecutor(max_workers=2)
+        try:
+            plc = _config_with_executor(executor)
+            config = PipelineConfig(
+                src=Merge([plc]),
+                pipes=[],
+                sink=SinkConfig(buffer_size=10),
+            )
+            new_config = _make_config_executors_picklable(config)
+            nested = cast(MergeConfig, new_config.src).pipeline_configs[0]
+            self.assertIsInstance(_first_pipe_executor(nested), _ExecutorProxy)
+        finally:
+            executor.shutdown()
+
+    @_ignore_warnings(_FORK_WARNING, _UNAWAITED_COROUTINE)
+    def test_run_in_subprocess_with_threadpool(self) -> None:
+        """run_pipeline_in_subprocess works with a ThreadPoolExecutor on a pipe."""
+        config = _config_with_executor(ThreadPoolExecutor(max_workers=2))
+        results = list(run_pipeline_in_subprocess(config, num_threads=1))
+        self.assertEqual(sorted(results), [2 * i for i in range(10)])
+
+    @unittest.skipUnless(
+        _interpreter_pool_available(),
+        "InterpreterPoolExecutor requires Python 3.14+",
+    )
+    @_ignore_warnings(_FORK_WARNING, _UNAWAITED_COROUTINE)
+    def test_run_in_subprocess_with_interpreterpool(self) -> None:
+        """run_pipeline_in_subprocess works with an InterpreterPoolExecutor on a pipe."""
+        import importlib
+
+        interpreter_mod = importlib.import_module("concurrent.futures.interpreter")
+        executor = interpreter_mod.InterpreterPoolExecutor(max_workers=2)
+
+        config = _config_with_executor(executor)
+        results = list(run_pipeline_in_subprocess(config, num_threads=1))
+        self.assertEqual(sorted(results), [2 * i for i in range(10)])
+
+    def test_used_thread_pool_is_rejected(self) -> None:
+        """A ThreadPoolExecutor that already ran work is rejected (must be freshly built)."""
+        tpe = ThreadPoolExecutor(max_workers=2)
+        try:
+            tpe.submit(_sync_double, 1).result(timeout=30)  # spawns a worker thread
+            with self.assertRaises(ValueError):
+                _make_config_executors_picklable(_config_with_executor(tpe))
+        finally:
+            tpe.shutdown()
 
 
 class TestOverrideStage(unittest.TestCase):
