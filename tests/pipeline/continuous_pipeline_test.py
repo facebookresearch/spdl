@@ -276,6 +276,23 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
             self.assertEqual(r2, [0, 1, 2])
             self.assertEqual(r3, [0, 1, 2])
 
+    def test_same_iterator_is_single_use(self) -> None:
+        """An iterator covers one epoch: reuse yields nothing, in either mode."""
+        for continuous in (False, True):
+            with self.subTest(continuous=continuous):
+                pipeline = (
+                    PipelineBuilder()
+                    .add_source(SourceIterable(3), continuous=continuous)
+                    .add_sink(buffer_size=3)
+                    .build(num_threads=1)
+                )
+
+                with pipeline.auto_stop():
+                    it = pipeline.get_iterator(timeout=5)
+                    self.assertEqual(list(it), [0, 1, 2])
+                    # Reusing the same iterator does not start a new epoch.
+                    self.assertEqual(list(it), [])
+
     def test_continuous_stop_with_pipe_stage(self) -> None:
         """Continuous pipeline with pipe stage can be stopped after epochs."""
 
