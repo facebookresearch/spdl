@@ -102,6 +102,14 @@ class TestIterateInSubprocess(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(ite)
 
+    def test_subprocess_iterable_exposes_finalizer(self) -> None:
+        """The iterable exposes a callable _finalizer (the teardown handle that
+        run_pipeline_in_subprocess relies on to join the worker before reaping pools)."""
+        src = iterate_in_subprocess(fn=partial(iter_range, n=3))
+        self.assertTrue(callable(getattr(src, "_finalizer", None)))
+        # Drain so the worker subprocess is torn down cleanly.
+        self.assertEqual(list(src), list(range(3)))
+
     def test_iterate_in_subprocess_multiple_initializer(self) -> None:
         """iterate_in_subprocess accepts multiple iterators"""
         N = 10

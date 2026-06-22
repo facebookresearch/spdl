@@ -8,6 +8,7 @@
 
 import asyncio
 import functools
+import multiprocessing as mp
 import os
 import pickle
 import platform
@@ -19,11 +20,16 @@ import time
 import unittest
 import warnings
 from collections.abc import Iterator
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import (
+    BrokenExecutor,
+    Future,
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+)
 from contextlib import asynccontextmanager
 from functools import partial
 from multiprocessing import Process
-from typing import cast, TypeVar
+from typing import Any, cast, TypeVar
 
 from parameterized import parameterized
 from spdl.pipeline import (
@@ -35,6 +41,7 @@ from spdl.pipeline import (
     TaskHook,
     TaskStatsHook,
 )
+from spdl.pipeline._common._convert import _is_process_pool
 from spdl.pipeline._components import _get_global_id, _set_global_id
 from spdl.pipeline._components._common import _EOF, StageInfo
 from spdl.pipeline._components._hook import _periodic_dispatch
@@ -50,6 +57,12 @@ from spdl.pipeline._executor_proxy import (
     _ExecutorProxy,
     _interpreter_pool_kwargs,
     _make_config_executors_picklable,
+)
+from spdl.pipeline._subprocess_worker_pool import (
+    _hoist_process_pools,
+    _RemoteExecutor,
+    _shutdown_pools,
+    _WorkerPool,
 )
 from spdl.pipeline.defs import (
     Aggregator,
@@ -105,6 +118,11 @@ _RUN_PIPELINE_DEPRECATION = {
 
 _UNAWAITED_COROUTINE = {
     "message": "coroutine .* was never awaited",
+    "category": RuntimeWarning,
+}
+
+_PROCESSPOOL_FORK_WARNING = {
+    "message": r"Hoisting a ProcessPoolExecutor .* 'fork' start method .* can deadlock\..*",
     "category": RuntimeWarning,
 }
 
@@ -2255,6 +2273,15 @@ def _route_zero(_: int) -> int:
     return 0
 
 
+def _raise_value_error(_: int) -> int:
+    raise ValueError("boom")
+
+
+def _sync_double_gen(x: int):
+    yield 2 * x
+    yield 2 * x + 1
+
+
 def _noop_initializer(_: int) -> None:
     pass
 
@@ -2281,6 +2308,10 @@ class _FakeInterpreterPoolExecutor:
 
     def _create_worker_context(self) -> _FakeInterpreterWorkerContext:
         return _FakeInterpreterWorkerContext(self._initdata)
+
+
+def _failing_initializer() -> None:
+    raise ValueError("init boom")
 
 
 def hook_factory(_: StageInfo) -> list[TaskHook]:
@@ -2910,6 +2941,264 @@ class TestExecutorProxy(unittest.TestCase):
                 _make_config_executors_picklable(_config_with_executor(tpe))
         finally:
             tpe.shutdown()
+
+
+class TestHoistProcessPools(unittest.TestCase):
+    """run_pipeline_in_subprocess hoists ProcessPoolExecutor workers into the main process."""
+
+    def test_hoist_replaces_with_remote_executor(self) -> None:
+        """A stdlib ProcessPoolExecutor is replaced by a _RemoteExecutor; original untouched."""
+        ppe = ProcessPoolExecutor(max_workers=2)
+        try:
+            config = _config_with_executor(ppe)
+            new_config, pools = _hoist_process_pools(config)
+            try:
+                self.assertEqual(len(pools), 1)
+                self.assertIsInstance(_first_pipe_executor(new_config), _RemoteExecutor)
+                # Original config is left untouched.
+                self.assertIs(_first_pipe_executor(config), ppe)
+            finally:
+                _shutdown_pools(pools)
+        finally:
+            ppe.shutdown()
+
+    def test_hoist_dedupes_shared_pool(self) -> None:
+        """The same ProcessPoolExecutor on two pipes maps to one shared pool/executor."""
+        ppe = ProcessPoolExecutor(max_workers=2)
+        try:
+            config = (
+                PipelineBuilder()
+                .add_source(_PicklableSource(10))
+                .pipe(_sync_double, executor=ppe)
+                .pipe(_sync_double, executor=ppe)
+                .add_sink(10)
+                .get_config()
+            )
+            new_config, pools = _hoist_process_pools(config)
+            try:
+                self.assertEqual(len(pools), 1)
+                ex0 = _pipe_executor(new_config.pipes[0])
+                ex1 = _pipe_executor(new_config.pipes[1])
+                self.assertIsInstance(ex0, _RemoteExecutor)
+                self.assertIs(ex0, ex1)
+            finally:
+                _shutdown_pools(pools)
+        finally:
+            ppe.shutdown()
+
+    def test_hoist_leaves_threadpool_untouched(self) -> None:
+        """Non-ProcessPoolExecutor executors are not hoisted (no pools spawned)."""
+        tpe = ThreadPoolExecutor(max_workers=2)
+        try:
+            config = _config_with_executor(tpe)
+            new_config, pools = _hoist_process_pools(config)
+            self.assertEqual(pools, [])
+            self.assertIs(new_config, config)
+        finally:
+            tpe.shutdown()
+
+    def test_remote_executor_is_detected_as_process_pool(self) -> None:
+        """_RemoteExecutor must look like a process pool (for sync-generator batching)."""
+        ctx = mp.get_context()
+        pool = _WorkerPool(ctx, 2, None, ())
+        try:
+            self.assertTrue(_is_process_pool(pool.make_executor()))
+        finally:
+            _shutdown_pools([pool])
+
+    def test_remote_executor_exposes_max_workers(self) -> None:
+        """The proxy mirrors ProcessPoolExecutor._max_workers (read by stats logging)."""
+        ctx = mp.get_context()
+        pool = _WorkerPool(ctx, 3, None, ())
+        try:
+            ex = pool.make_executor()
+            self.assertEqual(ex._max_workers, 3)
+            # __setstate__ restores it (the queues themselves only pickle via process
+            # inheritance, so exercise the state round-trip directly rather than pickling).
+            restored = _RemoteExecutor.__new__(_RemoteExecutor)
+            restored.__setstate__(ex.__getstate__())
+            self.assertEqual(restored._max_workers, 3)
+        finally:
+            _shutdown_pools([pool])
+
+    def test_hoist_rejects_used_process_pool(self) -> None:
+        """A ProcessPoolExecutor that already ran work is rejected (must be freshly built)."""
+        ppe = ProcessPoolExecutor(max_workers=2)
+        try:
+            ppe.submit(_sync_double, 1).result(timeout=30)  # spawns worker processes
+            with self.assertRaises(ValueError):
+                _hoist_process_pools(_config_with_executor(ppe))
+        finally:
+            ppe.shutdown()
+
+    def test_worker_pool_roundtrip_and_teardown(self) -> None:
+        """Workers run submitted tasks, propagate exceptions, and are reaped on shutdown."""
+        ctx = mp.get_context()
+        pool = _WorkerPool(ctx, 2, None, ())
+        try:
+            ex = pool.make_executor()
+            self.assertEqual(ex.submit(_sync_double, 21).result(timeout=30), 42)
+            with self.assertRaises(ValueError):
+                ex.submit(_raise_value_error, 0).result(timeout=30)
+        finally:
+            _shutdown_pools([pool])
+        for p in pool._procs:
+            self.assertFalse(p.is_alive())
+
+    def test_worker_pool_initializer_failure_fails_tasks(self) -> None:
+        """If the pool initializer raises, every task fails with a picklable error (no hang)."""
+        ctx = mp.get_context()
+        pool = _WorkerPool(ctx, 2, _failing_initializer, ())
+        try:
+            ex = pool.make_executor()
+            # Submit more tasks than workers: each must get its own failure response, proving
+            # the workers keep serving (rather than dying on an unpicklable re-send) and that
+            # no future is left hanging.
+            futures = [ex.submit(_sync_double, i) for i in range(5)]
+            for fut in futures:
+                with self.assertRaises(RuntimeError):
+                    fut.result(timeout=30)
+        finally:
+            _shutdown_pools([pool])
+
+    def test_remote_executor_breaks_after_router_exit(self) -> None:
+        """When the router exits on a closed out queue, pending and future submits fail fast."""
+        ctx = mp.get_context()
+        pool = _WorkerPool(ctx, 1, None, ())
+        try:
+            ex = pool.make_executor()
+            # Register a pending future, then simulate the router thread exiting because
+            # ``_out_q`` was closed (EOFError/OSError) before the result came back.
+            pending: Future[int] = Future()
+            ex._futures[next(ex._counter)] = pending
+            ex._fail_pending("out queue closed")
+            # The previously pending future is failed rather than left hanging forever.
+            self.assertIsInstance(pending.exception(timeout=5), BrokenExecutor)
+            # A later submit must fail fast (the router will not restart to drain its result)
+            # rather than silently registering a future that never resolves.
+            with self.assertRaises(BrokenExecutor):
+                ex.submit(_sync_double, 1)
+        finally:
+            _shutdown_pools([pool])
+
+    def test_worker_pool_cleans_up_on_partial_start_failure(self) -> None:
+        """If a worker fails to start partway, already-started workers are torn down."""
+        real_ctx = mp.get_context()
+        started: list[Process] = []
+
+        class _FlakyCtx:
+            """Wraps a real context but fails the second ``Process.start`` call."""
+
+            def Queue(self, *args: Any, **kwargs: Any) -> object:
+                return real_ctx.Queue(*args, **kwargs)
+
+            def Process(self, *args: Any, **kwargs: Any) -> Process:
+                proc = real_ctx.Process(*args, **kwargs)
+                real_start = proc.start
+
+                def start() -> None:
+                    if len(started) >= 1:
+                        raise OSError("cannot allocate worker")
+                    real_start()
+                    started.append(proc)
+
+                proc.start = start  # pyre-ignore[8]
+                return proc
+
+        with self.assertRaises(OSError):
+            _WorkerPool(cast(mp.context.BaseContext, _FlakyCtx()), 3, None, ())
+        # The worker that did start is not left running with no owner.
+        self.assertEqual(len(started), 1)
+        for proc in started:
+            self.assertFalse(proc.is_alive())
+
+    @_ignore_warnings(_FORK_WARNING, _UNAWAITED_COROUTINE, _PROCESSPOOL_FORK_WARNING)
+    def test_run_in_subprocess_with_processpool(self) -> None:
+        """run_pipeline_in_subprocess works with a ProcessPoolExecutor on a pipe."""
+        config = _config_with_executor(ProcessPoolExecutor(max_workers=2))
+        results = list(run_pipeline_in_subprocess(config, num_threads=1))
+        self.assertEqual(sorted(results), [2 * i for i in range(10)])
+
+    @_ignore_warnings(_FORK_WARNING, _UNAWAITED_COROUTINE, _PROCESSPOOL_FORK_WARNING)
+    def test_run_in_subprocess_with_processpool_generator(self) -> None:
+        """A sync generator op + ProcessPoolExecutor runs end-to-end (batch materialized)."""
+        config = (
+            PipelineBuilder()
+            .add_source(_PicklableSource(5))
+            .pipe(_sync_double_gen, executor=ProcessPoolExecutor(max_workers=2))
+            .add_sink(10)
+            .get_config()
+        )
+        results = list(run_pipeline_in_subprocess(config, num_threads=1))
+        expected = []
+        for i in range(5):
+            expected.extend([2 * i, 2 * i + 1])
+        self.assertEqual(sorted(results), sorted(expected))
+
+    def test_hoist_warns_on_fork_from_multithreaded(self) -> None:
+        """fork start method + a live extra thread in the parent → deadlock warning."""
+        ppe = ProcessPoolExecutor(max_workers=2)
+        started, release = threading.Event(), threading.Event()
+
+        def _hold() -> None:
+            started.set()
+            release.wait()
+
+        t = threading.Thread(target=_hold, daemon=True)
+        t.start()
+        started.wait()
+        try:
+            with self.assertWarns(RuntimeWarning):
+                _, pools = _hoist_process_pools(_config_with_executor(ppe), "fork")
+            _shutdown_pools(pools)
+        finally:
+            release.set()
+            t.join()
+            ppe.shutdown()
+
+    def test_hoist_no_warn_with_spawn(self) -> None:
+        """The spawn start method never triggers the fork-deadlock warning."""
+        ppe = ProcessPoolExecutor(max_workers=2)
+        started, release = threading.Event(), threading.Event()
+
+        def _hold() -> None:
+            started.set()
+            release.wait()
+
+        t = threading.Thread(target=_hold, daemon=True)
+        t.start()
+        started.wait()
+        try:
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                _, pools = _hoist_process_pools(_config_with_executor(ppe), "spawn")
+            _shutdown_pools(pools)
+            self.assertEqual(
+                [w for w in caught if "can deadlock" in str(w.message)], []
+            )
+        finally:
+            release.set()
+            t.join()
+            ppe.shutdown()
+
+    @_ignore_warnings(_UNAWAITED_COROUTINE)
+    def test_run_in_subprocess_with_processpool_spawn(self) -> None:
+        """Non-fork (spawn) mp_context works end-to-end with a ProcessPoolExecutor."""
+        config = _config_with_executor(ProcessPoolExecutor(max_workers=2))
+        results = list(
+            run_pipeline_in_subprocess(config, num_threads=1, mp_context="spawn")
+        )
+        self.assertEqual(sorted(results), [2 * i for i in range(10)])
+
+    @_ignore_warnings(_FORK_WARNING, _UNAWAITED_COROUTINE, _PROCESSPOOL_FORK_WARNING)
+    def test_run_in_subprocess_processpool_reused_across_epochs(self) -> None:
+        """A ProcessPoolExecutor pipe survives re-iteration: pools are reaped at
+        teardown, not after each epoch."""
+        config = _config_with_executor(ProcessPoolExecutor(max_workers=2))
+        src = run_pipeline_in_subprocess(config, num_threads=1)
+        expected = [2 * i for i in range(10)]
+        for _ in range(3):
+            self.assertEqual(sorted(src), expected)
 
 
 class TestOverrideStage(unittest.TestCase):
