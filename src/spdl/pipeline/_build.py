@@ -36,6 +36,11 @@ from spdl.pipeline._components import (
 )
 from spdl.pipeline._executor_proxy import _make_config_executors_picklable
 from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
+from spdl.pipeline._subprocess_worker_pool import (
+    _hoist_process_pools,
+    _IterableWithPoolShutdown,
+    _shutdown_pools,
+)
 from spdl.pipeline.defs import MergeConfig, PipelineConfig, SourceConfig
 
 from ._pipeline import Pipeline
@@ -407,12 +412,41 @@ def run_pipeline_in_subprocess(
     .. note::
 
        Pipe stages configured with a stdlib
-       :py:class:`concurrent.futures.ThreadPoolExecutor` or (on Python 3.14+)
+       :py:class:`concurrent.futures.ThreadPoolExecutor`,
+       :py:class:`concurrent.futures.ProcessPoolExecutor` or (on Python 3.14+)
        ``InterpreterPoolExecutor`` are explicitly supported, even though these executors are
-       not picklable: their constructor arguments are serialized and an equivalent executor
-       (same type, same ``max_workers``) is reconstructed inside the subprocess. Their workers
-       (threads / subinterpreters) live inside the subprocess and are cleaned up when it
-       exits.
+       not picklable.
+
+       Such an executor must be **freshly constructed** — handed over without any work
+       submitted yet — because its workers are (re)created as part of running the pipeline in
+       the subprocess (the whole point of moving execution there). Passing one that has already
+       spawned workers (i.e. been used) lifts it mid-lifecycle and raises :py:exc:`ValueError`.
+
+       - ``ThreadPoolExecutor`` / ``InterpreterPoolExecutor``: their constructor arguments are
+         serialized and an equivalent executor (same type, same ``max_workers``) is
+         reconstructed inside the subprocess. Their workers (threads / subinterpreters) live
+         inside the subprocess and are cleaned up when it exits.
+
+       - ``ProcessPoolExecutor``: its worker processes are spawned in the **main** process (as
+         children of the main process, not grandchildren via the pipeline subprocess) and the
+         executor is replaced with a queue-backed proxy that the subprocess submits to. This
+         keeps ownership of the worker processes in the main process, which reaps them when the
+         returned iterable is garbage-collected, so they cannot be orphaned if the pipeline
+         subprocess is force-killed. The worker count (``max_workers``) and
+         ``initializer``/``initargs`` are preserved; other construction options (e.g.
+         ``mp_context``, ``max_tasks_per_child``) are not honored.
+
+         .. warning::
+
+            Those worker processes are spawned with the start method named by ``mp_context``
+            (default: the platform default start method — ``fork`` on Linux through Python
+            3.13, ``forkserver`` from Python 3.14). Spawning them with ``fork`` from a process
+            that already has other live threads can deadlock — ``fork``
+            copies only the calling thread, so a lock held by another thread is never released
+            in the child. If you attach a ``ProcessPoolExecutor`` and the main process is (or
+            may become) multi-threaded, pass ``mp_context="spawn"`` or ``"forkserver"``, or
+            build the pipeline before any other threads start. A :py:exc:`RuntimeWarning` is
+            emitted when this risky combination is detected.
 
        SPDL's own :py:class:`~spdl.pipeline.PriorityThreadPoolExecutor` and related pool
        executors are already picklable and pass through unchanged.
@@ -435,9 +469,11 @@ def run_pipeline_in_subprocess(
 
     .. versionchanged:: 0.6.0
        Pipe stages configured with a stdlib
-       :py:class:`~concurrent.futures.ThreadPoolExecutor` or (on Python 3.14+)
-       ``InterpreterPoolExecutor`` are now supported; an equivalent executor is reconstructed
-       inside the subprocess.
+       :py:class:`~concurrent.futures.ThreadPoolExecutor`,
+       :py:class:`~concurrent.futures.ProcessPoolExecutor`, or (on Python 3.14+)
+       ``InterpreterPoolExecutor`` are now supported. Thread/interpreter pools are
+       reconstructed inside the subprocess; a ``ProcessPoolExecutor``'s worker processes are
+       spawned in (and owned by) the main process.
 
     .. seealso::
 
@@ -458,27 +494,46 @@ def run_pipeline_in_subprocess(
         else config_or_builder.get_config()  # pyre-ignore[16]
     )
 
-    # The stdlib thread-based executors (Thread/Interpreter pools, whose workers live inside
-    # the subprocess and die with it) are not picklable, so make them picklable via
-    # lazy-reconstruction proxies before the config is shipped to the subprocess.
-    config = _make_config_executors_picklable(config)
+    # Spawn workers for any stdlib ``ProcessPoolExecutor`` in the main process (as children of
+    # main, not grandchildren via the pipeline subprocess), then replace the executor with a
+    # queue-backed proxy that the subprocess submits to. The remaining stdlib executors
+    # (Thread/Interpreter pools, whose workers live inside the subprocess and die with it) are
+    # made picklable via lazy-reconstruction proxies.
+    config, pools = _hoist_process_pools(config, kwargs.get("mp_context"))
+    try:
+        config = _make_config_executors_picklable(config)
 
-    initializer = _get_initializer(kwargs)
-    return iterate_in_subprocess(
-        fn=partial(
-            _Wrapper,
-            config=config,
-            num_threads=num_threads,
-            max_failures=max_failures,
-            report_stats_interval=report_stats_interval,
-            queue_class=queue_class,
-            task_hook_factory=task_hook_factory,
-            background_tasks=background_tasks,
-            use_thread_output_queue=use_thread_output_queue,
-        ),
-        initializer=initializer,
-        **kwargs,
-    )
+        initializer = _get_initializer(kwargs)
+        iterable = iterate_in_subprocess(
+            fn=partial(
+                _Wrapper,
+                config=config,
+                num_threads=num_threads,
+                max_failures=max_failures,
+                report_stats_interval=report_stats_interval,
+                queue_class=queue_class,
+                task_hook_factory=task_hook_factory,
+                background_tasks=background_tasks,
+                use_thread_output_queue=use_thread_output_queue,
+            ),
+            initializer=initializer,
+            **kwargs,
+        )
+    except BaseException:
+        # If anything between the hoist and the iterable raises (e.g.
+        # ``iterate_in_subprocess`` fails to start the subprocess), the iterable is never
+        # returned to the caller — reap the pools here so their worker processes and pipe
+        # fds do not leak.
+        _shutdown_pools(pools)
+        raise
+    # The hoisted ``ProcessPoolExecutor`` workers are owned by this (the main) process and
+    # must outlive every iteration (they are reused across epochs). Wrap the iterable so the
+    # pools are reaped via the wrapper's finalizer when it is torn down — after the epoch loop,
+    # not at the end of each iteration — rather than threading a dedicated callback through the
+    # generic ``iterate_in_subprocess`` API.
+    if pools:
+        iterable = _IterableWithPoolShutdown(iterable, pools)
+    return iterable
 
 
 ################################################################################

@@ -19,6 +19,9 @@ perform surgery on the config: each non-picklable stdlib executor is replaced wi
 :py:class:`_ExecutorProxy` that records the executor's type and constructor arguments and
 lazily reconstructs an equivalent executor on first use inside the subprocess. Their workers
 (threads / subinterpreters) live inside the subprocess and are cleaned up when it exits.
+
+``ProcessPoolExecutor`` is handled separately — its workers are hoisted into the main process;
+see :py:mod:`spdl.pipeline._subprocess_worker_pool`.
 """
 
 from __future__ import annotations
@@ -40,6 +43,7 @@ from spdl.pipeline.defs import (
 __all__ = [
     "_ensure_executor_unused",
     "_make_config_executors_picklable",
+    "_rewrite_config_executors",
 ]
 
 
