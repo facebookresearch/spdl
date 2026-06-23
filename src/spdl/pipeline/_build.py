@@ -35,7 +35,9 @@ from spdl.pipeline._components import (
     TaskHook,
 )
 from spdl.pipeline._executor_proxy import _make_config_executors_picklable
+from spdl.pipeline._fuse import _fuse_subprocess_stages
 from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
+from spdl.pipeline._subprocess_pipeline_pool import _shutdown_pipeline_pools
 from spdl.pipeline._subprocess_worker_pool import (
     _hoist_process_pools,
     _IterableWithPoolShutdown,
@@ -135,12 +137,22 @@ def _build_pipeline(
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
+    fuse_subprocess_stages: bool = False,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
         try:
             _DEFAULT_BUILD_CALLBACK(pipeline_cfg)
         except Exception:
             _LG.exception("Build callback failed.")
+
+    pools: list[Any] = []
+    if fuse_subprocess_stages:
+        # Fuse consecutive same-pool stages so each run executes as one nested pipeline inside a
+        # worker pool, eliminating the inter-stage IPC. The pools are owned by the returned
+        # Pipeline and reaped when it stops.
+        pipeline_cfg, pools = _fuse_subprocess_stages(
+            pipeline_cfg, report_stats_interval=report_stats_interval
+        )
 
     desc = repr(pipeline_cfg)
 
@@ -169,7 +181,7 @@ def _build_pipeline(
         max_workers=num_threads,
         thread_name_prefix="spdl_worker_thread_",
     )
-    return Pipeline(coro, queue, executor, desc=desc)
+    return Pipeline(coro, queue, executor, desc=desc, pools=pools)
 
 
 def build_pipeline(
@@ -184,6 +196,7 @@ def build_pipeline(
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
+    fuse_subprocess_stages: bool = False,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -255,6 +268,19 @@ def build_pipeline(
             background event loop to the foreground consumer thread. This bypasses
             ``asyncio.run_coroutine_threadsafe``, reducing per-batch latency from
             ~200-400us to ~10us. Default: ``False``.
+
+        fuse_subprocess_stages: If ``True``, fuse runs of two or more adjacent pipe stages that
+            share the same process-pool (or interpreter-pool) executor instance into a single
+            stage that executes the run as one nested pipeline inside a worker pool. This
+            eliminates the inter-stage IPC that otherwise round-trips data back to this process
+            between each stage (so intermediate values need not be picklable), while each fused
+            stage keeps its own ``concurrency`` and per-stage stats. Only adjacent pool stages
+            fuse: an ``aggregate``/``disaggregate`` between two pool stages is not fused (it
+            keeps its main-process batching) and splits them into separate runs. Has no effect
+            on continuous-source pipelines. Default: ``False``.
+
+            .. versionadded:: 0.6.0
+               The ``fuse_subprocess_stages`` argument.
     """
     from . import _profile
 
@@ -271,6 +297,7 @@ def build_pipeline(
         stage_id=stage_id,
         background_tasks=background_tasks,
         use_thread_output_queue=use_thread_output_queue,
+        fuse_subprocess_stages=fuse_subprocess_stages,
     )
 
 
@@ -360,6 +387,7 @@ def run_pipeline_in_subprocess(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
+    fuse_subprocess_stages: bool = False,
     **kwargs: Any,
 ) -> Iterable[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
@@ -462,6 +490,17 @@ def run_pipeline_in_subprocess(
 
         num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory,background_tasks:
             Passed to :py:func:`build_pipeline`.
+        fuse_subprocess_stages: If ``True``, fuse runs of two or more adjacent pipe stages that
+            share the same process-pool (or interpreter-pool) executor instance into a single
+            stage that runs the run as one nested pipeline inside a worker pool. The worker
+            processes are spawned in (and owned by) the main process, exactly like a hoisted
+            ``ProcessPoolExecutor``; the pipeline subprocess drives them through a queue handle.
+            This removes the per-stage round-trip between the pipeline subprocess and the pool
+            workers (so intermediate values need not be picklable). Has no effect on
+            continuous-source pipelines. Default: ``False``.
+
+            .. versionadded:: 0.6.0
+               The ``fuse_subprocess_stages`` argument.
         kwargs: Passed to :py:func:`iterate_in_subprocess`.
 
     Yields:
@@ -494,6 +533,19 @@ def run_pipeline_in_subprocess(
         else config_or_builder.get_config()  # pyre-ignore[16]
     )
 
+    # Fuse runs of same-pool stages into nested-pipeline stages first, so a fused run executes
+    # as one pipeline inside the (main-owned) worker pool instead of round-tripping per stage.
+    # Runs before hoisting so only the *non-fused* ProcessPoolExecutor stages remain to be
+    # hoisted. The fused stage's queue handle is picklable and rides into the pipeline
+    # subprocess with the config, where the bridge stage drives the main-owned workers.
+    fuse_pools: list[Any] = []
+    if fuse_subprocess_stages:
+        config, fuse_pools = _fuse_subprocess_stages(
+            config,
+            mp_context=kwargs.get("mp_context"),
+            report_stats_interval=report_stats_interval,
+        )
+
     # Spawn workers for any stdlib ``ProcessPoolExecutor`` in the main process (as children of
     # main, not grandchildren via the pipeline subprocess), then replace the executor with a
     # queue-backed proxy that the subprocess submits to. The remaining stdlib executors
@@ -525,14 +577,16 @@ def run_pipeline_in_subprocess(
         # returned to the caller — reap the pools here so their worker processes and pipe
         # fds do not leak.
         _shutdown_pools(pools)
+        _shutdown_pipeline_pools(fuse_pools)
         raise
-    # The hoisted ``ProcessPoolExecutor`` workers are owned by this (the main) process and
-    # must outlive every iteration (they are reused across epochs). Wrap the iterable so the
-    # pools are reaped via the wrapper's finalizer when it is torn down — after the epoch loop,
-    # not at the end of each iteration — rather than threading a dedicated callback through the
-    # generic ``iterate_in_subprocess`` API.
-    if pools:
-        iterable = _IterableWithPoolShutdown(iterable, pools)
+    # The hoisted ``ProcessPoolExecutor`` workers and the fused-stage worker pools are all
+    # owned by this (the main) process and must outlive every iteration (they are reused across
+    # epochs). Wrap the iterable so they are reaped via the wrapper's finalizer when it is torn
+    # down — after the epoch loop, not at the end of each iteration. Both kinds share queues
+    # with the pipeline subprocess, so the wrapper joins that subprocess before reaping them.
+    all_pools: list[Any] = [*pools, *fuse_pools]
+    if all_pools:
+        iterable = _IterableWithPoolShutdown(iterable, all_pools)
     return iterable
 
 

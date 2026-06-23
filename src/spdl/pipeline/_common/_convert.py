@@ -8,6 +8,7 @@
 
 __all__ = [
     "convert_to_async",
+    "_is_process_pool",
     "_to_async_gen",
 ]
 

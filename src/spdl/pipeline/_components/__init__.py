@@ -21,9 +21,25 @@ from ._queue import (
     set_default_queue_class,
     StatsQueue,
 )
+from ._subprocess_pipe import (
+    _DONE,
+    _ERROR,
+    _ITEM,
+    _POOL_SHUTDOWN,
+    _RESULT,
+    _SESSION_END,
+    _subprocess_pipeline,
+)
 
 __all__ = [
     "_build_pipeline_coro",
+    "_DONE",
+    "_ERROR",
+    "_ITEM",
+    "_POOL_SHUTDOWN",
+    "_RESULT",
+    "_SESSION_END",
+    "_subprocess_pipeline",
     "_get_global_id",
     "_set_global_id",
     "get_default_hook_class",
