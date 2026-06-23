@@ -14,7 +14,7 @@ import time
 import warnings
 import weakref
 from asyncio import AbstractEventLoop, Queue as AsyncQueue
-from collections.abc import Coroutine, Iterator
+from collections.abc import Coroutine, Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from enum import IntEnum
@@ -206,12 +206,16 @@ class _PipelineImpl(Generic[T]):
         executor: ThreadPoolExecutor,
         *,
         desc: str,
+        pools: Sequence[Any] = (),
     ) -> None:
         self._str: str = "\n".join([repr(self), desc])
 
         self._output_queue: AsyncQueue = output_queue
         self._event_loop = _EventLoop(coro, executor)
         self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
+        # Worker pools owned by this pipeline (from subprocess-stage fusion). They are reaped in
+        # ``stop`` (and via the Pipeline finalizer), exactly once.
+        self._pools: list[Any] = list(pools)
 
     def __str__(self) -> str:
         return self._str
@@ -265,8 +269,19 @@ class _PipelineImpl(Generic[T]):
                 self._event_loop.join(timeout=to2)
             self._event_loop_state = _EventLoopState.STOPPED
 
+        self._shutdown_pools()
+
         if self._event_loop._task_exception is not None:
             raise self._event_loop._task_exception
+
+    def _shutdown_pools(self) -> None:
+        """Reap any owned worker pools exactly once (safe to call repeatedly)."""
+        pools, self._pools = self._pools, []
+        for pool in pools:
+            try:
+                pool.shutdown()
+            except Exception:
+                _LG.debug("Exception during worker pool shutdown.", exc_info=True)
 
     def get_item(self, *, timeout: float | None = None) -> T:
         """Get the next item.
@@ -496,9 +511,10 @@ class Pipeline(Generic[T]):
         executor: ThreadPoolExecutor,
         *,
         desc: str,
+        pools: Sequence[Any] = (),
     ) -> None:
         self._impl: _PipelineImpl[T] = _PipelineImpl(
-            coro, output_queue, executor, desc=desc
+            coro, output_queue, executor, desc=desc, pools=pools
         )
         self._finalizer = weakref.finalize(self, _stop_impl, self._impl)
 

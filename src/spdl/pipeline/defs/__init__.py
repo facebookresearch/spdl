@@ -28,6 +28,7 @@ The following step explains the steps to build a pipeline using the building blo
 from ._defs import (
     _PipeArgs,
     _PipeType,
+    _SubprocessPipelineConfig,
     _TPipeInputs,
     Aggregate,
     AggregateConfig,
@@ -49,6 +50,7 @@ from ._defs import (
 __all__ = [
     "_PipeArgs",
     "_PipeType",
+    "_SubprocessPipelineConfig",
     # pyrefly: ignore [bad-dunder-all]
     "_TAsyncCallables",
     # pyrefly: ignore [bad-dunder-all]
