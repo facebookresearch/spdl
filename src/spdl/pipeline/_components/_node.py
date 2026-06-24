@@ -19,6 +19,7 @@ from spdl.pipeline._common._misc import create_task
 from spdl.pipeline.defs import (
     _PipeArgs,
     _PipeType,
+    _SubprocessPipelineConfig,
     AggregateConfig,
     DisaggregateConfig,
     MergeConfig,
@@ -43,6 +44,7 @@ from ._pipe import (
 from ._queue import _ThreadBasedAsyncQueue, AsyncQueue, get_default_queue_class
 from ._sink import _sink
 from ._source import _source, _source_continuous
+from ._subprocess_pipe import _subprocess_pipeline
 from ._variants import _path_variants_router
 
 T = TypeVar("T")
@@ -147,6 +149,7 @@ class _Node(_NodeMixin):
         | AggregateConfig
         | DisaggregateConfig
         | PathVariantsConfig
+        | _SubprocessPipelineConfig
         | SinkConfig
     )
     """The configuration object that defines the behavior of this stage."""
@@ -276,6 +279,8 @@ def _get_stage_info(cfg: object, pipeline_id: int, stage_id: _MutableInt) -> Sta
             base = cfg.name or repr(cfg.op)
         case DisaggregateConfig():
             base = "disaggregate"
+        case _SubprocessPipelineConfig():
+            base = cfg.name
         case MergeConfig():
             base = "merge"
         case PathVariantsConfig():
@@ -302,7 +307,11 @@ _BUFFER_SIZE: int = 2
 
 def _convert_pipes(
     pipes: Sequence[
-        PipeConfig | AggregateConfig | DisaggregateConfig | PathVariantsConfig
+        PipeConfig
+        | AggregateConfig
+        | DisaggregateConfig
+        | PathVariantsConfig
+        | _SubprocessPipelineConfig
     ],
     n: _TNodes,
     q_class: type[AsyncQueue],
@@ -621,6 +630,13 @@ def _build_node(
                     fc = fc_class(max_failures)
                     args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
                     node._coro = _pipe(node.info, in_q, out_q, args, fc, hooks, False)
+
+                case _SubprocessPipelineConfig():
+                    # The fused run executes as a nested pipeline inside the worker pool; the
+                    # per-stage hooks/stats fire there, so this bridge stage needs none here.
+                    node._coro = _subprocess_pipeline(
+                        node.input_queue, node.output_queue, cfg.handle
+                    )
 
                 case _:  # pragma: no cover
                     raise ValueError(

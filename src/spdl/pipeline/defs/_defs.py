@@ -38,6 +38,7 @@ __all__ = [
     "AggregateConfig",
     "Collate",
     "DisaggregateConfig",
+    "_SubprocessPipelineConfig",
     "PipelineConfig",
     "SinkConfig",
     "SourceConfig",
@@ -411,6 +412,23 @@ class DisaggregateConfig(Generic[T]):
         return self.name or "disaggregate"
 
 
+@dataclass(frozen=True)
+class _SubprocessPipelineConfig:
+    """Internal config for a fused run of pipe stages run in a subprocess worker pool.
+
+    Not user-facing. Produced by the fusion pass (``_fuse_subprocess_stages``), which replaces a
+    span of consecutive pool-pipe stages with a single stage that executes the run as one nested
+    pipeline inside the worker pool — eliminating the inter-stage IPC of running each stage on a
+    process/interpreter pool separately.
+    """
+
+    name: str
+    """Name of the fused stage."""
+
+    handle: Any
+    """The picklable submit-side handle (``_SubprocessPipelineHandle``) for the worker pool."""
+
+
 ################################################################################
 # PathVariants
 ################################################################################
@@ -581,6 +599,7 @@ class PipelineConfig(Generic[U]):
         | AggregateConfig[Any]
         | DisaggregateConfig[Any]
         | PathVariantsConfig[Any]
+        | _SubprocessPipelineConfig
     ]
     """Pipe configurations."""
 

@@ -18,6 +18,7 @@ from spdl.pipeline._common._misc import _get_env_bool
 from spdl.pipeline.defs import (
     _PipeArgs,
     _PipeType,
+    _SubprocessPipelineConfig,
     AggregateConfig,
     DisaggregateConfig,
     MergeConfig,
@@ -262,8 +263,10 @@ def _profile_pipeline(
         raise ValueError(f"Unexpected source type {type(cfg.src)}")
 
     for pipe in cfg.pipes:
-        if isinstance(pipe, PathVariantsConfig):
-            _LG.warning("Skipping PathVariants stage in profiling (not supported).")
+        if isinstance(pipe, (PathVariantsConfig, _SubprocessPipelineConfig)):
+            _LG.warning(
+                "Skipping %s stage in profiling (not supported).", type(pipe).__name__
+            )
             continue
         _LG.info("Profiling Stage: %s", pipe.name)
         inputs, result = _profile_pipe(inputs, pipe, hook, callback)

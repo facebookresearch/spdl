@@ -305,6 +305,69 @@ if you want to ensure the size of the batch to be consistent,
 then all items must be dropped too.
 The other approach does not suffer from this.
 
+It is also cumbersome: you must hand-combine the stages into one function,
+which collapses the per-stage performance stats into a single number and
+discards each stage's individual ``concurrency``.
+
+Multi-processing (fused)
+------------------------
+
+Instead of hand-combining stages, you can ask the builder to fuse them for
+you by passing ``fuse_subprocess_stages=True`` to
+:py:meth:`~spdl.pipeline.PipelineBuilder.build`. Runs of consecutive
+:py:meth:`~spdl.pipeline.PipelineBuilder.pipe` stages that share the **same**
+process-pool (or interpreter-pool) executor instance are fused into a single
+stage that runs the run as one nested :py:class:`Pipeline` inside the worker
+pool:
+
+.. code-block::
+
+   executor = ProcessPoolExecutor(max_workers=4)
+
+   pipeline = (
+       PipelineBuilder()
+       .add_source(...)
+       .pipe(op1, executor=executor, concurrency=2)
+       .pipe(op2, executor=executor, concurrency=3)
+       .add_sink(...)
+       .build(num_threads=..., fuse_subprocess_stages=True)
+   )
+
+Because ``op1`` and ``op2`` now run back-to-back inside one worker, the
+intermediate value is **not** copied back to the main process between them.
+This removes the inter-stage IPC entirely, and — unlike the per-stage
+multi-processing above — the value handed from ``op1`` to ``op2`` does **not**
+need to be picklable. Each fused stage keeps its own ``concurrency`` and its
+own per-stage performance stats (the nested pipeline is built with the usual
+hooks, so the stats are reported from inside the worker).
+
+A **generator op** (a function that ``yield``\ s) is supported as a fused
+process-pool stage: each input item fans out into the values the generator
+yields, exactly as in an unfused pipeline. As with any sync generator on a
+process-pool executor, the yielded items are materialized once the generator is
+exhausted rather than streamed out incrementally. (An *async* generator cannot
+take an ``executor`` and so is never itself a fused stage, but it composes with
+fusion when placed before or after a fused run, running in the main process.)
+
+Only *adjacent* pool stages on the same executor are fused. An
+:py:meth:`~spdl.pipeline.PipelineBuilder.aggregate` or
+:py:meth:`~spdl.pipeline.PipelineBuilder.disaggregate` between two pool stages
+is **not** fused — it runs in the main process and keeps its usual batching
+semantics, and it splits the surrounding pool stages into separate runs (so
+each side fuses on its own only if it has two or more adjacent pool stages).
+
+The same option is accepted by
+:py:func:`spdl.pipeline.run_pipeline_in_subprocess`, where the fused worker
+pool is owned by the main process and the run executes in those workers — so
+the per-stage round-trip between the pipeline subprocess and the pool is
+removed as well.
+
+.. note::
+
+   Fusion preserves results but produces them in completion order across the
+   pool workers. Stages built with ``output_order="input"`` are not fused, and
+   fusion has no effect on continuous-source pipelines.
+
 Multi-threading in subprocess
 -----------------------------
 
