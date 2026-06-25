@@ -150,8 +150,9 @@ def _build_pipeline(
         # Fuse consecutive same-pool stages so each run executes as one nested pipeline inside a
         # worker pool, eliminating the inter-stage IPC. The pools are owned by the returned
         # Pipeline and reaped when it stops.
+        # stacklevel=4: _fuse_subprocess_stages -> _build_pipeline -> build_pipeline -> user.
         pipeline_cfg, pools = _fuse_subprocess_stages(
-            pipeline_cfg, report_stats_interval=report_stats_interval
+            pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
         )
 
     desc = repr(pipeline_cfg)
@@ -277,7 +278,8 @@ def build_pipeline(
             stage keeps its own ``concurrency`` and per-stage stats. Only adjacent pool stages
             fuse: an ``aggregate``/``disaggregate`` between two pool stages is not fused (it
             keeps its main-process batching) and splits them into separate runs. Has no effect
-            on continuous-source pipelines. Default: ``False``.
+            on continuous-source pipelines (a :py:class:`RuntimeWarning` is emitted if fusable
+            stages are otherwise present). Default: ``False``.
 
             .. versionadded:: 0.6.0
                The ``fuse_subprocess_stages`` argument.
@@ -497,7 +499,8 @@ def run_pipeline_in_subprocess(
             ``ProcessPoolExecutor``; the pipeline subprocess drives them through a queue handle.
             This removes the per-stage round-trip between the pipeline subprocess and the pool
             workers (so intermediate values need not be picklable). Has no effect on
-            continuous-source pipelines. Default: ``False``.
+            continuous-source pipelines (a :py:class:`RuntimeWarning` is emitted if fusable
+            stages are otherwise present). Default: ``False``.
 
             .. versionadded:: 0.6.0
                The ``fuse_subprocess_stages`` argument.
@@ -540,10 +543,12 @@ def run_pipeline_in_subprocess(
     # subprocess with the config, where the bridge stage drives the main-owned workers.
     fuse_pools: list[Any] = []
     if fuse_subprocess_stages:
+        # stacklevel=3: _fuse_subprocess_stages -> run_pipeline_in_subprocess -> user.
         config, fuse_pools = _fuse_subprocess_stages(
             config,
             mp_context=kwargs.get("mp_context"),
             report_stats_interval=report_stats_interval,
+            stacklevel=3,
         )
 
     # Spawn workers for any stdlib ``ProcessPoolExecutor`` in the main process (as children of

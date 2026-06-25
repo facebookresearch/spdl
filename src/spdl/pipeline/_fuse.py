@@ -259,14 +259,14 @@ def _pool_params(executor: Executor) -> tuple[int, Any, tuple[Any, ...]]:
     return max_workers, user_initializer, user_initargs
 
 
-def _warn_fork_with_threads(ctx: Any) -> None:
+def _warn_fork_with_threads(ctx: Any, stacklevel: int) -> None:
     if ctx.get_start_method() == "fork" and threading.active_count() > 1:
         warnings.warn(
             "Fusing subprocess pipeline stages with the 'fork' start method from a "
             "multi-threaded process can deadlock. Pass mp_context='spawn' or 'forkserver', "
             "or build the pipeline before other threads start.",
             RuntimeWarning,
-            stacklevel=3,
+            stacklevel=stacklevel,
         )
 
 
@@ -308,6 +308,7 @@ def _fuse_subprocess_stages(
     *,
     mp_context: str | None = None,
     report_stats_interval: float = -1,
+    stacklevel: int = 3,
 ) -> tuple[PipelineConfig[Any], list[_SubprocessPipelinePool]]:
     """Replace fusable runs of pool-pipe stages with single subprocess-pipeline stages.
 
@@ -317,7 +318,9 @@ def _fuse_subprocess_stages(
     not mutated.
 
     Fusion is skipped for continuous-source pipelines (epoch-end markers would be mishandled by
-    the fused source); such configs are returned unchanged.
+    the fused source); such configs are returned unchanged. When fusion was actually applicable
+    (the config has fusable runs) but is skipped for this reason, a :py:class:`RuntimeWarning`
+    is emitted so the caller's explicit ``fuse_subprocess_stages=True`` does not silently no-op.
 
     Args:
         config: The pipeline configuration to rewrite.
@@ -325,18 +328,29 @@ def _fuse_subprocess_stages(
             :py:func:`multiprocessing.get_context`.
         report_stats_interval: Forwarded to the nested ``build_pipeline`` so per-stage stats are
             reported from inside the workers.
+        stacklevel: ``warnings.warn`` stack level for a warning emitted directly by this
+            function, set by the caller so the warning points at the user's call site. The
+            fork-with-threads warning is one frame deeper and uses ``stacklevel + 1``.
 
     Returns:
         A tuple ``(new_config, pools)``. ``pools`` is empty when no fusion applies.
     """
-    if _has_continuous_source(config):
-        return config, []
     runs = _find_fusable_runs(config.pipes)
     if not runs:
         return config, []
 
+    if _has_continuous_source(config):
+        warnings.warn(
+            "fuse_subprocess_stages=True has no effect on continuous-source pipelines; the "
+            "fusable stages were left unfused (the fused source cannot handle epoch-end "
+            "markers).",
+            RuntimeWarning,
+            stacklevel=stacklevel,
+        )
+        return config, []
+
     ctx = mp.get_context(mp_context)
-    _warn_fork_with_threads(ctx)
+    _warn_fork_with_threads(ctx, stacklevel + 1)
 
     pools: list[_SubprocessPipelinePool] = []
     by_start = {r.start: r for r in runs}

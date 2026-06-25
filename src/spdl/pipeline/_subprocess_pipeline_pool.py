@@ -84,31 +84,56 @@ def _pipeline_worker_loop(
     from spdl.pipeline._build import build_pipeline
 
     if initializer is not None:
-        initializer(*initargs)
+        try:
+            initializer(*initargs)
+        except Exception as err:
+            # A failed initializer leaves this worker unable to run any session. Relay the error
+            # (followed by a ``_DONE`` so the bridge collector's per-worker accounting stays
+            # balanced) instead of exiting silently — a silent exit would hang the collector
+            # waiting for messages this dead worker can never send. ``KeyboardInterrupt`` /
+            # ``SystemExit`` deliberately propagate so the worker actually exits.
+            out_q.put((_ERROR, _to_picklable_error(err, traceback.format_exc())))
+            out_q.put((_DONE, None))
+            return
 
     exiting = False
+    session_ended = False
 
     def _drain() -> Any:
-        nonlocal exiting
+        nonlocal exiting, session_ended
         while True:
             kind, payload = in_q.get()
             if kind == _ITEM:
                 yield payload
             elif kind == _SESSION_END:
+                session_ended = True
                 return
             else:  # _POOL_SHUTDOWN
                 exiting = True
                 return
 
     while not exiting:
+        session_ended = False
         cfg = replace(sub_config, src=SourceConfig(_drain()))
         try:
             pipeline = build_pipeline(cfg, **build_kwargs)
             with pipeline.auto_stop():
                 for out in pipeline:
                     out_q.put((_RESULT, out))
-        except BaseException as err:  # noqa: B036 - relayed to the submitter below
+        except Exception as err:  # relayed to the submitter below
             out_q.put((_ERROR, _to_picklable_error(err, traceback.format_exc())))
+            # A pipeline failure abandons the source generator mid-session, so this session's
+            # remaining input (up to its ``_SESSION_END``) is still queued. Consume it here so
+            # the session emits exactly one ``_DONE`` and stays aligned with the one-per-worker
+            # ``_SESSION_END`` accounting on the feeder side — otherwise a retry session would
+            # consume that marker and emit a second, stray ``_DONE``. ``KeyboardInterrupt`` /
+            # ``SystemExit`` are not caught, so they tear the worker down as expected.
+            while not session_ended and not exiting:
+                kind, _ = in_q.get()
+                if kind == _SESSION_END:
+                    session_ended = True
+                elif kind == _POOL_SHUTDOWN:
+                    exiting = True
         out_q.put((_DONE, None))
 
 
