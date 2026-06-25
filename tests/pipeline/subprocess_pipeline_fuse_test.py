@@ -9,6 +9,7 @@
 import asyncio
 import queue as _queue
 import sys
+import time
 import unittest
 from collections.abc import AsyncIterator, Iterator
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
@@ -35,6 +36,10 @@ def _raise_initializer() -> None:
 
 def times_two(x: int) -> int:
     return x * 2
+
+
+def boom(x: int) -> int:
+    raise ValueError("boom")
 
 
 class _Unpicklable:
@@ -200,19 +205,6 @@ class SubprocessPipelineFuseTest(unittest.TestCase):
         with self.assertRaises(PipelineFailure):
             _run(fused, timeout=30.0)
 
-    def test_continuous_source_fusion_warns(self) -> None:
-        """fuse_subprocess_stages=True on a continuous source warns, not a silent no-op."""
-        ex = ProcessPoolExecutor(max_workers=2)
-        builder = (
-            PipelineBuilder()
-            .add_source(range(4), continuous=True)
-            .pipe(add_one, executor=ex, concurrency=2)
-            .pipe(times_two, executor=ex, concurrency=2)
-            .add_sink(4)
-        )
-        with self.assertWarnsRegex(RuntimeWarning, "continuous-source"):
-            builder.build(num_threads=4, fuse_subprocess_stages=True)
-
     def test_flag_off_is_unaffected(self) -> None:
         """Without the flag, the same pipeline runs the stages normally and matches."""
         n = 10
@@ -227,6 +219,159 @@ class SubprocessPipelineFuseTest(unittest.TestCase):
             .build(num_threads=4, fuse_subprocess_stages=False)
         )
         self.assertEqual(sorted(_run(pipeline)), ref)
+
+
+class ContinuousFuseTest(unittest.TestCase):
+    """Fusion with a continuous (multi-epoch) source."""
+
+    def test_multi_epoch_correct(self) -> None:
+        """A continuous fused pipeline yields the correct set each epoch."""
+        n = 12
+        ref = sorted((x + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .pipe(add_one, executor=ex, concurrency=2)
+            .pipe(times_two, executor=ex, concurrency=3)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        with pipeline.auto_stop():
+            for _ in range(3):  # three epochs from the same warm worker pool
+                epoch = sorted(pipeline.get_iterator(timeout=60))
+                self.assertEqual(epoch, ref)
+
+    def test_unpicklable_intermediate_multi_epoch(self) -> None:
+        """The unpicklable op->op handoff keeps working across epochs."""
+        n = 10
+        ref = sorted((x + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .pipe(wrap, executor=ex, concurrency=2)
+            .pipe(unwrap, executor=ex, concurrency=2)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        with pipeline.auto_stop():
+            for _ in range(2):
+                self.assertEqual(sorted(pipeline.get_iterator(timeout=60)), ref)
+
+    def test_aggregate_not_absorbed_multi_epoch(self) -> None:
+        """A non-absorbed aggregate keeps single-flush-per-epoch semantics across epochs.
+
+        Because the aggregate runs in the main process (not per worker), each epoch produces
+        full-size batches plus one combined partial, and every item is accounted for.
+        """
+        n = 12
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .pipe(add_one, executor=ex, concurrency=2)
+            .aggregate(3)
+            .pipe(len, executor=ex, concurrency=2)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        with pipeline.auto_stop():
+            for _ in range(2):  # each epoch's batches cover exactly n items
+                out = list(pipeline.get_iterator(timeout=60))
+                self.assertEqual(sum(out), n)
+
+    def test_fewer_items_than_workers(self) -> None:
+        """An epoch with fewer items than workers still completes (some workers run empty)."""
+        n = 2
+        ref = sorted((x + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=4)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .pipe(add_one, executor=ex, concurrency=2)
+            .pipe(times_two, executor=ex, concurrency=2)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        with pipeline.auto_stop():
+            for _ in range(2):
+                self.assertEqual(sorted(pipeline.get_iterator(timeout=60)), ref)
+
+    def test_generator_op_multi_epoch(self) -> None:
+        """A fused generator op keeps its 1->N fan-out correct across epochs."""
+        n = 8
+        ref = list(range(1, 2 * n + 1))
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .pipe(dup, executor=ex, concurrency=2)
+            .pipe(add_one, executor=ex, concurrency=2)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        with pipeline.auto_stop():
+            for _ in range(3):
+                self.assertEqual(sorted(pipeline.get_iterator(timeout=60)), ref)
+
+    def test_async_generator_op_multi_epoch(self) -> None:
+        """A main-process async-generator op fans out downstream of a fused run each epoch."""
+        n = 8
+        ref = list(range(2, 2 * n + 2))
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .pipe(add_one, executor=ex, concurrency=2)
+            .pipe(times_two, executor=ex, concurrency=2)
+            .pipe(adup)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        with pipeline.auto_stop():
+            for _ in range(3):
+                self.assertEqual(sorted(pipeline.get_iterator(timeout=60)), ref)
+
+    def test_continuous_op_failure_does_not_deadlock(self) -> None:
+        """Op failures (dropped per SPDL default) still let each epoch's barrier complete.
+
+        ``boom`` raises on every item, so the fused workers produce no results; the test checks
+        the continuous epoch barrier still completes each epoch (workers report the boundary
+        with zero results) instead of deadlocking, matching unfused drop-on-failure behavior.
+        """
+        n = 8
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .pipe(add_one, executor=ex, concurrency=2)
+            .pipe(boom, executor=ex, concurrency=2)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        with pipeline.auto_stop():
+            for _ in range(2):
+                self.assertEqual(list(pipeline.get_iterator(timeout=60)), [])
+
+    def test_continuous_in_subprocess(self) -> None:
+        """Continuous fusion composes with run_pipeline_in_subprocess across epochs."""
+        n = 12
+        ref = sorted((x + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        config = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .pipe(add_one, executor=ex, concurrency=2)
+            .pipe(times_two, executor=ex, concurrency=2)
+            .add_sink(n)
+            .get_config()
+        )
+        src = run_pipeline_in_subprocess(
+            config, num_threads=4, fuse_subprocess_stages=True
+        )
+        for _ in range(3):  # one epoch per iteration
+            self.assertEqual(sorted(src), ref)
 
 
 class FuseInSubprocessTest(unittest.TestCase):
@@ -289,9 +434,12 @@ class FeedAbortTest(unittest.TestCase):
                 StageInfo(pipeline_id=0, stage_id="0", stage_name="input")
             )  # stays empty -> get() blocks
             abort = asyncio.Event()
+            feeder_idle = asyncio.Event()
             with ThreadPoolExecutor(max_workers=2) as ex:
                 task = asyncio.ensure_future(
-                    _subprocess_pipe._feed(input_queue, in_q, num_workers, ex, abort)
+                    _subprocess_pipe._feed(
+                        input_queue, in_q, num_workers, ex, abort, feeder_idle
+                    )
                 )
                 await asyncio.sleep(0.1)  # let the feeder park on input_queue.get()
                 self.assertFalse(task.done(), "feeder should be parked on empty queue")
@@ -301,3 +449,64 @@ class FeedAbortTest(unittest.TestCase):
 
         msgs = asyncio.run(_scenario())
         self.assertEqual(msgs, [(_subprocess_pipe._SESSION_END, None)] * num_workers)
+
+
+class StallGuardTest(unittest.TestCase):
+    """The collector's stall guard against an abruptly-dead worker."""
+
+    def test_check_stall_raises_past_timeout(self) -> None:
+        """``_check_stall`` raises once no message has arrived for longer than the bound."""
+        orig = _subprocess_pipe._WORKER_STALL_TIMEOUT
+        _subprocess_pipe._WORKER_STALL_TIMEOUT = 0.0
+        try:
+            with self.assertRaises(TimeoutError):
+                _subprocess_pipe._check_stall(time.monotonic() - 1.0)
+        finally:
+            _subprocess_pipe._WORKER_STALL_TIMEOUT = orig
+
+    def test_check_stall_quiet_within_timeout(self) -> None:
+        """``_check_stall`` does not raise while progress is within the bound."""
+        orig = _subprocess_pipe._WORKER_STALL_TIMEOUT
+        _subprocess_pipe._WORKER_STALL_TIMEOUT = 60.0
+        try:
+            _subprocess_pipe._check_stall(time.monotonic())  # should not raise
+        finally:
+            _subprocess_pipe._WORKER_STALL_TIMEOUT = orig
+
+    def test_collect_suppresses_stall_while_feeder_idle(self) -> None:
+        """An idle feeder suppresses the collector's stall guard during input starvation.
+
+        With the timeout pinned to zero, any stall check on an empty queue would trip instantly;
+        the collector must instead keep draining while ``feeder_idle`` is set (nothing dispatched,
+        no worker message due) and still finish once the worker reports ``_DONE``.
+        """
+        orig = _subprocess_pipe._WORKER_STALL_TIMEOUT
+        _subprocess_pipe._WORKER_STALL_TIMEOUT = 0.0
+
+        async def _scenario() -> None:
+            out_q: _queue.Queue[Any] = _queue.Queue()
+            output_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
+            )
+            abort = asyncio.Event()
+            feeder_idle = asyncio.Event()
+            feeder_idle.set()  # feeder parked on an idle upstream -> no message expected
+            with ThreadPoolExecutor(max_workers=2) as ex:
+                task = asyncio.ensure_future(
+                    _subprocess_pipe._collect(
+                        out_q, 1, output_queue, ex, abort, feeder_idle
+                    )
+                )
+                await asyncio.sleep(
+                    0.6
+                )  # several empty poll cycles; must not trip the guard
+                self.assertFalse(
+                    task.done(), "idle feeder must suppress the stall guard"
+                )
+                out_q.put((_subprocess_pipe._DONE, None))
+                await asyncio.wait_for(task, timeout=5.0)
+
+        try:
+            asyncio.run(_scenario())
+        finally:
+            _subprocess_pipe._WORKER_STALL_TIMEOUT = orig

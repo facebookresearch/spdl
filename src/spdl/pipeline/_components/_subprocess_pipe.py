@@ -12,23 +12,35 @@ A fused run of pipe stages (see :py:mod:`spdl.pipeline._fuse`) is replaced by a 
 whose coroutine, defined here, streams items to a worker pool that runs the run as a nested
 :py:class:`~spdl.pipeline.Pipeline`, and streams the results back. The pool itself lives in
 :py:mod:`spdl.pipeline._subprocess_pipeline_pool`; this stage only talks to it through the
-shared queues carried by a handle.
+queues carried by a handle.
+
+There are two modes, selected by ``handle.continuous``:
+
+- **Non-continuous:** items are fed onto one shared queue that the workers steal from, and the
+  stage finishes when every worker reports ``_DONE``.
+- **Continuous:** the source emits epoch boundaries (``_EPOCH_END``). Each worker has its own
+  input queue so a boundary can be broadcast to all of them, and the collector applies the same
+  cross-stream barrier as :py:func:`spdl.pipeline._components._pipe._default_merge` — it emits one
+  ``_EPOCH_END`` downstream only once every worker has reached the boundary. The feeder gates the
+  next epoch's items behind that barrier so epochs stay correctly ordered across the pool.
 
 The wire protocol uses small integer message kinds (not sentinel objects): a sentinel pickled
 onto a multiprocessing queue is a different object on the other side, so identity comparison
-would not survive the trip.
+would not survive the trip. ``_EPOCH_END`` itself never crosses — it is translated to the
+``_EPOCH`` tag on the way in and re-emitted locally on the way out.
 """
 
 from __future__ import annotations
 
 import asyncio
 import queue as _queue
+import time
 from concurrent.futures import Executor, ThreadPoolExecutor
 from typing import Any
 
 from spdl.pipeline._common._misc import create_task
 
-from ._common import is_eof
+from ._common import _EPOCH_END, is_eof, is_epoch_end
 from ._queue import _queue_stage_hook, AsyncQueue
 
 __all__ = [
@@ -36,24 +48,35 @@ __all__ = [
     "_ITEM",
     "_SESSION_END",
     "_POOL_SHUTDOWN",
+    "_EPOCH",
     "_RESULT",
     "_ERROR",
     "_DONE",
+    "_EPOCH_DONE",
 ]
 
 # Input-queue message kinds (this stage -> worker).
 _ITEM = 0  # (_ITEM, value): one item for the sub-pipeline source
 _SESSION_END = 1  # (_SESSION_END, None): end of one input stream; finish the session
 _POOL_SHUTDOWN = 2  # (_POOL_SHUTDOWN, None): tear the worker down entirely
+_EPOCH = 3  # (_EPOCH, None): end of the current epoch (continuous mode); keep the worker alive
 
 # Output-queue message kinds (worker -> this stage).
 _RESULT = 0  # (_RESULT, value): one produced item
 _ERROR = 1  # (_ERROR, exc): the sub-pipeline failed
-_DONE = 2  # (_DONE, None): a worker finished the current session
+_DONE = 2  # (_DONE, None): a worker finished (session end, or exiting)
+_EPOCH_DONE = (
+    3  # (_EPOCH_DONE, None): a worker reached an epoch boundary (continuous mode)
+)
 
 # How long a blocking get may wait before yielding control, so the awaiting coroutine can
 # observe cancellation between polls instead of parking a thread on an indefinite get.
 _GET_TIMEOUT: float = 0.5
+
+# Fixed bound (15 min) on how long the collector waits for any worker message before assuming a
+# worker died abruptly and raising, instead of hanging forever. Comfortably above any per-stage
+# latency in a data loader. Not user-configurable for now.
+_WORKER_STALL_TIMEOUT: float = 900.0
 
 
 def _put(q: Any, msg: tuple[int, Any]) -> None:
@@ -67,14 +90,37 @@ def _drain_one(q: Any) -> tuple[int, Any] | None:
         return None
 
 
+def _check_stall(last_progress: float) -> None:
+    """Raise if no worker message has arrived within ``_WORKER_STALL_TIMEOUT`` seconds.
+
+    A worker that dies abruptly (segfault, OOM-kill, external ``SIGKILL``) bypasses the worker
+    loop's ``except`` and emits neither ``_ERROR`` nor ``_DONE``, so the collector would otherwise
+    spin on empty reads forever and hang the enclosing pipeline. This bounds that wait. Any worker
+    message (result, epoch boundary, done, error) counts as progress and resets the clock, so the
+    bound only needs to exceed the slowest expected gap between messages.
+    """
+    if time.monotonic() - last_progress > _WORKER_STALL_TIMEOUT:
+        raise TimeoutError(
+            f"Fused subprocess stage received no worker message for "
+            f"{_WORKER_STALL_TIMEOUT:.0f}s; a worker process may have died abruptly "
+            "(e.g. segfault or OOM-kill)."
+        )
+
+
+########################################################################################
+# Non-continuous: shared work-stealing input queue, finish when all workers report _DONE.
+########################################################################################
+
+
 async def _feed(
     input_queue: AsyncQueue,
     in_q: Any,
     num_workers: int,
     executor: Executor,
     abort: asyncio.Event,
+    feeder_idle: asyncio.Event,
 ) -> None:
-    """Forward items from the stage's input queue to the worker pool, then end the session.
+    """Forward items to the shared worker queue, then end the session.
 
     Sends exactly one ``_SESSION_END`` per worker: a worker consumes exactly one such marker to
     end its current session, so the per-worker count ends every worker exactly once even though
@@ -95,6 +141,7 @@ async def _feed(
     try:
         while not abort.is_set():
             get_task = create_task(input_queue.get())
+            feeder_idle.set()
             try:
                 await asyncio.wait(
                     {get_task, abort_wait}, return_when=asyncio.FIRST_COMPLETED
@@ -104,6 +151,7 @@ async def _feed(
                 item = get_task.result()
             finally:
                 get_task.cancel()
+                feeder_idle.clear()
             if is_eof(item):
                 break
             await loop.run_in_executor(executor, _put, in_q, (_ITEM, item))
@@ -119,6 +167,7 @@ async def _collect(
     output_queue: AsyncQueue,
     executor: Executor,
     abort: asyncio.Event,
+    feeder_idle: asyncio.Event,
 ) -> None:
     """Forward worker results to the stage's output queue until every worker is done.
 
@@ -129,14 +178,24 @@ async def _collect(
     a full teardown. Results that arrive after the first error are discarded — the enclosing
     pipeline is already failing, and forwarding them could block on a no-longer-drained output
     queue.
+
+    The stall guard is suppressed while ``feeder_idle`` is set: an idle feeder means nothing is
+    dispatched and no worker message is due, so a quiet ``out_q`` is input starvation, not a
+    dead worker.
     """
     loop = asyncio.get_running_loop()
     done = 0
     error: BaseException | None = None
+    last_progress = time.monotonic()
     while done < num_workers:
         res = await loop.run_in_executor(executor, _drain_one, out_q)
         if res is None:
+            if feeder_idle.is_set():
+                last_progress = time.monotonic()  # input-starved, not a stalled worker
+            else:
+                _check_stall(last_progress)
             continue  # timeout — loop so cancellation can be observed
+        last_progress = time.monotonic()
         kind, payload = res
         if kind == _DONE:
             done += 1
@@ -148,6 +207,109 @@ async def _collect(
             await output_queue.put(payload)
     if error is not None:
         raise error
+
+
+########################################################################################
+# Continuous: per-worker input queues, epoch broadcast + barrier across the pool.
+########################################################################################
+
+
+async def _feed_continuous(
+    input_queue: AsyncQueue,
+    in_qs: list[Any],
+    executor: Executor,
+    epoch_barrier: asyncio.Event,
+    feeder_idle: asyncio.Event,
+) -> None:
+    """Round-robin items to per-worker queues; broadcast and barrier each epoch boundary.
+
+    On an epoch boundary the next epoch's items must not be fed until every worker has drained
+    the current epoch (otherwise results from two epochs would interleave). The feeder therefore
+    broadcasts ``_EPOCH`` to all workers and waits on ``epoch_barrier``, which the collector sets
+    once it has emitted the epoch's single ``_EPOCH_END`` downstream.
+
+    A single shared ``epoch_barrier`` is sufficient (rather than one per epoch) only because the
+    feeder cannot advance past a boundary until the collector releases it: the feeder and
+    collector strictly alternate one epoch at a time, so the ``clear()``/``set()`` never race.
+    """
+    loop = asyncio.get_running_loop()
+
+    async def _broadcast(msg: tuple[int, Any]) -> None:
+        # Concurrent so a full/slow worker queue does not block the broadcast to the others.
+        await asyncio.gather(
+            *(loop.run_in_executor(executor, _put, q, msg) for q in in_qs)
+        )
+
+    i = 0
+    n = len(in_qs)
+    while True:
+        feeder_idle.set()
+        item = await input_queue.get()
+        feeder_idle.clear()
+        if is_eof(item):
+            await _broadcast((_POOL_SHUTDOWN, None))
+            break
+        if is_epoch_end(item):
+            epoch_barrier.clear()
+            await _broadcast((_EPOCH, None))
+            await epoch_barrier.wait()
+            continue
+        await loop.run_in_executor(executor, _put, in_qs[i % n], (_ITEM, item))
+        i += 1
+
+
+async def _collect_continuous(
+    out_q: Any,
+    num_workers: int,
+    output_queue: AsyncQueue,
+    executor: Executor,
+    epoch_barrier: asyncio.Event,
+    feeder_idle: asyncio.Event,
+) -> None:
+    """Forward results; emit one ``_EPOCH_END`` per epoch once all workers reach the boundary.
+
+    Mirrors the fan-in barrier in
+    :py:func:`spdl.pipeline._components._pipe._default_merge`: count ``_EPOCH_DONE`` across the
+    workers and, when all ``num_workers`` have reported, emit a single ``_EPOCH_END`` and release
+    the feeder. Finishes when every worker reports ``_DONE`` (graceful shutdown); on normal
+    pipeline stop this coroutine is cancelled instead.
+
+    The stall guard is suppressed while ``feeder_idle`` is set (e.g. between epochs, waiting on a
+    slow upstream for the next epoch's first item), where a quiet ``out_q`` is expected rather
+    than a sign of a dead worker.
+    """
+    loop = asyncio.get_running_loop()
+    workers_at_boundary = 0
+    done = 0
+    last_progress = time.monotonic()
+    while done < num_workers:
+        res = await loop.run_in_executor(executor, _drain_one, out_q)
+        if res is None:
+            if feeder_idle.is_set():
+                last_progress = time.monotonic()  # input-starved, not a stalled worker
+            else:
+                _check_stall(last_progress)
+            continue
+        last_progress = time.monotonic()
+        kind, payload = res
+        if kind == _RESULT:
+            await output_queue.put(payload)
+        elif kind == _EPOCH_DONE:
+            workers_at_boundary += 1
+            if workers_at_boundary >= num_workers:
+                workers_at_boundary = 0
+                await output_queue.put(_EPOCH_END)
+                epoch_barrier.set()
+        elif kind == _ERROR:
+            # Raise immediately rather than draining to every ``_DONE`` like :py:func:`_collect`.
+            # A continuous worker only emits ``_ERROR`` on a fatal sub-pipeline failure and then
+            # exits, so there is no warm pool left to preserve — the failure tears the whole
+            # pipeline (and pool) down. Draining-to-``_DONE`` would also deadlock here: the other
+            # workers stay warm waiting for the next epoch and never send ``_DONE`` without a
+            # shutdown. Surviving workers are unblocked by the pool teardown that follows.
+            raise payload
+        elif kind == _DONE:
+            done += 1
 
 
 async def _subprocess_pipeline(
@@ -164,18 +326,44 @@ async def _subprocess_pipeline(
     not occupy the enclosing pipeline's shared worker threads (which would starve its other
     stages).
     """
-    in_q, out_q, num_workers = handle.in_q, handle.out_q, handle.max_workers
-    # Two threads: one parked on the feeder put, one on the collector get.
+    in_qs, out_q = handle.in_qs, handle.out_q
+    num_workers = handle.max_workers
+    # One thread parked per concurrent blocking op: a put per input queue plus the collector get.
+    max_threads = (len(in_qs) if handle.continuous else 1) + 1
     executor = ThreadPoolExecutor(
-        max_workers=2, thread_name_prefix="spdl_fused_bridge_"
+        max_workers=max_threads, thread_name_prefix="spdl_fused_bridge_"
     )
-    # Set by the collector on a worker error so the feeder stops forwarding new items promptly.
-    abort = asyncio.Event()
+    # Set by the feeder whenever it is parked waiting on the upstream queue. The collector reads
+    # it to tell input starvation (no work dispatched, no worker message expected) apart from an
+    # unresponsive worker, so its stall guard does not fire spuriously on a slow/idle source.
+    feeder_idle = asyncio.Event()
     async with _queue_stage_hook(output_queue):
-        feeder = create_task(_feed(input_queue, in_q, num_workers, executor, abort))
-        collector = create_task(
-            _collect(out_q, num_workers, output_queue, executor, abort)
-        )
+        if handle.continuous:
+            epoch_barrier = asyncio.Event()
+            feeder = create_task(
+                _feed_continuous(
+                    input_queue, in_qs, executor, epoch_barrier, feeder_idle
+                )
+            )
+            collector = create_task(
+                _collect_continuous(
+                    out_q,
+                    num_workers,
+                    output_queue,
+                    executor,
+                    epoch_barrier,
+                    feeder_idle,
+                )
+            )
+        else:
+            # Set by the collector on a worker error so the feeder stops forwarding new items.
+            abort = asyncio.Event()
+            feeder = create_task(
+                _feed(input_queue, in_qs[0], num_workers, executor, abort, feeder_idle)
+            )
+            collector = create_task(
+                _collect(out_q, num_workers, output_queue, executor, abort, feeder_idle)
+            )
         try:
             await asyncio.gather(feeder, collector)
         except BaseException:

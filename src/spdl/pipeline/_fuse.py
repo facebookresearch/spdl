@@ -275,6 +275,7 @@ def _build_fused_stage(
     executor: Executor,
     ctx: Any,
     report_stats_interval: float,
+    continuous: bool,
 ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
     """Build the worker pool and replacement stage for one fusable run."""
     stripped = [_strip_executor(s) for s in stages]
@@ -297,7 +298,13 @@ def _build_fused_stage(
         _worker_initializer, _get_global_id(), user_initializer, user_initargs
     )
     pool = _SubprocessPipelinePool(
-        ctx, max_workers, sub_config, build_kwargs, initializer, ()
+        ctx,
+        max_workers,
+        sub_config,
+        build_kwargs,
+        initializer,
+        (),
+        continuous=continuous,
     )
     name = "subprocess_pipeline(" + "+".join(_stage_name(s) for s in stages) + ")"
     return _SubprocessPipelineConfig(name=name, handle=pool.make_handle()), pool
@@ -317,10 +324,9 @@ def _fuse_subprocess_stages(
     spawned pools are returned so the caller can reap them at teardown. The input ``config`` is
     not mutated.
 
-    Fusion is skipped for continuous-source pipelines (epoch-end markers would be mishandled by
-    the fused source); such configs are returned unchanged. When fusion was actually applicable
-    (the config has fusable runs) but is skipped for this reason, a :py:class:`RuntimeWarning`
-    is emitted so the caller's explicit ``fuse_subprocess_stages=True`` does not silently no-op.
+    For a continuous-source pipeline, the fused workers run continuous sub-pipelines and the
+    bridge stage propagates epoch boundaries across the pool (see
+    :py:mod:`spdl.pipeline._components._subprocess_pipe`).
 
     Args:
         config: The pipeline configuration to rewrite.
@@ -328,9 +334,9 @@ def _fuse_subprocess_stages(
             :py:func:`multiprocessing.get_context`.
         report_stats_interval: Forwarded to the nested ``build_pipeline`` so per-stage stats are
             reported from inside the workers.
-        stacklevel: ``warnings.warn`` stack level for a warning emitted directly by this
-            function, set by the caller so the warning points at the user's call site. The
-            fork-with-threads warning is one frame deeper and uses ``stacklevel + 1``.
+        stacklevel: ``warnings.warn`` stack level measured at this function, set by the
+            caller so warnings point at the user's call site. The fork-with-threads warning
+            is one frame deeper and uses ``stacklevel + 1``.
 
     Returns:
         A tuple ``(new_config, pools)``. ``pools`` is empty when no fusion applies.
@@ -339,16 +345,7 @@ def _fuse_subprocess_stages(
     if not runs:
         return config, []
 
-    if _has_continuous_source(config):
-        warnings.warn(
-            "fuse_subprocess_stages=True has no effect on continuous-source pipelines; the "
-            "fusable stages were left unfused (the fused source cannot handle epoch-end "
-            "markers).",
-            RuntimeWarning,
-            stacklevel=stacklevel,
-        )
-        return config, []
-
+    continuous = _has_continuous_source(config)
     ctx = mp.get_context(mp_context)
     _warn_fork_with_threads(ctx, stacklevel + 1)
 
@@ -357,16 +354,29 @@ def _fuse_subprocess_stages(
     pipes = list(config.pipes)
     new_pipes: list[object] = []
     i = 0
-    while i < len(pipes):
-        run = by_start.get(i)
-        if run is None:
-            new_pipes.append(pipes[i])
-            i += 1
-            continue
-        fused, pool = _build_fused_stage(
-            pipes[run.start : run.stop], run.executor, ctx, report_stats_interval
-        )
-        pools.append(pool)
-        new_pipes.append(fused)
-        i = run.stop
+    try:
+        while i < len(pipes):
+            run = by_start.get(i)
+            if run is None:
+                new_pipes.append(pipes[i])
+                i += 1
+                continue
+            fused, pool = _build_fused_stage(
+                pipes[run.start : run.stop],
+                run.executor,
+                ctx,
+                report_stats_interval,
+                continuous,
+            )
+            pools.append(pool)
+            new_pipes.append(fused)
+            i = run.stop
+    except BaseException:
+        # Each pool spawns its workers eagerly, so a failure partway through this loop (e.g. a
+        # later pool fails to spawn) would otherwise leak the workers already started by the
+        # pools built so far. Reap them before propagating, since the caller never receives the
+        # ``pools`` list to reap them itself.
+        for pool in pools:
+            pool.shutdown()
+        raise
     return replace(config, pipes=new_pipes), pools  # pyre-ignore[6]

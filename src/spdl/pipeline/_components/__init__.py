@@ -23,6 +23,8 @@ from ._queue import (
 )
 from ._subprocess_pipe import (
     _DONE,
+    _EPOCH,
+    _EPOCH_DONE,
     _ERROR,
     _ITEM,
     _POOL_SHUTDOWN,
@@ -34,6 +36,8 @@ from ._subprocess_pipe import (
 __all__ = [
     "_build_pipeline_coro",
     "_DONE",
+    "_EPOCH",
+    "_EPOCH_DONE",
     "_ERROR",
     "_ITEM",
     "_POOL_SHUTDOWN",

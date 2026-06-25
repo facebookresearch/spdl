@@ -277,9 +277,9 @@ def build_pipeline(
             between each stage (so intermediate values need not be picklable), while each fused
             stage keeps its own ``concurrency`` and per-stage stats. Only adjacent pool stages
             fuse: an ``aggregate``/``disaggregate`` between two pool stages is not fused (it
-            keeps its main-process batching) and splits them into separate runs. Has no effect
-            on continuous-source pipelines (a :py:class:`RuntimeWarning` is emitted if fusable
-            stages are otherwise present). Default: ``False``.
+            keeps its main-process batching) and splits them into separate runs. Continuous
+            sources are supported (the fused worker sub-pipelines stay warm across epochs and
+            epoch boundaries are propagated across the pool). Default: ``False``.
 
             .. versionadded:: 0.6.0
                The ``fuse_subprocess_stages`` argument.
@@ -498,9 +498,8 @@ def run_pipeline_in_subprocess(
             processes are spawned in (and owned by) the main process, exactly like a hoisted
             ``ProcessPoolExecutor``; the pipeline subprocess drives them through a queue handle.
             This removes the per-stage round-trip between the pipeline subprocess and the pool
-            workers (so intermediate values need not be picklable). Has no effect on
-            continuous-source pipelines (a :py:class:`RuntimeWarning` is emitted if fusable
-            stages are otherwise present). Default: ``False``.
+            workers (so intermediate values need not be picklable). Continuous sources are
+            supported. Default: ``False``.
 
             .. versionadded:: 0.6.0
                The ``fuse_subprocess_stages`` argument.
