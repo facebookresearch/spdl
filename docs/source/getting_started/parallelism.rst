@@ -362,11 +362,17 @@ pool is owned by the main process and the run executes in those workers — so
 the per-stage round-trip between the pipeline subprocess and the pool is
 removed as well.
 
+Fusion also works with a **continuous source**
+(:py:meth:`~spdl.pipeline.PipelineBuilder.add_source(..., continuous=True)
+<spdl.pipeline.PipelineBuilder.add_source>`). The worker sub-pipelines run in
+continuous mode and stay warm across epochs, and epoch boundaries are
+propagated across the pool: each fused stage emits one epoch boundary per epoch
+just like an unfused pipeline.
+
 .. note::
 
    Fusion preserves results but produces them in completion order across the
-   pool workers. Stages built with ``output_order="input"`` are not fused, and
-   fusion has no effect on continuous-source pipelines.
+   pool workers. Stages built with ``output_order="input"`` are not fused.
 
 Multi-threading in subprocess
 -----------------------------
