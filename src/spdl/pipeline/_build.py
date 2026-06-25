@@ -37,6 +37,7 @@ from spdl.pipeline._components import (
 from spdl.pipeline._executor_proxy import _make_config_executors_picklable
 from spdl.pipeline._fuse import _fuse_subprocess_stages
 from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
+from spdl.pipeline._random_seed import _draw_base_seed, _seed_global_rngs
 from spdl.pipeline._subprocess_pipeline_pool import _shutdown_pipeline_pools
 from spdl.pipeline._subprocess_worker_pool import (
     _hoist_process_pools,
@@ -366,7 +367,13 @@ class _Wrapper(Generic[U]):
 
 
 def _get_initializer(kwargs: Any) -> Sequence[Callable[[], None]]:
-    initializer = [partial(_set_global_id, _get_global_id())]
+    # Seed the subprocess' global RNGs deterministically so that random draws made
+    # inside the subprocess (e.g. multi-threaded preprocessing in MTP mode) are
+    # reproducible and do not depend on the start method.
+    initializer = [
+        partial(_set_global_id, _get_global_id()),
+        partial(_seed_global_rngs, _draw_base_seed()),
+    ]
     if "initializer" not in kwargs:
         return initializer
 
@@ -438,6 +445,56 @@ def run_pipeline_in_subprocess(
     GPU-transfer stages in the main process, an outer pipeline can wrap ``src``
     with ``add_source(src, continuous=True)`` (see the MTP pattern in the
     parallelism guide).
+
+    .. note::
+
+       **Random number generators.** The worker subprocess seeds its global RNGs
+       deterministically before iterating, so random draws made inside the
+       pipeline (e.g. data augmentation) are reproducible run-to-run and do not
+       depend on the multiprocessing start method (``fork`` / ``spawn`` /
+       ``forkserver``). No opt-in is required.
+
+       The base seed is captured in the main process from the standard library
+       :py:mod:`random` module. Seeding it (``random.seed(k)``) therefore makes
+       the subprocess draws reproducible across program runs as well — the same
+       contract as :py:class:`torch.utils.data.DataLoader`. Leaving it unseeded
+       keeps draws reproducible *within* a run but varying *across* runs.
+
+       This covers the **global** RNGs only:
+
+       - :py:mod:`random` (standard library),
+       - NumPy's **legacy** global RNG (:py:func:`numpy.random.rand`,
+         :py:func:`numpy.random.choice`, :py:func:`numpy.random.shuffle`, …), and
+       - PyTorch (:py:func:`torch.manual_seed`, which also seeds all CUDA
+         devices).
+
+       NumPy and PyTorch are reseeded only when the program has already imported
+       them; SPDL never imports them on your behalf.
+
+       .. warning::
+
+          The following sources are **not** covered, because the library cannot
+          reach them:
+
+          - A :py:class:`numpy.random.Generator` created with
+            :py:func:`numpy.random.default_rng` (the modern NumPy API) is an
+            independent object that ``numpy.random.seed`` does not touch. If your
+            code holds an unseeded ``default_rng()``, seed it explicitly or derive
+            it from the (now seeded) global RNG. SPDL's own samplers already store
+            an explicit seed, so they are reproducible in every mode.
+          - Hash randomization (``PYTHONHASHSEED``), which affects ``set``
+            iteration order, is fixed at interpreter start and cannot be reseeded
+            at runtime — pin it in the launch environment if it matters.
+          - Cryptographic / entropy sources (:py:func:`os.urandom`,
+            :py:mod:`secrets`, :py:func:`uuid.uuid4`) are intentionally left
+            untouched.
+
+          Note also that task *completion order* (``output_order="completion"``)
+          is independent of RNG state and can still differ between execution
+          modes.
+
+       .. versionadded:: 0.6.0
+          The worker subprocess now seeds its global RNGs deterministically.
 
     .. note::
 
