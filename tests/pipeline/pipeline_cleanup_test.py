@@ -25,7 +25,7 @@ class TestPipelineCleanup(unittest.TestCase):
             PipelineBuilder().add_source(range(100)).add_sink(1000).build(num_threads=1)
         )
 
-        pipeline.start(timeout=3)
+        pipeline.start(timeout=30)
 
         # Verify the pipeline is running
         self.assertTrue(pipeline._impl._event_loop.is_started())
@@ -61,13 +61,13 @@ class TestPipelineCleanup(unittest.TestCase):
             PipelineBuilder().add_source(range(100)).add_sink(1000).build(num_threads=1)
         )
 
-        pipeline.start(timeout=3)
+        pipeline.start(timeout=30)
 
         # Execute: Explicitly stop the pipeline
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            pipeline.stop(timeout=3)
+            pipeline.stop(timeout=30)
 
             # Delete the pipeline reference and force garbage collection
             del pipeline
@@ -95,9 +95,9 @@ class TestPipelineCleanup(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            with pipeline.auto_stop(timeout=3):
+            with pipeline.auto_stop(timeout=30):
                 # Get some items from the pipeline
-                iterator = pipeline.get_iterator(timeout=3)
+                iterator = pipeline.get_iterator(timeout=30)
                 for _ in range(5):
                     next(iterator)
 

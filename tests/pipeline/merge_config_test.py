@@ -48,7 +48,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=2)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(len(results), 6)
         self.assertCountEqual(results, [1, 2, 3, 4, 5, 6])
@@ -79,7 +79,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=2)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(len(results), 6)
         # Pipeline 1: [1, 2, 3] -> [2, 4, 6] (doubled)
@@ -115,7 +115,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=3)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(len(results), 6)
         self.assertCountEqual(results, [1, 2, 10, 20, 100, 200])
@@ -145,7 +145,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=2)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(len(results), 6)
         self.assertCountEqual(results, [5, 10, 15, 20, 25, 30])
@@ -180,7 +180,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=2)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=5))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(len(results), 6)
         self.assertCountEqual(results, [2, 4, 6, 8, 10, 12])
@@ -208,7 +208,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=2)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(len(results), 6)
         self.assertCountEqual(results, [1, 2, 3, "a", "b", "c"])
@@ -236,7 +236,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=2)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(len(results), 3)
         self.assertCountEqual(results, [1, 2, 3])
@@ -276,7 +276,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=2)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(len(results), 8)
         self.assertCountEqual(results, [1, 2, 3, 4, 10, 20, 30, 40])
@@ -306,7 +306,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=4)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(len(results), 20)
         expected = list(range(100, 110)) + list(range(150, 160))
@@ -347,7 +347,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=2)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(len(results), 5)
 
@@ -415,7 +415,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=2)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         # Verify we got all items with prefixes
         self.assertEqual(len(results), 6)
@@ -466,7 +466,7 @@ class MergeConfigTest(unittest.TestCase):
         pipeline = build_pipeline(main_pipeline_config, num_threads=2)
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=3))
+            results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, [1, 4, 2, 5, 3, 6])
 

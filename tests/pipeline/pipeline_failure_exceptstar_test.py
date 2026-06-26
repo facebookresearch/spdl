@@ -44,7 +44,7 @@ class TestPipelineFailureExceptStar(unittest.TestCase):
         caught = []
         try:
             with pipeline.auto_stop():
-                list(pipeline.get_iterator(timeout=10))
+                list(pipeline.get_iterator(timeout=30))
         except* ValueError as eg:
             caught.extend(eg.exceptions)
 

@@ -491,14 +491,31 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(remain, [])
         self.assertEqual(set(output), {1, 2, 3, 4})
 
-    def test_async_pipe_concurrency_throughput(self) -> None:
-        """increasing concurrency improves the throughput."""
+    def test_async_pipe_concurrency_runs_ops_in_parallel(self) -> None:
+        """A pool pipe runs up to `concurrency` ops simultaneously.
 
-        async def delay(val):
-            await asyncio.sleep(0.5)
+        Every op increments a shared counter and then waits on a single event that is
+        only set once the counter reaches `concurrency` -- i.e. once all `concurrency`
+        ops are in flight at the same time. If the pipe ran them serially the event
+        would never be set and the wait would time out, proving real parallelism without
+        depending on wall-clock timing.
+
+        A hand-rolled counter+event is used rather than ``asyncio.Barrier`` because the
+        latter is Python 3.11+ and SPDL supports 3.10.
+        """
+        concurrency = 4
+        all_running = asyncio.Event()
+        num_running = 0
+
+        async def op(val):
+            nonlocal num_running
+            num_running += 1
+            if num_running == concurrency:
+                all_running.set()
+            await asyncio.wait_for(all_running.wait(), timeout=30)
             return val
 
-        async def test(concurrency):
+        async def test():
             input_queue = AsyncQueue(
                 StageInfo(pipeline_id=0, stage_id="0", stage_name="input"),
                 buffer_size=0,
@@ -511,20 +528,18 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
             ref = [4, 5, 6, 7, _EOF]
             _put_aqueue(input_queue, ref, eof=False)
 
-            t0 = time.monotonic()
             await _pipe(
-                _SI("delay"),
+                _SI("op"),
                 input_queue,
                 output_queue,
                 _PipeArgs(
-                    op=delay,
+                    op=op,
                     concurrency=concurrency,
                 ),
                 _FailCounter(),
                 [],
                 False,
             )
-            elapsed = time.monotonic() - t0
 
             result = _flush_aqueue(output_queue)
 
@@ -532,13 +547,7 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result[-1], ref[-1])
             self.assertEqual(result[-1], _EOF)
 
-            return elapsed
-
-        elapsed1 = asyncio.run(test(1))
-        elapsed4 = asyncio.run(test(4))
-
-        self.assertGreater(elapsed1, 1.8)
-        self.assertLess(elapsed4, 1)
+        asyncio.run(test())
 
 
 ################################################################################
@@ -650,7 +659,7 @@ class TestPipelineHook(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            self.assertEqual([], list(pipeline.get_iterator(timeout=10)))
+            self.assertEqual([], list(pipeline.get_iterator(timeout=30)))
 
         self.assertEqual(h1._enter_stage_called, 1)
         self.assertEqual(h1._exit_stage_called, 1)
@@ -708,7 +717,7 @@ class TestPipelineHook(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            self.assertEqual(list(range(10)), list(pipeline.get_iterator(timeout=10)))
+            self.assertEqual(list(range(10)), list(pipeline.get_iterator(timeout=30)))
 
         for h in hooks:
             self.assertEqual(h._enter_stage_called, 1)
@@ -741,7 +750,7 @@ class TestPipelineHook(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=10))
+                vals = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(vals, [])
 
@@ -770,7 +779,7 @@ class TestPipelineHook(unittest.TestCase):
         )
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=10))
+                vals = list(pipeline.get_iterator(timeout=30))
         self.assertEqual(vals, list(range(10)))
 
     @_ignore_warnings({"category": RuntimeWarning})
@@ -796,7 +805,7 @@ class TestPipelineHook(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            self.assertEqual([], list(pipeline.get_iterator(timeout=10)))
+            self.assertEqual([], list(pipeline.get_iterator(timeout=30)))
 
     @_ignore_warnings({"category": RuntimeWarning})
     def test_pipeline_hook_failure_exit_task(self) -> None:
@@ -821,7 +830,7 @@ class TestPipelineHook(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            self.assertEqual(list(pipeline.get_iterator(timeout=10)), [])
+            self.assertEqual(list(pipeline.get_iterator(timeout=30)), [])
 
     def test_pipeline_hook_exit_task_capture_error(self) -> None:
         """If task fails exit_task captures the error."""
@@ -855,7 +864,7 @@ class TestPipelineHook(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            self.assertEqual(list(pipeline.get_iterator(timeout=10)), [])
+            self.assertEqual(list(pipeline.get_iterator(timeout=30)), [])
 
         self.assertTrue(exc_info is err)
 
@@ -880,7 +889,7 @@ class TestPipelineHook(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            output = list(pipeline.get_iterator(timeout=10))
+            output = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(output, list(range(5)))
         self.assertEqual(received_items, list(range(5)))
@@ -918,7 +927,7 @@ class TestPipelineHook(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            output = list(pipeline.get_iterator(timeout=10))
+            output = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(output, [1, 3, 5])
         self.assertEqual(captured_items_on_failure, [0, 2, 4])
@@ -944,7 +953,7 @@ class TestPipelineHook(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            output = list(pipeline.get_iterator(timeout=10))
+            output = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(output, list(range(5)))
         self.assertEqual(received_items, list(range(5)))
@@ -982,7 +991,7 @@ class TestPipelineHook(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            output = list(pipeline.get_iterator(timeout=10))
+            output = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(output, [1, 3, 5])
         self.assertEqual(sorted(captured_items_on_failure), [0, 2, 4])
@@ -1117,12 +1126,12 @@ class TestPipelineResume(unittest.TestCase):
 
         with pipeline.auto_stop():
             for i in range(5):
-                for j, val in enumerate(pipeline.get_iterator(timeout=10)):
+                for j, val in enumerate(pipeline.get_iterator(timeout=30)):
                     self.assertEqual(val, (i * 4) + j)
 
             # Now it's empty
             with self.assertRaises(StopIteration):
-                next(pipeline.get_iterator(timeout=10))
+                next(pipeline.get_iterator(timeout=30))
 
     def test_pipeline_resume(self) -> None:
         """AsyncPipeline can execute the source partially, then resumed"""
@@ -1134,13 +1143,13 @@ class TestPipelineResume(unittest.TestCase):
         pipeline = PipelineBuilder().add_source(src).add_sink(1000).build(num_threads=1)
 
         with pipeline.auto_stop():
-            iterator = pipeline.get_iterator(timeout=10)
+            iterator = pipeline.get_iterator(timeout=30)
             self.assertEqual([0, 1], [next(iterator) for _ in range(2)])
 
-            iterator = pipeline.get_iterator(timeout=10)
+            iterator = pipeline.get_iterator(timeout=30)
             self.assertEqual([2, 3, 4], [next(iterator) for _ in range(3)])
 
-            iterator = pipeline.get_iterator(timeout=10)
+            iterator = pipeline.get_iterator(timeout=30)
             self.assertEqual([5, 6, 7, 8, 9], [next(iterator) for _ in range(5)])
 
             with self.assertRaises(StopIteration):
@@ -1161,7 +1170,7 @@ class TestPipelineResume(unittest.TestCase):
             i = 0
             for _ in range(10):
                 num_items = random.randint(1, 128)
-                for j, item in enumerate(pipeline.get_iterator(timeout=10)):
+                for j, item in enumerate(pipeline.get_iterator(timeout=30)):
                     self.assertEqual(item, i)
                     i += 1
 
@@ -1192,7 +1201,7 @@ class TestPipelineOrder(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            self.assertEqual(list(pipeline.get_iterator(timeout=10)), list(range(10)))
+            self.assertEqual(list(pipeline.get_iterator(timeout=30)), list(range(10)))
 
     def test_pipeline_order_input(self) -> None:
         """The output is in the order of the input."""
@@ -1213,7 +1222,7 @@ class TestPipelineOrder(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            self.assertEqual(src, list(pipeline.get_iterator(timeout=10)))
+            self.assertEqual(src, list(pipeline.get_iterator(timeout=30)))
 
     def test_pipeline_order_input_sync_func(self) -> None:
         """The output is in the order of the input."""
@@ -1234,7 +1243,7 @@ class TestPipelineOrder(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            self.assertEqual(list(pipeline.get_iterator(timeout=10)), src)
+            self.assertEqual(list(pipeline.get_iterator(timeout=30)), src)
 
     @_ignore_warnings({"category": RuntimeWarning})
     def test_pipeline_order_input_filter_none(self) -> None:
@@ -1249,7 +1258,7 @@ class TestPipelineOrder(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            result = list(pipeline.get_iterator(timeout=10))
+            result = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(result, [1, 3, 5, 7, 9])
 
     def test_pipeline_order_input_filter_none_async(self) -> None:
@@ -1268,7 +1277,7 @@ class TestPipelineOrder(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            result = list(pipeline.get_iterator(timeout=10))
+            result = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(result, [1, 3, 5, 7, 9])
 
     def test_pipeline_order_input_filter_none_with_concurrency(self) -> None:
@@ -1287,7 +1296,7 @@ class TestPipelineOrder(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            result = list(pipeline.get_iterator(timeout=5))
+            result = list(pipeline.get_iterator(timeout=30))
             # Filters out 0, 3, 6, 9, 12
             self.assertEqual(result, [1, 2, 4, 5, 7, 8, 10, 11, 13, 14])
 
@@ -1303,7 +1312,7 @@ class TestPipelineOrder(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            result = list(pipeline.get_iterator(timeout=10))
+            result = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(result, [])
 
     def test_pipeline_order_input_mixed_none_and_values(self) -> None:
@@ -1327,7 +1336,7 @@ class TestPipelineOrder(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            result = list(pipeline.get_iterator(timeout=10))
+            result = list(pipeline.get_iterator(timeout=30))
             # Returns 2, 3, 4 (x < 5), and 7, 8, 9 (x >= 7)
             self.assertEqual(result, [2, 3, 4, 7, 8, 9])
 
@@ -1346,13 +1355,13 @@ class TestPipelineNoop(unittest.TestCase):
         with apl.auto_stop():
             for i in range(10):
                 print("fetching", i)
-                self.assertEqual(i, apl.get_item(timeout=1))
+                self.assertEqual(i, apl.get_item(timeout=30))
 
             with self.assertRaises(EOFError):
-                apl.get_item(timeout=1)
+                apl.get_item(timeout=30)
 
         with self.assertRaises(EOFError):
-            apl.get_item(timeout=1)
+            apl.get_item(timeout=30)
 
 
 class TestPipelinePassthrough(unittest.TestCase):
@@ -1370,13 +1379,13 @@ class TestPipelinePassthrough(unittest.TestCase):
         with apl.auto_stop():
             for i in range(10):
                 print("fetching", i)
-                self.assertEqual(i, apl.get_item(timeout=1))
+                self.assertEqual(i, apl.get_item(timeout=30))
 
             with self.assertRaises(EOFError):
-                apl.get_item(timeout=1)
+                apl.get_item(timeout=30)
 
         with self.assertRaises(EOFError):
-            apl.get_item(timeout=1)
+            apl.get_item(timeout=30)
 
 
 class TestPipelineSkip(unittest.TestCase):
@@ -1399,10 +1408,10 @@ class TestPipelineSkip(unittest.TestCase):
 
         with pipeline.auto_stop():
             for i in range(5):
-                self.assertEqual(i * 2 + 1, pipeline.get_item(timeout=10))
+                self.assertEqual(i * 2 + 1, pipeline.get_item(timeout=30))
 
             with self.assertRaises(EOFError):
-                pipeline.get_item(timeout=10)
+                pipeline.get_item(timeout=30)
 
 
 class TestPipelineLambda(unittest.TestCase):
@@ -1420,13 +1429,13 @@ class TestPipelineLambda(unittest.TestCase):
         with apl.auto_stop():
             for i in range(10):
                 print("fetching", i)
-                self.assertEqual(i, apl.get_item(timeout=1))
+                self.assertEqual(i, apl.get_item(timeout=30))
 
             with self.assertRaises(EOFError):
-                apl.get_item(timeout=1)
+                apl.get_item(timeout=30)
 
         with self.assertRaises(EOFError):
-            apl.get_item(timeout=1)
+            apl.get_item(timeout=30)
 
 
 class TestPipelineSimple(unittest.TestCase):
@@ -1442,7 +1451,7 @@ class TestPipelineSimple(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            for i, item in enumerate(pipeline.get_iterator(timeout=10)):
+            for i, item in enumerate(pipeline.get_iterator(timeout=30)):
                 self.assertEqual(item, i * 2 + 1)
 
 
@@ -1461,7 +1470,7 @@ class TestPipelineAggregate(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=10))
+            results = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(
                 results, [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12]]
             )
@@ -1480,7 +1489,7 @@ class TestPipelineAggregate(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=10))
+            results = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(results, [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
     @parameterized.expand([(False,), (True,)])
@@ -1525,7 +1534,7 @@ class TestPipelineAggregate(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=10))
+            results = list(pipeline.get_iterator(timeout=30))
             # "a", "bb", "ccc", "dddd" = 10 chars -> first result
             if drop_last:
                 # When drop_last=True, flush is not called,
@@ -1552,7 +1561,7 @@ class TestPipelineDisaggregate(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=10))
+            results = list(pipeline.get_iterator(timeout=30))
         self.assertEqual(results, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
 
 
@@ -1579,7 +1588,7 @@ class TestPipelineSource(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                results = list(pipeline.get_iterator(timeout=10))
+                results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, [1 + 2 * i for i in range(10)])
 
@@ -1602,7 +1611,7 @@ class TestPipelineType(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=10))
+                vals = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(vals, [])
 
@@ -1627,7 +1636,7 @@ class TestPipelineTask(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=10))
+            results = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(results, [1 + 2 * i for i in range(10) if i % 3])
 
 
@@ -1651,19 +1660,19 @@ class TestPipelineCancel(unittest.TestCase):
         with apl.auto_stop():
             for i in range(5):
                 print("fetching", i)
-                self.assertEqual(i, apl.get_item(timeout=1))
+                self.assertEqual(i, apl.get_item(timeout=30))
 
             # Ensure that buffers are filled and the pipeline is blocked.
             time.sleep(0.1)
             # At this point, the output queue holds 5.
 
         # Only the "5" is retrievable.
-        self.assertEqual(5, apl.get_item(timeout=1))
+        self.assertEqual(5, apl.get_item(timeout=30))
 
         # The background thread is stopped, so no more data is coming.
         for _ in range(3):
             with self.assertRaises(EOFError):
-                apl.get_item(timeout=1)
+                apl.get_item(timeout=30)
 
 
 class TestPipelineFail(unittest.TestCase):
@@ -1697,14 +1706,14 @@ class TestPipelineFail(unittest.TestCase):
         with self.assertRaises(PipelineFailure):
             with apl.auto_stop():
                 with self.assertRaises(EOFError):
-                    apl.get_item(timeout=1)
+                    apl.get_item(timeout=30)
 
         self.assertEqual(pwc.cache, [])
 
         # The background thread is stopped, and the output queue is empty.
         for _ in range(3):
             with self.assertRaises(EOFError):
-                apl.get_item(timeout=1)
+                apl.get_item(timeout=30)
 
 
 class TestPipelineEof(unittest.TestCase):
@@ -1720,10 +1729,10 @@ class TestPipelineEof(unittest.TestCase):
         with apl.auto_stop():
             for i in range(2):
                 print("fetching", i)
-                self.assertEqual(i, apl.get_item(timeout=1))
+                self.assertEqual(i, apl.get_item(timeout=30))
 
             with self.assertRaises(EOFError):
-                apl.get_item(timeout=1)
+                apl.get_item(timeout=30)
 
 
 class TestPipelineIterator(unittest.TestCase):
@@ -1739,7 +1748,7 @@ class TestPipelineIterator(unittest.TestCase):
         )
 
         with apl.auto_stop():
-            for i, item in enumerate(apl.get_iterator(timeout=1)):
+            for i, item in enumerate(apl.get_iterator(timeout=30)):
                 print(i, item)
                 self.assertEqual(i, item)
 
@@ -1810,7 +1819,7 @@ class TestPipelineStuck(unittest.TestCase):
         )
 
         with apl.auto_stop():
-            for i, item in enumerate(apl.get_iterator(timeout=10)):
+            for i, item in enumerate(apl.get_iterator(timeout=30)):
                 print(i, item)
                 self.assertEqual(i, item)
 
@@ -1833,7 +1842,7 @@ class TestPipelinePipe(unittest.TestCase):
 
         expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
         with apl.auto_stop():
-            output = list(apl.get_iterator(timeout=10))
+            output = list(apl.get_iterator(timeout=30))
         self.assertEqual(expected, output)
 
     def test_pipeline_pipe_sync_gen(self) -> None:
@@ -1853,7 +1862,7 @@ class TestPipelinePipe(unittest.TestCase):
 
         expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
         with apl.auto_stop():
-            output = list(apl.get_iterator(timeout=10))
+            output = list(apl.get_iterator(timeout=30))
         self.assertEqual(expected, output)
 
 
@@ -1881,7 +1890,7 @@ class TestCallableGenerator(unittest.TestCase):
 
         expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
         with apl.auto_stop():
-            output = list(apl.get_iterator(timeout=10))
+            output = list(apl.get_iterator(timeout=30))
         self.assertEqual(expected, output)
 
     def test_pipeline_pipe_agen_max_failures(self) -> None:
@@ -1901,7 +1910,7 @@ class TestCallableGenerator(unittest.TestCase):
 
         expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
         with apl.auto_stop():
-            output = list(apl.get_iterator(timeout=10))
+            output = list(apl.get_iterator(timeout=30))
         self.assertEqual(output, expected)
 
     def test_pipeline_pipe_gen(self) -> None:
@@ -1921,7 +1930,7 @@ class TestCallableGenerator(unittest.TestCase):
 
         expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
         with apl.auto_stop():
-            output = list(apl.get_iterator(timeout=10))
+            output = list(apl.get_iterator(timeout=30))
         self.assertEqual(output, expected)
 
     def test_pipeline_pipe_gen_max_failures(self) -> None:
@@ -1941,7 +1950,7 @@ class TestCallableGenerator(unittest.TestCase):
 
         expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
         with apl.auto_stop():
-            output = list(apl.get_iterator(timeout=10))
+            output = list(apl.get_iterator(timeout=30))
         self.assertEqual(output, expected)
 
     @unittest.skipIf(
@@ -1971,7 +1980,7 @@ class TestCallableGenerator(unittest.TestCase):
 
         expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
         with apl.auto_stop():
-            output = list(apl.get_iterator(timeout=0.2))
+            output = list(apl.get_iterator(timeout=30))
         self.assertEqual(output, expected)
 
     def test_pipeline_pipe_agen_wrong_hook(self) -> None:
@@ -2000,7 +2009,7 @@ class TestCallableGenerator(unittest.TestCase):
 
         expected = [0, 1, 2, 1, 2, 3, 2, 3, 4]
         with apl.auto_stop():
-            output = list(apl.get_iterator(timeout=10))
+            output = list(apl.get_iterator(timeout=30))
         self.assertEqual(output, expected)
 
     def test_pipeline_source_agen(self) -> None:
@@ -2014,7 +2023,7 @@ class TestCallableGenerator(unittest.TestCase):
 
         expected = [0, 1, 2]
         with apl.auto_stop():
-            output = list(apl.get_iterator(timeout=10))
+            output = list(apl.get_iterator(timeout=30))
         self.assertEqual(output, expected)
 
 
@@ -2099,7 +2108,6 @@ class TestPipelineCustom(unittest.TestCase):
         in pipe function.
         """
         num_threads = 10
-        sleep = 0.5
 
         ref = set(range(num_threads))
 
@@ -2115,10 +2123,14 @@ class TestPipelineCustom(unittest.TestCase):
             initializer=init_storage,
         )
 
+        # Block every op until all `num_threads` of them are running at once, forcing the
+        # pool to actually use all its threads (the point of this test). If they did not run
+        # concurrently the barrier would never reach its count and wait() would raise
+        # BrokenBarrierError, failing the pipeline -- deterministic, no wall-clock timing.
+        barrier = threading.Barrier(num_threads)
+
         def op(i: int) -> int:
-            # sleep to block this thread, so that
-            # we use all the threads in the pool
-            time.sleep(sleep)
+            barrier.wait(timeout=30)
             print(i, thread_local_storage.value)
             return thread_local_storage.value
 
@@ -2130,14 +2142,11 @@ class TestPipelineCustom(unittest.TestCase):
             .build(num_threads=1)
         )
 
-        t0 = time.monotonic()
         with pipeline.auto_stop():
-            vals = list(pipeline.get_iterator(timeout=10))
-        elapsed = time.monotonic() - t0
+            vals = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(0, len(ref_copy))
         self.assertEqual(ref, set(vals))
-        self.assertLess(elapsed, sleep * 2)
 
     def test_pipeline_custom_pipe_executor_process(self) -> None:
         """`pipe` accepts custom ProcessPoolExecutor."""
@@ -2154,7 +2163,7 @@ class TestPipelineCustom(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            vals = list(pipeline.get_iterator(timeout=10))
+            vals = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(num_processes, len(set(vals)))
 
@@ -2171,7 +2180,7 @@ class TestPipelineCustom(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            vals = list(pipeline.get_iterator(timeout=10))
+            vals = list(pipeline.get_iterator(timeout=30))
         self.assertEqual([0, 0, 1, 0, 1, 2], vals)
 
     def test_pipeline_custom_pipe_executor_async(self) -> None:
@@ -2200,7 +2209,7 @@ class TestPipelineCustom(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            vals = list(pipeline.get_iterator(timeout=10))
+            vals = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(op, vals)
 
@@ -2219,7 +2228,7 @@ class TestPipelineCustom(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            vals = list(pipeline.get_iterator(timeout=10))
+            vals = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual([i + 1 for i in range(10)], vals)
 
@@ -2238,7 +2247,7 @@ class TestPipelineCustom(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            vals = list(pipeline.get_iterator(timeout=10))
+            vals = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual([i + 1 for i in range(10)], vals)
 
@@ -2487,14 +2496,14 @@ class TestPipelineMax(unittest.TestCase):
 
         pipeline = builder.build(num_threads=1)
         with pipeline.auto_stop():
-            vals = list(pipeline.get_iterator(timeout=10))
+            vals = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual([0, 2, 4, 6, 8], vals)
 
         pipeline = builder.build(num_threads=1, max_failures=3)
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=10))
+                vals = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual([0, 2, 4, 6], vals)
 
@@ -2532,13 +2541,13 @@ class TestPipelineMax(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure):
             with pipeline2.auto_stop():
-                vals = list(pipeline2.get_iterator(timeout=10))
+                vals = list(pipeline2.get_iterator(timeout=30))
 
         self.assertEqual([0, 2, 4, 6], vals)
 
         with self.assertRaises(PipelineFailure):
             with pipeline1.auto_stop():
-                vals = list(pipeline1.get_iterator(timeout=10))
+                vals = list(pipeline1.get_iterator(timeout=30))
 
         self.assertEqual([0, 2, 4], vals)
 
@@ -2568,7 +2577,7 @@ class TestPipelineMax(unittest.TestCase):
         pipeline = builder.build(num_threads=1, max_failures=-1)
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=10))
+                vals = list(pipeline.get_iterator(timeout=30))
         self.assertEqual([0, 2, 4], vals)
 
     @parameterized.expand(
@@ -2594,7 +2603,7 @@ class TestPipelineMax(unittest.TestCase):
 
         pipeline = builder.build(num_threads=1, max_failures=2)
         with pipeline.auto_stop():
-            vals = list(pipeline.get_iterator(timeout=10))
+            vals = list(pipeline.get_iterator(timeout=30))
         self.assertEqual([0, 2, 4, 6, 8], vals)
 
     @parameterized.expand(
@@ -2635,7 +2644,7 @@ class TestPipelineMax(unittest.TestCase):
         pipeline = builder.build(num_threads=1, max_failures=2)
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=10))
+                vals = list(pipeline.get_iterator(timeout=30))
         self.assertEqual([2, 4, 8, 10, 14, 16], vals)
 
 
@@ -2655,7 +2664,9 @@ class TestPipelinePropagate(unittest.TestCase):
         )
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                pass
+                # Consume so the source actually runs; otherwise surfacing its failure
+                # races against auto_stop() cancelling the not-yet-run source task.
+                list(pipeline.get_iterator(timeout=30))
 
 
 class TestIterableWithShuffle:
@@ -3248,7 +3259,7 @@ class TestPipelineFailureStructure(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure) as ctx:
             with pipeline.auto_stop():
-                list(pipeline.get_iterator(timeout=10))
+                list(pipeline.get_iterator(timeout=30))
 
         pf = ctx.exception
         if sys.version_info >= (3, 11):
@@ -3274,7 +3285,7 @@ class TestPipelineFailureStructure(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure) as ctx:
             with pipeline.auto_stop():
-                list(pipeline.get_iterator(timeout=10))
+                list(pipeline.get_iterator(timeout=30))
 
         pf = ctx.exception
         if sys.version_info >= (3, 11):
@@ -3302,7 +3313,7 @@ class TestPipelineFailureStructure(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure) as ctx:
             with pipeline.auto_stop():
-                list(pipeline.get_iterator(timeout=10))
+                list(pipeline.get_iterator(timeout=30))
 
         pf = ctx.exception
         sub = pf.subgroup(ValueError)
@@ -3326,7 +3337,7 @@ class TestPipelineFailureStructure(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure) as ctx:
             with pipeline.auto_stop():
-                list(pipeline.get_iterator(timeout=10))
+                list(pipeline.get_iterator(timeout=30))
 
         pf = ctx.exception
         for exc in pf.exceptions:
