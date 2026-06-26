@@ -22,6 +22,7 @@
 #include <nanobind/stl/vector.h>
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace nb = nanobind;
 
