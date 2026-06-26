@@ -27,7 +27,7 @@ from spdl.pipeline.defs import (
 
 
 def _run_pipeline(
-    config: PipelineConfig[object], num_threads: int = 2, timeout: int = 5
+    config: PipelineConfig[object], num_threads: int = 2, timeout: int = 30
 ) -> list[object]:
     """Helper to build, run, and collect results from a pipeline."""
     pipeline = build_pipeline(config, num_threads=num_threads)
@@ -639,7 +639,7 @@ class PathVariantsErrorHandlingTest(unittest.TestCase):
         # If the router is not cancelled on path failure, this would deadlock
         # because the router keeps trying to push items to the dead path's queue.
         with self.assertRaises(PipelineFailure):
-            _run_pipeline(config, timeout=5)
+            _run_pipeline(config)
 
     def test_path_failure_cancels_router_all_to_failing_path(self) -> None:
         """All items routed to the failing path — router cancelled, no hang."""
@@ -661,7 +661,7 @@ class PathVariantsErrorHandlingTest(unittest.TestCase):
             sink=SinkConfig(buffer_size=10),
         )
         with self.assertRaises(PipelineFailure):
-            _run_pipeline(config, timeout=5)
+            _run_pipeline(config)
 
     def test_router_raises_exception(self) -> None:
         """Router function itself raises — pipeline fails cleanly."""

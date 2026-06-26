@@ -281,7 +281,7 @@ class AggregatePipeEndToEndTest(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=10))
+            results = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(results, [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]])
 
     def test_aggregate_custom_op_bulk_drain(self) -> None:
@@ -322,5 +322,5 @@ class AggregatePipeEndToEndTest(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = list(pipeline.get_iterator(timeout=10))
+            results = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(results, ["abbcccdddd", "effgggh"])

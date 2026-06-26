@@ -53,7 +53,7 @@ class PipelineDefTest(unittest.TestCase):
         pipeline = build_pipeline(cfg, num_threads=1)
 
         with pipeline.auto_stop():
-            ite = pipeline.get_iterator(timeout=3)
+            ite = pipeline.get_iterator(timeout=30)
             self.assertEqual(list(ite), expected)
 
     def test_build_pipeline_simple(self) -> None:

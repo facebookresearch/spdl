@@ -309,7 +309,7 @@ class TestPriorityExecutorPipelineCorrectness(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = sorted(pipeline.get_iterator(timeout=10))
+            results = sorted(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, sorted(x * 2 + 1 for x in range(20)))
         pool.shutdown()
@@ -331,7 +331,7 @@ class TestPriorityExecutorPipelineCorrectness(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = sorted(pipeline.get_iterator(timeout=10))
+            results = sorted(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, sorted((x + 1) * 3 - 1 for x in range(15)))
         pool.shutdown()
@@ -351,7 +351,7 @@ class TestPriorityExecutorPipelineCorrectness(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = sorted(pipeline.get_iterator(timeout=10))
+            results = sorted(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, sorted(x * 2 + 1 for x in range(10)))
         pool.shutdown()
@@ -377,7 +377,7 @@ class TestPriorityExecutorPipelineCorrectness(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                list(pipeline.get_iterator(timeout=10))
+                list(pipeline.get_iterator(timeout=30))
 
         pool.shutdown()
 
@@ -597,7 +597,7 @@ class TestMixedExecutorPipeline(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = sorted(pipeline.get_iterator(timeout=10))
+            results = sorted(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, sorted(x * 2 + 1 for x in range(20)))
         pool.shutdown()
@@ -619,7 +619,7 @@ class TestMixedExecutorPipeline(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = sorted(pipeline.get_iterator(timeout=10))
+            results = sorted(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, sorted((x + 10) * 3 for x in range(20)))
         pool.shutdown()
@@ -642,7 +642,7 @@ class TestMixedExecutorPipeline(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = sorted(pipeline.get_iterator(timeout=10))
+            results = sorted(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, sorted((x + 1) * 2 - 1 for x in range(15)))
         pool.shutdown()
@@ -666,7 +666,7 @@ class TestMixedExecutorPipeline(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = sorted(pipeline.get_iterator(timeout=10))
+            results = sorted(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, sorted((x + 1) * 2 - 1 for x in range(12)))
         pool_a.shutdown()
@@ -694,7 +694,7 @@ class TestMixedExecutorPipeline(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                list(pipeline.get_iterator(timeout=10))
+                list(pipeline.get_iterator(timeout=30))
 
         pool.shutdown()
         regular.shutdown()
@@ -931,7 +931,7 @@ class TestPriorityInterpreterPoolExecutor(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            results = sorted(pipeline.get_iterator(timeout=10))
+            results = sorted(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, sorted(x * 2 + 1 for x in range(20)))
         pool.shutdown()

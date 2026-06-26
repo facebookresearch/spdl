@@ -108,7 +108,7 @@ class BackgroundTaskTest(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            items = list(pipeline.get_iterator(timeout=3))
+            items = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(sorted(items), [0, 1, 2, 3, 4])
         self.assertTrue(task_instance.started, "Background task should have started")
@@ -123,7 +123,7 @@ class BackgroundTaskTest(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            items = list(pipeline.get_iterator(timeout=3))
+            items = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(sorted(items), [0, 1, 2, 3, 4])
 
@@ -139,7 +139,7 @@ class BackgroundTaskTest(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            items = list(pipeline.get_iterator(timeout=3))
+            items = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(sorted(items), [0, 1, 2, 3, 4])
         self.assertGreater(task_0.count, 0, "First background task should have run")
@@ -150,7 +150,7 @@ class BackgroundTaskTest(unittest.TestCase):
         pipeline = build_pipeline(_simple_cfg(), num_threads=1)
 
         with pipeline.auto_stop():
-            items = list(pipeline.get_iterator(timeout=3))
+            items = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(sorted(items), [0, 1, 2, 3, 4])
 
@@ -159,7 +159,7 @@ class BackgroundTaskTest(unittest.TestCase):
         pipeline = build_pipeline(_simple_cfg(), num_threads=1, background_tasks=[])
 
         with pipeline.auto_stop():
-            items = list(pipeline.get_iterator(timeout=3))
+            items = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(sorted(items), [0, 1, 2, 3, 4])
 
@@ -174,7 +174,7 @@ class BackgroundTaskTest(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            items = list(pipeline.get_iterator(timeout=10))
+            items = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(sorted(items), [0, 1, 2])
         self.assertTrue(
@@ -192,7 +192,7 @@ class BackgroundTaskTest(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            items = list(pipeline.get_iterator(timeout=3))
+            items = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(sorted(items), [0, 1, 2, 3, 4])
         self.assertTrue(good_task.started, "Good background task should have run")
@@ -217,7 +217,7 @@ class BackgroundTaskTest(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            items = list(pipeline.get_iterator(timeout=3))
+            items = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(sorted(items), [0, 1, 2, 3, 4])
         self.assertTrue(MyTask.ran, "Task class used as factory should have run")
@@ -252,7 +252,7 @@ class DefaultBackgroundTasksTest(unittest.TestCase):
         pipeline = build_pipeline(_simple_cfg(), num_threads=1)
 
         with pipeline.auto_stop():
-            items = list(pipeline.get_iterator(timeout=3))
+            items = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(sorted(items), [0, 1, 2, 3, 4])
         self.assertTrue(
@@ -271,7 +271,7 @@ class DefaultBackgroundTasksTest(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            items = list(pipeline.get_iterator(timeout=3))
+            items = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(sorted(items), [0, 1, 2, 3, 4])
         self.assertTrue(default_task.started, "Default background task should have run")

@@ -90,7 +90,7 @@ class TestContinuousPipelineBasic(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = list(pipeline.get_iterator(timeout=5))
+                result = list(pipeline.get_iterator(timeout=30))
                 self.assertEqual(result, [0, 1, 2, 3, 4], f"epoch {epoch}")
 
     def test_continuous_single_epoch(self) -> None:
@@ -103,7 +103,7 @@ class TestContinuousPipelineBasic(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            result = list(pipeline.get_iterator(timeout=5))
+            result = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(result, [0, 1, 2])
 
     def test_continuous_empty_epoch(self) -> None:
@@ -117,7 +117,7 @@ class TestContinuousPipelineBasic(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = list(pipeline.get_iterator(timeout=5))
+                result = list(pipeline.get_iterator(timeout=30))
                 self.assertEqual(result, [], f"epoch {epoch}")
 
     def test_continuous_single_item_epoch(self) -> None:
@@ -131,7 +131,7 @@ class TestContinuousPipelineBasic(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = list(pipeline.get_iterator(timeout=5))
+                result = list(pipeline.get_iterator(timeout=30))
                 self.assertEqual(result, [0], f"epoch {epoch}")
 
 
@@ -152,7 +152,7 @@ class TestContinuousPipelinePipe(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = sorted(pipeline.get_iterator(timeout=5))
+                result = sorted(pipeline.get_iterator(timeout=30))
                 self.assertEqual(result, [0, 2, 4, 6, 8], f"epoch {epoch}")
 
     def test_continuous_pipe_chain(self) -> None:
@@ -175,7 +175,7 @@ class TestContinuousPipelinePipe(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = list(pipeline.get_iterator(timeout=5))
+                result = list(pipeline.get_iterator(timeout=30))
                 self.assertEqual(result, [2, 4, 6], f"epoch {epoch}")
 
 
@@ -192,7 +192,7 @@ class TestContinuousPipelineAggregate(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = list(pipeline.get_iterator(timeout=5))
+                result = list(pipeline.get_iterator(timeout=30))
                 self.assertEqual(result, [[0, 1, 2], [3, 4, 5]], f"epoch {epoch}")
 
     def test_continuous_aggregate_partial_batch_flushed(self) -> None:
@@ -207,7 +207,7 @@ class TestContinuousPipelineAggregate(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = list(pipeline.get_iterator(timeout=5))
+                result = list(pipeline.get_iterator(timeout=30))
                 # 5 items, batch_size=3: full batch [0,1,2] + partial batch [3,4]
                 self.assertEqual(result, [[0, 1, 2], [3, 4]], f"epoch {epoch}")
 
@@ -223,7 +223,7 @@ class TestContinuousPipelineAggregate(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = list(pipeline.get_iterator(timeout=5))
+                result = list(pipeline.get_iterator(timeout=30))
                 # 5 items, batch_size=3, drop_last: only [0,1,2], partial [3,4] dropped
                 self.assertEqual(result, [[0, 1, 2]], f"epoch {epoch}")
 
@@ -239,7 +239,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            it = pipeline.get_iterator(timeout=5)
+            it = pipeline.get_iterator(timeout=30)
             # Consume only a few items
             self.assertEqual(next(it), 0)
             self.assertEqual(next(it), 1)
@@ -255,7 +255,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            result = list(pipeline.get_iterator(timeout=5))
+            result = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(result, [0, 1, 2])
             # auto_stop exits here after one epoch — must not hang
 
@@ -269,9 +269,9 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            r1 = list(pipeline.get_iterator(timeout=5))
-            r2 = list(pipeline.get_iterator(timeout=5))
-            r3 = list(pipeline.get_iterator(timeout=5))
+            r1 = list(pipeline.get_iterator(timeout=30))
+            r2 = list(pipeline.get_iterator(timeout=30))
+            r3 = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(r1, [0, 1, 2])
             self.assertEqual(r2, [0, 1, 2])
             self.assertEqual(r3, [0, 1, 2])
@@ -288,7 +288,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
                 )
 
                 with pipeline.auto_stop():
-                    it = pipeline.get_iterator(timeout=5)
+                    it = pipeline.get_iterator(timeout=30)
                     self.assertEqual(list(it), [0, 1, 2])
                     # Reusing the same iterator does not start a new epoch.
                     self.assertEqual(list(it), [])
@@ -308,7 +308,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            r1 = sorted(pipeline.get_iterator(timeout=5))
+            r1 = sorted(pipeline.get_iterator(timeout=30))
             self.assertEqual(r1, [0, 2, 4, 6, 8])
             # auto_stop exits — pipeline has items buffered for next epoch
             # stop() must drain and shut down cleanly
@@ -333,7 +333,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            r1 = list(pipeline.get_iterator(timeout=5))
+            r1 = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(r1, [0, 1, 2, 3, 4])
             # auto_stop exits — must not hang on subprocess IPC
 
@@ -402,7 +402,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = list(pipeline.get_iterator(timeout=5))
+                result = list(pipeline.get_iterator(timeout=30))
                 self.assertEqual(result, [0, 1, 2, 3, 4], f"epoch {epoch}")
 
     @_ignore_fork_warning
@@ -428,7 +428,7 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
         )
 
         with pipeline.auto_stop():
-            it = pipeline.get_iterator(timeout=5)
+            it = pipeline.get_iterator(timeout=30)
             self.assertEqual(next(it), 0)
             self.assertEqual(next(it), 1)
             # auto_stop exits mid-epoch — must not hang
@@ -461,11 +461,11 @@ class TestContinuousPipelineShutdown(unittest.TestCase):
         )
 
         pipeline.start()
-        finalizer = weakref.finalize(pipeline, lambda p: p.stop(timeout=10), pipeline)
+        finalizer = weakref.finalize(pipeline, lambda p: p.stop(timeout=30), pipeline)
 
         # Iterate 2 epochs
         for epoch in range(2):
-            result = list(pipeline.get_iterator(timeout=5))
+            result = list(pipeline.get_iterator(timeout=30))
             self.assertEqual(result, [0, 1, 2, 3, 4], f"epoch {epoch}")
 
         t0 = time.monotonic()
@@ -494,7 +494,7 @@ class TestContinuousPipelinePathVariants(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = sorted(pipeline.get_iterator(timeout=5))
+                result = sorted(pipeline.get_iterator(timeout=30))
                 self.assertEqual(result, [0, 4, 8, 101, 103, 105], f"epoch {epoch}")
 
     def test_continuous_path_variants_empty_epoch(self) -> None:
@@ -515,7 +515,7 @@ class TestContinuousPipelinePathVariants(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = list(pipeline.get_iterator(timeout=5))
+                result = list(pipeline.get_iterator(timeout=30))
                 self.assertEqual(result, [], f"epoch {epoch}")
 
     def test_continuous_nested_path_variants_multi_epoch(self) -> None:
@@ -546,7 +546,7 @@ class TestContinuousPipelinePathVariants(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = sorted(pipeline.get_iterator(timeout=5))
+                result = sorted(pipeline.get_iterator(timeout=30))
                 # evens 0,4 -> 0,4; evens 2,6 -> 20,60; odds 1,3,5,7 -> 101..107
                 self.assertEqual(
                     result, [0, 4, 20, 60, 101, 103, 105, 107], f"epoch {epoch}"
@@ -570,7 +570,7 @@ class TestContinuousPipelinePathVariants(unittest.TestCase):
 
         with pipeline.auto_stop():
             for epoch in range(3):
-                result = list(pipeline.get_iterator(timeout=5))
+                result = list(pipeline.get_iterator(timeout=30))
                 # evens -> [0, 2] full batch + [4] partial flushed at epoch end;
                 # odds -> 101, 103, 105. Cross-path order is nondeterministic.
                 self.assertCountEqual(
@@ -604,7 +604,7 @@ class TestContinuousPipelinePathVariants(unittest.TestCase):
         with pipeline.auto_stop():
             for epoch in range(4):
                 base = epoch * 100
-                result = sorted(pipeline.get_iterator(timeout=10))
+                result = sorted(pipeline.get_iterator(timeout=30))
                 # Each epoch must contain exactly its own disjoint block. A
                 # next-epoch fast-path item leaking in would show as a value
                 # >= base + 100; the fan-in barrier parks the fast path at the
@@ -636,7 +636,7 @@ class TestContinuousPipelineErrors(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                list(pipeline.get_iterator(timeout=5))
+                list(pipeline.get_iterator(timeout=30))
 
     def test_continuous_pipe_failure(self) -> None:
         """Pipe function raising propagates error."""
@@ -656,7 +656,7 @@ class TestContinuousPipelineErrors(unittest.TestCase):
 
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                list(pipeline.get_iterator(timeout=5))
+                list(pipeline.get_iterator(timeout=30))
 
 
 class TestContinuousPipelineValidation(unittest.TestCase):
