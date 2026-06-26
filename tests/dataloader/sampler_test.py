@@ -7,10 +7,13 @@
 # pyre-strict
 
 import functools
+import multiprocessing as mp
+import pickle
+import random
 import unittest
 import warnings
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from functools import partial
 from typing import TypeVar
 
@@ -508,3 +511,173 @@ class TestDistributedSamplerIterateInSubprocess(unittest.TestCase):
             self.assertEqual(hyp, ref)
             self.assertNotEqual(hyp, previous)
             previous = hyp
+
+
+# ---------------------------------------------------------------------------
+# Sampler contract: identical output is preserved across the subprocess
+# boundary, *regardless of how* the sampler implements its determinism.
+#
+# Today the cross-process equivalence happens to fall out of NumPy's seeded
+# ``Generator`` being a pure function of the stored seed -- but that is an
+# implementation detail. These tests pin the observable contract directly so
+# that an implementation change which breaks it (e.g. switching to a global RNG,
+# or capturing process-local / non-picklable state) is caught regardless of how
+# determinism is achieved.
+# ---------------------------------------------------------------------------
+_SAMPLER_N = 24
+_SAMPLER_SEED = 7
+_TIMEOUT = 60.0
+
+
+def _build_random_sampler() -> Iterable[int]:
+    """A plain (unshuffled) random sampler -- same sequence every epoch."""
+    return DistributedRandomSampler(
+        _SAMPLER_N, rank=0, world_size=1, seed=_SAMPLER_SEED
+    )
+
+
+def _build_weighted_sampler() -> Iterable[int]:
+    """A weighted random sampler (draws with replacement)."""
+    return DistributedRandomSampler(
+        _SAMPLER_N,
+        rank=0,
+        world_size=1,
+        weights=[1.0] * _SAMPLER_N,
+        num_draws=_SAMPLER_N,
+        seed=_SAMPLER_SEED,
+    )
+
+
+def _build_deterministic_sampler() -> Iterable[int]:
+    """A deterministic (round-robin) sampler -- no randomness at all."""
+    return DistributedDeterministicSampler(_SAMPLER_N, rank=0, world_size=1)
+
+
+def _build_shuffled_sampler() -> Iterable[int]:
+    """A random sampler that reshuffles itself each epoch via ``embed_shuffle``."""
+    return embed_shuffle(
+        DistributedRandomSampler(_SAMPLER_N, rank=0, world_size=1, seed=_SAMPLER_SEED)
+    )
+
+
+_BUILDERS: dict[str, Callable[[], Iterable[int]]] = {
+    "random": _build_random_sampler,
+    "weighted": _build_weighted_sampler,
+    "deterministic": _build_deterministic_sampler,
+    "shuffled": _build_shuffled_sampler,
+}
+
+
+def _collect_epochs(source: Iterable[int], num_epochs: int) -> list[list[int]]:
+    """Iterate ``source`` ``num_epochs`` times, returning one index list per epoch."""
+    return [list(source) for _ in range(num_epochs)]
+
+
+def _perturb_global_rngs() -> None:
+    """Advance the global RNGs to a state unrelated to any sampler seed.
+
+    A sampler whose output depends only on its own (seeded) state must be
+    completely unaffected by this. Only ``numpy`` (the legacy global RNG) and
+    stdlib ``random`` are perturbed -- those are the global generators a sampler
+    could plausibly start drawing from.
+    """
+    random.seed(0x0BADC0DE)
+    [random.random() for _ in range(64)]
+    # numpy's stub types ``seed`` as a sequence/array; pass a single-element seq.
+    np.random.seed([0x1234])
+    np.random.rand(64)
+
+
+def _available_start_methods() -> list[str]:
+    return [m for m in ("fork", "spawn") if m in mp.get_all_start_methods()]
+
+
+class TestDistributedSamplerSubprocessContract(unittest.TestCase):
+    @parameterized.expand([("random",), ("weighted",), ("deterministic",)])
+    def test_output_invariant_to_global_rng_state(self, builder_name: str) -> None:
+        """A sampler's sequence does not depend on ambient global RNG state.
+
+        Catches a regression where the sampler starts drawing from a global RNG
+        (``random`` / ``numpy``) -- which would also silently diverge across a
+        process boundary, since the global state differs there."""
+        builder = _BUILDERS[builder_name]
+        reference = list(builder())
+
+        # Perturbed global RNGs must not change a freshly built sampler's output.
+        _perturb_global_rngs()
+        self.assertEqual(list(builder()), reference, msg=f"fresh build {builder_name}")
+
+        # Nor perturbation between construction and iteration of the same object.
+        sampler = builder()
+        _perturb_global_rngs()
+        self.assertEqual(list(sampler), reference, msg=f"same object {builder_name}")
+
+    def test_shuffle_progression_invariant_to_global_rng_state(self) -> None:
+        """Per-epoch reshuffle (``embed_shuffle``) depends only on the epoch
+        counter, not on ambient global RNG state."""
+        num_epochs = 4
+        reference = _collect_epochs(_build_shuffled_sampler(), num_epochs)
+        # The reshuffle must reorder across epochs (otherwise the test is vacuous).
+        self.assertNotEqual(reference[0], reference[1])
+
+        src = _build_shuffled_sampler()
+        got = []
+        for _ in range(num_epochs):
+            _perturb_global_rngs()
+            got.append(list(src))
+        self.assertEqual(got, reference)
+
+    @parameterized.expand(
+        [
+            (builder_name, num_epochs)
+            for builder_name in ("random", "weighted", "deterministic", "shuffled")
+            for num_epochs in (1, 3)
+        ]
+    )
+    def test_output_survives_pickle_roundtrip(
+        self, builder_name: str, num_epochs: int
+    ) -> None:
+        """Pickling then unpickling a sampler -- exactly what ``spawn`` /
+        ``forkserver`` do to move it into a worker -- preserves its full
+        multi-epoch sequence. Catches reliance on process-local or non-picklable
+        state."""
+        builder = _BUILDERS[builder_name]
+        reference = _collect_epochs(builder(), num_epochs)
+
+        restored = pickle.loads(pickle.dumps(builder()))
+        got = _collect_epochs(restored, num_epochs)
+        self.assertEqual(
+            got, reference, msg=f"builder={builder_name} num_epochs={num_epochs}"
+        )
+
+    @parameterized.expand(
+        [
+            (builder_name, start_method, num_epochs)
+            for builder_name in ("random", "weighted", "deterministic", "shuffled")
+            for start_method in _available_start_methods()
+            for num_epochs in (1, 3)
+        ]
+    )
+    @_ignore_fork_warning
+    def test_sampler_matches_in_subprocess(
+        self, builder_name: str, start_method: str, num_epochs: int
+    ) -> None:
+        """Iterating a sampler in a subprocess yields the identical per-epoch
+        sequence as iterating it in-process, for both ``fork`` and ``spawn`` and
+        for single and multiple epochs."""
+        builder = _BUILDERS[builder_name]
+        reference = _collect_epochs(builder(), num_epochs)
+
+        src = iterate_in_subprocess(builder, mp_context=start_method, timeout=_TIMEOUT)
+        try:
+            got = _collect_epochs(src, num_epochs)
+        finally:
+            finalizer = getattr(src, "_finalizer", None)
+            if finalizer is not None:
+                finalizer()
+        self.assertEqual(
+            got,
+            reference,
+            msg=f"builder={builder_name} start_method={start_method} "
+            f"num_epochs={num_epochs}",
+        )
