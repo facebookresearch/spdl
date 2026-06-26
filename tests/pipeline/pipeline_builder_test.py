@@ -3105,16 +3105,22 @@ class TestHoistProcessPools(unittest.TestCase):
 
             def Process(self, *args: Any, **kwargs: Any) -> Process:
                 proc = real_ctx.Process(*args, **kwargs)
-                real_start = proc.start
 
-                def start() -> None:
-                    if len(started) >= 1:
-                        raise OSError("cannot allocate worker")
-                    real_start()
-                    started.append(proc)
+                # Proxy the process rather than monkeypatching ``proc.start``: under the
+                # forkserver start method ``start()`` pickles the ``Process`` object, and a
+                # closure stashed on its instance dict would be unpicklable. The real process
+                # stays clean (only it is ever started); the proxy enforces the failure.
+                class _Proxy:
+                    def start(self_inner) -> None:
+                        if len(started) >= 1:
+                            raise OSError("cannot allocate worker")
+                        proc.start()
+                        started.append(proc)
 
-                proc.start = start  # pyre-ignore[8]
-                return proc
+                    def __getattr__(self_inner, name: str) -> Any:
+                        return getattr(proc, name)
+
+                return cast(Process, _Proxy())
 
         with self.assertRaises(OSError):
             _WorkerPool(cast(mp.context.BaseContext, _FlakyCtx()), 3, None, ())
