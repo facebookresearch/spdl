@@ -682,6 +682,10 @@ class TestContinuousPipelineValidation(unittest.TestCase):
             build_pipeline(merged_config, num_threads=1)
 
 
+def _double(x: int) -> int:
+    return x * 2
+
+
 class _RecordIDs:
     """Pipe function that records the thread ID and process ID."""
 
@@ -760,13 +764,10 @@ class TestContinuousSubprocessPipelineReuse(unittest.TestCase):
         reused across epochs in the subprocess.
         """
 
-        def double(x: int) -> int:
-            return x * 2
-
         backend = (
             PipelineBuilder()
             .add_source(SourceIterable(10), continuous=True)
-            .pipe(double, concurrency=4)
+            .pipe(_double, concurrency=4)
             .aggregate(3, drop_last=False)
             .add_sink(buffer_size=2)
         )
