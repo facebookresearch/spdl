@@ -11,6 +11,7 @@
 #include "libspdl/core/detail/logging.h"
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <glog/logging.h>
 
 namespace spdl::core {

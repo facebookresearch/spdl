@@ -16,6 +16,7 @@
 
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
