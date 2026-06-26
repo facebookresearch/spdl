@@ -22,6 +22,7 @@ from typing import Any
 
 from spdl.pipeline import (
     AsyncQueue,
+    build_pipeline,
     Pipeline,
     PipelineBuilder,
     PipelineFailure,
@@ -30,7 +31,9 @@ from spdl.pipeline import (
 )
 from spdl.pipeline._components import _subprocess_pipe
 from spdl.pipeline._components._common import StageInfo
+from spdl.pipeline._fuse import _find_fusable_runs
 from spdl.pipeline.config import set_default_hook_class, set_default_queue_class
+from spdl.pipeline.defs import Pipe
 
 
 def add_one(x: int) -> int:
@@ -47,6 +50,16 @@ def times_two(x: int) -> int:
 
 def boom(x: int) -> int:
     raise ValueError("boom")
+
+
+def route_by_parity(x: int) -> int:
+    """Router: even items to path 0, odd items to path 1."""
+    return x % 2
+
+
+async def aident(x: int) -> int:
+    """An async (no-executor) branch stage; runs on the worker's loop once fused."""
+    return x
 
 
 class _Unpicklable:
@@ -419,6 +432,126 @@ class ContinuousFuseTest(unittest.TestCase):
             "fused-pool teardown hung on a full input queue after a mid-stream stop",
         )
         t.join(timeout=10)
+
+
+class PathVariantsFuseTest(unittest.TestCase):
+    """Fusion of a path-variants stage whose branches share one pool executor."""
+
+    def test_lone_path_variants_pool_branches_fused_match_unfused(self) -> None:
+        """A single path-variants stage with same-pool branches fuses and matches unfused.
+
+        Even items take the ``add_one`` branch, odd items the ``times_two`` branch. The whole
+        routing construct moves into one worker, so the result must match the unfused run.
+        """
+        n = 16
+        ref = sorted(x + 1 if x % 2 == 0 else x * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        builder = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .path_variants(
+                route_by_parity,
+                [[Pipe(add_one, executor=ex)], [Pipe(times_two, executor=ex)]],
+            )
+            .add_sink(n)
+        )
+        config = builder.get_config()
+        # A lone same-pool path-variants is a fusable run on its own.
+        self.assertEqual(len(_find_fusable_runs(config.pipes)), 1)
+        pipeline = build_pipeline(config, num_threads=4, fuse_subprocess_stages=True)
+        self.assertEqual(sorted(_run(pipeline)), ref)
+
+    def test_path_variants_async_branch_stage_fuses(self) -> None:
+        """A branch mixing an async (no-executor) stage with a pool stage still fuses.
+
+        Mirrors a cache miss-path shape (async I/O then pool CPU): the async stage runs on the
+        worker's loop and the pool stage on its threads, all inside one worker.
+        """
+        n = 16
+        ref = sorted(x + 1 if x % 2 == 0 else x * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        builder = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .path_variants(
+                route_by_parity,
+                [
+                    [Pipe(add_one, executor=ex)],
+                    [Pipe(aident), Pipe(times_two, executor=ex)],
+                ],
+            )
+            .add_sink(n)
+        )
+        config = builder.get_config()
+        self.assertEqual(len(_find_fusable_runs(config.pipes)), 1)
+        pipeline = build_pipeline(config, num_threads=4, fuse_subprocess_stages=True)
+        self.assertEqual(sorted(_run(pipeline)), ref)
+
+    def test_path_variants_mixed_executors_not_fused(self) -> None:
+        """Branches on two different pool executors are not fused, and still run correctly."""
+        n = 16
+        ref = sorted(x + 1 if x % 2 == 0 else x * 2 for x in range(n))
+        ex1 = ProcessPoolExecutor(max_workers=2)
+        ex2 = ProcessPoolExecutor(max_workers=2)
+        builder = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .path_variants(
+                route_by_parity,
+                [[Pipe(add_one, executor=ex1)], [Pipe(times_two, executor=ex2)]],
+            )
+            .add_sink(n)
+        )
+        config = builder.get_config()
+        self.assertEqual(_find_fusable_runs(config.pipes), [])
+        pipeline = build_pipeline(config, num_threads=4, fuse_subprocess_stages=True)
+        self.assertEqual(sorted(_run(pipeline)), ref)
+
+    def test_path_variants_fused_with_adjacent_pool_pipe(self) -> None:
+        """A pool-pipe adjacent to a same-pool path-variants stage fuses into one run."""
+        n = 16
+        # add_one shifts each item to v=x+1; then even v -> add_one (v+1), odd v -> times_two (v*2).
+        ref = sorted(
+            (v + 1) if v % 2 == 0 else (v * 2) for v in (x + 1 for x in range(n))
+        )
+        ex = ProcessPoolExecutor(max_workers=2)
+        builder = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .pipe(add_one, executor=ex)
+            .path_variants(
+                route_by_parity,
+                [[Pipe(add_one, executor=ex)], [Pipe(times_two, executor=ex)]],
+            )
+            .add_sink(n)
+        )
+        config = builder.get_config()
+        runs = _find_fusable_runs(config.pipes)
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(
+            (runs[0].start, runs[0].stop), (0, 2)
+        )  # both stages in one run
+        pipeline = build_pipeline(config, num_threads=4, fuse_subprocess_stages=True)
+        self.assertEqual(sorted(_run(pipeline)), ref)
+
+    def test_path_variants_fused_multi_epoch(self) -> None:
+        """A fused path-variants stage stays correct across epochs of a continuous source."""
+        n = 12
+        ref = sorted(x + 1 if x % 2 == 0 else x * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .path_variants(
+                route_by_parity,
+                [[Pipe(add_one, executor=ex)], [Pipe(times_two, executor=ex)]],
+            )
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        with pipeline.auto_stop():
+            for _ in range(3):  # three epochs from the same warm worker pool
+                self.assertEqual(sorted(pipeline.get_iterator(timeout=60)), ref)
 
 
 class FuseInSubprocessTest(unittest.TestCase):
