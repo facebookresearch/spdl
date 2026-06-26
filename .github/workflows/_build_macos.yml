@@ -15,7 +15,7 @@ on:
         default: 'false'
         type: string
       machine:
-        default: "macos-latest"
+        default: "macos-15"
         type: string
       test-concurrency:
         required: false
@@ -42,6 +42,9 @@ jobs:
         env:
           SPDL_USE_TRACING: 1
         run: |
+          xcodebuild -version
+          ls -alh /Applications/ | grep Xcode
+
           curl -LsSf https://astral.sh/uv/install.sh | sh
           set -ex
 
