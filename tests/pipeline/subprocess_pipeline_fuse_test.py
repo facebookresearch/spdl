@@ -12,6 +12,7 @@ import os
 import queue as _queue
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from collections.abc import AsyncIterator, Iterator
@@ -378,6 +379,46 @@ class ContinuousFuseTest(unittest.TestCase):
         )
         for _ in range(3):  # one epoch per iteration
             self.assertEqual(sorted(src), ref)
+
+    def test_teardown_mid_stream_does_not_hang(self) -> None:
+        """Tearing a continuous fused subprocess pipeline down mid-stream must not hang.
+
+        A teardown before the stream is drained leaves the per-worker input queue full; the
+        pool shutdown must cancel the queue feeder-thread join instead of blocking forever
+        waiting to flush buffered items into a pipe the (terminated) workers no longer drain.
+        Uses the same path data loaders do — ``run_pipeline_in_subprocess`` + fusion — and
+        triggers teardown via the iterable's documented ``_finalizer`` handle.
+        """
+        n = 100_000  # far more than any buffer, so the stream is still full at teardown
+        ex = ProcessPoolExecutor(max_workers=2)
+        self.addCleanup(ex.shutdown)
+        config = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .pipe(add_one, executor=ex, concurrency=2)
+            .pipe(times_two, executor=ex, concurrency=2)
+            .add_sink(2)
+            .get_config()
+        )
+        src = run_pipeline_in_subprocess(
+            config, num_threads=4, fuse_subprocess_stages=True
+        )
+        it = iter(src)
+        next(it)  # consume a couple of items so the queues stay backed up
+        next(it)
+        torn_down = threading.Event()
+
+        def _teardown() -> None:
+            src._finalizer()  # pyre-ignore[16]: documented teardown handle
+            torn_down.set()
+
+        t = threading.Thread(target=_teardown, daemon=True)
+        t.start()
+        self.assertTrue(
+            torn_down.wait(timeout=60),
+            "fused-pool teardown hung on a full input queue after a mid-stream stop",
+        )
+        t.join(timeout=10)
 
 
 class FuseInSubprocessTest(unittest.TestCase):

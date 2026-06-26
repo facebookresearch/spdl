@@ -311,6 +311,7 @@ class _SubprocessPipelinePool:
             # processes or pipe fds. Mirrors ``_WorkerPool.__init__``.
             self._terminate(started)
             for q in (*self._in_qs, self._out_q):
+                q.cancel_join_thread()
                 q.close()
                 q.join_thread()
             raise
@@ -362,7 +363,12 @@ class _SubprocessPipelinePool:
         self._terminate(self._procs)
         # Close this process's queue handles so the feeder threads created on first ``put``
         # exit; otherwise a process that creates many pipelines leaks threads and pipe fds.
+        # The workers are already reaped, so any item still buffered in this process's feeder
+        # threads can never be delivered — ``cancel_join_thread`` first so ``join_thread``
+        # does not block forever flushing it into a pipe no worker drains (e.g. a continuous
+        # run torn down with a full ``in_q`` behind the broadcast shutdown markers).
         for q in (*self._in_qs, self._out_q):
+            q.cancel_join_thread()
             q.close()
             q.join_thread()
 
