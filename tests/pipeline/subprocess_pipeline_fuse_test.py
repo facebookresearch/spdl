@@ -7,12 +7,16 @@
 # pyre-strict
 
 import asyncio
+import json
+import os
 import queue as _queue
 import sys
+import tempfile
 import time
 import unittest
 from collections.abc import AsyncIterator, Iterator
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from typing import Any
 
 from spdl.pipeline import (
@@ -21,9 +25,11 @@ from spdl.pipeline import (
     PipelineBuilder,
     PipelineFailure,
     run_pipeline_in_subprocess,
+    TaskHook,
 )
 from spdl.pipeline._components import _subprocess_pipe
 from spdl.pipeline._components._common import StageInfo
+from spdl.pipeline.config import set_default_hook_class, set_default_queue_class
 
 
 def add_one(x: int) -> int:
@@ -510,3 +516,177 @@ class StallGuardTest(unittest.TestCase):
             asyncio.run(_scenario())
         finally:
             _subprocess_pipe._WORKER_STALL_TIMEOUT = orig
+
+
+# Set inside each fused worker process by ``_install_recording_hooks`` (the executor
+# initializer). The worker is a separate process, so the recording hooks below cannot share
+# in-memory counters with the test; each instead writes a small JSON file into this directory,
+# which the test reads back to prove the hooks fired inside the worker.
+_EVIDENCE_DIR: str | None = None
+
+
+def _write_evidence(record: dict[str, Any]) -> None:
+    if (d := _EVIDENCE_DIR) is None:
+        return
+    # ``iid`` (the recorder's id) keeps each instance's file distinct within a process; ``pid``
+    # keeps them distinct across worker processes, so no two writers ever race on one path.
+    path = os.path.join(d, f"{record['kind']}-{record['pid']}-{record['iid']}.json")
+    with open(path, "w") as f:
+        f.write(json.dumps(record))
+
+
+class _RecordingTaskHook(TaskHook):
+    """A ``TaskHook`` that records how many tasks ran in its (subprocess) stage."""
+
+    def __init__(self, info: Any, interval: float = -1) -> None:
+        self.info = info
+        self.n_tasks = 0
+
+    @asynccontextmanager
+    async def stage_hook(self) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            _write_evidence(
+                {
+                    "kind": "task",
+                    "name": str(self.info),
+                    "pid": os.getpid(),
+                    "iid": id(self),
+                    "n_tasks": self.n_tasks,
+                }
+            )
+
+    @asynccontextmanager
+    async def task_hook(self, input_item: Any = None) -> AsyncIterator[None]:
+        self.n_tasks += 1
+        yield
+
+
+class _RecordingQueue(AsyncQueue):
+    """An ``AsyncQueue`` whose ``stage_hook`` records that it ran in the (subprocess) stage."""
+
+    def __init__(
+        self, info: Any, *, buffer_size: int = 1, interval: float = -1
+    ) -> None:
+        super().__init__(info, buffer_size=buffer_size)
+        self.n_get = 0
+
+    async def get(self) -> object:
+        item = await super().get()
+        self.n_get += 1
+        return item
+
+    @asynccontextmanager
+    async def stage_hook(self) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            _write_evidence(
+                {
+                    "kind": "queue",
+                    "name": str(self.info),
+                    "pid": os.getpid(),
+                    "iid": id(self),
+                    "n_get": self.n_get,
+                }
+            )
+
+
+def _install_recording_hooks(evidence_dir: str) -> None:
+    """Executor initializer: runs inside each fused worker before its sub-pipeline is built.
+
+    Fusion reads this off the ``ProcessPoolExecutor`` (``_pool_params``) and runs it in every
+    worker process, so the worker's nested ``build_pipeline`` — which is given no explicit
+    ``task_hook_factory``/``queue_class`` — picks up these recording classes as its defaults.
+    """
+    global _EVIDENCE_DIR
+    _EVIDENCE_DIR = evidence_dir
+    set_default_hook_class(_RecordingTaskHook)
+    set_default_queue_class(_RecordingQueue)
+
+
+class FuseHookTest(unittest.TestCase):
+    """``TaskHook`` and the queue ``stage_hook`` fire inside the fused worker subprocess.
+
+    The fused run executes as a nested pipeline inside main-process-owned worker processes; the
+    per-stage hooks/stats fire there, not in the bridge stage. These tests install recording
+    hook/queue classes as the worker defaults (via the pool's ``initializer``) and assert, from
+    the evidence files those recorders leave behind, that both fired in a non-main process.
+    """
+
+    def _read_evidence(self, evidence_dir: str) -> list[dict[str, Any]]:
+        records: list[dict[str, Any]] = []
+        for name in os.listdir(evidence_dir):
+            with open(os.path.join(evidence_dir, name)) as f:
+                records.append(json.loads(f.read()))
+        return records
+
+    def _assert_hooks_fired(self, records: list[dict[str, Any]], n: int) -> None:
+        task_records = [r for r in records if r["kind"] == "task"]
+        queue_records = [r for r in records if r["kind"] == "queue"]
+
+        self.assertTrue(task_records, "TaskHook never fired in any fused worker")
+        self.assertTrue(
+            queue_records, "queue stage_hook never fired in any fused worker"
+        )
+
+        # Every record came from a worker process, never the main/test process — this is what
+        # proves the hooks fired "in the subprocess".
+        main_pid = os.getpid()
+        for r in records:
+            self.assertNotEqual(r["pid"], main_pid)
+
+        # The two fused pipe stages each see every item once: ``add_one`` over n items, then
+        # ``times_two`` over n items => 2n ``task_hook`` invocations, summed across workers.
+        self.assertEqual(sum(r["n_tasks"] for r in task_records), 2 * n)
+
+        # The fused sub-pipeline's queues carried the data inside the worker(s).
+        self.assertGreaterEqual(sum(r["n_get"] for r in queue_records), n)
+
+    def test_hooks_fire_in_fused_workers(self) -> None:
+        """Hooks fire in the fused workers spawned by ``PipelineBuilder.build``."""
+        n = 16
+        ref = sorted((x + 1) * 2 for x in range(n))
+        with tempfile.TemporaryDirectory() as evidence_dir:
+            ex = ProcessPoolExecutor(
+                max_workers=2,
+                initializer=_install_recording_hooks,
+                initargs=(evidence_dir,),
+            )
+            fused = (
+                PipelineBuilder()
+                .add_source(range(n))
+                .pipe(add_one, executor=ex, concurrency=2)
+                .pipe(times_two, executor=ex, concurrency=2)
+                .add_sink(n)
+                .build(num_threads=4, fuse_subprocess_stages=True)
+            )
+            self.assertEqual(sorted(_run(fused)), ref)
+            self._assert_hooks_fired(self._read_evidence(evidence_dir), n)
+
+    def test_hooks_fire_in_fused_workers_via_subprocess(self) -> None:
+        """Hooks fire in the fused workers when the run is driven from a pipeline subprocess."""
+        n = 16
+        ref = sorted((x + 1) * 2 for x in range(n))
+        with tempfile.TemporaryDirectory() as evidence_dir:
+            ex = ProcessPoolExecutor(
+                max_workers=2,
+                initializer=_install_recording_hooks,
+                initargs=(evidence_dir,),
+            )
+            config = (
+                PipelineBuilder()
+                .add_source(range(n))
+                .pipe(add_one, executor=ex, concurrency=2)
+                .pipe(times_two, executor=ex, concurrency=2)
+                .add_sink(n)
+                .get_config()
+            )
+            src = run_pipeline_in_subprocess(
+                config, num_threads=4, fuse_subprocess_stages=True
+            )
+            # Each worker writes its evidence when its nested pipeline tears down at end of the
+            # session, before the run completes — so the files are present once iteration ends.
+            self.assertEqual(sorted(src), ref)
+            self._assert_hooks_fired(self._read_evidence(evidence_dir), n)
