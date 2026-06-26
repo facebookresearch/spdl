@@ -3152,6 +3152,10 @@ class TestHoistProcessPools(unittest.TestCase):
             expected.extend([2 * i, 2 * i + 1])
         self.assertEqual(sorted(results), sorted(expected))
 
+    @unittest.skipUnless(
+        "fork" in mp.get_all_start_methods(),
+        "fork start method is not available on this platform",
+    )
     def test_hoist_warns_on_fork_from_multithreaded(self) -> None:
         """fork start method + a live extra thread in the parent → deadlock warning."""
         ppe = ProcessPoolExecutor(max_workers=2)
