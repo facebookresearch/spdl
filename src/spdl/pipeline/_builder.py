@@ -171,6 +171,19 @@ class PipelineBuilder(Generic[T, U]):
                 into asynchronous one. If ``None``, the default executor is used.
 
                 It is invalid to provide this argument when the given op is already async.
+
+                A :py:class:`~concurrent.futures.ProcessPoolExecutor` is treated as a
+                *specification*: the pipeline reads its worker count and initializer and runs
+                its own equivalent worker pool, which it spawns eagerly when the pipeline is
+                built and shuts down when the pipeline stops. Pass a freshly constructed
+                executor — one that has already spawned workers or had work submitted triggers
+                a :py:class:`RuntimeWarning`, its own workers are not used, and you remain
+                responsible for shutting it down. Use the ``mp_context`` argument of
+                :py:meth:`build` to control the start method of the spawned workers.
+
+                .. versionchanged:: 0.6.0
+                   A ``ProcessPoolExecutor`` is now recreated and owned by the pipeline (its
+                   workers are spawned eagerly at build time) rather than used directly.
             name: The name (prefix) to give to the task.
             output_order: If ``"completion"`` (default), the items are put to output queue
                 in the order their process is completed.
@@ -293,6 +306,7 @@ class PipelineBuilder(Generic[T, U]):
         stage_id: int = 0,
         use_thread_output_queue: bool = False,
         fuse_subprocess_stages: bool = False,
+        mp_context: str | None = None,
     ) -> Pipeline[U]:
         """Build the pipeline.
 
@@ -348,6 +362,16 @@ class PipelineBuilder(Generic[T, U]):
 
                 .. versionadded:: 0.6.0
                    The ``fuse_subprocess_stages`` argument.
+
+            mp_context: The multiprocessing start method (e.g. ``"spawn"`` or
+                ``"forkserver"``) used to spawn the worker processes for any stage configured
+                with a :py:class:`~concurrent.futures.ProcessPoolExecutor`. If ``None``
+                (default), the platform default start method is used. Prefer ``"spawn"`` or
+                ``"forkserver"`` over ``"fork"`` when building from a process that already has
+                other threads running, as ``"fork"`` can deadlock or corrupt a worker.
+
+                .. versionadded:: 0.6.0
+                   The ``mp_context`` argument.
         """
         return build_pipeline(
             self.get_config(),
@@ -359,4 +383,5 @@ class PipelineBuilder(Generic[T, U]):
             stage_id=stage_id,
             use_thread_output_queue=use_thread_output_queue,
             fuse_subprocess_stages=fuse_subprocess_stages,
+            mp_context=mp_context,
         )

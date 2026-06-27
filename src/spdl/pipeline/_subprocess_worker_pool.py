@@ -44,8 +44,8 @@ from concurrent.futures import (
 from typing import Any, TypeVar
 
 from spdl.pipeline._executor_proxy import (
-    _ensure_executor_unused,
     _rewrite_config_executors,
+    _warn_if_executor_used,
 )
 from spdl.pipeline.defs import PipelineConfig
 
@@ -349,7 +349,7 @@ def _hoist_process_pools(
         key = id(executor)
         if key in seen:
             return seen[key]
-        _ensure_executor_unused(executor)
+        _warn_if_executor_used(executor)
         if not ctx_box:
             ctx = mp.get_context(mp_context)
             if ctx.get_start_method() == "fork" and threading.active_count() > 1:

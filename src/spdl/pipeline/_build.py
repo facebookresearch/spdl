@@ -139,6 +139,7 @@ def _build_pipeline(
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
     fuse_subprocess_stages: bool = False,
+    mp_context: str | None = None,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
         try:
@@ -146,44 +147,66 @@ def _build_pipeline(
         except Exception:
             _LG.exception("Build callback failed.")
 
-    pools: list[Any] = []
-    if fuse_subprocess_stages:
-        # Fuse consecutive same-pool stages so each run executes as one nested pipeline inside a
-        # worker pool, eliminating the inter-stage IPC. The pools are owned by the returned
-        # Pipeline and reaped when it stops.
-        # stacklevel=4: _fuse_subprocess_stages -> _build_pipeline -> build_pipeline -> user.
-        pipeline_cfg, pools = _fuse_subprocess_stages(
-            pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
+    # Both ``_fuse_subprocess_stages`` and ``_hoist_process_pools`` eagerly spawn worker
+    # processes. They are handed to the returned Pipeline, which owns and reaps them. But if
+    # anything between spawning them and returning the Pipeline raises, ownership never
+    # transfers, so reap them here before propagating rather than leaking the worker processes
+    # and their pipe fds. (Each helper already reaps the pools it spawned if it raises partway;
+    # this guards the window *between* the helpers and the ``Pipeline`` construction.)
+    fuse_pools: list[Any] = []
+    worker_pools: list[Any] = []
+    try:
+        if fuse_subprocess_stages:
+            # Fuse consecutive same-pool stages so each run executes as one nested pipeline
+            # inside a worker pool, eliminating the inter-stage IPC.
+            # stacklevel=4: _fuse_subprocess_stages -> _build_pipeline -> build_pipeline -> user.
+            pipeline_cfg, fuse_pools = _fuse_subprocess_stages(
+                pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
+            )
+
+        # Treat any user-provided ``ProcessPoolExecutor`` as a specification and replace it with
+        # an eagerly-spawned, pipeline-owned worker pool (a ``_RemoteExecutor`` submit proxy
+        # backed by a ``_WorkerPool``). Spawning the workers now -- at build time, before the
+        # event-loop thread starts -- avoids forking a worker lazily mid-load from this
+        # multi-threaded process, which can corrupt the child. (Inside the
+        # ``run_pipeline_in_subprocess`` worker the process pools were already hoisted in the
+        # main process, so no ``ProcessPoolExecutor`` remains and this is a no-op.)
+        pipeline_cfg, worker_pools = _hoist_process_pools(pipeline_cfg, mp_context)
+
+        desc = repr(pipeline_cfg)
+
+        _LG.debug("%s", desc)
+
+        # Merge per-pipeline background tasks with defaults
+        all_bg_tasks: list[BackgroundTaskFactory] = []
+        default_bg = get_default_background_tasks()
+        if default_bg:
+            all_bg_tasks.extend(default_bg)
+        if background_tasks:
+            all_bg_tasks.extend(background_tasks)
+
+        coro, queue = _build_pipeline_coro(
+            pipeline_cfg,
+            max_failures=max_failures,
+            report_stats_interval=report_stats_interval,
+            queue_class=queue_class,
+            task_hook_factory=task_hook_factory,
+            stage_id=stage_id,
+            background_tasks=all_bg_tasks or None,
+            use_thread_output_queue=use_thread_output_queue,
         )
 
-    desc = repr(pipeline_cfg)
-
-    _LG.debug("%s", desc)
-
-    # Merge per-pipeline background tasks with defaults
-    all_bg_tasks: list[BackgroundTaskFactory] = []
-    default_bg = get_default_background_tasks()
-    if default_bg:
-        all_bg_tasks.extend(default_bg)
-    if background_tasks:
-        all_bg_tasks.extend(background_tasks)
-
-    coro, queue = _build_pipeline_coro(
-        pipeline_cfg,
-        max_failures=max_failures,
-        report_stats_interval=report_stats_interval,
-        queue_class=queue_class,
-        task_hook_factory=task_hook_factory,
-        stage_id=stage_id,
-        background_tasks=all_bg_tasks or None,
-        use_thread_output_queue=use_thread_output_queue,
-    )
-
-    executor = ThreadPoolExecutor(
-        max_workers=num_threads,
-        thread_name_prefix="spdl_worker_thread_",
-    )
-    return Pipeline(coro, queue, executor, desc=desc, pools=pools)
+        executor = ThreadPoolExecutor(
+            max_workers=num_threads,
+            thread_name_prefix="spdl_worker_thread_",
+        )
+        return Pipeline(
+            coro, queue, executor, desc=desc, pools=[*fuse_pools, *worker_pools]
+        )
+    except BaseException:
+        _shutdown_pools(worker_pools)
+        _shutdown_pipeline_pools(fuse_pools)
+        raise
 
 
 def build_pipeline(
@@ -199,6 +222,7 @@ def build_pipeline(
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
     fuse_subprocess_stages: bool = False,
+    mp_context: str | None = None,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -287,6 +311,21 @@ def build_pipeline(
 
             .. versionadded:: 0.6.0
                The ``fuse_subprocess_stages`` argument.
+
+        mp_context: The multiprocessing start method (as accepted by
+            :py:func:`multiprocessing.get_context`, e.g. ``"spawn"`` or ``"forkserver"``)
+            used to spawn the worker processes for any stage configured with a
+            :py:class:`~concurrent.futures.ProcessPoolExecutor`. If ``None`` (default), the
+            platform default start method is used.
+
+            .. note::
+
+               The ``"fork"`` start method can deadlock or corrupt a worker when the pipeline
+               is built from a process that already has other threads running. Prefer
+               ``"spawn"`` or ``"forkserver"`` in that case.
+
+            .. versionadded:: 0.6.0
+               The ``mp_context`` argument.
     """
     from . import _profile
 
@@ -304,6 +343,7 @@ def build_pipeline(
         background_tasks=background_tasks,
         use_thread_output_queue=use_thread_output_queue,
         fuse_subprocess_stages=fuse_subprocess_stages,
+        mp_context=mp_context,
     )
 
 
@@ -512,10 +552,12 @@ def run_pipeline_in_subprocess(
        ``InterpreterPoolExecutor`` are explicitly supported, even though these executors are
        not picklable.
 
-       Such an executor must be **freshly constructed** — handed over without any work
+       Such an executor should be **freshly constructed** — handed over without any work
        submitted yet — because its workers are (re)created as part of running the pipeline in
-       the subprocess (the whole point of moving execution there). Passing one that has already
-       spawned workers (i.e. been used) lifts it mid-lifecycle and raises :py:exc:`ValueError`.
+       the subprocess (the whole point of moving execution there). The executor is treated as a
+       *specification*: its own workers are not used. Passing one that has already spawned
+       workers (i.e. been used) emits a :py:exc:`RuntimeWarning` and continues; its workers are
+       not used and you remain responsible for shutting it down.
 
        - ``ThreadPoolExecutor`` / ``InterpreterPoolExecutor``: their constructor arguments are
          serialized and an equivalent executor (same type, same ``max_workers``) is

@@ -2943,12 +2943,12 @@ class TestExecutorProxy(unittest.TestCase):
         results = list(run_pipeline_in_subprocess(config, num_threads=1))
         self.assertEqual(sorted(results), [2 * i for i in range(10)])
 
-    def test_used_thread_pool_is_rejected(self) -> None:
-        """A ThreadPoolExecutor that already ran work is rejected (must be freshly built)."""
+    def test_used_thread_pool_warns(self) -> None:
+        """A ThreadPoolExecutor that already ran work warns (it is used only as a spec)."""
         tpe = ThreadPoolExecutor(max_workers=2)
         try:
             tpe.submit(_sync_double, 1).result(timeout=30)  # spawns a worker thread
-            with self.assertRaises(ValueError):
+            with self.assertWarns(RuntimeWarning):
                 _make_config_executors_picklable(_config_with_executor(tpe))
         finally:
             tpe.shutdown()
@@ -3032,13 +3032,14 @@ class TestHoistProcessPools(unittest.TestCase):
         finally:
             _shutdown_pools([pool])
 
-    def test_hoist_rejects_used_process_pool(self) -> None:
-        """A ProcessPoolExecutor that already ran work is rejected (must be freshly built)."""
+    def test_hoist_warns_on_used_process_pool(self) -> None:
+        """A ProcessPoolExecutor that already ran work warns (it is used only as a spec)."""
         ppe = ProcessPoolExecutor(max_workers=2)
         try:
             ppe.submit(_sync_double, 1).result(timeout=30)  # spawns worker processes
-            with self.assertRaises(ValueError):
-                _hoist_process_pools(_config_with_executor(ppe))
+            with self.assertWarns(RuntimeWarning):
+                _, pools = _hoist_process_pools(_config_with_executor(ppe))
+            _shutdown_pools(pools)
         finally:
             ppe.shutdown()
 

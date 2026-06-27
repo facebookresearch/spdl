@@ -791,6 +791,18 @@ def Pipe(
             into asynchronous one. If ``None``, the default executor is used.
 
             It is invalid to provide this argument when the given op is already async.
+
+            A :py:class:`~concurrent.futures.ProcessPoolExecutor` is treated as a
+            *specification*: the pipeline reads its worker count and initializer and runs its
+            own equivalent worker pool, which it spawns eagerly when the pipeline is built and
+            shuts down when the pipeline stops. Pass a freshly constructed executor — one that
+            has already spawned workers or had work submitted triggers a
+            :py:class:`RuntimeWarning`, its own workers are not used, and you remain
+            responsible for shutting it down.
+
+            .. versionchanged:: 0.6.0
+               A ``ProcessPoolExecutor`` is now recreated and owned by the pipeline (its
+               workers are spawned eagerly at build time) rather than used directly.
         name: The name (prefix) to give to the task.
         output_order: If ``"completion"`` (default), the items are put to output queue
             in the order their process is completed.
