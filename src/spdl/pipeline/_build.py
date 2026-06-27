@@ -37,6 +37,7 @@ from spdl.pipeline._components import (
 from spdl.pipeline._executor_proxy import _make_config_executors_picklable
 from spdl.pipeline._fuse import _fuse_subprocess_stages
 from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
+from spdl.pipeline._random_seed import _capture_rng_initializers
 from spdl.pipeline._subprocess_pipeline_pool import _shutdown_pipeline_pools
 from spdl.pipeline._subprocess_worker_pool import (
     _hoist_process_pools,
@@ -365,8 +366,20 @@ class _Wrapper(Generic[U]):
                 yield from pipeline
 
 
-def _get_initializer(kwargs: Any) -> Sequence[Callable[[], None]]:
-    initializer = [partial(_set_global_id, _get_global_id())]
+def _get_initializer(
+    kwargs: Any, *, shareable_rng_only: bool
+) -> Sequence[Callable[[], None]]:
+    initializer: list[Callable[[], None]] = [
+        partial(_set_global_id, _get_global_id()),
+    ]
+    # Copy the main process' current global RNG state into the worker so that
+    # RNG-dependent work inside the pipeline (e.g. augmentation in MTP mode)
+    # continues from the state the user set, regardless of the start method.
+    # Captured here in the main process; restored in the worker before iteration.
+    # For subinterpreters only the stdlib ``random`` state is copied: initializers
+    # cross the interpreter boundary as call arguments and so must be shareable,
+    # which the captured numpy/torch state objects are not.
+    initializer.extend(_capture_rng_initializers(shareable_only=shareable_rng_only))
     if "initializer" not in kwargs:
         return initializer
 
@@ -438,6 +451,55 @@ def run_pipeline_in_subprocess(
     GPU-transfer stages in the main process, an outer pipeline can wrap ``src``
     with ``add_source(src, continuous=True)`` (see the MTP pattern in the
     parallelism guide).
+
+    .. note::
+
+       **Random number generators.** The current global RNG state of the main
+       process is copied into the worker subprocess before iterating, so
+       RNG-dependent work inside the pipeline (e.g. data augmentation) continues
+       from exactly the state the main process was in — regardless of the
+       multiprocessing start method (``fork`` / ``spawn`` / ``forkserver``). No
+       opt-in is required.
+
+       In particular, if you seed the global RNGs in the main process before
+       creating the pipeline (``random.seed(k)``, ``numpy.random.seed(k)``,
+       ``torch.manual_seed(k)``), the worker inherits that seeding seamlessly, so
+       draws are reproducible across program runs just as they would be in-process.
+
+       This copies the **global** generators only:
+
+       - :py:mod:`random` (standard library),
+       - NumPy's **legacy** global RNG (:py:func:`numpy.random.rand`,
+         :py:func:`numpy.random.choice`, :py:func:`numpy.random.shuffle`, …), and
+       - PyTorch's CPU generator.
+
+       NumPy and PyTorch state is copied only when the program has already
+       imported them; SPDL never imports them on your behalf.
+
+       .. warning::
+
+          The following sources are **not** copied, because the library cannot
+          reach them:
+
+          - A :py:class:`numpy.random.Generator` created with
+            :py:func:`numpy.random.default_rng` (the modern NumPy API) is an
+            independent object, not part of the legacy global state. If your code
+            holds one, seed it explicitly. SPDL's own samplers already store an
+            explicit seed, so they are reproducible in every mode.
+          - PyTorch **CUDA** device RNG state (only the CPU generator is copied).
+          - Hash randomization (``PYTHONHASHSEED``), which affects ``set``
+            iteration order, is fixed at interpreter start — pin it in the launch
+            environment if it matters.
+          - Cryptographic / entropy sources (:py:func:`os.urandom`,
+            :py:mod:`secrets`, :py:func:`uuid.uuid4`) are intentionally left
+            untouched.
+
+          Note also that task *completion order* (``output_order="completion"``)
+          is independent of RNG state and can still differ between execution
+          modes.
+
+       .. versionchanged:: 0.6.0
+          The worker subprocess now inherits the main process' global RNG state.
 
     .. note::
 
@@ -559,7 +621,7 @@ def run_pipeline_in_subprocess(
     try:
         config = _make_config_executors_picklable(config)
 
-        initializer = _get_initializer(kwargs)
+        initializer = _get_initializer(kwargs, shareable_rng_only=False)
         iterable = iterate_in_subprocess(
             fn=partial(
                 _Wrapper,
@@ -638,13 +700,32 @@ def run_pipeline_in_subinterpreter(
     Yields:
         The results yielded from the pipeline.
 
+    .. note::
+
+       **Random number generators.** Only the stdlib :py:mod:`random` global
+       state is copied from the main interpreter into the subinterpreter; unlike
+       :py:func:`run_pipeline_in_subprocess`, the **NumPy** and **PyTorch** global
+       RNG state is **not**. Two interpreter limitations force this: the restore
+       initializers cross the boundary as call arguments and so must be shareable
+       across interpreters, which the captured NumPy / PyTorch state objects are
+       not; and NumPy and PyTorch cannot be imported in a subinterpreter at all,
+       so a pipeline running here cannot use them regardless. For any NumPy /
+       PyTorch randomness, seed it from within ``config`` — e.g. via an SPDL
+       sampler that stores an explicit seed
+       (:py:class:`~spdl.source.DistributedRandomSampler`) — rather than depending
+       on the main interpreter's global RNG state.
+
+       .. versionchanged:: 0.6.0
+          The subinterpreter now inherits the main interpreter's stdlib
+          :py:mod:`random` global state.
+
     .. seealso::
 
        - :py:func:`iterate_in_subinterpreter` implements the logic for manipulating an iterable
          in a subinterpreter.
        - :ref:`parallelism-performance` for the context in which this function was created.
     """
-    initializer = _get_initializer(kwargs)
+    initializer = _get_initializer(kwargs, shareable_rng_only=True)
     return iterate_in_subinterpreter(
         fn=partial(
             _Wrapper,
