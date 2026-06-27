@@ -19,6 +19,13 @@ combined into a single nested :py:class:`~spdl.pipeline.Pipeline` executed insid
 pool, so the op→op handoff stays in-process. The actual config rewrite and worker-pool spawning
 build on the runs found here.
 
+A :py:class:`~spdl.pipeline.defs.PathVariantsConfig` whose branches all use the same pool
+executor is fusable as a unit: the whole routing construct moves into the nested pipeline, where
+the router and any async/thread branch stages run on the worker's loop/threads. Because the
+nested pipeline is built by the normal :py:func:`~spdl.pipeline._build.build_pipeline`, which
+already supports path-variants, no execution machinery is special-cased here — only detection and
+the executor-stripping rewrite know about it.
+
 The detection is a pure function over the stage configs (no process spawning), which keeps the
 fusion policy easy to reason about and to test in isolation.
 """
@@ -44,6 +51,7 @@ from spdl.pipeline.defs._defs import (
     _PipeType,
     _SubprocessPipelineConfig,
     MergeConfig,
+    PathVariantsConfig,
     PipeConfig,
     PipelineConfig,
     SinkConfig,
@@ -124,9 +132,11 @@ def _is_isolating_pool(executor: Executor | type[Executor] | None) -> bool:
 class _FusableRun:
     """A maximal span of ``pipes`` that can be fused into one subprocess sub-pipeline.
 
-    The fused stages are ``pipes[start:stop]`` — two or more *adjacent* pool-pipes sharing
-    :py:attr:`executor`. Only consecutive pool-pipes fuse; aggregate/disaggregate micro-stages
-    are never absorbed (so their batching semantics are unchanged) and instead bound a run.
+    The fused stages are ``pipes[start:stop]`` — *adjacent* stages sharing :py:attr:`executor`:
+    pool-pipes, and path-variants stages whose branches all use it. A span of two or more always
+    fuses; a single path-variants stage fuses on its own (its branches otherwise round-trip per
+    stage). Aggregate/disaggregate micro-stages are never absorbed (so their batching semantics
+    are unchanged) and instead bound a run.
     """
 
     start: int
@@ -155,27 +165,86 @@ def _fusable_pool_executor(cfg: object) -> Executor | None:
     return None
 
 
+def _scan_variant_pool_executors(
+    cfg: PathVariantsConfig[Any], acc: list[Executor]
+) -> bool:
+    """Collect the isolating-pool executors of every pool-pipe in ``cfg``'s branches.
+
+    Recurses into nested path-variants. Appends each completion-ordered pool-pipe's executor to
+    ``acc``; async/thread/default pipes are ignored (they run on the worker's own loop/threads
+    once the stage is fused). Returns ``False`` if any branch holds an *input-ordered*
+    (``output_order="input"``) pool-pipe, which is not fusable for the same reason a top-level
+    one is not — its global input order cannot be preserved across the pool workers.
+    """
+    for path in cfg.paths:
+        for stage in path:
+            if isinstance(stage, PathVariantsConfig):
+                if not _scan_variant_pool_executors(stage, acc):
+                    return False
+                continue
+            executor = _fusable_pool_executor(stage)
+            if executor is not None:
+                acc.append(executor)
+            elif (
+                isinstance(stage, PipeConfig)
+                and stage._args.executor is not None
+                and _is_isolating_pool(stage._args.executor)
+            ):
+                # A pool-pipe that _fusable_pool_executor rejected -> input-ordered: not fusable.
+                return False
+    return True
+
+
+def _path_variants_executor(cfg: object) -> Executor | None:
+    """Return the shared isolating-pool executor if ``cfg`` is a fusable path-variants stage.
+
+    A :py:class:`~spdl.pipeline.defs.PathVariantsConfig` is fusable when every pool-pipe across
+    all of its branches (recursively) shares the **same** isolating-pool executor instance — the
+    whole routing construct then moves into one worker's nested pipeline, where the router and any
+    async/thread branch stages run on the worker's loop/threads and the pool stages run on its
+    thread pool. Returns ``None`` for a non-path-variants stage, a stage with no pool-pipe (no
+    isolation to gain), or branches that mix more than one pool executor / hold an input-ordered
+    pool-pipe.
+    """
+    if not isinstance(cfg, PathVariantsConfig):
+        return None
+    executors: list[Executor] = []
+    if not _scan_variant_pool_executors(cfg, executors) or not executors:
+        return None
+    first = executors[0]
+    return first if all(e is first for e in executors) else None
+
+
+def _fusable_executor(cfg: object) -> Executor | None:
+    """The isolating-pool executor a stage fuses onto: a pool-pipe's, or a path-variants'
+    shared one. ``None`` if the stage is not fusable."""
+    return _fusable_pool_executor(cfg) or _path_variants_executor(cfg)
+
+
 def _scan_run(
     pipes: Sequence[object], start: int, executor: Executor
 ) -> tuple[_FusableRun | None, int]:
-    """Scan one fusable run of adjacent same-executor pool-pipes from ``pipes[start]``.
+    """Scan one fusable run of adjacent same-executor fusable stages from ``pipes[start]``.
 
-    Greedily consumes the immediately-following pool-pipes that share ``executor``, stopping at
-    the first stage that is anything else — a different executor, a thread/None/async pipe, an
-    aggregate/disaggregate micro-stage, a path-variant stage, an input-ordered pool-pipe, or the
-    end. Only adjacent pool-pipes fuse, so a micro-stage between two pool-pipes splits them into
-    separate (and therefore unfused) runs and keeps its main-process batching semantics.
+    Greedily consumes the immediately-following stages that share ``executor`` — pool-pipes and
+    path-variants stages whose branches all use it — stopping at the first stage that is anything
+    else: a different executor, a thread/None/async pipe, an aggregate/disaggregate micro-stage,
+    or the end. A micro-stage between two fusable stages splits them into separate runs and keeps
+    its main-process batching semantics.
+
+    A run of two or more stages always fuses. A lone stage fuses only if it is a path-variants
+    stage — its branches otherwise round-trip per stage, so moving the whole construct into one
+    worker is the win — whereas a lone pool-pipe gains nothing from fusion.
 
     Returns:
         A tuple ``(run, next_index)``. ``run`` is the emitted :py:class:`_FusableRun`, or
-        ``None`` for a lone pool-pipe with no same-executor neighbour. ``next_index`` is where
-        the outer scan should resume.
+        ``None`` for a lone pool-pipe. ``next_index`` is where the outer scan should resume.
     """
     j = start + 1
     n = len(pipes)
-    while j < n and _fusable_pool_executor(pipes[j]) is executor:
+    while j < n and _fusable_executor(pipes[j]) is executor:
         j += 1
-    if j - start >= 2:
+    if j - start >= 2 or isinstance(pipes[start], PathVariantsConfig):
         return _FusableRun(start, j, executor), j
     return None, j
 
@@ -183,10 +252,12 @@ def _scan_run(
 def _find_fusable_runs(pipes: Sequence[object]) -> list[_FusableRun]:
     """Find all maximal fusable runs in a pipeline config's ``pipes``.
 
-    A run is a span of ≥2 adjacent completion-ordered :py:func:`~spdl.pipeline.defs.Pipe`
-    stages sharing the same isolating-pool executor instance. A lone pool-pipe, and any
-    aggregate/disaggregate micro-stage, break a run and are left unchanged in the main process.
-    Returned runs are ordered by position and never overlap.
+    A run is a span of adjacent stages sharing the same isolating-pool executor instance: either
+    ≥2 such stages (completion-ordered :py:func:`~spdl.pipeline.defs.Pipe` stages and/or
+    path-variants stages), or a single :py:class:`~spdl.pipeline.defs.PathVariantsConfig` (whose
+    branches round-trip per stage when unfused). A lone pool-pipe, and any aggregate/disaggregate
+    micro-stage, break a run and are left unchanged in the main process. Returned runs are ordered
+    by position and never overlap.
 
     Args:
         pipes: The ordered stage configs from a :py:class:`~spdl.pipeline.defs.PipelineConfig`.
@@ -198,7 +269,7 @@ def _find_fusable_runs(pipes: Sequence[object]) -> list[_FusableRun]:
     i = 0
     n = len(pipes)
     while i < n:
-        executor = _fusable_pool_executor(pipes[i])
+        executor = _fusable_executor(pipes[i])
         if executor is None:
             i += 1
             continue
@@ -224,10 +295,30 @@ def _has_continuous_source(config: PipelineConfig[Any]) -> bool:
 
 
 def _strip_executor(cfg: object) -> object:
-    """Strip a pool-pipe's executor so it runs on the worker's own pool."""
+    """Strip a stage's executor(s) so it runs on the worker's own pool.
+
+    Recurses into a path-variants stage, stripping every branch pipe's executor (the branch ops
+    then run on the worker's nested thread pool). A pickling boundary is crossed when the config
+    ships to the worker, so any live executor — pool or thread — must be removed regardless.
+    """
     if isinstance(cfg, PipeConfig):
         return replace(cfg, _args=replace(cfg._args, executor=None))
+    if isinstance(cfg, PathVariantsConfig):
+        new_paths = tuple(
+            tuple(_strip_executor(stage) for stage in path) for path in cfg.paths
+        )
+        return replace(cfg, paths=new_paths)
     return cfg
+
+
+def _stage_concurrency(cfg: object) -> int:
+    """Total worker-thread demand of a fused stage: a pipe's ``concurrency``, or the sum across
+    every branch pipe of a path-variants stage (recursively). Other stages contribute 0."""
+    if isinstance(cfg, PipeConfig):
+        return cfg._args.concurrency
+    if isinstance(cfg, PathVariantsConfig):
+        return sum(_stage_concurrency(s) for path in cfg.paths for s in path)
+    return 0
 
 
 def _stage_name(cfg: object) -> str:
@@ -279,9 +370,7 @@ def _build_fused_stage(
 ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
     """Build the worker pool and replacement stage for one fusable run."""
     stripped = [_strip_executor(s) for s in stages]
-    num_threads = max(
-        1, sum(s._args.concurrency for s in stages if isinstance(s, PipeConfig))
-    )
+    num_threads = max(1, sum(_stage_concurrency(s) for s in stages))
     sub_config: PipelineConfig[Any] = PipelineConfig(
         src=SourceConfig(
             []

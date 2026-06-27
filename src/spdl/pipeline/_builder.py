@@ -340,10 +340,11 @@ class PipelineBuilder(Generic[T, U]):
                 single stage that runs the run as one nested pipeline inside a worker pool. This
                 eliminates the inter-stage IPC that otherwise round-trips data back to this
                 process between each stage (so intermediate values need not be picklable), while
-                each fused stage keeps its own ``concurrency`` and per-stage stats. Only
-                adjacent pool stages fuse; an ``aggregate``/``disaggregate`` between them is
-                not fused and runs in the main process with its usual batching. Default:
-                ``False``.
+                each fused stage keeps its own ``concurrency`` and per-stage stats. A
+                ``path_variants`` stage whose branches all use the same pool executor is fused
+                too (router and branches move into the worker), and fuses on its own. An
+                ``aggregate``/``disaggregate`` between pool stages is not fused and runs in the
+                main process with its usual batching. Default: ``False``.
 
                 .. versionadded:: 0.6.0
                    The ``fuse_subprocess_stages`` argument.
