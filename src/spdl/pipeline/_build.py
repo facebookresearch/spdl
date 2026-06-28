@@ -276,11 +276,14 @@ def build_pipeline(
             stage that executes the run as one nested pipeline inside a worker pool. This
             eliminates the inter-stage IPC that otherwise round-trips data back to this process
             between each stage (so intermediate values need not be picklable), while each fused
-            stage keeps its own ``concurrency`` and per-stage stats. Only adjacent pool stages
-            fuse: an ``aggregate``/``disaggregate`` between two pool stages is not fused (it
-            keeps its main-process batching) and splits them into separate runs. Continuous
-            sources are supported (the fused worker sub-pipelines stay warm across epochs and
-            epoch boundaries are propagated across the pool). Default: ``False``.
+            stage keeps its own ``concurrency`` and per-stage stats. A ``path_variants`` stage
+            whose branches all use the same pool executor is fused too — the whole routing
+            construct (router and branches) moves into the worker — and fuses on its own even
+            when it is the only such stage. An ``aggregate``/``disaggregate`` between two pool
+            stages is not fused (it keeps its main-process batching) and splits them into
+            separate runs. Continuous sources are supported (the fused worker sub-pipelines stay
+            warm across epochs and epoch boundaries are propagated across the pool). Default:
+            ``False``.
 
             .. versionadded:: 0.6.0
                The ``fuse_subprocess_stages`` argument.
@@ -560,8 +563,9 @@ def run_pipeline_in_subprocess(
             processes are spawned in (and owned by) the main process, exactly like a hoisted
             ``ProcessPoolExecutor``; the pipeline subprocess drives them through a queue handle.
             This removes the per-stage round-trip between the pipeline subprocess and the pool
-            workers (so intermediate values need not be picklable). Continuous sources are
-            supported. Default: ``False``.
+            workers (so intermediate values need not be picklable). A ``path_variants`` stage
+            whose branches all use the same pool executor is fused too (router and branches move
+            into the worker). Continuous sources are supported. Default: ``False``.
 
             .. versionadded:: 0.6.0
                The ``fuse_subprocess_stages`` argument.
