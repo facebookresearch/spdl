@@ -7,6 +7,7 @@
 # pyre-strict
 
 import asyncio
+import itertools
 import json
 import os
 import queue as _queue
@@ -808,15 +809,37 @@ class StallGuardTest(unittest.TestCase):
 # which the test reads back to prove the hooks fired inside the worker.
 _EVIDENCE_DIR: str | None = None
 
+# A per-process monotonic counter for evidence filenames. ``id(self)`` is only unique among
+# simultaneously-live objects -- CPython recycles addresses, so two recorders created and
+# destroyed in sequence could collide on one path and clobber each other's count. This counter
+# (combined with ``pid``) is guaranteed distinct for every write within a process.
+_EVIDENCE_SEQ = itertools.count()
+_EVIDENCE_SEQ_LOCK = threading.Lock()
+
 
 def _write_evidence(record: dict[str, Any]) -> None:
     if (d := _EVIDENCE_DIR) is None:
         return
-    # ``iid`` (the recorder's id) keeps each instance's file distinct within a process; ``pid``
-    # keeps them distinct across worker processes, so no two writers ever race on one path.
-    path = os.path.join(d, f"{record['kind']}-{record['pid']}-{record['iid']}.json")
-    with open(path, "w") as f:
-        f.write(json.dumps(record))
+    with _EVIDENCE_SEQ_LOCK:
+        seq = next(_EVIDENCE_SEQ)
+    # ``pid`` proves the write came from a worker process (never the main/test process); ``seq``
+    # keeps each writer's file distinct within that process, so no two writers ever race on one
+    # path. Write to a temp file then atomically rename, so a reader polling mid-write never sees
+    # a truncated/partial file.
+    path = os.path.join(d, f"{record['kind']}-{record['pid']}-{seq}.json")
+    tmp = f"{path}.tmp"
+    try:
+        with open(tmp, "w") as f:
+            f.write(json.dumps(record))
+        os.replace(tmp, path)
+    except OSError:
+        # This runs inside the worker's stage_hook ``finally`` (stage teardown). It must never
+        # raise into the stage: an I/O failure here -- e.g. the evidence ``TemporaryDirectory``
+        # already torn down in a teardown race -- would otherwise crash the stage and drop items
+        # from the data path the test is validating. A lost evidence file at most makes an
+        # assertion under-count, which surfaces as a clear assertion failure (not a baffling
+        # dropped-item one).
+        pass
 
 
 class _RecordingTaskHook(TaskHook):
@@ -902,8 +925,30 @@ class FuseHookTest(unittest.TestCase):
     def _read_evidence(self, evidence_dir: str) -> list[dict[str, Any]]:
         records: list[dict[str, Any]] = []
         for name in os.listdir(evidence_dir):
+            if not name.endswith(".json"):
+                continue  # skip ``.json.tmp`` files still being written
             with open(os.path.join(evidence_dir, name)) as f:
                 records.append(json.loads(f.read()))
+        return records
+
+    def _await_evidence(
+        self, evidence_dir: str, n: int, timeout: float = 60.0
+    ) -> list[dict[str, Any]]:
+        """Re-read evidence until the workers' task total lands, then return the records.
+
+        Each fused worker writes its evidence files to disk during nested-pipeline teardown, a
+        side channel with no happens-before relationship to the main iterator completing. Polling
+        until the recorded task total reaches the expected ``2 * n`` closes that read-too-early
+        window without masking regressions: on a genuine failure (hooks never fire) the poll times
+        out and the caller's assertions report the shortfall.
+        """
+        deadline = time.monotonic() + timeout
+        records = self._read_evidence(evidence_dir)
+        while sum(r["n_tasks"] for r in records if r["kind"] == "task") < 2 * n:
+            if time.monotonic() > deadline:
+                break  # fall through; the assertions below report the shortfall
+            time.sleep(0.02)
+            records = self._read_evidence(evidence_dir)
         return records
 
     def _assert_hooks_fired(self, records: list[dict[str, Any]], n: int) -> None:
@@ -947,7 +992,7 @@ class FuseHookTest(unittest.TestCase):
                 .build(num_threads=4, fuse_subprocess_stages=True)
             )
             self.assertEqual(sorted(_run(fused)), ref)
-            self._assert_hooks_fired(self._read_evidence(evidence_dir), n)
+            self._assert_hooks_fired(self._await_evidence(evidence_dir, n), n)
 
     def test_hooks_fire_in_fused_workers_via_subprocess(self) -> None:
         """Hooks fire in the fused workers when the run is driven from a pipeline subprocess."""
@@ -970,7 +1015,8 @@ class FuseHookTest(unittest.TestCase):
             src = run_pipeline_in_subprocess(
                 config, num_threads=4, fuse_subprocess_stages=True
             )
-            # Each worker writes its evidence when its nested pipeline tears down at end of the
-            # session, before the run completes — so the files are present once iteration ends.
+            # Each worker writes its evidence during nested-pipeline teardown, on a side channel
+            # (the filesystem) with no happens-before relationship to iteration ending — so
+            # ``_await_evidence`` polls for the files rather than assuming they are already there.
             self.assertEqual(sorted(src), ref)
-            self._assert_hooks_fired(self._read_evidence(evidence_dir), n)
+            self._assert_hooks_fired(self._await_evidence(evidence_dir, n), n)
