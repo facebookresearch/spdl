@@ -5,10 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
+    "_drive_to_completion",
     "_EOF",
     "_EPOCH_END",
     "_periodic_dispatch",
     "_P2Percentile",
+    "_ShieldedHook",
     "_SKIP",
     "_StatsCounter",
     "_time_str",
@@ -22,7 +24,7 @@ import time
 from asyncio import Task
 from collections.abc import Callable, Coroutine, Iterator
 from contextlib import contextmanager
-from typing import Any, TypeVar
+from typing import Any, AsyncContextManager, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._common._types import StageInfo as StageInfo  # noqa: F811
@@ -249,3 +251,84 @@ async def _periodic_dispatch(
 
     if pending:
         await asyncio.wait(pending)
+
+
+async def _drive_to_completion(
+    coro: Coroutine[Any, Any, T],
+) -> tuple[T, asyncio.CancelledError | None]:
+    """Drive ``coro`` to completion, absorbing repeated cancellations.
+
+    A task can be cancelled more than once: each ``cancel()`` queues another
+    ``CancelledError`` for the next suspension point. A single ``asyncio.shield``
+    only absorbs one, so we loop until the shielded task actually finishes.
+
+    Returns the coroutine's result together with the first ``CancelledError``
+    seen (or ``None``). The caller is responsible for re-raising the
+    cancellation once any remaining shielded work is done — it is never
+    swallowed here. A non-cancellation exception from ``coro`` propagates
+    immediately and takes priority over a pending cancellation.
+
+    The surrounding task may be cancelled repeatedly (e.g. the pipeline
+    executor re-cancels orphaned stages on every loop iteration). Each delivery
+    interrupts our ``await`` with ``CancelledError`` even after ``coro`` itself
+    has already finished. We disambiguate via ``task.cancelled()``: if ``coro``
+    was itself cancelled, that is its result and we propagate it; otherwise the
+    ``CancelledError`` is a cancellation of *our* wait, so we keep ``coro``'s
+    real result (value or non-cancel exception) and report the cancellation for
+    the caller to handle.
+    """
+    task = asyncio.ensure_future(coro)
+    cancelled: asyncio.CancelledError | None = None
+    while True:
+        try:
+            return await asyncio.shield(task), cancelled
+        except asyncio.CancelledError as e:
+            cancelled = cancelled or e
+            if task.done():
+                if task.cancelled():
+                    raise
+                # ``coro`` finished; ``task.result()`` returns its value or
+                # re-raises its (non-cancel) exception.
+                return task.result(), cancelled
+
+
+class _ShieldedHook:
+    """Wrap a stage-hook context manager so ``__aenter__``/``__aexit__`` run to
+    completion even when the surrounding task is cancelled.
+
+    The cancellation is re-raised once the shielded enter/exit finishes, so the
+    stage still shuts down — it is only deferred, not dropped. This protects
+    finalization that must not be lost (e.g. flushing the final task stats in
+    ``TaskStatsHook.stage_hook`` or the queue stats in ``StatsQueue.stage_hook``).
+
+    .. caution::
+
+       This makes the hook's enter/exit uninterruptible. Only wrap finalization
+       that is trusted to terminate; a ``stage_hook`` that blocks after ``yield``
+       would make the whole stage impossible to cancel.
+    """
+
+    def __init__(self, cm: AsyncContextManager[Any]) -> None:
+        self._cm = cm
+
+    async def __aenter__(self) -> Any:
+        res, cancelled = await _drive_to_completion(self._cm.__aenter__())
+        if cancelled is None:
+            return res
+        # Entered successfully but we were cancelled; release before re-raising
+        # so a half-initialized hook is not leaked. The exit is shielded too.
+        await _drive_to_completion(self._cm.__aexit__(None, None, None))
+        raise cancelled
+
+    async def __aexit__(self, *exc_info: Any) -> Any:
+        result, cancelled = await _drive_to_completion(self._cm.__aexit__(*exc_info))
+        # Surface a deferred cancellation only when there is no original
+        # exception to preserve, or the hook suppressed it (truthy ``result``).
+        # When an exception is already propagating into this exit (e.g. a stage
+        # failure) and the hook did not suppress it, that exception must win —
+        # a cancellation that arrived during finalization must not mask it.
+        # ``result`` is the hook's exception-suppression signal, which we also
+        # return to honor the context-manager contract.
+        if cancelled is not None and (exc_info[0] is None or result):
+            raise cancelled
+        return result

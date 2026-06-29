@@ -20,6 +20,7 @@ from spdl.pipeline._common._misc import create_task
 from ._common import (
     _P2Percentile,
     _periodic_dispatch,
+    _ShieldedHook,
     _StatsCounter,
     _time_str,
     StageInfo,
@@ -196,14 +197,18 @@ class TaskHook(ABC):
 
 
 def _stage_hooks(hooks: Sequence[TaskHook]) -> AsyncContextManager[None]:
-    hs: list[AsyncContextManager[None]] = [hook.stage_hook() for hook in hooks]
+    raw: list[AsyncContextManager[None]] = [hook.stage_hook() for hook in hooks]
 
-    if not all(hasattr(h, "__aenter__") and hasattr(h, "__aexit__") for h in hs):
+    if not all(hasattr(h, "__aenter__") and hasattr(h, "__aexit__") for h in raw):
         raise ValueError(
             "`stage_hook()` must return an object that has `__aenter__` and"
             " `__aexit__` method. "
             "Make sure that `stage_hook()` is decorated with `asynccontextmanager`."
         )
+
+    # Shield enter/exit so stage finalization (e.g. final stats reporting) is not
+    # lost when the pipeline is cancelled during shutdown.
+    hs: list[AsyncContextManager[None]] = [_ShieldedHook(h) for h in raw]
 
     @asynccontextmanager
     async def stage_hooks() -> AsyncIterator[None]:

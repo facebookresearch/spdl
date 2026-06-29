@@ -21,7 +21,7 @@ from typing import Any
 
 from spdl.pipeline._common._convert import _to_async
 
-from ._common import _EOF, _EPOCH_END, is_eof, is_epoch_end
+from ._common import _EOF, _EPOCH_END, _ShieldedHook, is_eof, is_epoch_end
 from ._hook import _stage_hooks, TaskHook
 from ._queue import AsyncQueue
 
@@ -55,7 +55,11 @@ async def _queue_stage_hook(queues: Sequence[AsyncQueue]) -> AsyncGenerator[None
     cancelled = False
     async with AsyncExitStack() as stack:
         for q in queues:
-            await stack.enter_async_context(q.stage_hook())
+            # Use the shared guarded wrapper so stage finalization (e.g. final
+            # stats flush) survives cancellation, consistently with the other
+            # pipes. This stage's only bespoke behavior is the multi-queue EOF
+            # broadcast below, which the shared hook does not cover.
+            await stack.enter_async_context(_ShieldedHook(q.stage_hook()))
         try:
             yield
         except asyncio.CancelledError:
