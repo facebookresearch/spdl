@@ -34,6 +34,7 @@ from typing import Any, cast, TypeVar
 from parameterized import parameterized
 from spdl.pipeline import (
     AsyncQueue,
+    Pipeline,
     PipelineBuilder,
     PipelineFailure,
     PriorityThreadPoolExecutor,
@@ -3355,3 +3356,99 @@ class TestPipelineFailureStructure(unittest.TestCase):
             self.assertTrue(
                 any(note.startswith("Pipeline stage:") for note in notes),
             )
+
+
+class _SlowFinalizeQueue(AsyncQueue):
+    """AsyncQueue whose stage finalization sleeps.
+
+    Holding the stage open during finalization guarantees that the executor's
+    orphan-cancellation (issued once a downstream stage completes) lands while
+    the failing stage is still finalizing — the exact window the fix protects.
+    """
+
+    @asynccontextmanager
+    async def stage_hook(self):
+        try:
+            yield
+        finally:
+            await asyncio.sleep(0.3)
+
+
+class TestStageFinalizationCancellation(unittest.TestCase):
+    """A stage failure must survive a cancellation that races stage finalization.
+
+    When a stage raises and its stage/queue hook finalization is then interrupted
+    by an external cancellation (the executor orphan-cancels the stage once a
+    downstream stage completes), the cancellation must not mask the failure.
+    Otherwise the task is marked cancelled, ``_gather_error`` drops its exception,
+    and no ``PipelineFailure`` is raised. This surfaced intermittently with
+    ``use_thread_output_queue=True`` (it perturbs shutdown scheduling, hitting the
+    race on roughly half of the runs).
+
+    The hooks are shielded so finalization runs to completion and re-raises the
+    failure instead of the cancellation. ``_SlowFinalizeQueue`` makes the race
+    deterministic, so a regression fails on every run without a stress loop.
+    """
+
+    def _assert_fails(self, pipeline: Pipeline) -> None:
+        with self.assertRaises(PipelineFailure):
+            with pipeline.auto_stop():
+                list(pipeline.get_iterator(timeout=30))
+
+    def test_max_failures(self) -> None:
+        """Exceeding max_failures surfaces despite finalization cancellation."""
+
+        def fail_odd(x):
+            if x % 2:
+                raise ValueError(f"Only even numbers are allowed. {x}")
+            return x
+
+        self._assert_fails(
+            PipelineBuilder()
+            .add_source(range(10))
+            .pipe(fail_odd)
+            .add_sink(1)
+            .build(
+                num_threads=1,
+                max_failures=3,
+                use_thread_output_queue=True,
+                queue_class=_SlowFinalizeQueue,
+            )
+        )
+
+    def test_type_error(self) -> None:
+        """A stage TypeError surfaces despite finalization cancellation."""
+
+        async def wrong_sig(i, _):
+            return i
+
+        self._assert_fails(
+            PipelineBuilder()
+            .add_source(range(10))
+            # pyre-ignore[6]
+            .pipe(wrong_sig)
+            .add_sink(1)
+            .build(
+                num_threads=1,
+                use_thread_output_queue=True,
+                queue_class=_SlowFinalizeQueue,
+            )
+        )
+
+    def test_source_failure(self) -> None:
+        """A source exception surfaces despite finalization cancellation."""
+
+        def failure_source():
+            raise RuntimeError("Foo")
+            yield None
+
+        self._assert_fails(
+            PipelineBuilder()
+            .add_source(failure_source())
+            .add_sink(1)
+            .build(
+                num_threads=1,
+                use_thread_output_queue=True,
+                queue_class=_SlowFinalizeQueue,
+            )
+        )

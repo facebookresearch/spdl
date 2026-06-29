@@ -17,7 +17,14 @@ from typing import Any
 
 from spdl.pipeline._common._misc import create_task
 
-from ._common import _EOF, _periodic_dispatch, _StatsCounter, _time_str, StageInfo
+from ._common import (
+    _EOF,
+    _periodic_dispatch,
+    _ShieldedHook,
+    _StatsCounter,
+    _time_str,
+    StageInfo,
+)
 
 __all__ = [
     "_queue_stage_hook",
@@ -75,7 +82,11 @@ async def _queue_stage_hook(queue: AsyncQueue) -> AsyncGenerator[None, None]:
     # Note:
     # `asyncio.CancelledError` is a subclass of BaseException, so it won't be
     # caught in the following, and EOF won't be passed to the output queue.
-    async with queue.stage_hook():
+    #
+    # The stage hook is shielded so its finalization (e.g. flushing the final
+    # `StatsQueue` stats) runs to completion even when the cancellation that
+    # ends the stage propagates through this `async with`.
+    async with _ShieldedHook(queue.stage_hook()):
         try:
             yield
         except Exception:
