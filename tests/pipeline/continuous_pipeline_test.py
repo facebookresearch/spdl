@@ -786,55 +786,66 @@ class TestContinuousSubprocessPipelineReuse(unittest.TestCase):
             self.assertEqual(flat, expected_items, f"epoch {epoch}: items")
 
 
-@unittest.skipIf(
-    sys.version_info < (3, 14),
-    "Subinterpreters require Python 3.14+",
-)
-class TestContinuousSubinterpreterPipelineReuse(unittest.TestCase):
-    @_ignore_fork_warning
-    def test_subinterpreter_pipeline_reused_across_epochs(self) -> None:
-        """Thread and process IDs stay the same across epochs in subinterpreter."""
-        recorder = _RecordIDs()
+def _has_interpreter_pool_executor() -> bool:
+    if sys.version_info < (3, 14):
+        return False
+    try:
+        from concurrent.futures.interpreter import InterpreterPoolExecutor  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
-        config = (
-            PipelineBuilder()
-            .add_source(SourceIterable(5), continuous=True)
-            .pipe(recorder, concurrency=1)
-            .add_sink(buffer_size=3)
-            .get_config()
-        )
-        source = run_pipeline_in_subinterpreter(
-            config,
-            num_threads=1,
-            timeout=10,
-        )
 
-        all_thread_ids: list[set[int]] = []
-        all_process_ids: list[set[int]] = []
+_HAS_INTERPRETER: bool = _has_interpreter_pool_executor()
 
-        for epoch in range(3):
-            recorder.thread_ids.clear()
-            recorder.process_ids.clear()
-            result = list(source)
-            self.assertEqual(sorted(result), [0, 1, 2, 3, 4], f"epoch {epoch}")
-            all_thread_ids.append(set(recorder.thread_ids))
-            all_process_ids.append(set(recorder.process_ids))
 
-        # All epochs should use the same thread(s) — pipeline was reused
-        self.assertEqual(
-            all_thread_ids[0],
-            all_thread_ids[1],
-            "Thread IDs changed between epoch 0 and 1 — pipeline was rebuilt",
-        )
-        self.assertEqual(
-            all_thread_ids[1],
-            all_thread_ids[2],
-            "Thread IDs changed between epoch 1 and 2 — pipeline was rebuilt",
-        )
+if _HAS_INTERPRETER:
 
-        # All epochs should run in the same process (subinterpreter shares process)
-        self.assertEqual(
-            all_process_ids[0],
-            all_process_ids[1],
-            "Process IDs changed between epoch 0 and 1",
-        )
+    class TestContinuousSubinterpreterPipelineReuse(unittest.TestCase):
+        @_ignore_fork_warning
+        def test_subinterpreter_pipeline_reused_across_epochs(self) -> None:
+            """Thread and process IDs stay the same across epochs in subinterpreter."""
+            recorder = _RecordIDs()
+
+            config = (
+                PipelineBuilder()
+                .add_source(SourceIterable(5), continuous=True)
+                .pipe(recorder, concurrency=1)
+                .add_sink(buffer_size=3)
+                .get_config()
+            )
+            source = run_pipeline_in_subinterpreter(
+                config,
+                num_threads=1,
+                timeout=10,
+            )
+
+            all_thread_ids: list[set[int]] = []
+            all_process_ids: list[set[int]] = []
+
+            for epoch in range(3):
+                recorder.thread_ids.clear()
+                recorder.process_ids.clear()
+                result = list(source)
+                self.assertEqual(sorted(result), [0, 1, 2, 3, 4], f"epoch {epoch}")
+                all_thread_ids.append(set(recorder.thread_ids))
+                all_process_ids.append(set(recorder.process_ids))
+
+            # All epochs should use the same thread(s) — pipeline was reused
+            self.assertEqual(
+                all_thread_ids[0],
+                all_thread_ids[1],
+                "Thread IDs changed between epoch 0 and 1 — pipeline was rebuilt",
+            )
+            self.assertEqual(
+                all_thread_ids[1],
+                all_thread_ids[2],
+                "Thread IDs changed between epoch 1 and 2 — pipeline was rebuilt",
+            )
+
+            # All epochs should run in the same process (subinterpreter shares process)
+            self.assertEqual(
+                all_process_ids[0],
+                all_process_ids[1],
+                "Process IDs changed between epoch 0 and 1",
+            )

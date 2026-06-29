@@ -2728,7 +2728,7 @@ class TestRunPipeline(unittest.TestCase):
             pass
 
 
-def _interpreter_pool_available() -> bool:
+def _has_interpreter_pool_executor() -> bool:
     if sys.version_info < (3, 14):
         return False
     try:
@@ -2736,6 +2736,9 @@ def _interpreter_pool_available() -> bool:
     except ImportError:
         return False
     return True
+
+
+_HAS_INTERPRETER: bool = _has_interpreter_pool_executor()
 
 
 def _config_with_executor(executor) -> PipelineConfig:
@@ -2925,22 +2928,6 @@ class TestExecutorProxy(unittest.TestCase):
     def test_run_in_subprocess_with_threadpool(self) -> None:
         """run_pipeline_in_subprocess works with a ThreadPoolExecutor on a pipe."""
         config = _config_with_executor(ThreadPoolExecutor(max_workers=2))
-        results = list(run_pipeline_in_subprocess(config, num_threads=1))
-        self.assertEqual(sorted(results), [2 * i for i in range(10)])
-
-    @unittest.skipUnless(
-        _interpreter_pool_available(),
-        "InterpreterPoolExecutor requires Python 3.14+",
-    )
-    @_ignore_warnings(_FORK_WARNING, _UNAWAITED_COROUTINE)
-    def test_run_in_subprocess_with_interpreterpool(self) -> None:
-        """run_pipeline_in_subprocess works with an InterpreterPoolExecutor on a pipe."""
-        import importlib
-
-        interpreter_mod = importlib.import_module("concurrent.futures.interpreter")
-        executor = interpreter_mod.InterpreterPoolExecutor(max_workers=2)
-
-        config = _config_with_executor(executor)
         results = list(run_pipeline_in_subprocess(config, num_threads=1))
         self.assertEqual(sorted(results), [2 * i for i in range(10)])
 
@@ -3452,3 +3439,19 @@ class TestStageFinalizationCancellation(unittest.TestCase):
                 queue_class=_SlowFinalizeQueue,
             )
         )
+
+
+if _HAS_INTERPRETER:
+
+    class TestExecutorProxyInterpreterPool(unittest.TestCase):
+        @_ignore_warnings(_FORK_WARNING, _UNAWAITED_COROUTINE)
+        def test_run_in_subprocess_with_interpreterpool(self) -> None:
+            """run_pipeline_in_subprocess works with an InterpreterPoolExecutor on a pipe."""
+            import importlib
+
+            interpreter_mod = importlib.import_module("concurrent.futures.interpreter")
+            executor = interpreter_mod.InterpreterPoolExecutor(max_workers=2)
+
+            config = _config_with_executor(executor)
+            results = list(run_pipeline_in_subprocess(config, num_threads=1))
+            self.assertEqual(sorted(results), [2 * i for i in range(10)])

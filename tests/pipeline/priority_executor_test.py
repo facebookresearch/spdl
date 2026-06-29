@@ -864,74 +864,84 @@ class TestPriorityExecutorGarbageCollection(unittest.TestCase):
 
 # ─── PriorityInterpreterPoolExecutor tests (Python 3.14+ only) ───
 
-_has_interpreter_pool: bool = sys.version_info >= (3, 14)
+
+def _has_interpreter_pool_executor() -> bool:
+    if sys.version_info < (3, 14):
+        return False
+    try:
+        from concurrent.futures.interpreter import InterpreterPoolExecutor  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
-@unittest.skipUnless(
-    _has_interpreter_pool, "InterpreterPoolExecutor requires Python 3.14+"
-)
-class TestPriorityInterpreterPoolExecutor(unittest.TestCase):
-    def test_basic_execution(self) -> None:
-        from spdl.pipeline import PriorityInterpreterPoolExecutor
+_HAS_INTERPRETER: bool = _has_interpreter_pool_executor()
 
-        executor = PriorityInterpreterPoolExecutor(max_workers=2)
-        stage = executor.get_executor()
-        futs = [stage.submit(pow, 2, x) for x in range(10)]
-        results = {f.result(timeout=10) for f in futs}
-        self.assertEqual(results, {2**x for x in range(10)})
-        executor.shutdown()
 
-    def test_exception_propagation(self) -> None:
-        from spdl.pipeline import PriorityInterpreterPoolExecutor
+if _HAS_INTERPRETER:
 
-        executor = PriorityInterpreterPoolExecutor(max_workers=1)
-        stage = executor.get_executor()
+    class TestPriorityInterpreterPoolExecutor(unittest.TestCase):
+        def test_basic_execution(self) -> None:
+            from spdl.pipeline import PriorityInterpreterPoolExecutor
 
-        def fail() -> None:
-            raise ValueError("interpreter boom")
+            executor = PriorityInterpreterPoolExecutor(max_workers=2)
+            stage = executor.get_executor()
+            futs = [stage.submit(pow, 2, x) for x in range(10)]
+            results = {f.result(timeout=10) for f in futs}
+            self.assertEqual(results, {2**x for x in range(10)})
+            executor.shutdown()
 
-        fut = stage.submit(fail)
-        with self.assertRaises(ValueError):
-            fut.result(timeout=10)
-        executor.shutdown()
+        def test_exception_propagation(self) -> None:
+            from spdl.pipeline import PriorityInterpreterPoolExecutor
 
-    def test_submit_after_shutdown_raises(self) -> None:
-        from spdl.pipeline import PriorityInterpreterPoolExecutor
+            executor = PriorityInterpreterPoolExecutor(max_workers=1)
+            stage = executor.get_executor()
 
-        executor = PriorityInterpreterPoolExecutor(max_workers=1)
-        stage = executor.get_executor()
-        executor.shutdown()
-        with self.assertRaises(RuntimeError):
-            executor._submit_with_priority(  # pyre-ignore[16]
-                (0, 0), lambda: None, (), {}
+            def fail() -> None:
+                raise ValueError("interpreter boom")
+
+            fut = stage.submit(fail)
+            with self.assertRaises(ValueError):
+                fut.result(timeout=10)
+            executor.shutdown()
+
+        def test_submit_after_shutdown_raises(self) -> None:
+            from spdl.pipeline import PriorityInterpreterPoolExecutor
+
+            executor = PriorityInterpreterPoolExecutor(max_workers=1)
+            executor.get_executor()
+            executor.shutdown()
+            with self.assertRaises(RuntimeError):
+                executor._submit_with_priority(  # pyre-ignore[16]
+                    (0, 0), lambda: None, (), {}
+                )
+
+        def test_is_executor_compatible(self) -> None:
+            from spdl.pipeline import PriorityInterpreterPoolExecutor
+
+            executor = PriorityInterpreterPoolExecutor(max_workers=1)
+            stage = executor.get_executor()
+            self.assertIsInstance(stage, Executor)
+            executor.shutdown()
+
+        def test_pipeline_two_stage(self) -> None:
+            from spdl.pipeline import PriorityInterpreterPoolExecutor
+
+            pool = PriorityInterpreterPoolExecutor(max_workers=4)
+            s1 = pool.get_executor()
+            s2 = pool.get_executor()
+
+            pipeline = (
+                PipelineBuilder()
+                .add_source(range(20))
+                .pipe(lambda x: x * 2, executor=s1, concurrency=4)
+                .pipe(lambda x: x + 1, executor=s2, concurrency=4)
+                .add_sink(3)
+                .build(num_threads=1)
             )
 
-    def test_is_executor_compatible(self) -> None:
-        from spdl.pipeline import PriorityInterpreterPoolExecutor
+            with pipeline.auto_stop():
+                results = sorted(pipeline.get_iterator(timeout=30))
 
-        executor = PriorityInterpreterPoolExecutor(max_workers=1)
-        stage = executor.get_executor()
-        self.assertIsInstance(stage, Executor)
-        executor.shutdown()
-
-    def test_pipeline_two_stage(self) -> None:
-        from spdl.pipeline import PriorityInterpreterPoolExecutor
-
-        pool = PriorityInterpreterPoolExecutor(max_workers=4)
-        s1 = pool.get_executor()
-        s2 = pool.get_executor()
-
-        pipeline = (
-            PipelineBuilder()
-            .add_source(range(20))
-            .pipe(lambda x: x * 2, executor=s1, concurrency=4)
-            .pipe(lambda x: x + 1, executor=s2, concurrency=4)
-            .add_sink(3)
-            .build(num_threads=1)
-        )
-
-        with pipeline.auto_stop():
-            results = sorted(pipeline.get_iterator(timeout=30))
-
-        self.assertEqual(results, sorted(x * 2 + 1 for x in range(20)))
-        pool.shutdown()
+            self.assertEqual(results, sorted(x * 2 + 1 for x in range(20)))
+            pool.shutdown()
