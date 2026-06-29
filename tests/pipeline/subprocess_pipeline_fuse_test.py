@@ -128,6 +128,33 @@ def _run(pipeline: Pipeline[Any], timeout: float = 60.0) -> list[Any]:
         return list(pipeline.get_iterator(timeout=timeout))
 
 
+def stall_on_first(x: int) -> int:
+    """Stall only on the earliest item, so one worker holds it while its peer races ahead."""
+    if x == 0:
+        time.sleep(3.0)
+    return x + 1
+
+
+class _Buffer1Queue(AsyncQueue):
+    """An ``AsyncQueue`` pinned to ``buffer_size=1`` (no prefetch slack)."""
+
+    def __init__(
+        self, info: Any, *, buffer_size: int = 1, interval: float = -1
+    ) -> None:
+        super().__init__(info, buffer_size=1)
+
+
+def _install_small_buffers() -> None:
+    """Executor initializer: pin the worker sub-pipeline's queues to ``buffer_size=1``.
+
+    A single-slot buffer stops the worker holding the earliest item from prefetching past it, so
+    that worker stays parked on the slow item while its peer drains the rest — the timing that
+    surfaces the startup race below (a cheap, deterministic stand-in for the recording overhead
+    that first exposed it under stress).
+    """
+    set_default_queue_class(_Buffer1Queue)
+
+
 class SubprocessPipelineFuseTest(unittest.TestCase):
     def test_two_pool_stages_fused_match_unfused(self) -> None:
         """A fused two-stage process-pool pipeline matches the unfused result."""
@@ -250,6 +277,36 @@ class SubprocessPipelineFuseTest(unittest.TestCase):
             .build(num_threads=4, fuse_subprocess_stages=False)
         )
         self.assertEqual(sorted(_run(pipeline)), ref)
+
+
+class StartupRaceFuseTest(unittest.TestCase):
+    """A slow worker holding the earliest items must not have them silently dropped.
+
+    Regression test for the silent earliest-item drop in the non-continuous fused
+    pipeline. With a single shared work-stealing input queue, a worker that drains its
+    stream and reaches ``_SESSION_END`` early could loop back and consume a second end
+    marker meant for a slower peer still holding (un-flushed) items; that peer then
+    never ended, the collector reached its ``_DONE`` count from the wrong workers and
+    finished, and the peer's earliest items were dropped with no error. Per-worker input
+    queues (one ``_SESSION_END`` each) make that impossible. ``stall_on_first`` +
+    ``buffer_size=1`` deterministically pin the worker that grabs item ``0`` while its
+    peer races through the rest — exactly the interleaving the race needs.
+    """
+
+    def test_slow_worker_does_not_drop_earliest_items(self) -> None:
+        """A worker stalled on the earliest item still delivers it instead of dropping it."""
+        n = 16
+        ref = sorted((x + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2, initializer=_install_small_buffers)
+        fused = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .pipe(stall_on_first, executor=ex, concurrency=1)
+            .pipe(times_two, executor=ex, concurrency=1)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        self.assertEqual(sorted(_run(fused)), ref)
 
 
 class ContinuousFuseTest(unittest.TestCase):
@@ -692,34 +749,36 @@ class FeedAbortTest(unittest.TestCase):
     def test_feed_ends_session_when_aborted_while_idle(self) -> None:
         """A feeder parked on an empty input queue still emits the per-worker _SESSION_END.
 
-        On a worker error the collector sets ``abort`` while the feeder is typically blocked
-        waiting on a slow/idle upstream. The feeder must wake and send one ``_SESSION_END`` per
-        worker so the collector can drain every ``_DONE`` instead of hanging until its stall
-        timeout. Driving ``_feed`` directly keeps the abort-while-idle race deterministic.
+        On a worker error the collector sets ``abort`` while the feeder is typically
+        blocked waiting on a slow/idle upstream. The feeder must wake and send exactly one
+        ``_SESSION_END`` onto each worker's own queue so the collector can drain every
+        ``_DONE`` instead of hanging until its stall timeout. Driving ``_feed`` directly
+        keeps the abort-while-idle race deterministic.
         """
         num_workers = 3
 
-        async def _scenario() -> list[Any]:
-            in_q: _queue.Queue[Any] = _queue.Queue()
+        async def _scenario() -> list[list[Any]]:
+            in_qs: list[_queue.Queue[Any]] = [
+                _queue.Queue() for _ in range(num_workers)
+            ]
             input_queue = AsyncQueue(
                 StageInfo(pipeline_id=0, stage_id="0", stage_name="input")
             )  # stays empty -> get() blocks
             abort = asyncio.Event()
             feeder_idle = asyncio.Event()
-            with ThreadPoolExecutor(max_workers=2) as ex:
+            with ThreadPoolExecutor(max_workers=num_workers + 1) as ex:
                 task = asyncio.ensure_future(
-                    _subprocess_pipe._feed(
-                        input_queue, in_q, num_workers, ex, abort, feeder_idle
-                    )
+                    _subprocess_pipe._feed(input_queue, in_qs, ex, abort, feeder_idle)
                 )
                 await asyncio.sleep(0.1)  # let the feeder park on input_queue.get()
                 self.assertFalse(task.done(), "feeder should be parked on empty queue")
                 abort.set()
                 await asyncio.wait_for(task, timeout=5.0)
-            return [in_q.get_nowait() for _ in range(in_q.qsize())]
+            return [[q.get_nowait() for _ in range(q.qsize())] for q in in_qs]
 
         msgs = asyncio.run(_scenario())
-        self.assertEqual(msgs, [(_subprocess_pipe._SESSION_END, None)] * num_workers)
+        # Every worker's own queue receives exactly one _SESSION_END.
+        self.assertEqual(msgs, [[(_subprocess_pipe._SESSION_END, None)]] * num_workers)
 
 
 class StallGuardTest(unittest.TestCase):
