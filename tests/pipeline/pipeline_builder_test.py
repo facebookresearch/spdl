@@ -3355,3 +3355,77 @@ class TestPipelineFailureStructure(unittest.TestCase):
             self.assertTrue(
                 any(note.startswith("Pipeline stage:") for note in notes),
             )
+
+
+class TestPipelineThreadOutputQueueFailure(unittest.TestCase):
+    """Exception propagation must be reliable with the thread-backed sink queue.
+
+    With ``use_thread_output_queue=True`` the sink's output queue routes through
+    ``run_in_executor``, which perturbs event-loop scheduling during shutdown. This
+    used to let a failing stage be orphan-cancelled before it could re-raise, so the
+    ``PipelineFailure`` was dropped on ~50% of runs. These tests stress the failure
+    paths to confirm the error surfaces on every iteration.
+    """
+
+    _STRESS_RUNS: int = 50
+
+    def _assert_always_fails(self, build_pipeline) -> None:
+        for _ in range(self._STRESS_RUNS):
+            pipeline = build_pipeline()
+            with self.assertRaises(PipelineFailure):
+                with pipeline.auto_stop():
+                    list(pipeline.get_iterator(timeout=30))
+
+    def test_max_failures(self) -> None:
+        """Exceeding max_failures reliably fails with the thread output queue."""
+
+        def fail_odd(x):
+            if x % 2:
+                raise ValueError(f"Only even numbers are allowed. {x}")
+            return x
+
+        def build():
+            return (
+                PipelineBuilder()
+                .add_source(range(10))
+                .pipe(fail_odd)
+                .add_sink(1)
+                .build(num_threads=1, max_failures=3, use_thread_output_queue=True)
+            )
+
+        self._assert_always_fails(build)
+
+    def test_type_error(self) -> None:
+        """A stage TypeError reliably surfaces with the thread output queue."""
+
+        async def wrong_sig(i, _):
+            return i
+
+        def build():
+            return (
+                PipelineBuilder()
+                .add_source(range(10))
+                # pyre-ignore[6]
+                .pipe(wrong_sig)
+                .add_sink(1)
+                .build(num_threads=1, use_thread_output_queue=True)
+            )
+
+        self._assert_always_fails(build)
+
+    def test_source_failure(self) -> None:
+        """A source exception reliably surfaces with the thread output queue."""
+
+        def failure_source():
+            raise RuntimeError("Foo")
+            yield None
+
+        def build():
+            return (
+                PipelineBuilder()
+                .add_source(failure_source())
+                .add_sink(1)
+                .build(num_threads=1, use_thread_output_queue=True)
+            )
+
+        self._assert_always_fails(build)

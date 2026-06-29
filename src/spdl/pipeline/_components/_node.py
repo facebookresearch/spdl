@@ -41,7 +41,12 @@ from ._pipe import (
     _ordered_pipe,
     _pipe,
 )
-from ._queue import _ThreadBasedAsyncQueue, AsyncQueue, get_default_queue_class
+from ._queue import (
+    _get_stage_exc,
+    _ThreadBasedAsyncQueue,
+    AsyncQueue,
+    get_default_queue_class,
+)
 from ._sink import _sink
 from ._source import _source, _source_continuous
 from ._subprocess_pipe import _subprocess_pipeline
@@ -780,7 +785,15 @@ def _start_tasks(node: _TNodes) -> set[Task]:
 
 
 def _cancel_recursive(node: _TNodes) -> None:
-    node.task.cancel()
+    # Do not cancel a task that has already failed and recorded its terminal
+    # exception (it is only suspended at its EOF handoff and will re-raise once
+    # resumed). Cancelling it would replace the real exception with
+    # CancelledError and mask the failure -- a race exposed by the thread-backed
+    # sink queue, which lets a downstream stage complete (and trigger this
+    # cancellation) before the failed task is resumed. Its upstream producers
+    # are still cancelled so they are not left orphaned.
+    if _get_stage_exc(node.task) is None:
+        node.task.cancel()
     for n in node.upstream:
         _cancel_recursive(n)
 
@@ -822,7 +835,11 @@ def _gather_error(
 
     task = node.task
     errs = []
-    if not task.cancelled() and (err := task.exception()) is not None:
+    if (
+        task.done()
+        and not task.cancelled()
+        and isinstance(err := task.exception(), Exception)
+    ):
         errs.append((task.get_name(), err))
 
     for n in node.upstream:

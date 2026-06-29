@@ -21,6 +21,8 @@ from ._common import _EOF, _periodic_dispatch, _StatsCounter, _time_str, StageIn
 
 __all__ = [
     "_queue_stage_hook",
+    "_get_stage_exc",
+    "_STAGE_EXC_ATTR",
     "AsyncQueue",
     "_ThreadBasedAsyncQueue",
     "StatsQueue",
@@ -30,6 +32,21 @@ __all__ = [
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
+
+# Attribute used to stash a stage's terminal exception onto its asyncio Task.
+# See `_queue_stage_hook` / `_get_stage_exc` for why this is needed.
+_STAGE_EXC_ATTR: str = "_spdl_stage_exc"
+
+
+def _get_stage_exc(task: "asyncio.Task[Any]") -> Exception | None:
+    """Return the terminal exception recorded by `_queue_stage_hook`, if any.
+
+    A failing stage records its exception onto its own Task before yielding at the
+    EOF handoff. This marks the task as already-failed so that orphan cancellation
+    during shutdown can skip it (and let it re-raise naturally) instead of masking
+    the real error with `CancelledError`.
+    """
+    return getattr(task, _STAGE_EXC_ATTR, None)
 
 
 class AsyncQueue(asyncio.Queue):
@@ -78,7 +95,18 @@ async def _queue_stage_hook(queue: AsyncQueue) -> AsyncGenerator[None, None]:
     async with queue.stage_hook():
         try:
             yield
-        except Exception:
+        except Exception as e:
+            # Record the terminal exception onto the running Task *before* the
+            # `await queue.put(_EOF)` suspension point, marking this task as
+            # already-failed. During shutdown a downstream stage can complete
+            # first and trigger orphan cancellation of this still-suspended
+            # Task; the resulting CancelledError would replace the real error
+            # before it is re-raised, masking the failure (only observed with
+            # the thread-backed sink queue, which perturbs scheduling order).
+            # `_cancel_recursive` reads this mark and skips cancelling the task
+            # so it resumes and re-raises its real exception.
+            if (task := asyncio.current_task()) is not None:
+                setattr(task, _STAGE_EXC_ATTR, e)
             await queue.put(_EOF)
             raise
         else:
