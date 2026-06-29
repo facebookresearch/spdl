@@ -211,7 +211,12 @@ def _profile_pipe(
     cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
     outputs = []
     for concurrency in concurrencies:
-        pipeline = _build._build_pipeline(cfg_, num_threads=concurrency)
+        # Profiling reads the sink output queue's lap stats (occupancy_rate), which only
+        # the stats-collecting AsyncQueue provides. Force the asyncio-backed output queue
+        # here; the thread-backed output queue (the default) does not collect stats.
+        pipeline = _build._build_pipeline(
+            cfg_, num_threads=concurrency, use_thread_output_queue=False
+        )
         with hook_.stage_profile_hook(pipe.name, concurrency):
             qps_, outputs = _run(pipeline)
 

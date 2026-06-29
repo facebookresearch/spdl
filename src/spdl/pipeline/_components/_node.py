@@ -446,7 +446,7 @@ def _convert_config(
     pipeline_id: int,
     stage_id: _MutableInt,
     disable_sink: bool = False,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool = True,
 ) -> _TOutputNodes:
     """Convert a :py:class:`~spdl.pipeline.defs.PipelineConfig` into a linked list of
     :py:class:`~spdl.pipeline._components._node._Node` objects.
@@ -723,7 +723,7 @@ def _build_pipeline_node(
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None,
     stage_id: int,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool = True,
 ) -> _TOutputNodes:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
@@ -997,7 +997,7 @@ def _build_pipeline_coro(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: Sequence[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool = True,
 ) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
     try:
         node = _build_pipeline_node(
