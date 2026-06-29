@@ -291,7 +291,7 @@ class PipelineBuilder(Generic[T, U]):
         queue_class: type[AsyncQueue] | None = None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         stage_id: int = 0,
-        use_thread_output_queue: bool = False,
+        use_thread_output_queue: bool = True,
         fuse_subprocess_stages: bool = False,
     ) -> Pipeline[U]:
         """Build the pipeline.
@@ -333,7 +333,10 @@ class PipelineBuilder(Generic[T, U]):
 
             use_thread_output_queue: If ``True``, replace the sink's output queue with a
                 ``queue.Queue``-backed queue for lower-latency batch handoff.
-                Default: ``False``.
+                Default: ``True``.
+
+                .. versionchanged:: 0.6.0
+                   ``use_thread_output_queue`` now defaults to ``True`` (was ``False``).
 
             fuse_subprocess_stages: If ``True``, fuse runs of two or more adjacent pipe stages
                 that share the same process-pool (or interpreter-pool) executor instance into a

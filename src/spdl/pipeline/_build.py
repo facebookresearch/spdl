@@ -137,7 +137,7 @@ def _build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool = True,
     fuse_subprocess_stages: bool = False,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
@@ -197,7 +197,7 @@ def build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool = True,
     fuse_subprocess_stages: bool = False,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
@@ -269,7 +269,10 @@ def build_pipeline(
             :py:class:`queue.Queue`-backed queue for the final handoff from the
             background event loop to the foreground consumer thread. This bypasses
             ``asyncio.run_coroutine_threadsafe``, reducing per-batch latency from
-            ~200-400us to ~10us. Default: ``False``.
+            ~200-400us to ~10us. Default: ``True``.
+
+            .. versionchanged:: 0.6.0
+               ``use_thread_output_queue`` now defaults to ``True`` (was ``False``).
 
         fuse_subprocess_stages: If ``True``, fuse runs of two or more adjacent pipe stages that
             share the same process-pool (or interpreter-pool) executor instance into a single
@@ -332,7 +335,7 @@ class _Wrapper(Generic[U]):
         queue_class: type[AsyncQueue] | None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         background_tasks: list[BackgroundTaskFactory] | None = None,
-        use_thread_output_queue: bool = False,
+        use_thread_output_queue: bool = True,
     ) -> None:
         self.config = config
         self.num_threads = num_threads
@@ -404,7 +407,7 @@ def run_pipeline_in_subprocess(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool = True,
     fuse_subprocess_stages: bool = False,
     **kwargs: Any,
 ) -> Iterable[T]:
@@ -675,7 +678,7 @@ def run_pipeline_in_subinterpreter(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool = True,
     **kwargs: Any,
 ) -> Iterable[T]:
     """**[Experimental]** Run the given Pipeline in a subinterpreter, and iterate on the result.

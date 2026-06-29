@@ -41,7 +41,12 @@ from ._pipe import (
     _ordered_pipe,
     _pipe,
 )
-from ._queue import _ThreadBasedAsyncQueue, AsyncQueue, get_default_queue_class
+from ._queue import (
+    _get_stage_exc,
+    _ThreadBasedAsyncQueue,
+    AsyncQueue,
+    get_default_queue_class,
+)
 from ._sink import _sink
 from ._source import _source, _source_continuous
 from ._subprocess_pipe import _subprocess_pipeline
@@ -441,7 +446,7 @@ def _convert_config(
     pipeline_id: int,
     stage_id: _MutableInt,
     disable_sink: bool = False,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool = True,
 ) -> _TOutputNodes:
     """Convert a :py:class:`~spdl.pipeline.defs.PipelineConfig` into a linked list of
     :py:class:`~spdl.pipeline._components._node._Node` objects.
@@ -718,7 +723,7 @@ def _build_pipeline_node(
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None,
     stage_id: int,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool = True,
 ) -> _TOutputNodes:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
@@ -780,7 +785,15 @@ def _start_tasks(node: _TNodes) -> set[Task]:
 
 
 def _cancel_recursive(node: _TNodes) -> None:
-    node.task.cancel()
+    # Do not cancel a task that has already failed and recorded its terminal
+    # exception (it is only suspended at its EOF handoff and will re-raise once
+    # resumed). Cancelling it would replace the real exception with
+    # CancelledError and mask the failure -- a race exposed by the thread-backed
+    # sink queue, which lets a downstream stage complete (and trigger this
+    # cancellation) before the failed task is resumed. Its upstream producers
+    # are still cancelled so they are not left orphaned.
+    if _get_stage_exc(node.task) is None:
+        node.task.cancel()
     for n in node.upstream:
         _cancel_recursive(n)
 
@@ -822,7 +835,11 @@ def _gather_error(
 
     task = node.task
     errs = []
-    if not task.cancelled() and (err := task.exception()) is not None:
+    if (
+        task.done()
+        and not task.cancelled()
+        and isinstance(err := task.exception(), Exception)
+    ):
         errs.append((task.get_name(), err))
 
     for n in node.upstream:
@@ -980,7 +997,7 @@ def _build_pipeline_coro(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: Sequence[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool = True,
 ) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
     try:
         node = _build_pipeline_node(

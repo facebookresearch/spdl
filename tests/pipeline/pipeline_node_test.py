@@ -21,6 +21,7 @@ from spdl.pipeline._components._node import (
     _SourceNode,
     _start_tasks,
 )
+from spdl.pipeline._components._queue import _STAGE_EXC_ATTR
 from spdl.pipeline.defs import SinkConfig, SourceConfig
 
 
@@ -258,6 +259,70 @@ class PipelineNodeTest(unittest.TestCase):
             self.assertEqual(name, "0:0:C2")
             self.assertIsInstance(err, DummyException)
             self.assertEqual(err.args[0], "fail C2")
+
+        asyncio.run(run())
+
+    def test_cancel_recursive_skips_already_failed(self) -> None:
+        """`_cancel_recursive` skips an already-failed task (so its real
+        exception is not masked) while still cancelling its upstream."""
+        # A task that has already failed and recorded its terminal exception
+        # (i.e. it is suspended at its EOF handoff, mid-failure) must NOT be
+        # cancelled, otherwise CancelledError masks the real exception. Its
+        # upstream producers are still cancelled.
+        #
+        #  A -> B (already failed, suspended)
+
+        async def run() -> None:
+            a = _node("A", [])
+            b = _node("B", [a])  # sleeps: stands in for "suspended at put(_EOF)"
+            tasks = _start_tasks(b)
+            await asyncio.sleep(0)
+
+            # Mark B as already-failed, as `_queue_stage_hook` does before its
+            # `await queue.put(_EOF)` suspension point.
+            setattr(b.task, _STAGE_EXC_ATTR, DummyException("fail B"))
+
+            _cancel_recursive(b)
+            await asyncio.sleep(0)
+
+            self.assertFalse(b.task.cancelled())  # skipped: already failed
+            self.assertTrue(a.task.cancelled())  # upstream still cancelled
+
+            b.task.cancel()  # cleanup
+            await asyncio.wait(tasks)
+
+        asyncio.run(run())
+
+    def test_cancel_orphaned_skips_already_failed_upstream(self) -> None:
+        """Orphan cancellation skips an already-failed upstream task (so its
+        exception is not masked) while still cancelling further upstream."""
+        # When a downstream task is done, orphan cancellation must skip an
+        # upstream task that has already failed (and is only suspended at its
+        # EOF handoff), so its exception is not masked by CancelledError.
+        #
+        #  A -> B (already failed, suspended) -> C (done)
+
+        async def run() -> None:
+            a = _node("A", [])
+            b = _node("B", [a])  # sleeps: stands in for "suspended at put(_EOF)"
+            c = _node("C", [b])
+            tasks = _start_tasks(c)
+            await asyncio.sleep(0)
+
+            # B recorded its terminal exception but has not re-raised yet.
+            setattr(b.task, _STAGE_EXC_ATTR, DummyException("fail B"))
+            # C has finished (e.g. it read B's EOF).
+            c.task.cancel()
+            await asyncio.wait([c.task])
+
+            _cancel_orphaned(c)
+            await asyncio.sleep(0)
+
+            self.assertFalse(b.task.cancelled())  # skipped: already failed
+            self.assertTrue(a.task.cancelled())  # upstream still cancelled
+
+            b.task.cancel()  # cleanup
+            await asyncio.wait(tasks)
 
         asyncio.run(run())
 
