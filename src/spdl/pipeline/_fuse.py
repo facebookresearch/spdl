@@ -45,7 +45,7 @@ from typing import Any
 
 from spdl.pipeline._common._convert import _is_process_pool
 from spdl.pipeline._components import _get_global_id, _set_global_id
-from spdl.pipeline._executor_proxy import _ensure_executor_unused
+from spdl.pipeline._executor_proxy import _warn_if_executor_used
 from spdl.pipeline._subprocess_pipeline_pool import _SubprocessPipelinePool
 from spdl.pipeline.defs._defs import (
     _PipeType,
@@ -343,7 +343,7 @@ def _worker_initializer(
 
 def _pool_params(executor: Executor) -> tuple[int, Any, tuple[Any, ...]]:
     """Read worker count and initializer off a fresh pool executor without using it."""
-    _ensure_executor_unused(executor)
+    _warn_if_executor_used(executor)
     max_workers = getattr(executor, "_max_workers", None) or os.cpu_count() or 1
     user_initializer = getattr(executor, "_initializer", None)
     user_initargs = getattr(executor, "_initargs", ()) or ()

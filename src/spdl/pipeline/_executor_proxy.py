@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import sys
 import threading
+import warnings
 from collections.abc import Callable
 from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import replace
@@ -41,9 +42,9 @@ from spdl.pipeline.defs import (
 )
 
 __all__ = [
-    "_ensure_executor_unused",
     "_make_config_executors_picklable",
     "_rewrite_config_executors",
+    "_warn_if_executor_used",
 ]
 
 
@@ -179,16 +180,22 @@ if sys.version_info >= (3, 14):
     _EXECUTOR_ARG_EXTRACTORS[InterpreterPoolExecutor] = _interpreter_pool_kwargs
 
 
-def _ensure_executor_unused(executor: Executor) -> None:
-    """Reject a stdlib pool executor that has already been used.
+def _warn_if_executor_used(executor: Executor) -> None:
+    """Warn if a stdlib pool executor handed to the pipeline has already been used.
 
-    Moving a pipeline to a subprocess recreates the executor's workers as part of running it
-    there (thread / interpreter pools are reconstructed in the subprocess; a
-    :py:class:`~concurrent.futures.ProcessPoolExecutor`'s workers are hoisted into the main
-    process). The executor must therefore be freshly constructed — one that has already
-    spawned workers or had work submitted is being lifted mid-lifecycle, which is not the
-    supported contract: the whole point is that execution, including the pool's worker startup,
-    happens as part of the run. Construct the executor and hand it over without using it first.
+    The pipeline treats a passed executor as a *specification*: it reads the executor's type
+    and constructor arguments and runs its own equivalent workers (thread / interpreter pools
+    are reconstructed; a :py:class:`~concurrent.futures.ProcessPoolExecutor`'s workers are
+    spawned eagerly in the main process). The executor should therefore be freshly
+    constructed. One that has already spawned workers or had work submitted is being handed
+    over mid-lifecycle: its own workers are not used by the pipeline, and the caller remains
+    responsible for shutting it down. Construct the executor and hand it over without using it
+    first.
+
+    This helper runs deep inside the config-rewriting machinery and is reached via several
+    distinct, variable-depth build paths, so no fixed ``stacklevel`` reliably points at the
+    user's ``pipe()``/``build()`` call. The warning therefore carries a self-contained message;
+    its ``stacklevel`` is a best-effort constant rather than a per-call-site value.
     """
     if (
         getattr(
@@ -199,10 +206,14 @@ def _ensure_executor_unused(executor: Executor) -> None:
         )  # Process pool: spawned worker processes
         or getattr(executor, "_queue_count", 0)  # Process pool: work already submitted
     ):
-        raise ValueError(
-            "run_pipeline_in_subprocess() requires a freshly constructed executor with no "
-            "work submitted yet: its workers are (re)created when the pipeline runs in the "
-            "subprocess. Construct the executor and pass it without using it first."
+        warnings.warn(
+            "An executor passed to the SPDL pipeline has already spawned workers or had work "
+            "submitted. The pipeline treats the executor as a specification and runs its own "
+            "equivalent workers, so the passed executor's own workers are not used and you "
+            "remain responsible for shutting it down. Construct the executor and pass it "
+            "without using it first.",
+            RuntimeWarning,
+            stacklevel=2,
         )
 
 
@@ -217,7 +228,7 @@ def _maybe_proxy(executor: Executor | None) -> Executor | _ExecutorProxy | None:
     extractor = _EXECUTOR_ARG_EXTRACTORS.get(type(executor))
     if extractor is None:
         return executor
-    _ensure_executor_unused(executor)
+    _warn_if_executor_used(executor)
     return _ExecutorProxy(type(executor), extractor(executor))
 
 
