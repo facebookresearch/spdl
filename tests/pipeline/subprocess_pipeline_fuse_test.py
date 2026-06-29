@@ -216,26 +216,6 @@ class SubprocessPipelineFuseTest(unittest.TestCase):
         self.assertTrue(all(v == 3 for v in out))
         self.assertEqual(sum(out), n)
 
-    @unittest.skipUnless(
-        sys.version_info >= (3, 14), "InterpreterPoolExecutor requires Python 3.14+"
-    )
-    def test_interpreter_pool_stages_fused(self) -> None:
-        """Stages sharing an InterpreterPoolExecutor are recognized and fused."""
-        from concurrent.futures import InterpreterPoolExecutor  # pyre-ignore[21]
-
-        n = 12
-        ref = sorted((x + 1) * 2 for x in range(n))
-        ex = InterpreterPoolExecutor(max_workers=2)
-        fused = (
-            PipelineBuilder()
-            .add_source(range(n))
-            .pipe(add_one, executor=ex, concurrency=2)
-            .pipe(times_two, executor=ex, concurrency=2)
-            .add_sink(n)
-            .build(num_threads=4, fuse_subprocess_stages=True)
-        )
-        self.assertEqual(sorted(_run(fused)), ref)
-
     def test_initializer_failure_surfaces_not_hangs(self) -> None:
         """A worker initializer that raises surfaces as a failure instead of hanging.
 
@@ -1020,3 +1000,37 @@ class FuseHookTest(unittest.TestCase):
             # ``_await_evidence`` polls for the files rather than assuming they are already there.
             self.assertEqual(sorted(src), ref)
             self._assert_hooks_fired(self._await_evidence(evidence_dir, n), n)
+
+
+def _has_interpreter_pool_executor() -> bool:
+    if sys.version_info < (3, 14):
+        return False
+    try:
+        from concurrent.futures.interpreter import InterpreterPoolExecutor  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+_HAS_INTERPRETER: bool = _has_interpreter_pool_executor()
+
+
+if _HAS_INTERPRETER:
+
+    class SubprocessPipelineInterpreterPoolFuseTest(unittest.TestCase):
+        def test_interpreter_pool_stages_fused(self) -> None:
+            """Stages sharing an InterpreterPoolExecutor are recognized and fused."""
+            from concurrent.futures import InterpreterPoolExecutor  # pyre-ignore[21]
+
+            n = 12
+            ref = sorted((x + 1) * 2 for x in range(n))
+            ex = InterpreterPoolExecutor(max_workers=2)
+            fused = (
+                PipelineBuilder()
+                .add_source(range(n))
+                .pipe(add_one, executor=ex, concurrency=2)
+                .pipe(times_two, executor=ex, concurrency=2)
+                .add_sink(n)
+                .build(num_threads=4, fuse_subprocess_stages=True)
+            )
+            self.assertEqual(sorted(_run(fused)), ref)
