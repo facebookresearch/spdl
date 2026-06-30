@@ -355,7 +355,7 @@ std::vector<std::string> to_str(const AVChannelLayout* p) {
     if (size > BUF_SIZE) {
       size = BUF_SIZE;
     }
-    ret.emplace_back(std::string{buf, static_cast<size_t>(size)});
+    ret.emplace_back(buf, static_cast<size_t>(size));
     p++;
   }
 #undef BUF_SIZE
