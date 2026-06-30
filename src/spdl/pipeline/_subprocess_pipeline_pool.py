@@ -15,12 +15,15 @@ module runs one submitted ``fn(*args)`` per task, here each worker process runs 
 back over a shared queue, so the op→op handoff between fused stages stays inside one worker
 process — no inter-stage IPC, and intermediate values need not be picklable.
 
-Two layouts, chosen by ``continuous``:
+Each worker has its own input queue in both layouts (chosen by ``continuous``):
 
-- **Non-continuous:** all workers steal from one shared input queue; each worker runs one session
-  (until ``_SESSION_END``) and reports ``_DONE``.
-- **Continuous:** each worker has its own input queue (so the bridge can broadcast epoch
-  boundaries) and runs a long-lived *continuous* sub-pipeline, emitting ``_EPOCH_DONE`` at each
+- **Non-continuous:** the bridge round-robins items across the per-worker queues and sends one
+  ``_SESSION_END`` to each; each worker runs one session (until its ``_SESSION_END``) and
+  reports ``_DONE``. A per-worker queue (rather than one shared queue the workers steal from)
+  guarantees every worker receives exactly one end marker, so a fast worker cannot steal a
+  slow peer's marker and let the collector finish before the peer flushes its items.
+- **Continuous:** the per-worker queue also lets the bridge broadcast epoch boundaries cleanly;
+  each worker runs a long-lived *continuous* sub-pipeline, emitting ``_EPOCH_DONE`` at each
   boundary and staying warm across epochs.
 
 Like :py:class:`spdl.pipeline._subprocess_worker_pool._WorkerPool`, the worker processes are
@@ -238,9 +241,9 @@ class _SubprocessPipelineHandle:
     Holds only the queues, worker count, and mode, so it is cheap to carry inside a
     :py:class:`~spdl.pipeline.defs.PipelineConfig` — including across the pickle boundary into a
     pipeline subprocess (the queues travel as ``Process`` spawn arguments, the only context in
-    which an ``mp.Queue`` may be pickled). ``in_qs`` is the shared input queue (length 1) in
-    non-continuous mode, or one queue per worker in continuous mode. The worker processes
-    themselves are owned by the main process, so this handle holds no process references.
+    which an ``mp.Queue`` may be pickled). ``in_qs`` holds one input queue per worker in both
+    modes. The worker processes themselves are owned by the main process, so this handle
+    holds no process references.
     """
 
     def __init__(
@@ -270,23 +273,21 @@ class _SubprocessPipelinePool:
         size = max(4, max_workers * 2)
         self._continuous = continuous
         self._out_q: Any = ctx.Queue(maxsize=size)
-        if continuous:
-            # One queue per worker so the bridge can broadcast epoch boundaries cleanly.
-            self._in_qs: list[Any] = [
-                ctx.Queue(maxsize=size) for _ in range(max_workers)
-            ]
-            worker_in_qs = self._in_qs
-        else:
-            # One shared queue the workers steal from.
-            shared = ctx.Queue(maxsize=size)
-            self._in_qs = [shared]
-            worker_in_qs = [shared] * max_workers
+        # One input queue per worker in both modes. Continuous mode needs it to broadcast epoch
+        # boundaries cleanly; non-continuous mode needs it so each worker receives exactly one
+        # ``_SESSION_END`` on its own queue. A single shared queue cannot guarantee that — a
+        # worker that drains its stream and reaches ``_SESSION_END`` early can loop back and
+        # steal a second marker meant for a slower peer still holding (un-flushed) items. That
+        # peer then never ends, the collector reaches its ``_DONE`` count from the wrong workers
+        # and finishes, and the slow peer's items are silently dropped. Per-worker queues remove
+        # the shared marker entirely, so every worker ends exactly once.
+        self._in_qs: list[Any] = [ctx.Queue(maxsize=size) for _ in range(max_workers)]
         self._max_workers = max_workers
         self._procs: list[Any] = [
             ctx.Process(
                 target=_pipeline_worker_loop,
                 args=(
-                    worker_in_qs[i],
+                    self._in_qs[i],
                     self._out_q,
                     sub_config,
                     build_kwargs,
@@ -335,12 +336,8 @@ class _SubprocessPipelinePool:
         )
 
     def _broadcast_shutdown(self) -> None:
-        # Continuous: one shutdown per worker queue. Non-continuous: N onto the shared queue,
-        # where each worker consumes exactly one (it stops pulling the instant it gets one).
-        targets = (
-            self._in_qs if self._continuous else [self._in_qs[0]] * self._max_workers
-        )
-        for q in targets:
+        # One shutdown marker per worker, onto that worker's own input queue.
+        for q in self._in_qs:
             try:
                 # Non-blocking: the queues are bounded and on the error path workers may have
                 # stalled on a full ``_out_q`` (the bridge stage stops draining after relaying
