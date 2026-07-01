@@ -59,8 +59,6 @@ Or any iterable that yields keys/paths/metadata for downstream stages.
 
 Map each classified operation to a `.pipe()` stage with appropriate concurrency. Separate operations of different natures into distinct stages — never bundle network I/O and CPU decode in one function.
 
-`.pipe()` accepts both sync (`def`) and async (`async def`) callables. If the original loader used `async` I/O (e.g. `aiohttp`), **pass the coroutine function to `.pipe()` as-is** — SPDL awaits it on its own event loop. Do **not** wrap it as `asyncio.run(coro(x))`: that spins up and tears down a brand-new event loop on every item — pure per-item overhead — and forces the work onto worker threads instead of running as cheap cooperative coroutines on SPDL's shared event loop.
-
 Use `PriorityThreadPoolExecutor` from `spdl.pipeline` as the shared executor. It prioritizes downstream stages over upstream ones — when the thread pool is contended, items closer to the pipeline output are processed first, reducing end-to-end latency and ensuring data flows through the pipeline faster.
 
 ```python

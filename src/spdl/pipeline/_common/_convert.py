@@ -202,8 +202,11 @@ def convert_to_async(
         op = op.__call__
 
     if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
-        # op is async function. No need to convert.
-        assert executor is None  # This has been checked in `PipelineBuilder.pipe()`
+        # op is async function. No need to convert. An async op always runs on the event loop,
+        # so any ``executor`` it carries is not used to run it here -- it is only a subprocess
+        # fusion-group tag. When the stage is fused the tag is stripped by ``_strip_executor``;
+        # when it is not fused the ``_strip_async_executor_tags`` pass clears it before executor
+        # hoisting, so no idle worker pool is spawned for a pool the async op never submits to.
         return op  # pyre-ignore: [7]
 
     if inspect.isgeneratorfunction(op):

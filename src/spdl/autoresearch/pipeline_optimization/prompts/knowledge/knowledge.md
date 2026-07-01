@@ -268,7 +268,7 @@ This wrapper is passed to TorchTNT's `fit()` or `train()` as the `train_dataload
 **Key facts about Pipeline:**
 - `Pipeline` is both iterable and iterator. It can technically be directly iterated, but the wrapper pattern above is recommended because it provides `get_iterator(timeout=...)` for timeout handling and `__len__` for epoch length.
 - **Preferred iteration**: Always use `pipeline.get_iterator(timeout=<seconds>)` to obtain an iterator with a timeout, so that jobs do not get stuck. Directly iterating with `for batch in pipeline:` or `iter(pipeline)` is discouraged because it lacks timeout handling.
-- The pipeline is built once and iterated many times. `auto_stop()` is obsolete — do not call it, and do not rebuild per epoch.
+- The pipeline is built once and iterated many times. There is no need for `auto_stop()` or rebuilding per epoch.
 - The `Pipeline` abstracts away whether it uses MTP (subprocess) or pure multithreading internally, so switching between them does not affect how the Pipeline is consumed.
 - TorchTNT calls `iter(dataloader)` at the start of each epoch, then `next(data_iter)` per step until `StopIteration`.
 - The pipeline's source controls how many items are produced per epoch. When the source is exhausted, the iterator raises `StopIteration`, ending the epoch in TorchTNT.

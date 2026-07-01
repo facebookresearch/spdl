@@ -32,9 +32,9 @@ from spdl.pipeline import (
 )
 from spdl.pipeline._components import _subprocess_pipe
 from spdl.pipeline._components._common import StageInfo
-from spdl.pipeline._fuse import _find_fusable_runs
+from spdl.pipeline._fuse import _find_fusable_runs, _strip_async_executor_tags
 from spdl.pipeline.config import set_default_hook_class, set_default_queue_class
-from spdl.pipeline.defs import Pipe
+from spdl.pipeline.defs import Pipe, PipeConfig
 
 
 def add_one(x: int) -> int:
@@ -121,6 +121,22 @@ async def adup(x: int) -> AsyncIterator[int]:
     """An async-generator op: yields two values per input (1->2 fan-out)."""
     yield x
     yield x + 1
+
+
+async def aadd_one(x: int) -> int:
+    """An async op: adds one. Picklable (module-level) so it can be fused into a worker."""
+    return x + 1
+
+
+async def aunwrap(o: _Unpicklable) -> int:
+    """An async op consuming an unpicklable intermediate; runs inside the worker when fused."""
+    return o.value * 2
+
+
+async def _astamp(item: _PidStamp) -> _PidStamp:
+    """An async op that records its pid; runs on the worker's event loop once fused."""
+    item.pids["async"] = os.getpid()
+    return item
 
 
 def _run(pipeline: Pipeline[Any], timeout: float = 60.0) -> list[Any]:
@@ -277,6 +293,174 @@ class SubprocessPipelineFuseTest(unittest.TestCase):
             .build(num_threads=4, fuse_subprocess_stages=False)
         )
         self.assertEqual(sorted(_run(pipeline)), ref)
+
+
+class AsyncFuseTest(unittest.TestCase):
+    """An async op tagged with a pool executor joins the surrounding fused run."""
+
+    def test_async_op_between_pool_stages_fuses_and_matches(self) -> None:
+        """An async op tagged with the neighbours' pool joins their run (one run, span 0..3)."""
+        n = 16
+        ref = sorted((x + 1 + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        builder = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .pipe(add_one, executor=ex, concurrency=2)
+            .pipe(aadd_one, executor=ex, concurrency=2)
+            .pipe(times_two, executor=ex, concurrency=2)
+            .add_sink(n)
+        )
+        config = builder.get_config()
+        runs = _find_fusable_runs(config.pipes)
+        self.assertEqual(len(runs), 1)
+        self.assertEqual((runs[0].start, runs[0].stop), (0, 3))
+        pipeline = build_pipeline(config, num_threads=4, fuse_subprocess_stages=True)
+        self.assertEqual(sorted(_run(pipeline)), ref)
+
+    def test_async_op_runs_in_worker_process(self) -> None:
+        """A fused async op runs on the worker's event loop, in the worker process (not main).
+
+        The sync pool stages on either side and the async op in the middle all stamp
+        ``os.getpid()``; the assertion proves the async stage shares the worker process with its
+        neighbours rather than hopping back to main.
+        """
+        n = 16
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source([_PidStamp(x) for x in range(n)])
+            .pipe(_stamp_branch, executor=ex, concurrency=2)
+            .pipe(_astamp, executor=ex, concurrency=2)
+            .pipe(_stamp_merge, executor=ex, concurrency=2)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        main_pid = os.getpid()
+        results = _run(pipeline)
+        self.assertEqual(len(results), n)
+        for item in results:
+            self.assertEqual(set(item.pids), {"branch", "async", "merge"})
+            self.assertEqual(item.pids["branch"], item.pids["async"])
+            self.assertEqual(item.pids["async"], item.pids["merge"])
+            self.assertNotEqual(item.pids["async"], main_pid)
+
+    def test_async_generator_op_fused(self) -> None:
+        """An async-generator op tagged with the pool fuses, fanning out inside the worker."""
+        n = 8
+        ex = ProcessPoolExecutor(max_workers=2)
+        # add_one -> v=x+1; adup(v) yields {v, v+1}.
+        ref = sorted(v for x in range(n) for v in (x + 1, x + 2))
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .pipe(add_one, executor=ex, concurrency=2)
+            .pipe(adup, executor=ex, concurrency=2)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        self.assertEqual(sorted(_run(pipeline)), ref)
+
+    def test_unpicklable_intermediate_through_async_fused(self) -> None:
+        """An unpicklable value handed from a sync pool op to a fused async op stays in-worker."""
+        n = 12
+        ref = sorted((x + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .pipe(wrap, executor=ex, concurrency=2)
+            .pipe(aunwrap, executor=ex, concurrency=2)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        self.assertEqual(sorted(_run(pipeline)), ref)
+
+    def test_async_tag_ignored_when_fusion_off(self) -> None:
+        """With fusion off, the async op's pool tag is ignored and it runs in the main process."""
+        n = 10
+        ref = sorted((x + 1 + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .pipe(add_one, executor=ex, concurrency=2)
+            .pipe(aadd_one, executor=ex, concurrency=2)
+            .pipe(times_two, executor=ex, concurrency=2)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=False)
+        )
+        self.assertEqual(sorted(_run(pipeline)), ref)
+
+    def test_thread_pool_executor_on_async_op_raises(self) -> None:
+        """A non-isolating (thread-pool) executor on an async op is rejected at config time."""
+        with self.assertRaises(ValueError):
+            Pipe(aadd_one, executor=ThreadPoolExecutor(max_workers=1))
+        # An isolating-pool executor is accepted (used only as a fusion-group tag).
+        Pipe(aadd_one, executor=ProcessPoolExecutor(max_workers=1))
+
+    def test_async_fused_multi_epoch(self) -> None:
+        """A fused async stage stays correct across epochs of a continuous source."""
+        n = 12
+        ref = sorted((x + 1 + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .pipe(add_one, executor=ex, concurrency=2)
+            .pipe(aadd_one, executor=ex, concurrency=2)
+            .pipe(times_two, executor=ex, concurrency=2)
+            .add_sink(n)
+            .build(num_threads=4, fuse_subprocess_stages=True)
+        )
+        with pipeline.auto_stop():
+            for _ in range(3):  # three epochs from the same warm worker pool
+                self.assertEqual(sorted(pipeline.get_iterator(timeout=60)), ref)
+
+    def test_strip_async_executor_tags_clears_only_async(self) -> None:
+        """The strip pass clears an async op's pool tag but leaves a sync op's tag intact."""
+        ex1 = ProcessPoolExecutor(max_workers=2)
+        ex2 = ProcessPoolExecutor(max_workers=2)
+        config = (
+            PipelineBuilder()
+            .add_source(range(4))
+            .pipe(add_one, executor=ex1)  # sync pool: tag preserved
+            .pipe(aadd_one, executor=ex2)  # async on a different pool: tag stripped
+            .add_sink(4)
+            .get_config()
+        )
+        # Different executors -> neither adjacent stage fuses, so both tags stay on config.pipes.
+        self.assertEqual(_find_fusable_runs(config.pipes), [])
+        stripped = _strip_async_executor_tags(config)
+        sync_pipe, async_pipe = stripped.pipes[0], stripped.pipes[1]
+        assert isinstance(sync_pipe, PipeConfig)
+        assert isinstance(async_pipe, PipeConfig)
+        self.assertIsNotNone(sync_pipe._args.executor)  # sync tag kept
+        self.assertIsNone(async_pipe._args.executor)  # async tag cleared
+
+    def test_nonfused_async_tag_runs_in_subprocess(self) -> None:
+        """A non-fused async op carrying a pool tag runs correctly via run_pipeline_in_subprocess.
+
+        The strip pass removes the (meaningless) tag before executor hoisting, so no spurious
+        worker pool is spawned for an executor the async op never submits to.
+        """
+        n = 12
+        ref = sorted(((x + 1) + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        config = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .pipe(add_one)  # main-process sync op
+            .pipe(aadd_one, executor=ex)  # lone async pool tag -> not fused
+            .pipe(times_two)  # main-process sync op
+            .add_sink(n)
+            .get_config()
+        )
+        self.assertEqual(_find_fusable_runs(config.pipes), [])
+        src = run_pipeline_in_subprocess(
+            config, num_threads=4, fuse_subprocess_stages=True
+        )
+        self.assertEqual(sorted(src), ref)
 
 
 class StartupRaceFuseTest(unittest.TestCase):
@@ -551,6 +735,37 @@ class PathVariantsFuseTest(unittest.TestCase):
             .add_sink(n)
         )
         config = builder.get_config()
+        self.assertEqual(len(_find_fusable_runs(config.pipes)), 1)
+        pipeline = build_pipeline(config, num_threads=4, fuse_subprocess_stages=True)
+        self.assertEqual(sorted(_run(pipeline)), ref)
+
+    def test_path_variants_ordered_async_tag_does_not_block_fusion(self) -> None:
+        """An input-ordered async op carrying a pool tag doesn't poison path-variants fusion.
+
+        The async op runs on the worker's loop, not the pool, so its ``output_order="input"``
+        can't be broken by pool parallelism and must not mark the same-pool stage non-fusable —
+        unlike an input-ordered *sync* pool-pipe, which genuinely blocks fusion.
+        """
+        n = 16
+        ref = sorted(x + 1 if x % 2 == 0 else (x + 1) * 2 for x in range(n))
+        ex = ProcessPoolExecutor(max_workers=2)
+        builder = (
+            PipelineBuilder()
+            .add_source(range(n))
+            .path_variants(
+                route_by_parity,
+                [
+                    [Pipe(add_one, executor=ex)],
+                    [
+                        Pipe(aadd_one, executor=ex, output_order="input"),
+                        Pipe(times_two, executor=ex),
+                    ],
+                ],
+            )
+            .add_sink(n)
+        )
+        config = builder.get_config()
+        # The ordered async op is only a fusion-group tag, so the same-pool stage still fuses.
         self.assertEqual(len(_find_fusable_runs(config.pipes)), 1)
         pipeline = build_pipeline(config, num_threads=4, fuse_subprocess_stages=True)
         self.assertEqual(sorted(_run(pipeline)), ref)
