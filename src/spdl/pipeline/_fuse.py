@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import multiprocessing as mp
 import os
-import sys
 import threading
 import warnings
 from collections.abc import Sequence
@@ -43,7 +42,7 @@ from dataclasses import dataclass, replace
 from functools import partial
 from typing import Any
 
-from spdl.pipeline._common._convert import _is_process_pool
+from spdl.pipeline._common._convert import _is_isolating_pool
 from spdl.pipeline._components import _get_global_id, _set_global_id
 from spdl.pipeline._executor_proxy import _ensure_executor_unused
 from spdl.pipeline._subprocess_pipeline_pool import _SubprocessPipelinePool
@@ -62,70 +61,11 @@ __all__ = [
     "_FusableRun",
     "_find_fusable_runs",
     "_fuse_subprocess_stages",
-    "_is_interpreter_pool",
-    "_is_isolating_pool",
 ]
 
 # Buffer size for the fused sub-pipeline's sink. Small: the worker drains it straight onto the
 # result queue, so a deep buffer only adds latency.
 _FUSED_SINK_BUFFER: int = 3
-
-
-# Declared before the branch so its type stays ``type[Executor] | None`` on every Python
-# version; otherwise, on versions without ``InterpreterPoolExecutor`` the ``else`` assignment
-# narrows it to ``None`` and the isinstance/issubclass checks below fail to type-check.
-_INTERPRETER_POOL_CLASS: type[Executor] | None
-if sys.version_info >= (3, 14):
-    from concurrent.futures.interpreter import (  # pyre-ignore[21]
-        InterpreterPoolExecutor,
-    )
-
-    _INTERPRETER_POOL_CLASS = InterpreterPoolExecutor
-else:
-    _INTERPRETER_POOL_CLASS = None
-
-
-def _is_interpreter_pool(executor: Executor | type[Executor] | None) -> bool:
-    """Check whether ``executor`` is or wraps an ``InterpreterPoolExecutor``.
-
-    Mirrors :py:func:`spdl.pipeline._common._convert._is_process_pool`: matches the stdlib
-    ``InterpreterPoolExecutor`` (Python 3.14+) directly, SPDL pool wrappers via their
-    ``_pool_executor_class``, and a ``PriorityExecutorEntrypoint`` via its ``_owner``.
-
-    Args:
-        executor: The executor (or executor class, or ``None``) to inspect.
-
-    Returns:
-        ``True`` if the executor isolates work in a subinterpreter, else ``False``. Always
-        ``False`` on Python versions without ``InterpreterPoolExecutor``.
-    """
-    if _INTERPRETER_POOL_CLASS is None or executor is None:
-        return False
-    if isinstance(executor, _INTERPRETER_POOL_CLASS):
-        return True
-    pool_cls = getattr(executor, "_pool_executor_class", None)
-    if pool_cls is not None:
-        return issubclass(pool_cls, _INTERPRETER_POOL_CLASS)
-    owner = getattr(executor, "_owner", None)
-    if owner is not None:
-        return _is_interpreter_pool(owner)
-    return False
-
-
-def _is_isolating_pool(executor: Executor | type[Executor] | None) -> bool:
-    """Check whether ``executor`` runs work in a separate process or subinterpreter.
-
-    These are exactly the executors whose inter-stage handoff crosses an IPC / pickling
-    boundary, and therefore the executors that fusion targets. Thread pools (which share
-    address space) and ``None`` (the default thread pool) are not isolating.
-
-    Args:
-        executor: The executor (or executor class, or ``None``) to inspect.
-
-    Returns:
-        ``True`` if the executor is a process pool or interpreter pool, else ``False``.
-    """
-    return _is_process_pool(executor) or _is_interpreter_pool(executor)
 
 
 @dataclass(frozen=True)
