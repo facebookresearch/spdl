@@ -345,24 +345,9 @@ A **generator op** (a function that ``yield``\ s) is supported as a fused
 process-pool stage: each input item fans out into the values the generator
 yields, exactly as in an unfused pipeline. As with any sync generator on a
 process-pool executor, the yielded items are materialized once the generator is
-exhausted rather than streamed out incrementally.
-
-An **async op** (an ``async def`` function or an async generator) can be fused
-too. Because an async op always runs on the event loop, it takes no executor to
-*run* it; instead, tag it with the **same** pool executor as its neighbours and
-it joins their fused run, executing on the worker's own event loop:
-
-.. code-block::
-
-   .pipe(sync_op,  executor=executor)
-   .pipe(async_op, executor=executor)   # runs on the worker's event loop
-   .pipe(sync_op,  executor=executor)
-
-All three fuse into one subprocess run, so an async op between two pool stages no
-longer splits the run in two. The executor is used only to group the stage, not
-to run the coroutine; a fused async op must be picklable, like any fused stage.
-Passing a non-isolating executor (e.g. a thread pool) to an async op is an error.
-Unfused, the tag is ignored and the async op runs in the main process.
+exhausted rather than streamed out incrementally. (An *async* generator cannot
+take an ``executor`` and so is never itself a fused stage, but it composes with
+fusion when placed before or after a fused run, running in the main process.)
 
 Only *adjacent* pool stages on the same executor are fused. An
 :py:meth:`~spdl.pipeline.PipelineBuilder.aggregate` or
