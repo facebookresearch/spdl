@@ -35,7 +35,7 @@ from spdl.pipeline._components import (
     TaskHook,
 )
 from spdl.pipeline._executor_proxy import _make_config_executors_picklable
-from spdl.pipeline._fuse import _fuse_subprocess_stages
+from spdl.pipeline._fuse import _fuse_subprocess_stages, _strip_async_executor_tags
 from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
 from spdl.pipeline._random_seed import _capture_rng_initializers
 from spdl.pipeline._subprocess_pipeline_pool import _shutdown_pipeline_pools
@@ -281,9 +281,11 @@ def build_pipeline(
             construct (router and branches) moves into the worker — and fuses on its own even
             when it is the only such stage. An ``aggregate``/``disaggregate`` between two pool
             stages is not fused (it keeps its main-process batching) and splits them into
-            separate runs. Continuous sources are supported (the fused worker sub-pipelines stay
-            warm across epochs and epoch boundaries are propagated across the pool). Default:
-            ``False``.
+            separate runs. An async op joins a fused run when tagged with the same executor as
+            its neighbours (see :py:meth:`~spdl.pipeline.PipelineBuilder.pipe`), running on the
+            worker's own event loop. Continuous sources are supported (the fused worker
+            sub-pipelines stay warm across epochs and epoch boundaries are propagated across the
+            pool). Default: ``False``.
 
             .. versionadded:: 0.6.0
                The ``fuse_subprocess_stages`` argument.
@@ -565,7 +567,9 @@ def run_pipeline_in_subprocess(
             This removes the per-stage round-trip between the pipeline subprocess and the pool
             workers (so intermediate values need not be picklable). A ``path_variants`` stage
             whose branches all use the same pool executor is fused too (router and branches move
-            into the worker). Continuous sources are supported. Default: ``False``.
+            into the worker). An async op joins a fused run when tagged with the same executor as
+            its neighbours (see :py:meth:`~spdl.pipeline.PipelineBuilder.pipe`), running on the
+            worker's own event loop. Continuous sources are supported. Default: ``False``.
 
             .. versionadded:: 0.6.0
                The ``fuse_subprocess_stages`` argument.
@@ -615,6 +619,11 @@ def run_pipeline_in_subprocess(
             report_stats_interval=report_stats_interval,
             stacklevel=3,
         )
+
+    # Clear executor tags left on any unfused async op: they are subprocess fusion-group hints,
+    # not real pools, and the executor-hoisting/pickling passes below are op-agnostic -- an async
+    # op's process-pool tag would otherwise spawn an idle worker pool it never submits to.
+    config = _strip_async_executor_tags(config)
 
     # Spawn workers for any stdlib ``ProcessPoolExecutor`` in the main process (as children of
     # main, not grandchildren via the pipeline subprocess), then replace the executor with a

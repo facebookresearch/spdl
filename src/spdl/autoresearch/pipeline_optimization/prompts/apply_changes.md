@@ -76,7 +76,7 @@ __PIPELINE_CODE__
 13. **TorchTNT scripts**: If the code uses TorchTNT (`torchtnt.framework.fit`, `train`, `AutoUnit`), the SPDL `Pipeline` is passed directly to TorchTNT as the `train_dataloader` (Pipeline is iterable — no wrapper class is required unless instrumentation was added). When applying changes:
    - **Pipeline construction changes** (concurrency, MTP, batch size): Modify the function that builds the `PipelineBuilder`, same as non-TorchTNT code. The `Pipeline` abstracts MTP vs pure multithreading, so the code passing Pipeline to TorchTNT does not change.
    - **Do NOT modify TorchTNT internals** (`fit()`, `train()`, `AutoUnit.train_step`). Only modify the pipeline construction.
-   - The pipeline is built once and iterated many times. `auto_stop()` is obsolete — do not call it, and do not rebuild per epoch.
+   - The pipeline is built once and iterated many times. There is no need for `auto_stop()` or rebuilding per epoch.
 
 Output the modified file:
 
