@@ -32,7 +32,6 @@ fusion policy easy to reason about and to test in isolation.
 
 from __future__ import annotations
 
-import inspect
 import multiprocessing as mp
 import os
 import threading
@@ -62,7 +61,6 @@ __all__ = [
     "_FusableRun",
     "_find_fusable_runs",
     "_fuse_subprocess_stages",
-    "_strip_async_executor_tags",
 ]
 
 # Buffer size for the fused sub-pipeline's sink. Small: the worker drains it straight onto the
@@ -115,8 +113,8 @@ def _scan_variant_pool_executors(
     Recurses into nested path-variants. Appends each completion-ordered pool-pipe's executor to
     ``acc``; async/thread/default pipes are ignored (they run on the worker's own loop/threads
     once the stage is fused). Returns ``False`` if any branch holds an *input-ordered*
-    (``output_order="input"``) *sync* pool-pipe, which is not fusable for the same reason a
-    top-level one is not — its global input order cannot be preserved across the pool workers.
+    (``output_order="input"``) pool-pipe, which is not fusable for the same reason a top-level
+    one is not — its global input order cannot be preserved across the pool workers.
     """
     for path in cfg.paths:
         for stage in path:
@@ -131,12 +129,8 @@ def _scan_variant_pool_executors(
                 isinstance(stage, PipeConfig)
                 and stage._args.executor is not None
                 and _is_isolating_pool(stage._args.executor)
-                and not _is_async_op(stage._args.op)
             ):
-                # A sync pool-pipe that _fusable_pool_executor rejected -> input-ordered:
-                # its global input order can't be preserved across pool workers, so it is not
-                # fusable. An async op's executor is only a fusion-group tag (it runs on the
-                # loop, not the pool), so its ordering is unaffected and it never blocks fusion.
+                # A pool-pipe that _fusable_pool_executor rejected -> input-ordered: not fusable.
                 return False
     return True
 
@@ -257,20 +251,11 @@ def _strip_executor(cfg: object) -> object:
     return cfg
 
 
-def _is_async_op(op: object) -> bool:
-    """Whether ``op`` runs on the event loop rather than the worker's thread pool."""
-    return inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op)
-
-
 def _stage_concurrency(cfg: object) -> int:
     """Total worker-thread demand of a fused stage: a pipe's ``concurrency``, or the sum across
-    every branch pipe of a path-variants stage (recursively). Other stages contribute 0.
-
-    An async pipe contributes 0: its ``concurrency`` bounds concurrent coroutines on the
-    worker's event loop, which do not consume worker threads.
-    """
+    every branch pipe of a path-variants stage (recursively). Other stages contribute 0."""
     if isinstance(cfg, PipeConfig):
-        return 0 if _is_async_op(cfg._args.op) else cfg._args.concurrency
+        return cfg._args.concurrency
     if isinstance(cfg, PathVariantsConfig):
         return sum(_stage_concurrency(s) for path in cfg.paths for s in path)
     return 0
@@ -424,43 +409,3 @@ def _fuse_subprocess_stages(
             pool.shutdown()
         raise
     return replace(config, pipes=new_pipes), pools  # pyre-ignore[6]
-
-
-def _strip_async_executor_tag(cfg: object) -> object:
-    """Clear the executor tag on an async-op stage, recursing into path-variants branches.
-
-    An async op's executor is only a subprocess fusion-group tag; once fusion has run, any tag
-    left on an *unfused* async op is a no-op that must not reach the subprocess
-    executor-hoisting machinery (which is op-agnostic and would otherwise spawn an idle worker
-    pool for it). Sync stages are returned unchanged.
-    """
-    if isinstance(cfg, PipeConfig):
-        if cfg._args.executor is not None and _is_async_op(cfg._args.op):
-            return replace(cfg, _args=replace(cfg._args, executor=None))
-        return cfg
-    if isinstance(cfg, PathVariantsConfig):
-        new_paths = tuple(
-            tuple(_strip_async_executor_tag(stage) for stage in path)
-            for path in cfg.paths
-        )
-        return replace(cfg, paths=new_paths)
-    return cfg
-
-
-def _strip_async_executor_tags(config: PipelineConfig[Any]) -> PipelineConfig[Any]:
-    """Return ``config`` with executor tags cleared from every unfused async-op stage.
-
-    Walks the top-level pipes, path-variants branches, and merged sub-configs (mirroring the
-    executor rewrite in :py:mod:`spdl.pipeline._executor_proxy`). Fused async ops are already
-    inside a :py:class:`_SubprocessPipelineConfig` handle (their tags stripped when the run was
-    built), so this only touches tags left on stages that stayed in the enclosing pipeline.
-    """
-    src = config.src
-    if isinstance(src, MergeConfig):
-        new_configs = tuple(
-            _strip_async_executor_tags(plc) for plc in src.pipeline_configs
-        )
-        # pyre-ignore[6]: MergeConfig annotates a 1-tuple but holds N configs.
-        src = replace(src, pipeline_configs=new_configs)
-    new_pipes = [_strip_async_executor_tag(p) for p in config.pipes]
-    return replace(config, src=src, pipes=new_pipes)  # pyre-ignore[6]

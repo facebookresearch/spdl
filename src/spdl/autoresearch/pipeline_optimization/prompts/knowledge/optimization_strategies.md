@@ -33,6 +33,37 @@ pipeline = (
 | `buffer_size` | `.add_sink(N)` | 2-10; affects memory, NOT throughput |
 | `output_order` | `.pipe(fn, output_order=...)` | "completion" for I/O (avoids head-of-line blocking), "input" for determinism |
 
+### Async Stage Functions: Pass Them As-Is
+
+`.pipe()` accepts both regular (`def`) and asynchronous (`async def`) callables. **Pass an async function directly — do not wrap it in `asyncio.run()`:**
+
+```python
+async def fetch(key):
+    async with session.get(url(key)) as resp:
+        return await resp.read()
+
+pipeline = (
+    PipelineBuilder()
+    .add_source(source)
+    .pipe(fetch, concurrency=32)   # CORRECT: coroutine function passed as-is
+    ...
+)
+```
+
+SPDL runs stages on its own event loop, so it awaits async stage functions natively and drives up to `concurrency` of them at once as cheap cooperative coroutines — ideal for I/O-bound work.
+
+**Anti-pattern:** wrapping the coroutine so the stage becomes synchronous.
+
+```python
+# WRONG — asyncio.run() spins up and tears down a brand-new event loop on
+# every single item. That per-item loop init/finalize is pure overhead, and
+# it forces the work onto pipeline worker threads instead of running as cheap
+# cooperative coroutines on SPDL's shared event loop.
+.pipe(lambda key: asyncio.run(fetch(key)), concurrency=32)
+```
+
+If a stage is already synchronous, just pass it as a normal function — no event loop is involved either way.
+
 ## Recommended Architecture: Multi-Threading in Subprocess (MTP)
 
 The production pattern runs the CPU-heavy pipeline in a **subprocess** and only does GPU transfer in the main process.
