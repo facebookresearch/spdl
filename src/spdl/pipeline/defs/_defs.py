@@ -21,6 +21,7 @@ from fractions import Fraction
 from functools import partial
 from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
 
+from spdl.pipeline._common._convert import _is_isolating_pool
 from spdl.pipeline._common._source_locator import locate_source
 from spdl.pipeline._common._types import _TCallables, _TMergeOp
 
@@ -212,8 +213,14 @@ class PipeConfig(Generic[T, U]):
     def __post_init__(self) -> None:
         op = self._args.op
         if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
-            if self._args.executor is not None:
-                raise ValueError("`executor` cannot be specified when op is async.")
+            executor = self._args.executor
+            if executor is not None and not _is_isolating_pool(executor):
+                raise ValueError(
+                    "An async op may only be given an isolating-pool (process or interpreter) "
+                    "executor, which is used solely to group the op into a subprocess fusion "
+                    "run -- not to execute it. A non-isolating executor (e.g. a thread pool) "
+                    "has no effect on an async op and is not allowed."
+                )
         if inspect.isasyncgenfunction(op):
             if self._type == _PipeType.OrderedPipe:
                 raise ValueError(
@@ -790,7 +797,11 @@ def Pipe(
         executor: A custom executor object to be used to convert the synchronous operation
             into asynchronous one. If ``None``, the default executor is used.
 
-            It is invalid to provide this argument when the given op is already async.
+            When ``op`` is already async, ``executor`` must be an isolating-pool (process or
+            interpreter) executor and is not used to run the op (an async op always runs on the
+            event loop) -- it serves only as a subprocess fusion-group tag (see
+            ``fuse_subprocess_stages`` on :py:meth:`~spdl.pipeline.PipelineBuilder.build`).
+            Passing a non-isolating executor (e.g. a thread pool) with an async op is an error.
         name: The name (prefix) to give to the task.
         output_order: If ``"completion"`` (default), the items are put to output queue
             in the order their process is completed.
