@@ -214,13 +214,29 @@ def _child_exit_code(
 class InterpreterExitTopologyTest(unittest.TestCase):
     """Held, unstopped pipelines exit cleanly at interpreter exit, across topologies."""
 
+    @unittest.skipUnless(
+        "forkserver" in mp.get_all_start_methods(),
+        "forkserver start method is unavailable on this platform (e.g. Windows)",
+    )
     def test_plain_forkserver(self) -> None:
         """Plain thread-only pipeline exits cleanly (forkserver)."""
-        self.assertEqual(_child_exit_code(_scenario_plain, "forkserver"), 0)
+        exit_code = _child_exit_code(_scenario_plain, "forkserver")
+        self.assertIsNotNone(
+            exit_code,
+            "Child process hung (did not exit within timeout); the pipeline's "
+            "non-daemon event-loop thread likely blocked interpreter shutdown.",
+        )
+        self.assertEqual(exit_code, 0)
 
     def test_plain_spawn(self) -> None:
         """Plain thread-only pipeline exits cleanly (spawn)."""
-        self.assertEqual(_child_exit_code(_scenario_plain, "spawn"), 0)
+        exit_code = _child_exit_code(_scenario_plain, "spawn")
+        self.assertIsNotNone(
+            exit_code,
+            "Child process hung (did not exit within timeout); the pipeline's "
+            "non-daemon event-loop thread likely blocked interpreter shutdown.",
+        )
+        self.assertEqual(exit_code, 0)
 
 
 # Note: the `.to(ProcessPoolExecutorConfig)` region topology's interpreter-exit teardown is

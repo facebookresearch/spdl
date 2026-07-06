@@ -26,6 +26,7 @@ The following step explains the steps to build a pipeline using the building blo
 """
 
 from ._defs import (
+    _MainProcess,
     _PipeArgs,
     _PipeType,
     _SubprocessPipelineConfig,
@@ -36,6 +37,9 @@ from ._defs import (
     Collate,
     Disaggregate,
     DisaggregateConfig,
+    ExecutorConfig,
+    InterpreterPoolExecutorConfig,
+    MAIN_PROCESS,
     Merge,
     MergeConfig,
     PathVariants,
@@ -43,11 +47,14 @@ from ._defs import (
     Pipe,
     PipeConfig,
     PipelineConfig,
+    PlacementConfig,
+    ProcessPoolExecutorConfig,
     SinkConfig,
     SourceConfig,
 )
 
 __all__ = [
+    "_MainProcess",
     "_PipeArgs",
     "_PipeType",
     "_SubprocessPipelineConfig",
@@ -62,6 +69,9 @@ __all__ = [
     "Collate",
     "Disaggregate",
     "DisaggregateConfig",
+    "ExecutorConfig",
+    "InterpreterPoolExecutorConfig",
+    "MAIN_PROCESS",
     "Merge",
     "MergeConfig",
     "PathVariants",
@@ -69,6 +79,8 @@ __all__ = [
     "Pipe",
     "PipeConfig",
     "PipelineConfig",
+    "PlacementConfig",
+    "ProcessPoolExecutorConfig",
     "SinkConfig",
     "SourceConfig",
 ]
