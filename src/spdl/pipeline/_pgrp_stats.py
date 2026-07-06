@@ -630,7 +630,20 @@ class ProcessGroupStatsMonitor(BackgroundTask):
         or this coroutine is cancelled.  On cancellation the subprocess
         is terminated (then killed if it does not exit within 5 seconds)
         and ``CancelledError`` is re-raised.
+
+        A daemon process cannot spawn children, so the monitor subprocess cannot
+        be started from one (e.g. a worker-pool process running a nested pipeline,
+        which runs as a daemon). In that case this skips with a warning rather
+        than raising: a main-process monitor already covers the whole process
+        group, so a per-worker monitor here would be redundant anyway.
         """
+        if multiprocessing.current_process().daemon:
+            _LG.warning(
+                "Skipping process-group stats monitor: a daemon process cannot "
+                "spawn the monitor subprocess (pid=%d).",
+                os.getpid(),
+            )
+            return
         ctx = self._mp_context or multiprocessing.get_context()
         # pyrefly: ignore [missing-attribute]
         proc = ctx.Process(
