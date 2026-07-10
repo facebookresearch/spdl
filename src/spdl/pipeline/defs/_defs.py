@@ -40,6 +40,12 @@ __all__ = [
     "Collate",
     "DisaggregateConfig",
     "_SubprocessPipelineConfig",
+    "_MainProcess",
+    "ExecutorConfig",
+    "ProcessPoolExecutorConfig",
+    "InterpreterPoolExecutorConfig",
+    "MAIN_PROCESS",
+    "PlacementConfig",
     "PipelineConfig",
     "SinkConfig",
     "SourceConfig",
@@ -437,6 +443,110 @@ class _SubprocessPipelineConfig:
 
 
 ################################################################################
+# Executor placement (region markers for `.to()`)
+################################################################################
+
+
+@dataclass(frozen=True)
+class ExecutorConfig:
+    """**[Experimental]** Base spec for a worker-pool executor.
+
+    A serializable description of a pool of workers, materialized into a live executor by
+    the pipeline. Subclassed by :py:class:`ProcessPoolExecutorConfig` and
+    :py:class:`InterpreterPoolExecutorConfig`; those subclasses are used as ``.to()``
+    placement targets (via :py:class:`PlacementConfig`).
+
+    .. versionadded:: 0.6.0
+    """
+
+    max_workers: int | None = None
+    """Number of workers. If ``None``, defaults to the number of CPUs."""
+
+    initializer: Callable[..., object] | None = None
+    """Callable run once in each worker before it processes any work."""
+
+    initargs: tuple[Any, ...] = ()
+    """Positional arguments passed to ``initializer``."""
+
+
+@dataclass(frozen=True)
+class ProcessPoolExecutorConfig(ExecutorConfig):
+    """**[Experimental]** A worker-pool executor backed by subprocesses.
+
+    Used as a ``.to()`` target to run a region's stages in a pool of worker *processes*
+    as one nested pipeline — the op->op handoff stays in the worker, so intermediate
+    values are not copied back to the main process and need not be picklable. The region
+    ends at the next ``.to()`` target (see :py:data:`MAIN_PROCESS`).
+
+    .. versionadded:: 0.6.0
+    """
+
+    mp_context: str | None = None
+    """Multiprocessing start method (e.g. ``"spawn"``, ``"fork"``, ``"forkserver"``),
+    as accepted by :py:func:`multiprocessing.get_context`. ``None`` uses the default
+    context."""
+
+
+@dataclass(frozen=True)
+class InterpreterPoolExecutorConfig(ExecutorConfig):
+    """**[Experimental]** A worker-pool executor backed by subinterpreters.
+
+    Like :py:class:`ProcessPoolExecutorConfig`, but the workers are Python
+    *subinterpreters* (:py:mod:`concurrent.interpreters`) sharing the process rather than
+    separate processes. There is no ``mp_context`` because no new process is started.
+
+    .. note::
+
+       Requires Python 3.14 or later; using this target on an older interpreter is an
+       error. NumPy and PyTorch cannot be imported inside a subinterpreter, so a region
+       whose stages need them must use :py:class:`ProcessPoolExecutorConfig` instead.
+
+    .. versionadded:: 0.6.0
+    """
+
+
+@dataclass(frozen=True)
+class _MainProcess:
+    """Sentinel ``.to()`` target for the main process. Use the :py:data:`MAIN_PROCESS`
+    singleton rather than instantiating this type."""
+
+    def __repr__(self) -> str:
+        return "MAIN_PROCESS"
+
+
+MAIN_PROCESS: _MainProcess = _MainProcess()
+"""**[Experimental]** The main-process execution target. Pass to
+:py:meth:`spdl.pipeline.PipelineBuilder.to`
+to close a worker-pool region and bring subsequent stages back to the main process.
+
+.. versionadded:: 0.6.0
+"""
+
+
+@dataclass(frozen=True)
+class PlacementConfig:
+    """**[Experimental]** A region marker designating where the subsequent stages execute.
+
+    Sits among the stage configs in :py:attr:`PipelineConfig.pipes`: every stage after
+    this marker (until the next :py:class:`PlacementConfig`) runs on :py:attr:`target`.
+    :py:meth:`spdl.pipeline.PipelineBuilder.to` appends one of these. A pipeline
+    implicitly starts on the main process, so a marker is needed only to enter a
+    worker-pool region and (with :py:data:`MAIN_PROCESS`) to leave it.
+
+    .. versionadded:: 0.6.0
+    """
+
+    target: "ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig | _MainProcess"
+    """Where the stages following this marker execute."""
+
+    name: str = "placement"
+    """Name of the marker (used only for display)."""
+
+    def __repr__(self) -> str:
+        return f"{self.name}({self.target!r})"
+
+
+################################################################################
 # PathVariants
 ################################################################################
 
@@ -607,6 +717,7 @@ class PipelineConfig(Generic[U]):
         | DisaggregateConfig[Any]
         | PathVariantsConfig[Any]
         | _SubprocessPipelineConfig
+        | PlacementConfig
     ]
     """Pipe configurations."""
 

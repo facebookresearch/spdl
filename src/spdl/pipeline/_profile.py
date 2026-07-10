@@ -25,6 +25,7 @@ from spdl.pipeline.defs import (
     PathVariantsConfig,
     PipeConfig,
     PipelineConfig,
+    PlacementConfig,
     SinkConfig,
     SourceConfig,
 )
@@ -263,7 +264,9 @@ def _profile_pipeline(
         raise ValueError(f"Unexpected source type {type(cfg.src)}")
 
     for pipe in cfg.pipes:
-        if isinstance(pipe, (PathVariantsConfig, _SubprocessPipelineConfig)):
+        if isinstance(
+            pipe, (PathVariantsConfig, _SubprocessPipelineConfig, PlacementConfig)
+        ):
             _LG.warning(
                 "Skipping %s stage in profiling (not supported).", type(pipe).__name__
             )

@@ -26,6 +26,7 @@ from spdl.pipeline.defs import (
     PathVariantsConfig,
     PipeConfig,
     PipelineConfig,
+    PlacementConfig,
     SinkConfig,
     SourceConfig,
 )
@@ -312,6 +313,7 @@ def _convert_pipes(
         | DisaggregateConfig
         | PathVariantsConfig
         | _SubprocessPipelineConfig
+        | PlacementConfig
     ],
     n: _TNodes,
     q_class: type[AsyncQueue],
@@ -340,6 +342,12 @@ def _convert_pipes(
         match cfg:
             case PathVariantsConfig():
                 n = _convert_path_variants(cfg, n, q_class, pipeline_id, stage_id, idx)
+            case PlacementConfig():
+                # Region markers are build-time directives resolved before the pipeline is
+                # built; they must never reach node construction.
+                raise ValueError(
+                    "PlacementConfig region markers must be resolved before building nodes."
+                )
             case _:
                 in_q = _get_output_queue(n, idx)
                 info = _get_stage_info(cfg, pipeline_id, stage_id)
