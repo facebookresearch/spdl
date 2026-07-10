@@ -253,21 +253,7 @@ class PipelineBuilder(Generic[T, U]):
             executor: A custom executor object to be used to convert the synchronous operation
                 into asynchronous one. If ``None``, the default executor is used.
 
-                When ``op`` is already async, ``executor`` must be an isolating-pool (process
-                or interpreter) executor and is **not** used to run the op -- an async op always
-                runs on the event loop. It serves only as a subprocess fusion-group tag: with
-                ``fuse_subprocess_stages=True`` (see
-                :py:meth:`~spdl.pipeline.PipelineBuilder.build`), adjacent stages sharing the
-                same executor instance are fused into one worker sub-pipeline, so tagging an
-                async op lets it join such a run (it then runs on the worker's own event loop
-                and, like any fused stage, must be picklable). Unfused, the tag is ignored and
-                the op runs in the main process. Passing a non-isolating executor (e.g. a thread
-                pool) with an async op is an error.
-
-                .. versionchanged:: 0.6.0
-                   An async ``op`` may now be given an isolating-pool ``executor`` as a
-                   subprocess fusion-group tag; previously any ``executor`` on an async op was
-                   rejected.
+                It is invalid to provide this argument when the given op is already async.
             name: The name (prefix) to give to the task.
             output_order: If ``"completion"`` (default), the items are put to output queue
                 in the order their process is completed.
@@ -455,7 +441,6 @@ class PipelineBuilder(Generic[T, U]):
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         stage_id: int = 0,
         use_thread_output_queue: bool = False,
-        fuse_subprocess_stages: bool = False,
     ) -> Pipeline[U]:
         """Build the pipeline.
 
@@ -498,19 +483,10 @@ class PipelineBuilder(Generic[T, U]):
                 ``queue.Queue``-backed queue for lower-latency batch handoff.
                 Default: ``False``.
 
-            fuse_subprocess_stages: If ``True``, fuse runs of two or more adjacent pipe stages
-                that share the same process-pool (or interpreter-pool) executor instance into a
-                single stage that runs the run as one nested pipeline inside a worker pool. This
-                eliminates the inter-stage IPC that otherwise round-trips data back to this
-                process between each stage (so intermediate values need not be picklable), while
-                each fused stage keeps its own ``concurrency`` and per-stage stats. A
-                ``path_variants`` stage whose branches all use the same pool executor is fused
-                too (router and branches move into the worker), and fuses on its own. An
-                ``aggregate``/``disaggregate`` between pool stages is not fused and runs in the
-                main process with its usual batching. Default: ``False``.
+        .. seealso::
 
-                .. versionadded:: 0.6.0
-                   The ``fuse_subprocess_stages`` argument.
+           :py:meth:`~spdl.pipeline.PipelineBuilder.to`
+              Run a region of stages in a subprocess (or subinterpreter) worker pool.
         """
         return build_pipeline(
             self.get_config(),
@@ -521,5 +497,4 @@ class PipelineBuilder(Generic[T, U]):
             task_hook_factory=task_hook_factory,
             stage_id=stage_id,
             use_thread_output_queue=use_thread_output_queue,
-            fuse_subprocess_stages=fuse_subprocess_stages,
         )

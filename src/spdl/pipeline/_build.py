@@ -35,11 +35,7 @@ from spdl.pipeline._components import (
     TaskHook,
 )
 from spdl.pipeline._executor_proxy import _make_config_executors_picklable
-from spdl.pipeline._fuse import (
-    _fuse_marked_regions,
-    _fuse_subprocess_stages,
-    _strip_async_executor_tags,
-)
+from spdl.pipeline._fuse import _fuse_marked_regions
 from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
 from spdl.pipeline._random_seed import _capture_rng_initializers
 from spdl.pipeline._subprocess_pipeline_pool import _shutdown_pipeline_pools
@@ -142,7 +138,6 @@ def _build_pipeline(
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
-    fuse_subprocess_stages: bool = False,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
         try:
@@ -150,31 +145,13 @@ def _build_pipeline(
         except Exception:
             _LG.exception("Build callback failed.")
 
-    pools: list[Any] = []
-    # Both fusion passes eagerly spawn worker pools. Reap them together on failure: each pass
-    # only reaps its own pools if it raises, so without this a failure in the second pass would
-    # leak the pools the first already spawned -- this half-built pipeline is never returned to
-    # the caller to be stopped.
-    try:
-        # Honor explicit `.to()` region markers first. This is a no-op when the config has no
-        # markers, so it is always safe to run and independent of `fuse_subprocess_stages`.
-        # stacklevel=4: _fuse_marked_regions -> _build_pipeline -> build_pipeline -> user.
-        pipeline_cfg, region_pools = _fuse_marked_regions(
-            pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
-        )
-        pools.extend(region_pools)
-        if fuse_subprocess_stages:
-            # Fuse consecutive same-pool stages so each run executes as one nested pipeline
-            # inside a worker pool, eliminating the inter-stage IPC. The pools are owned by the
-            # returned Pipeline and reaped when it stops.
-            # stacklevel=4: _fuse_subprocess_stages -> _build_pipeline -> build_pipeline -> user.
-            pipeline_cfg, id_pools = _fuse_subprocess_stages(
-                pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
-            )
-            pools.extend(id_pools)
-    except BaseException:
-        _shutdown_pipeline_pools(pools)
-        raise
+    # Fuse each `.to()` region into one nested-pipeline stage that runs in a worker pool,
+    # eliminating the inter-stage IPC within the region. A no-op when the config has no markers.
+    # The pools are owned by the returned Pipeline and reaped when it stops.
+    # stacklevel=4: _fuse_marked_regions -> _build_pipeline -> build_pipeline -> user.
+    pipeline_cfg, pools = _fuse_marked_regions(
+        pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
+    )
 
     desc = repr(pipeline_cfg)
 
@@ -218,7 +195,6 @@ def build_pipeline(
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
-    fuse_subprocess_stages: bool = False,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -291,24 +267,11 @@ def build_pipeline(
             ``asyncio.run_coroutine_threadsafe``, reducing per-batch latency from
             ~200-400us to ~10us. Default: ``False``.
 
-        fuse_subprocess_stages: If ``True``, fuse runs of two or more adjacent pipe stages that
-            share the same process-pool (or interpreter-pool) executor instance into a single
-            stage that executes the run as one nested pipeline inside a worker pool. This
-            eliminates the inter-stage IPC that otherwise round-trips data back to this process
-            between each stage (so intermediate values need not be picklable), while each fused
-            stage keeps its own ``concurrency`` and per-stage stats. A ``path_variants`` stage
-            whose branches all use the same pool executor is fused too — the whole routing
-            construct (router and branches) moves into the worker — and fuses on its own even
-            when it is the only such stage. An ``aggregate``/``disaggregate`` between two pool
-            stages is not fused (it keeps its main-process batching) and splits them into
-            separate runs. An async op joins a fused run when tagged with the same executor as
-            its neighbours (see :py:meth:`~spdl.pipeline.PipelineBuilder.pipe`), running on the
-            worker's own event loop. Continuous sources are supported (the fused worker
-            sub-pipelines stay warm across epochs and epoch boundaries are propagated across the
-            pool). Default: ``False``.
+    .. seealso::
 
-            .. versionadded:: 0.6.0
-               The ``fuse_subprocess_stages`` argument.
+       :py:meth:`~spdl.pipeline.PipelineBuilder.to`
+          Designate a region of stages to run together in a subprocess (or subinterpreter)
+          worker pool, eliminating the inter-stage IPC within the region.
     """
     from . import _profile
 
@@ -325,7 +288,6 @@ def build_pipeline(
         stage_id=stage_id,
         background_tasks=background_tasks,
         use_thread_output_queue=use_thread_output_queue,
-        fuse_subprocess_stages=fuse_subprocess_stages,
     )
 
 
@@ -427,7 +389,6 @@ def run_pipeline_in_subprocess(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
-    fuse_subprocess_stages: bool = False,
     **kwargs: Any,
 ) -> Iterable[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
@@ -579,21 +540,15 @@ def run_pipeline_in_subprocess(
 
         num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory,background_tasks:
             Passed to :py:func:`build_pipeline`.
-        fuse_subprocess_stages: If ``True``, fuse runs of two or more adjacent pipe stages that
-            share the same process-pool (or interpreter-pool) executor instance into a single
-            stage that runs the run as one nested pipeline inside a worker pool. The worker
-            processes are spawned in (and owned by) the main process, exactly like a hoisted
-            ``ProcessPoolExecutor``; the pipeline subprocess drives them through a queue handle.
-            This removes the per-stage round-trip between the pipeline subprocess and the pool
-            workers (so intermediate values need not be picklable). A ``path_variants`` stage
-            whose branches all use the same pool executor is fused too (router and branches move
-            into the worker). An async op joins a fused run when tagged with the same executor as
-            its neighbours (see :py:meth:`~spdl.pipeline.PipelineBuilder.pipe`), running on the
-            worker's own event loop. Continuous sources are supported. Default: ``False``.
-
-            .. versionadded:: 0.6.0
-               The ``fuse_subprocess_stages`` argument.
         kwargs: Passed to :py:func:`iterate_in_subprocess`.
+
+    .. seealso::
+
+       :py:meth:`~spdl.pipeline.PipelineBuilder.to`
+          Designate a region of stages to run together in a subprocess (or subinterpreter)
+          worker pool. When the config has such a region, its worker pool is spawned in (and
+          owned by) the main process, so it is not orphaned if the pipeline subprocess is
+          force-killed.
 
     Yields:
         The results yielded from the pipeline.
@@ -625,11 +580,11 @@ def run_pipeline_in_subprocess(
         else config_or_builder.get_config()  # pyre-ignore[16]
     )
 
-    # Every pass below eagerly spawns worker pools, so they all run inside one try/except:
-    # ``_fuse_marked_regions`` spawns ``fuse_pools`` up front, and if any *later* pass
-    # (``_fuse_subprocess_stages``, ``_hoist_process_pools``) or the iterable creation
-    # raises, both ``fuse_pools`` and the hoisted ``pools`` must be reaped -- this half-built
-    # iterable is never returned to the caller to be stopped. Mirrors ``_build_pipeline``.
+    # Both passes below eagerly spawn worker pools, so they run inside one try/except:
+    # ``_fuse_marked_regions`` spawns ``fuse_pools`` up front, so if a later pass
+    # (``_hoist_process_pools``) or the iterable creation raises, both ``fuse_pools`` and the
+    # hoisted ``pools`` must be reaped -- this half-built iterable is never returned to the
+    # caller to be stopped. Mirrors the guard in ``_build_pipeline``.
     fuse_pools: list[Any] = []
     pools: list[Any] = []
     try:
@@ -648,23 +603,6 @@ def run_pipeline_in_subprocess(
             stacklevel=3,
         )
         fuse_pools.extend(region_pools)
-        # Also fuse runs of same-pool stages tagged with an identical executor into one nested
-        # pipeline inside a worker pool, eliminating the inter-stage IPC (before hoisting, so
-        # only unfused ProcessPoolExecutor stages remain).
-        if fuse_subprocess_stages:
-            # stacklevel=3: _fuse_subprocess_stages -> run_pipeline_in_subprocess -> user.
-            config, id_pools = _fuse_subprocess_stages(
-                config,
-                mp_context=kwargs.get("mp_context"),
-                report_stats_interval=report_stats_interval,
-                stacklevel=3,
-            )
-            fuse_pools.extend(id_pools)
-
-        # Clear executor tags left on any unfused async op: they are subprocess fusion-group
-        # hints, not real pools, and the executor-hoisting/pickling passes below are op-agnostic
-        # -- an async op's process-pool tag would otherwise spawn an idle pool it never uses.
-        config = _strip_async_executor_tags(config)
 
         # Spawn workers for any stdlib ``ProcessPoolExecutor`` in the main process (as children
         # of main, not grandchildren via the pipeline subprocess), then replace the executor
@@ -693,9 +631,9 @@ def run_pipeline_in_subprocess(
             **kwargs,
         )
     except BaseException:
-        # Any eager-spawn pass above (region fusion, identity fusion, hoisting) or the iterable
-        # creation failed; the iterable is never returned to the caller, so reap the region and
-        # hoisted pools here to avoid leaking their worker processes and pipe fds.
+        # Any eager-spawn pass above (region fusion, hoisting) or the iterable creation failed;
+        # the iterable is never returned to the caller, so reap the region and hoisted pools
+        # here to avoid leaking their worker processes and pipe fds.
         _shutdown_pools(pools)
         _shutdown_pipeline_pools(fuse_pools)
         raise
