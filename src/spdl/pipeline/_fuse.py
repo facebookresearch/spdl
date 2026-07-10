@@ -35,6 +35,7 @@ from __future__ import annotations
 import inspect
 import multiprocessing as mp
 import os
+import sys
 import threading
 import warnings
 from collections.abc import Sequence
@@ -46,7 +47,12 @@ from typing import Any
 from spdl.pipeline._common._convert import _is_isolating_pool
 from spdl.pipeline._components import _get_global_id, _set_global_id
 from spdl.pipeline._executor_proxy import _ensure_executor_unused
-from spdl.pipeline._subprocess_pipeline_pool import _SubprocessPipelinePool
+from spdl.pipeline._subprocess_pipeline_pool import (
+    _InterpreterBackend,
+    _PoolBackend,
+    _ProcessBackend,
+    _SubprocessPipelinePool,
+)
 from spdl.pipeline.defs._defs import (
     _MainProcess,
     _PipeType,
@@ -324,7 +330,7 @@ def _warn_fork_with_threads(ctx: Any, stacklevel: int) -> None:
 def _build_fused_stage_core(
     stages: Sequence[object],
     *,
-    ctx: Any,
+    backend: _PoolBackend,
     num_threads: int,
     max_workers: int,
     user_initializer: Any,
@@ -332,10 +338,10 @@ def _build_fused_stage_core(
     report_stats_interval: float,
     continuous: bool,
 ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
-    """Spawn a worker pool that runs ``stages`` as a nested pipeline, and return the pool and its
+    """Spawn a worker pool that runs ``stages`` as a nested pipeline; return the pool and its
     replacement stage. Shared by the executor-identity fusion (:py:func:`_build_fused_stage`) and
-    the ``.to()`` marker fusion (:py:func:`_build_fused_stage_from_spec`) — the two differ only in
-    where the pool parameters come from (a live executor vs. a serializable spec)."""
+    the ``.to()`` marker fusion (:py:func:`_build_fused_stage_from_spec`); they differ only in
+    where the pool params and backend come from (a live executor vs. a spec)."""
     stripped = [_strip_executor(s) for s in stages]
     sub_config: PipelineConfig[Any] = PipelineConfig(
         src=SourceConfig(
@@ -352,7 +358,7 @@ def _build_fused_stage_core(
         _worker_initializer, _get_global_id(), user_initializer, user_initargs
     )
     pool = _SubprocessPipelinePool(
-        ctx,
+        backend,
         max_workers,
         sub_config,
         build_kwargs,
@@ -375,7 +381,7 @@ def _build_fused_stage(
     max_workers, user_initializer, user_initargs = _pool_params(executor)
     return _build_fused_stage_core(
         stages,
-        ctx=ctx,
+        backend=_ProcessBackend(ctx),
         num_threads=max(1, sum(_stage_concurrency(s) for s in stages)),
         max_workers=max_workers,
         user_initializer=user_initializer,
@@ -387,8 +393,8 @@ def _build_fused_stage(
 
 def _build_fused_stage_from_spec(
     stages: Sequence[object],
-    spec: ProcessPoolExecutorConfig,
-    ctx: Any,
+    spec: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig,
+    backend: _PoolBackend,
     report_stats_interval: float,
     continuous: bool,
 ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
@@ -396,12 +402,13 @@ def _build_fused_stage_from_spec(
     parameters from ``spec``. ``num_threads`` for the nested pipeline is the sum of the region
     stages' concurrency, ``max_workers`` falls back to the CPU count, and
     ``report_stats_interval`` is inherited from
-    :py:func:`~spdl.pipeline._build.build_pipeline`."""
+    :py:func:`~spdl.pipeline._build.build_pipeline`. ``backend`` (process or subinterpreter) is
+    chosen by the caller from the spec type."""
     num_threads = max(1, sum(_stage_concurrency(s) for s in stages))
     max_workers = spec.max_workers or os.cpu_count() or 1
     return _build_fused_stage_core(
         stages,
-        ctx=ctx,
+        backend=backend,
         num_threads=num_threads,
         max_workers=max_workers,
         user_initializer=spec.initializer,
@@ -534,20 +541,25 @@ def _fuse_marked_regions(
     def _flush() -> None:
         if not region:
             return
-        if isinstance(target, InterpreterPoolExecutorConfig):
-            raise NotImplementedError(
-                "Subinterpreter regions (`.to(InterpreterPoolExecutorConfig(...))`) are not yet "
-                "supported; use `ProcessPoolExecutorConfig` for now."
-            )
-        assert isinstance(
-            target, ProcessPoolExecutorConfig
-        )  # narrowed: not main, not subinterpreter
-        ctx = mp.get_context(target.mp_context)
-        # +2, not +1: this runs inside the nested ``_flush`` closure, one frame deeper than
-        # ``_fuse_marked_regions`` itself, so the warning still points at the user's call site.
-        _warn_fork_with_threads(ctx, stacklevel + 2)
+        backend: _PoolBackend
+        if isinstance(target, ProcessPoolExecutorConfig):
+            ctx = mp.get_context(target.mp_context)
+            # +2, not +1: this runs inside the nested ``_flush`` closure, one frame deeper than
+            # ``_fuse_marked_regions`` itself, so the warning still points at the user's call site.
+            _warn_fork_with_threads(ctx, stacklevel + 2)
+            backend = _ProcessBackend(ctx)
+        elif isinstance(target, InterpreterPoolExecutorConfig):
+            if sys.version_info < (3, 14):
+                raise RuntimeError(
+                    "Subinterpreter regions (`.to(InterpreterPoolExecutorConfig(...))`) require "
+                    "Python 3.14 or later. Current version: "
+                    f"{sys.version_info.major}.{sys.version_info.minor}"
+                )
+            backend = _InterpreterBackend()
+        else:  # pragma: no cover -- a main-process target never accumulates a region
+            raise AssertionError(f"Unexpected region target: {target!r}")
         fused, pool = _build_fused_stage_from_spec(
-            region, target, ctx, report_stats_interval, continuous
+            region, target, backend, report_stats_interval, continuous
         )
         pools.append(pool)
         new_pipes.append(fused)
