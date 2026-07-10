@@ -7,6 +7,7 @@
 # pyre-strict
 
 import logging
+import sys
 from collections.abc import AsyncIterable, Callable, Iterable, Sequence
 from concurrent.futures import Executor
 from fractions import Fraction
@@ -15,17 +16,22 @@ from typing import Generic, TypeVar
 from spdl._internal import log_api_usage_once
 from spdl.pipeline._components import AsyncQueue, StageInfo, TaskHook
 from spdl.pipeline.defs import (
+    _MainProcess,
+    _PipeType,
     _TPipeInputs,
     Aggregate,
     AggregateConfig,
     Aggregator,
     Disaggregate,
     DisaggregateConfig,
+    InterpreterPoolExecutorConfig,
     PathVariants,
     PathVariantsConfig,
     Pipe,
     PipeConfig,
     PipelineConfig,
+    PlacementConfig,
+    ProcessPoolExecutorConfig,
     SinkConfig,
     SourceConfig,
 )
@@ -43,6 +49,79 @@ T = TypeVar("T")
 U = TypeVar("U")
 T_ = TypeVar("T_")
 U_ = TypeVar("U_")
+
+
+def _has_ordered_pipe(cfg: object) -> bool:
+    """Whether ``cfg`` is (or, for path-variants, contains) an ``output_order="input"`` pipe.
+
+    Recurses into :py:class:`~spdl.pipeline.defs.PathVariantsConfig` branches: those stages run
+    inside the region worker too, so an input-ordered pipe nested in a branch is just as invalid
+    as a top-level one (global input order cannot be preserved across the pool's workers).
+    """
+    if isinstance(cfg, PipeConfig):
+        return cfg._type is _PipeType.OrderedPipe
+    if isinstance(cfg, PathVariantsConfig):
+        return any(_has_ordered_pipe(s) for path in cfg.paths for s in path)
+    return False
+
+
+def _validate_executor_regions(
+    pipes: Sequence[
+        PipeConfig
+        | AggregateConfig
+        | DisaggregateConfig
+        | PathVariantsConfig
+        | PlacementConfig
+    ],
+) -> None:
+    """Validate the :py:meth:`PipelineBuilder.to` region markers in ``pipes``.
+
+    Stateless scan (a pipeline starts on the main process). Rejects: a subinterpreter region on
+    Python < 3.14; a stage using ``output_order="input"`` inside a region (including one nested
+    in a ``path_variants`` branch, since order cannot be preserved across independent workers); an
+    empty region (a ``.to(...)`` marker with no stages before the next marker/sink); and a region
+    left open at the sink.
+    """
+    in_region = False
+    region_has_stage = False
+    for p in pipes:
+        if isinstance(p, PlacementConfig):
+            # A non-main region that opened but never received a stage does nothing; reject it
+            # rather than silently dropping it (usually a stray or duplicated ``.to(...)``).
+            # Adjacent *non-empty* regions with different targets remain valid.
+            if in_region and not region_has_stage:
+                raise ValueError(
+                    "An empty `to(...)` region has no stages. Add stages before the next "
+                    "`.to(...)`, or remove the redundant marker."
+                )
+            target = p.target
+            in_region = not isinstance(target, _MainProcess)
+            region_has_stage = False
+            if isinstance(
+                target, InterpreterPoolExecutorConfig
+            ) and sys.version_info < (3, 14):
+                raise RuntimeError(
+                    "A subinterpreter region (`to(InterpreterPoolExecutorConfig(...))`) requires "
+                    "Python 3.14 or later. Current version: "
+                    f"{sys.version_info.major}.{sys.version_info.minor}"
+                )
+        elif in_region:
+            region_has_stage = True
+            if _has_ordered_pipe(p):
+                raise ValueError(
+                    "A stage with `output_order='input'` cannot run inside a `to()` region: "
+                    "input order cannot be preserved across the region's independent workers."
+                )
+    if in_region and not region_has_stage:
+        raise ValueError(
+            "An empty `to(...)` region has no stages. Add stages before closing it, or remove "
+            "the redundant marker."
+        )
+    if in_region:
+        raise ValueError(
+            "A `to()` execution region must be closed with `to(MAIN_PROCESS)` before "
+            "`add_sink()`. The sink always runs in the main process."
+        )
 
 
 ################################################################################
@@ -81,7 +160,11 @@ class PipelineBuilder(Generic[T, U]):
 
         self._src: SourceConfig[T] | None = None
         self._process_args: list[
-            PipeConfig | AggregateConfig | DisaggregateConfig | PathVariantsConfig
+            PipeConfig
+            | AggregateConfig
+            | DisaggregateConfig
+            | PathVariantsConfig
+            | PlacementConfig
         ] = []
         self._sink: SinkConfig[U] | None = None
 
@@ -246,6 +329,66 @@ class PipelineBuilder(Generic[T, U]):
         self._process_args.append(Disaggregate())
         return self
 
+    def to(
+        self,
+        target: "ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig | _MainProcess",
+        /,
+    ) -> "PipelineBuilder[T, U]":
+        """**[Experimental]** Designate where the subsequent stages execute.
+
+        Opens (or closes) an *execution region*: every stage added after this call runs on
+        ``target`` until the next :py:meth:`to`. A pipeline starts on the main process, so a
+        region is opened by ``to(ProcessPoolExecutorConfig(...))`` or ``to(InterpreterPoolExecutorConfig(...))``
+        and closed by ``to(MAIN_PROCESS)``. The stages inside a region are fused into one nested
+        pipeline that runs together in a worker process (or subinterpreter), so the value handed
+        from one stage to the next stays in the worker — it is **not** copied back to the main
+        process between stages and need not be picklable. Only the region's inputs and outputs
+        cross the boundary.
+
+        Unlike passing ``executor=`` to individual :py:meth:`pipe` calls, a region also carries
+        :py:meth:`aggregate`, :py:meth:`disaggregate`, and :py:meth:`path_variants` stages into
+        the worker, and gives the worker-pool configuration a single home.
+
+        Args:
+            target: Where the following stages run.
+
+                - :py:class:`~spdl.pipeline.defs.ProcessPoolExecutorConfig` — a pool of worker processes.
+                - :py:class:`~spdl.pipeline.defs.InterpreterPoolExecutorConfig` — a pool of subinterpreters
+                  (Python 3.14+; the region's ops must avoid NumPy/PyTorch, which cannot be
+                  imported in a subinterpreter).
+                - :py:data:`~spdl.pipeline.defs.MAIN_PROCESS` — close the current region; the
+                  following stages run in the main process.
+
+                A live :py:class:`~concurrent.futures.Executor` is **not** accepted — pass a spec
+                so the pipeline stays expressible as static config. To run a single stage on a
+                custom executor, use ``pipe(executor=...)`` instead.
+
+        .. note::
+
+           The region must be closed with ``to(MAIN_PROCESS)`` before :py:meth:`add_sink`, a
+           stage inside a region may not use ``output_order="input"`` (order cannot be preserved
+           across independent workers), and a subinterpreter region requires Python 3.14+. These
+           are checked when the pipeline is built.
+
+        .. versionadded:: 0.6.0
+        """
+        if isinstance(target, Executor):
+            raise TypeError(
+                "`to()` takes a serializable execution target (ProcessPoolExecutorConfig, "
+                "InterpreterPoolExecutorConfig, or MAIN_PROCESS), not a live Executor. To run a single "
+                "stage on a custom executor, pass it to `pipe(executor=...)` instead."
+            )
+        if not isinstance(
+            target,
+            (ProcessPoolExecutorConfig, InterpreterPoolExecutorConfig, _MainProcess),
+        ):
+            raise TypeError(
+                "`to()` target must be a ProcessPoolExecutorConfig, InterpreterPoolExecutorConfig, or "
+                f"MAIN_PROCESS. Got: {type(target).__name__}."
+            )
+        self._process_args.append(PlacementConfig(target=target))
+        return self
+
     def path_variants(
         self,
         router: Callable,
@@ -286,13 +429,19 @@ class PipelineBuilder(Generic[T, U]):
             A PipelineConfig object representing the current pipeline configuration.
 
         Raises:
-            RuntimeError: If source or sink is not set.
+            RuntimeError: If source or sink is not set, or a subinterpreter region is used on
+                Python < 3.14.
+            ValueError: If an execution region opened by :py:meth:`to` is not closed with
+                ``to(MAIN_PROCESS)`` before the sink, or a stage inside a region uses
+                ``output_order="input"``.
         """
         if (src := self._src) is None:
             raise RuntimeError("Source is not set. Did you call `add_source`?")
 
         if (sink := self._sink) is None:
             raise RuntimeError("Sink is not set. Did you call `add_sink`?")
+
+        _validate_executor_regions(self._process_args)
 
         return PipelineConfig(src, self._process_args, sink)
 

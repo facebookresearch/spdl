@@ -6,13 +6,14 @@
 
 # pyre-strict
 
+import multiprocessing as mp
 import os
 import sys
 import unittest
 from collections.abc import Sequence
 from typing import Any
 
-from spdl.pipeline import build_pipeline, Pipeline
+from spdl.pipeline import build_pipeline, Pipeline, run_pipeline_in_subprocess
 from spdl.pipeline.defs import (
     Aggregate,
     InterpreterPoolExecutorConfig,
@@ -69,6 +70,30 @@ def stamp_region(item: _PidStamp) -> _PidStamp:
 def stamp_main(item: _PidStamp) -> _PidStamp:
     """A main-process stage (after the region closes): records the pid it runs in."""
     item.pids["main"] = os.getpid()
+    return item
+
+
+class _ProcStamp:
+    """Item recording ``(pid, ppid, daemon)`` of the stages that touch it, so a test can check
+    which process a stage ran in and whether that process is a daemon."""
+
+    def __init__(self, value: int, main_pid: int) -> None:
+        self.value = value
+        self.main_pid = main_pid
+        self.intermediate: tuple[int, int, bool] | None = None
+        self.region: tuple[int, int, bool] | None = None
+
+
+def stamp_intermediate(item: _ProcStamp) -> _ProcStamp:
+    """A stage OUTSIDE any region: under ``run_pipeline_in_subprocess`` it runs in the
+    intermediate pipeline subprocess."""
+    item.intermediate = (os.getpid(), os.getppid(), mp.current_process().daemon)
+    return item
+
+
+def stamp_region_proc(item: _ProcStamp) -> _ProcStamp:
+    """A stage INSIDE a subprocess region: it runs in a region worker process."""
+    item.region = (os.getpid(), os.getppid(), mp.current_process().daemon)
     return item
 
 
@@ -277,3 +302,67 @@ else:
             with self.assertRaises(RuntimeError) as cm:
                 build_pipeline(config, num_threads=2)
             self.assertIn("3.14", str(cm.exception))
+
+
+class RegionUnderSubprocessTest(unittest.TestCase):
+    """A ``.to()`` region driven by :py:func:`run_pipeline_in_subprocess`.
+
+    ``run_pipeline_in_subprocess`` runs the source/sink and any non-region stages in an
+    *intermediate* subprocess, while each ``.to(ProcessPoolExecutorConfig(...))`` region is fused in
+    the **main** process (via ``_fuse_marked_regions``) so its worker pool is main-owned --
+    spawned by main, not by the intermediate subprocess (which, as a daemon, cannot have
+    children). These tests pin that placement and the daemon flags that let teardown reap
+    everything at exit.
+    """
+
+    def test_region_pool_is_main_owned_and_daemon(self) -> None:
+        """The region worker pool is spawned from main (hoisted), and both the intermediate
+        subprocess and the region workers are daemons.
+
+        A stage outside the region records the intermediate subprocess's
+        ``(pid, ppid, daemon)``; a stage inside the region records the region worker's. The
+        region worker's parent must be the main process (not the intermediate subprocess),
+        and every spawned process must be a daemon so it is terminated at interpreter exit
+        rather than hang-joined.
+        """
+        main_pid = os.getpid()
+        n = 4
+        config = _cfg(
+            [_ProcStamp(i, main_pid) for i in range(n)],
+            [
+                Pipe(
+                    stamp_intermediate
+                ),  # outside the region -> intermediate subprocess
+                PlacementConfig(
+                    target=ProcessPoolExecutorConfig(max_workers=1, mp_context="spawn")
+                ),
+                Pipe(stamp_region_proc),  # inside the region -> region worker
+                PlacementConfig(target=MAIN_PROCESS),
+            ],
+        )
+        src = run_pipeline_in_subprocess(
+            config,
+            num_threads=2,
+            use_thread_output_queue=True,
+            buffer_size=8,
+            timeout=60.0,
+            mp_context="spawn",
+            daemon=True,
+        )
+        results = list(src)
+
+        self.assertEqual(len(results), n)
+        for item in results:
+            self.assertIsNotNone(item.intermediate)
+            self.assertIsNotNone(item.region)
+            inter_pid, inter_ppid, inter_daemon = item.intermediate
+            region_pid, region_ppid, region_daemon = item.region
+            # The intermediate subprocess is a daemon child of main.
+            self.assertEqual(inter_ppid, main_pid)
+            self.assertTrue(inter_daemon)
+            # The region worker pool is spawned from MAIN (hoisted), not the intermediate
+            # subprocess -- its parent is main, and distinct from the intermediate.
+            self.assertEqual(region_ppid, main_pid)
+            self.assertNotEqual(region_ppid, inter_pid)
+            # The region workers are daemons.
+            self.assertTrue(region_daemon)
