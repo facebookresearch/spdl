@@ -73,6 +73,46 @@ For production training, isolate the CPU-heavy stages in a subprocess and keep o
 
 See `migrating_to_spdl_pipeline.md` for the full MTP construction pattern, pickling/thread-safety constraints, and media (`spdl.io`) recipes — they apply identically to a from-scratch build. See `optimization_strategies.md` for deep tuning: concurrency search, subprocess IPC / shared-memory arena, GPU (NVDEC) video decode, decoder-thread tuning, GC-stall mitigation, and headspace analysis.
 
+## Pipeline Lifecycle and Cleanup
+
+A `Pipeline` cleans itself up, so holding a reference to one is safe. It drains its background thread and any worker processes/subinterpreters on two occasions: when it is garbage collected (via `weakref.finalize`), and — if a reference is still held when the program ends — at the very start of interpreter finalization, via a hook `Pipeline.start()` registers with `threading._register_atexit`. You do **not** have to call `Pipeline.stop()` for cleanup to happen, keeping the `Pipeline` alive as an attribute is fine, and it is in fact **required** for a `continuous=True` source re-iterated across epochs, since the same object must survive to be iterated again. (See `Pipeline.start`'s docstring for why the exit hook uses `threading._register_atexit` rather than `atexit`.)
+
+Releasing the reference (or calling `Pipeline.stop()`) as soon as you are done is still good hygiene — it frees the worker processes and memory promptly instead of at GC/exit — but it is no longer needed to avoid a hang.
+
+This matters when a framework stashes the loader on a long-lived object. TorchTNT, for example, holds the dataloader on its `State` (`PhaseState._dataloader`) until the process exits. This no longer hangs the run (the exit hook cleans the pipeline up), but if you want its resources released as soon as training ends (e.g. between fit and eval) rather than at exit, detach it and force a collection with a callback:
+
+```python
+import gc
+
+from torchtnt.framework.callback import Callback
+from torchtnt.framework.state import State
+from torchtnt.framework.unit import TEvalUnit, TPredictUnit, TTestUnit, TTrainUnit
+
+
+class DetachDataloaderCallback(Callback):
+    """Optional: drop TNT's dataloader refs at train end so the SPDL Pipeline
+    (and its workers) are released promptly, instead of lingering on State until
+    the pipeline is cleaned up at exit."""
+
+    def on_train_end(self, state: State, unit: TTrainUnit) -> None:
+        self._detach(state)
+
+    def on_exception(
+        self,
+        state: State,
+        unit: TTrainUnit | TEvalUnit | TPredictUnit | TTestUnit,
+        exc: BaseException,
+    ) -> None:
+        # on_train_end does not fire on failure/preemption, so reap here too.
+        self._detach(state)
+
+    def _detach(self, state: State) -> None:
+        for phase_state in (state.train_state, state.eval_state):
+            if phase_state is not None:
+                phase_state._dataloader = None  # pyre-ignore[8]
+        gc.collect()
+```
+
 ## Structuring the Construction Code
 
 When code builds a `Pipeline` (or `PipelineConfig`) in more than one shape — e.g. a script that supports several execution modes, or a loader with optional stages — keep **each pipeline's construction in one place**. The maintainability win is being able to read a single fluent chain top-to-bottom and see the whole pipeline; it is lost when the construction is scattered across helpers that each tack on a few stages.
@@ -151,3 +191,4 @@ When variants genuinely differ in topology (not just an argument), inline each o
 - [ ] Production build uses MTP with picklable stage functions
 - [ ] Iterated via `get_iterator(timeout=...)`
 - [ ] Each pipeline shape is a single readable builder chain (no partial-construction helpers)
+- [ ] Long-lived holders (e.g. TorchTNT `State`) release the `Pipeline` reference promptly to free resources (optional hygiene; cleanup at exit is automatic)
