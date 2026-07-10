@@ -10,6 +10,7 @@ import asyncio
 import concurrent.futures
 import logging
 import queue
+import threading
 import time
 import warnings
 import weakref
@@ -405,6 +406,35 @@ def _stop_impl(impl: _PipelineImpl[Any]) -> None:
         _LG.debug("Exception during automatic pipeline shutdown.", exc_info=True)
 
 
+def _register_stop_at_exit(impl: _PipelineImpl[Any]) -> None:
+    """Register :py:func:`_stop_impl` to run for ``impl`` at the start of interpreter finalization.
+
+    Uses ``threading._register_atexit`` -- **not** ``atexit.register``: threading-atexit callbacks
+    run inside ``threading._shutdown()``, before non-daemon threads and child processes are joined,
+    whereas an ``atexit`` hook runs *after*, by which point the interpreter has already hung joining
+    the pipeline's non-daemon event-loop thread. This is the same private API, for the same reason,
+    that ``concurrent.futures`` uses. Called from :py:meth:`Pipeline.start` (after the pipeline
+    started its own threads/processes, so this registers last and, being LIFO, runs first). The
+    hook holds only a weak reference, so it never keeps the pipeline alive; once the pipeline is
+    stopped or collected it is a safe no-op (``stop`` is idempotent).
+    """
+    ref = weakref.ref(impl)
+
+    def _hook() -> None:
+        if (impl := ref()) is not None:
+            _stop_impl(impl)
+
+    try:
+        threading._register_atexit(_hook)  # pyre-ignore[16]
+    except (AttributeError, RuntimeError):
+        # Defensive around a private stdlib API: ``RuntimeError`` if the interpreter is already
+        # shutting down, ``AttributeError`` if a future Python drops the hook. The exit hook is
+        # only a safety net (explicit ``stop()`` and the GC finalizer still work), so failing to
+        # register must never break pipeline start; a unit test asserts the API exists so a genuine
+        # regression surfaces loudly in CI.
+        _LG.debug("Could not register interpreter-exit stop hook.", exc_info=True)
+
+
 class Pipeline(Generic[T]):
     """Pipeline()
 
@@ -489,9 +519,16 @@ class Pipeline(Generic[T]):
                    # do something with the decoded image
                    ...
 
-    When the ``Pipeline`` object is garbage collected, the background thread is
-    automatically stopped. You can still use :py:meth:`auto_stop` or
-    :py:meth:`stop` for deterministic, scoped lifecycle management.
+    A ``Pipeline`` cleans up its background thread and worker processes
+    automatically, so a forgotten pipeline will not hang the process at exit: it
+    is stopped when the object is garbage collected, and — as a safety net for a
+    reference held until the program ends — by a hook that :py:meth:`start`
+    registers to run at interpreter shutdown. Even so, it is **recommended to
+    release the resources explicitly** once you are done, either by calling
+    :py:meth:`stop` (or using the :py:meth:`auto_stop` context manager) or by
+    dropping all strong references to the ``Pipeline`` so it is garbage collected.
+    This frees the background thread, worker processes, and memory promptly,
+    rather than leaving them alive until exit.
 
     .. versionchanged:: 0.4.0
 
@@ -502,6 +539,16 @@ class Pipeline(Generic[T]):
        is stopped automatically via :py:func:`weakref.finalize`.
        Explicit :py:meth:`start` / :py:meth:`stop` and the :py:meth:`auto_stop`
        context manager continue to work as before.
+
+    .. versionchanged:: 0.6.0
+
+       Cleanup is now more robust: :py:meth:`start` registers a hook (via
+       ``threading._register_atexit``) that stops a still-running pipeline at
+       interpreter shutdown, so a reference held until the program ends no longer
+       risks a hang at exit. Explicitly releasing resources is still recommended
+       — call :py:meth:`stop` (or use :py:meth:`auto_stop`), or drop all strong
+       references so the pipeline is garbage collected — to free them promptly.
+       See :py:meth:`start` for details.
     """
 
     def __init__(
@@ -531,8 +578,59 @@ class Pipeline(Generic[T]):
         .. note::
 
            Calling ``start`` multiple times raises ``RuntimeError``.
+
+        .. note::
+
+           **Cleanup at interpreter exit.** The pipeline runs a background, *non-daemon*
+           event-loop thread (and may own worker subprocesses). They are released
+           when you :py:meth:`stop` the pipeline, or when the object is garbage
+           collected -- a :py:func:`weakref.finalize` stops it at GC. But if a strong
+           reference is held until the program ends (e.g. a training loop that keeps
+           the dataloader for the whole run), GC does not run before interpreter
+           shutdown, which would otherwise **hang** joining the still-running
+           event-loop thread.
+
+           To prevent that, :py:meth:`start` registers a process-wide hook that
+           stops the pipeline at the very start of interpreter finalization. It holds
+           only a weak reference, so it never keeps the pipeline alive; explicit
+           :py:meth:`stop` and the GC path are unaffected.
+
+           The hook uses ``threading._register_atexit`` and **not**
+           :py:func:`atexit.register`, because of *when* CPython runs each. A plain
+           ``atexit`` hook runs **after** non-daemon threads are already joined --
+           too late. ``threading._register_atexit`` callbacks run earlier, inside
+           ``threading._shutdown()``, *before* that join (the same mechanism, and the
+           same reason, that :py:mod:`concurrent.futures` uses):
+
+           .. mermaid::
+
+              flowchart TD
+
+                  subgraph C["run threading._register_atexit hooks (LIFO)"]
+                      S1["Pipeline's stop hook runs here: pipeline stopped"]
+                  end
+
+                  subgraph E["atexit hooks (LIFO)"]
+                      M1["multiprocessing joins children;"]
+                      M2["weakref.finalize"]
+                  end
+
+                  A["Python reaches the end of program"]
+                  --> B["threading._shutdown()"]
+                  --> C
+                  --> D["join non-daemon threads"]
+                  --> E
+                  --> F["GC and module teardown"]
+
+           The stop hook runs before the non-daemon-thread join and before
+           the ``atexit`` phase, so the pipeline is torn down before anything
+           blocks on it.
         """
         self._impl.start(timeout=timeout, **kwargs)
+        # Register only after a successful start (raises if already started -> no
+        # double-register) and after the pipeline's threads/processes are up, so this
+        # hook lands after the stdlib atexit hooks and -- being LIFO -- runs first.
+        _register_stop_at_exit(self._impl)
 
     def stop(self, *, timeout: float | None = None) -> None:
         """Stop the pipeline.
@@ -578,11 +676,13 @@ class Pipeline(Generic[T]):
             EOFError: When the pipeline is exhausted or cancelled and there are no more items
                 in the sink.
         """
-        # Ensure that the pipeline is started before accessing the sink queue.
+        # Ensure that the pipeline is started before accessing the sink queue. Route through the
+        # facade `start` (not `_impl.start`) so an auto-started pipeline also registers the
+        # interpreter-exit stop hook.
         # Note: This check-then-start pattern is not thread-safe, but `get_item` is not
-        # it is not supposed to be called from multiple threads.
+        # supposed to be called from multiple threads.
         if self._impl._event_loop_state == _EventLoopState.NOT_STARTED:
-            self._impl.start()
+            self.start()
         return self._impl.get_item(timeout=timeout)
 
     def get_iterator(self, *, timeout: float | None = None) -> Iterator[T]:

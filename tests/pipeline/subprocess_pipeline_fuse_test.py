@@ -981,9 +981,12 @@ class FeedAbortTest(unittest.TestCase):
             )  # stays empty -> get() blocks
             abort = asyncio.Event()
             feeder_idle = asyncio.Event()
+            put_stop = threading.Event()
             with ThreadPoolExecutor(max_workers=num_workers + 1) as ex:
                 task = asyncio.ensure_future(
-                    _subprocess_pipe._feed(input_queue, in_qs, ex, abort, feeder_idle)
+                    _subprocess_pipe._feed(
+                        input_queue, in_qs, ex, abort, feeder_idle, put_stop
+                    )
                 )
                 await asyncio.sleep(0.1)  # let the feeder park on input_queue.get()
                 self.assertFalse(task.done(), "feeder should be parked on empty queue")

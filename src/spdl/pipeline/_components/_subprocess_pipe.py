@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import asyncio
 import queue as _queue
+import threading
 import time
 from concurrent.futures import Executor, ThreadPoolExecutor
 from typing import Any
@@ -78,14 +79,28 @@ _EPOCH_DONE = (
 # observe cancellation between polls instead of parking a thread on an indefinite get.
 _GET_TIMEOUT: float = 0.5
 
+# How long a blocking put may wait before re-checking the teardown flag. A put onto a *full*
+# worker queue (backpressure once the consumer stops) cannot be released by pool teardown -- an
+# mp.Queue putter blocked on the queue's semaphore is not woken by closing the queue or
+# terminating the consumer workers -- so an indefinite put would park this pool thread forever and
+# hang interpreter exit (a non-daemon executor thread joined by concurrent.futures at shutdown).
+_PUT_TIMEOUT: float = 0.5
+
 # Fixed bound (15 min) on how long the collector waits for any worker message before assuming a
 # worker died abruptly and raising, instead of hanging forever. Comfortably above any per-stage
 # latency in a data loader. Not user-configurable for now.
 _WORKER_STALL_TIMEOUT: float = 900.0
 
 
-def _put(q: Any, msg: tuple[int, Any]) -> None:
-    q.put(msg)
+def _put(q: Any, msg: tuple[int, Any], stop: threading.Event) -> None:
+    # Bounded, interruptible put: poll so this pool thread wakes to observe teardown (``stop``)
+    # and exit, rather than parking forever on a full queue (see ``_PUT_TIMEOUT``).
+    while not stop.is_set():
+        try:
+            q.put(msg, timeout=_PUT_TIMEOUT)
+            return
+        except _queue.Full:
+            continue
 
 
 def _drain_one(q: Any) -> tuple[int, Any] | None:
@@ -123,6 +138,7 @@ async def _feed(
     executor: Executor,
     abort: asyncio.Event,
     feeder_idle: asyncio.Event,
+    put_stop: threading.Event,
 ) -> None:
     """Round-robin items across the per-worker queues, then end every worker's session.
 
@@ -165,13 +181,18 @@ async def _feed(
                 feeder_idle.clear()
             if is_eof(item):
                 break
-            await loop.run_in_executor(executor, _put, in_qs[i % n], (_ITEM, item))
+            await loop.run_in_executor(
+                executor, _put, in_qs[i % n], (_ITEM, item), put_stop
+            )
             i += 1
     finally:
         abort_wait.cancel()
     # Concurrent so a full/slow worker queue does not block the markers to the others.
     await asyncio.gather(
-        *(loop.run_in_executor(executor, _put, q, (_SESSION_END, None)) for q in in_qs)
+        *(
+            loop.run_in_executor(executor, _put, q, (_SESSION_END, None), put_stop)
+            for q in in_qs
+        )
     )
 
 
@@ -234,6 +255,7 @@ async def _feed_continuous(
     executor: Executor,
     epoch_barrier: asyncio.Event,
     feeder_idle: asyncio.Event,
+    put_stop: threading.Event,
 ) -> None:
     """Round-robin items to per-worker queues; broadcast and barrier each epoch boundary.
 
@@ -251,7 +273,7 @@ async def _feed_continuous(
     async def _broadcast(msg: tuple[int, Any]) -> None:
         # Concurrent so a full/slow worker queue does not block the broadcast to the others.
         await asyncio.gather(
-            *(loop.run_in_executor(executor, _put, q, msg) for q in in_qs)
+            *(loop.run_in_executor(executor, _put, q, msg, put_stop) for q in in_qs)
         )
 
     i = 0
@@ -268,7 +290,9 @@ async def _feed_continuous(
             await _broadcast((_EPOCH, None))
             await epoch_barrier.wait()
             continue
-        await loop.run_in_executor(executor, _put, in_qs[i % n], (_ITEM, item))
+        await loop.run_in_executor(
+            executor, _put, in_qs[i % n], (_ITEM, item), put_stop
+        )
         i += 1
 
 
@@ -352,12 +376,16 @@ async def _subprocess_pipeline(
     # it to tell input starvation (no work dispatched, no worker message expected) apart from an
     # unresponsive worker, so its stall guard does not fire spuriously on a slow/idle source.
     feeder_idle = asyncio.Event()
+    # Signals threads parked in a blocking ``_put`` to stop and exit on teardown. Needed because a
+    # put onto a full worker queue cannot be released by pool teardown (see ``_PUT_TIMEOUT``), so
+    # without it such a thread would outlive this stage and hang interpreter exit.
+    put_stop = threading.Event()
     async with _queue_stage_hook(output_queue):
         if handle.continuous:
             epoch_barrier = asyncio.Event()
             feeder = create_task(
                 _feed_continuous(
-                    input_queue, in_qs, executor, epoch_barrier, feeder_idle
+                    input_queue, in_qs, executor, epoch_barrier, feeder_idle, put_stop
                 )
             )
             collector = create_task(
@@ -374,7 +402,7 @@ async def _subprocess_pipeline(
             # Set by the collector on a worker error so the feeder stops forwarding new items.
             abort = asyncio.Event()
             feeder = create_task(
-                _feed(input_queue, in_qs, executor, abort, feeder_idle)
+                _feed(input_queue, in_qs, executor, abort, feeder_idle, put_stop)
             )
             collector = create_task(
                 _collect(out_q, num_workers, output_queue, executor, abort, feeder_idle)
@@ -387,6 +415,8 @@ async def _subprocess_pipeline(
             await asyncio.gather(feeder, collector, return_exceptions=True)
             raise
         finally:
-            # Don't wait on threads still parked in a blocking get/put — the pool teardown
-            # unblocks them. ``cancel_futures`` discards anything not yet started.
+            # Release any thread parked in a blocking ``_put`` so it exits instead of outliving
+            # this stage, then drop the executor. ``cancel_futures`` discards anything not yet
+            # started; a still-parked get self-releases within ``_GET_TIMEOUT``.
+            put_stop.set()
             executor.shutdown(wait=False, cancel_futures=True)
