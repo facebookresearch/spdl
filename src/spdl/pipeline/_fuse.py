@@ -48,12 +48,16 @@ from spdl.pipeline._components import _get_global_id, _set_global_id
 from spdl.pipeline._executor_proxy import _ensure_executor_unused
 from spdl.pipeline._subprocess_pipeline_pool import _SubprocessPipelinePool
 from spdl.pipeline.defs._defs import (
+    _MainProcess,
     _PipeType,
     _SubprocessPipelineConfig,
+    InterpreterPoolExecutorConfig,
     MergeConfig,
     PathVariantsConfig,
     PipeConfig,
     PipelineConfig,
+    PlacementConfig,
+    ProcessPoolExecutorConfig,
     SinkConfig,
     SourceConfig,
 )
@@ -61,6 +65,7 @@ from spdl.pipeline.defs._defs import (
 __all__ = [
     "_FusableRun",
     "_find_fusable_runs",
+    "_fuse_marked_regions",
     "_fuse_subprocess_stages",
     "_strip_async_executor_tags",
 ]
@@ -316,16 +321,22 @@ def _warn_fork_with_threads(ctx: Any, stacklevel: int) -> None:
         )
 
 
-def _build_fused_stage(
+def _build_fused_stage_core(
     stages: Sequence[object],
-    executor: Executor,
+    *,
     ctx: Any,
+    num_threads: int,
+    max_workers: int,
+    user_initializer: Any,
+    user_initargs: tuple[Any, ...],
     report_stats_interval: float,
     continuous: bool,
 ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
-    """Build the worker pool and replacement stage for one fusable run."""
+    """Spawn a worker pool that runs ``stages`` as a nested pipeline, and return the pool and its
+    replacement stage. Shared by the executor-identity fusion (:py:func:`_build_fused_stage`) and
+    the ``.to()`` marker fusion (:py:func:`_build_fused_stage_from_spec`) — the two differ only in
+    where the pool parameters come from (a live executor vs. a serializable spec)."""
     stripped = [_strip_executor(s) for s in stages]
-    num_threads = max(1, sum(_stage_concurrency(s) for s in stages))
     sub_config: PipelineConfig[Any] = PipelineConfig(
         src=SourceConfig(
             []
@@ -333,7 +344,6 @@ def _build_fused_stage(
         pipes=stripped,  # pyre-ignore[6]
         sink=SinkConfig(_FUSED_SINK_BUFFER),
     )
-    max_workers, user_initializer, user_initargs = _pool_params(executor)
     build_kwargs = {
         "num_threads": num_threads,
         "report_stats_interval": report_stats_interval,
@@ -352,6 +362,53 @@ def _build_fused_stage(
     )
     name = "subprocess_pipeline(" + "+".join(_stage_name(s) for s in stages) + ")"
     return _SubprocessPipelineConfig(name=name, handle=pool.make_handle()), pool
+
+
+def _build_fused_stage(
+    stages: Sequence[object],
+    executor: Executor,
+    ctx: Any,
+    report_stats_interval: float,
+    continuous: bool,
+) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
+    """Build the worker pool and replacement stage for one executor-identity fusable run."""
+    max_workers, user_initializer, user_initargs = _pool_params(executor)
+    return _build_fused_stage_core(
+        stages,
+        ctx=ctx,
+        num_threads=max(1, sum(_stage_concurrency(s) for s in stages)),
+        max_workers=max_workers,
+        user_initializer=user_initializer,
+        user_initargs=user_initargs,
+        report_stats_interval=report_stats_interval,
+        continuous=continuous,
+    )
+
+
+def _build_fused_stage_from_spec(
+    stages: Sequence[object],
+    spec: ProcessPoolExecutorConfig,
+    ctx: Any,
+    report_stats_interval: float,
+    continuous: bool,
+) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
+    """Build the worker pool and replacement stage for one ``.to()`` region, reading the pool
+    parameters from ``spec``. ``num_threads`` for the nested pipeline is the sum of the region
+    stages' concurrency, ``max_workers`` falls back to the CPU count, and
+    ``report_stats_interval`` is inherited from
+    :py:func:`~spdl.pipeline._build.build_pipeline`."""
+    num_threads = max(1, sum(_stage_concurrency(s) for s in stages))
+    max_workers = spec.max_workers or os.cpu_count() or 1
+    return _build_fused_stage_core(
+        stages,
+        ctx=ctx,
+        num_threads=num_threads,
+        max_workers=max_workers,
+        user_initializer=spec.initializer,
+        user_initargs=spec.initargs,
+        report_stats_interval=report_stats_interval,
+        continuous=continuous,
+    )
 
 
 def _fuse_subprocess_stages(
@@ -420,6 +477,94 @@ def _fuse_subprocess_stages(
         # later pool fails to spawn) would otherwise leak the workers already started by the
         # pools built so far. Reap them before propagating, since the caller never receives the
         # ``pools`` list to reap them itself.
+        for pool in pools:
+            pool.shutdown()
+        raise
+    return replace(config, pipes=new_pipes), pools  # pyre-ignore[6]
+
+
+def _has_executor_markers(pipes: Sequence[object]) -> bool:
+    """Whether ``pipes`` contains any ``.to()`` region marker."""
+    return any(isinstance(p, PlacementConfig) for p in pipes)
+
+
+def _fuse_marked_regions(
+    config: PipelineConfig[Any],
+    *,
+    report_stats_interval: float = -1,
+    stacklevel: int = 3,
+) -> tuple[PipelineConfig[Any], list[_SubprocessPipelinePool]]:
+    """Fuse each ``.to()`` region into one subprocess-pipeline stage.
+
+    Walks ``config.pipes`` tracking the current execution target set by
+    :py:class:`~spdl.pipeline.defs.PlacementConfig` markers (a pipeline starts on the main
+    process). Every maximal span of stages under a subprocess target — pipes *and* the
+    aggregate/disaggregate/path-variants stages between them, which the executor-identity fusion
+    leaves in the main process — is replaced by a single stage that runs the span as one nested
+    pipeline inside a worker pool. Main-process spans are kept unchanged, and the marker nodes
+    themselves are dropped. The spawned pools are returned for the caller to reap at teardown; the
+    input ``config`` is not mutated.
+
+    This is a no-op (returns ``config`` and no pools) when there are no markers, so it is safe to
+    run unconditionally and leaves the executor-identity :py:func:`_fuse_subprocess_stages` path
+    unchanged.
+
+    Args:
+        config: The pipeline configuration to rewrite.
+        report_stats_interval: Fallback stats interval for a region whose spec does not set one.
+        stacklevel: ``warnings.warn`` stack level measured at this function. The fork-with-threads
+            warning is raised from the nested ``_flush`` closure (two frames deeper), so it uses
+            ``stacklevel + 2``.
+
+    Returns:
+        A tuple ``(new_config, pools)``. ``pools`` is empty when no region is fused.
+    """
+    pipes = list(config.pipes)
+    if not _has_executor_markers(pipes):
+        return config, []
+
+    continuous = _has_continuous_source(config)
+    pools: list[_SubprocessPipelinePool] = []
+    new_pipes: list[object] = []
+    target: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig | _MainProcess = (
+        _MainProcess()
+    )
+    region: list[object] = []
+
+    def _flush() -> None:
+        if not region:
+            return
+        if isinstance(target, InterpreterPoolExecutorConfig):
+            raise NotImplementedError(
+                "Subinterpreter regions (`.to(InterpreterPoolExecutorConfig(...))`) are not yet "
+                "supported; use `ProcessPoolExecutorConfig` for now."
+            )
+        assert isinstance(
+            target, ProcessPoolExecutorConfig
+        )  # narrowed: not main, not subinterpreter
+        ctx = mp.get_context(target.mp_context)
+        # +2, not +1: this runs inside the nested ``_flush`` closure, one frame deeper than
+        # ``_fuse_marked_regions`` itself, so the warning still points at the user's call site.
+        _warn_fork_with_threads(ctx, stacklevel + 2)
+        fused, pool = _build_fused_stage_from_spec(
+            region, target, ctx, report_stats_interval, continuous
+        )
+        pools.append(pool)
+        new_pipes.append(fused)
+        region.clear()
+
+    try:
+        for p in pipes:
+            if isinstance(p, PlacementConfig):
+                _flush()  # close the span running under the previous target
+                target = p.target
+            elif isinstance(target, _MainProcess):
+                new_pipes.append(p)
+            else:
+                region.append(p)
+        _flush()  # close a region left open at the end of the pipes
+    except BaseException:
+        # Reap any pools spawned before the failure; the caller never receives them to reap.
         for pool in pools:
             pool.shutdown()
         raise

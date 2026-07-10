@@ -35,7 +35,11 @@ from spdl.pipeline._components import (
     TaskHook,
 )
 from spdl.pipeline._executor_proxy import _make_config_executors_picklable
-from spdl.pipeline._fuse import _fuse_subprocess_stages, _strip_async_executor_tags
+from spdl.pipeline._fuse import (
+    _fuse_marked_regions,
+    _fuse_subprocess_stages,
+    _strip_async_executor_tags,
+)
 from spdl.pipeline._iter_utils import iterate_in_subinterpreter, iterate_in_subprocess
 from spdl.pipeline._random_seed import _capture_rng_initializers
 from spdl.pipeline._subprocess_pipeline_pool import _shutdown_pipeline_pools
@@ -147,14 +151,30 @@ def _build_pipeline(
             _LG.exception("Build callback failed.")
 
     pools: list[Any] = []
-    if fuse_subprocess_stages:
-        # Fuse consecutive same-pool stages so each run executes as one nested pipeline inside a
-        # worker pool, eliminating the inter-stage IPC. The pools are owned by the returned
-        # Pipeline and reaped when it stops.
-        # stacklevel=4: _fuse_subprocess_stages -> _build_pipeline -> build_pipeline -> user.
-        pipeline_cfg, pools = _fuse_subprocess_stages(
+    # Both fusion passes eagerly spawn worker pools. Reap them together on failure: each pass
+    # only reaps its own pools if it raises, so without this a failure in the second pass would
+    # leak the pools the first already spawned -- this half-built pipeline is never returned to
+    # the caller to be stopped.
+    try:
+        # Honor explicit `.to()` region markers first. This is a no-op when the config has no
+        # markers, so it is always safe to run and independent of `fuse_subprocess_stages`.
+        # stacklevel=4: _fuse_marked_regions -> _build_pipeline -> build_pipeline -> user.
+        pipeline_cfg, region_pools = _fuse_marked_regions(
             pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
         )
+        pools.extend(region_pools)
+        if fuse_subprocess_stages:
+            # Fuse consecutive same-pool stages so each run executes as one nested pipeline
+            # inside a worker pool, eliminating the inter-stage IPC. The pools are owned by the
+            # returned Pipeline and reaped when it stops.
+            # stacklevel=4: _fuse_subprocess_stages -> _build_pipeline -> build_pipeline -> user.
+            pipeline_cfg, id_pools = _fuse_subprocess_stages(
+                pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
+            )
+            pools.extend(id_pools)
+    except BaseException:
+        _shutdown_pipeline_pools(pools)
+        raise
 
     desc = repr(pipeline_cfg)
 
@@ -605,33 +625,55 @@ def run_pipeline_in_subprocess(
         else config_or_builder.get_config()  # pyre-ignore[16]
     )
 
-    # Fuse runs of same-pool stages into nested-pipeline stages first, so a fused run executes
-    # as one pipeline inside the (main-owned) worker pool instead of round-tripping per stage.
-    # Runs before hoisting so only the *non-fused* ProcessPoolExecutor stages remain to be
-    # hoisted. The fused stage's queue handle is picklable and rides into the pipeline
-    # subprocess with the config, where the bridge stage drives the main-owned workers.
+    # Every pass below eagerly spawns worker pools, so they all run inside one try/except:
+    # ``_fuse_marked_regions`` spawns ``fuse_pools`` up front, and if any *later* pass
+    # (``_fuse_subprocess_stages``, ``_hoist_process_pools``) or the iterable creation
+    # raises, both ``fuse_pools`` and the hoisted ``pools`` must be reaped -- this half-built
+    # iterable is never returned to the caller to be stopped. Mirrors ``_build_pipeline``.
     fuse_pools: list[Any] = []
-    if fuse_subprocess_stages:
-        # stacklevel=3: _fuse_subprocess_stages -> run_pipeline_in_subprocess -> user.
-        config, fuse_pools = _fuse_subprocess_stages(
+    pools: list[Any] = []
+    try:
+        # Fuse each `.to()` region into a nested-pipeline stage here, in the main process (a
+        # no-op when the config has no markers), so its worker pool is main-owned -- spawned
+        # here, not inside the daemonic pipeline subprocess (a daemon cannot have children),
+        # and not orphaned if that subprocess is force-killed. Runs before hoisting so only
+        # the *non-region* ProcessPoolExecutor stages remain to be hoisted. The fused stage's
+        # queue handle is picklable and rides into the subprocess with the config (where the
+        # inner build sees no markers and is a no-op), and the bridge stage there drives the
+        # main-owned workers.
+        # stacklevel=3: _fuse_marked_regions -> run_pipeline_in_subprocess -> user.
+        config, region_pools = _fuse_marked_regions(
             config,
-            mp_context=kwargs.get("mp_context"),
             report_stats_interval=report_stats_interval,
             stacklevel=3,
         )
+        fuse_pools.extend(region_pools)
+        # Also fuse runs of same-pool stages tagged with an identical executor into one nested
+        # pipeline inside a worker pool, eliminating the inter-stage IPC (before hoisting, so
+        # only unfused ProcessPoolExecutor stages remain).
+        if fuse_subprocess_stages:
+            # stacklevel=3: _fuse_subprocess_stages -> run_pipeline_in_subprocess -> user.
+            config, id_pools = _fuse_subprocess_stages(
+                config,
+                mp_context=kwargs.get("mp_context"),
+                report_stats_interval=report_stats_interval,
+                stacklevel=3,
+            )
+            fuse_pools.extend(id_pools)
 
-    # Clear executor tags left on any unfused async op: they are subprocess fusion-group hints,
-    # not real pools, and the executor-hoisting/pickling passes below are op-agnostic -- an async
-    # op's process-pool tag would otherwise spawn an idle worker pool it never submits to.
-    config = _strip_async_executor_tags(config)
+        # Clear executor tags left on any unfused async op: they are subprocess fusion-group
+        # hints, not real pools, and the executor-hoisting/pickling passes below are op-agnostic
+        # -- an async op's process-pool tag would otherwise spawn an idle pool it never uses.
+        config = _strip_async_executor_tags(config)
 
-    # Spawn workers for any stdlib ``ProcessPoolExecutor`` in the main process (as children of
-    # main, not grandchildren via the pipeline subprocess), then replace the executor with a
-    # queue-backed proxy that the subprocess submits to. The remaining stdlib executors
-    # (Thread/Interpreter pools, whose workers live inside the subprocess and die with it) are
-    # made picklable via lazy-reconstruction proxies.
-    config, pools = _hoist_process_pools(config, kwargs.get("mp_context"))
-    try:
+        # Spawn workers for any stdlib ``ProcessPoolExecutor`` in the main process (as children
+        # of main, not grandchildren via the pipeline subprocess), then replace the executor
+        # with a queue-backed proxy that the subprocess submits to. The remaining stdlib
+        # executors (Thread/Interpreter pools, whose workers live inside the subprocess and die
+        # with it) are made picklable via lazy-reconstruction proxies.
+        config, hoisted_pools = _hoist_process_pools(config, kwargs.get("mp_context"))
+        pools.extend(hoisted_pools)
+
         config = _make_config_executors_picklable(config)
 
         initializer = _get_initializer(kwargs, shareable_rng_only=False)
@@ -651,10 +693,9 @@ def run_pipeline_in_subprocess(
             **kwargs,
         )
     except BaseException:
-        # If anything between the hoist and the iterable raises (e.g.
-        # ``iterate_in_subprocess`` fails to start the subprocess), the iterable is never
-        # returned to the caller — reap the pools here so their worker processes and pipe
-        # fds do not leak.
+        # Any eager-spawn pass above (region fusion, identity fusion, hoisting) or the iterable
+        # creation failed; the iterable is never returned to the caller, so reap the region and
+        # hoisted pools here to avoid leaking their worker processes and pipe fds.
         _shutdown_pools(pools)
         _shutdown_pipeline_pools(fuse_pools)
         raise
