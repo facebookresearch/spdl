@@ -7,6 +7,7 @@
 # pyre-strict
 
 import os
+import sys
 import unittest
 from collections.abc import Sequence
 from typing import Any
@@ -196,15 +197,83 @@ class MarkedRegionFuseTest(unittest.TestCase):
         pipeline = build_pipeline(config, num_threads=2)
         self.assertEqual(sorted(_run(pipeline)), sorted((x + 1) * 2 for x in range(n)))
 
-    def test_subinterpreter_region_not_yet_supported(self) -> None:
-        """A subinterpreter region raises until the subinterpreter backend lands."""
-        config = _cfg(
-            range(4),
-            [
-                PlacementConfig(target=InterpreterPoolExecutorConfig(max_workers=1)),
-                Pipe(add_one),
-                PlacementConfig(target=MAIN_PROCESS),
-            ],
-        )
-        with self.assertRaises(NotImplementedError):
-            build_pipeline(config, num_threads=2)
+
+if sys.version_info >= (3, 14):
+
+    class SubinterpreterRegionFuseTest(unittest.TestCase):
+        """Region fusion targeting subinterpreter workers (Python 3.14+)."""
+
+        def test_region_of_two_pipes(self) -> None:
+            """Two pipes in a subinterpreter region produce the same result as inline."""
+            n = 16
+            config = _cfg(
+                range(n),
+                [
+                    PlacementConfig(
+                        target=InterpreterPoolExecutorConfig(max_workers=2)
+                    ),
+                    Pipe(add_one),
+                    Pipe(times_two),
+                    PlacementConfig(target=MAIN_PROCESS),
+                ],
+            )
+            pipeline = build_pipeline(config, num_threads=4)
+            self.assertEqual(
+                sorted(_run(pipeline)), sorted((x + 1) * 2 for x in range(n))
+            )
+
+        def test_aggregate_inside_region(self) -> None:
+            """An aggregate stage inside a subinterpreter region is absorbed and runs there."""
+            config = _cfg(
+                range(10),
+                [
+                    PlacementConfig(
+                        target=InterpreterPoolExecutorConfig(max_workers=1)
+                    ),
+                    Pipe(add_one),
+                    Aggregate(3),
+                    PlacementConfig(target=MAIN_PROCESS),
+                ],
+            )
+            pipeline = build_pipeline(config, num_threads=2)
+            self.assertEqual(_run(pipeline), [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]])
+
+        def test_unpicklable_intermediate_stays_in_region(self) -> None:
+            """An unpicklable value between two subinterpreter stages never crosses out."""
+            n = 5
+            config = _cfg(
+                range(n),
+                [
+                    PlacementConfig(
+                        target=InterpreterPoolExecutorConfig(max_workers=1)
+                    ),
+                    Pipe(wrap),
+                    Pipe(unwrap),
+                    PlacementConfig(target=MAIN_PROCESS),
+                ],
+            )
+            pipeline = build_pipeline(config, num_threads=2)
+            self.assertEqual(
+                sorted(_run(pipeline)), sorted((x + 1) * 2 for x in range(n))
+            )
+
+else:
+
+    class SubinterpreterRegionRequiresPy314Test(unittest.TestCase):
+        """On Python < 3.14, a subinterpreter region is rejected with a clear error."""
+
+        def test_raises_runtime_error(self) -> None:
+            """Building a subinterpreter region on an older interpreter raises RuntimeError."""
+            config = _cfg(
+                range(4),
+                [
+                    PlacementConfig(
+                        target=InterpreterPoolExecutorConfig(max_workers=1)
+                    ),
+                    Pipe(add_one),
+                    PlacementConfig(target=MAIN_PROCESS),
+                ],
+            )
+            with self.assertRaises(RuntimeError) as cm:
+                build_pipeline(config, num_threads=2)
+            self.assertIn("3.14", str(cm.exception))
