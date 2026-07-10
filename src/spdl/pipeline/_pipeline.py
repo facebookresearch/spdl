@@ -514,10 +514,9 @@ class Pipeline(Generic[T]):
                .build(num_threads=10)
            )
 
-           with pipeline.auto_stop():
-               for item in pipeline.get_iterator(timeout=30):
-                   # do something with the decoded image
-                   ...
+           for item in pipeline.get_iterator(timeout=30):
+               # do something with the decoded image
+               ...
 
     A ``Pipeline`` cleans up its background thread and worker processes
     automatically, so a forgotten pipeline will not hang the process at exit: it
@@ -532,11 +531,11 @@ class Pipeline(Generic[T]):
 
     .. versionchanged:: 0.4.0
 
-       **[Experimental]** Calling :py:meth:`start` and :py:meth:`stop` is now
-       optional. When iterating a pipeline that has not been explicitly started,
+       Calling :py:meth:`start` and :py:meth:`stop` is now optional.
+       When iterating a pipeline that has not been explicitly started,
        the background thread is started automatically on the first item request.
        When the ``Pipeline`` object is garbage collected, the background thread
-       is stopped automatically via :py:func:`weakref.finalize`.
+       is stopped automatically via :py:class:`weakref.finalize`.
        Explicit :py:meth:`start` / :py:meth:`stop` and the :py:meth:`auto_stop`
        context manager continue to work as before.
 
