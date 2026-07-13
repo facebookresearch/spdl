@@ -8,10 +8,10 @@
 
 import sys
 import unittest
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Any
 
-from spdl.pipeline import build_pipeline, Pipeline, PipelineBuilder
+from spdl.pipeline import Pipeline, PipelineBuilder
 from spdl.pipeline.defs import (
     _MainProcess,
     InterpreterPoolExecutorConfig,
@@ -28,6 +28,10 @@ def add_one(x: int) -> int:
 
 def times_two(x: int) -> int:
     return x * 2
+
+
+async def aadd_one(x: int) -> int:
+    return x + 1
 
 
 def _run(pipeline: Pipeline[Any], timeout: float = 60.0) -> list[Any]:
@@ -194,3 +198,31 @@ class ToEndToEndTest(unittest.TestCase):
             .build(num_threads=4)
         )
         self.assertEqual(sorted(_run(pipeline)), sorted((x + 1) * 2 for x in range(n)))
+
+
+class AsyncOpExecutorRejectedTest(unittest.TestCase):
+    """An async op may not be given an executor.
+
+    Regions place stages by marker, so an async op inside a region carries no executor; the
+    per-stage ``executor=`` on an async op (previously accepted as a fusion-group tag) is
+    rejected again.
+    """
+
+    def test_pipe_async_with_executor_raises(self) -> None:
+        """pipe(async_op, executor=...) is rejected regardless of executor type.
+
+        The validation only checks that an executor was supplied (no type-specific branch), so an
+        isolating (process) and a non-isolating (thread) pool are rejected identically.
+        """
+        for factory in (ProcessPoolExecutor, ThreadPoolExecutor):
+            with self.subTest(executor=factory.__name__):
+                b = PipelineBuilder().add_source(range(4))
+                with factory(max_workers=1) as ex:
+                    with self.assertRaises(ValueError):
+                        b.pipe(aadd_one, executor=ex)
+
+    def test_pipe_config_async_with_executor_raises(self) -> None:
+        """The rejection is enforced at the config layer (Pipe factory)."""
+        with ProcessPoolExecutor(max_workers=1) as ex:
+            with self.assertRaises(ValueError):
+                Pipe(aadd_one, executor=ex)

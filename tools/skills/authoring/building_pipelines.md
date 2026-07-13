@@ -142,24 +142,24 @@ def _build_mt_pipeline(...):
     )
 ```
 
-**Extract a shared builder only when the variants differ purely by argument.** When two modes really do produce the identical chain except for one value (say an executor or a buffer size), factor out *the entire chain* into a helper parameterized by that value — never a helper that builds only part of it:
+**Extract a shared builder only when the variants differ purely by argument.** When two modes really do produce the identical chain except for one value (say a region target or a buffer size), factor out *the entire chain* into a helper parameterized by that value — never a helper that builds only part of it:
 
 ```python
-# Two modes that are the SAME stage graph, differing only by the executor:
-def _build_thread_pipeline(args):
-    return _build_local_pipeline(args, ThreadPoolExecutor(max_workers=args.n))
+def _build_subprocess_pipeline(args):
+    return _build_local_pipeline(args, ProcessPoolExecutorConfig(max_workers=args.n))
+def _build_subinterp_pipeline(args):
+    return _build_local_pipeline(args, InterpreterPoolExecutorConfig(max_workers=args.n))
 
-def _build_interp_pipeline(args):
-    return _build_local_pipeline(args, InterpreterPoolExecutor(max_workers=args.n))
-
-def _build_local_pipeline(args, executor: Executor):
+def _build_local_pipeline(args, target: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig):
     return (
         PipelineBuilder()
         .add_source(...)
         .aggregate(...)
-        .pipe(decode, executor=executor)
+        .to(target)
+        .pipe(decode)
+        .to(MAIN_PROCESS)
         .add_sink(...)
-        .build(num_threads=args.n, fuse_subprocess_stages=True)
+        .build(num_threads=args.n)
     )
 ```
 

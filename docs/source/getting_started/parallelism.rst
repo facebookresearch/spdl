@@ -309,85 +309,76 @@ It is also cumbersome: you must hand-combine the stages into one function,
 which collapses the per-stage performance stats into a single number and
 discards each stage's individual ``concurrency``.
 
-Multi-processing (fused)
-------------------------
+Multi-processing (region)
+-------------------------
 
-Instead of hand-combining stages, you can ask the builder to fuse them for
-you by passing ``fuse_subprocess_stages=True`` to
-:py:meth:`~spdl.pipeline.PipelineBuilder.build`. Runs of consecutive
-:py:meth:`~spdl.pipeline.PipelineBuilder.pipe` stages that share the **same**
-process-pool (or interpreter-pool) executor instance are fused into a single
-stage that runs the run as one nested :py:class:`Pipeline` inside the worker
-pool:
+Instead of hand-combining stages, you can mark a **region** of the pipeline to
+run together in a worker pool with :py:meth:`~spdl.pipeline.PipelineBuilder.to`.
+Every stage between ``.to(ProcessPoolExecutorConfig(...))`` and ``.to(MAIN_PROCESS)`` runs
+as one nested :py:class:`Pipeline` inside a pool of worker processes:
 
 .. code-block::
 
-   executor = ProcessPoolExecutor(max_workers=4)
+   from spdl.pipeline.defs import MAIN_PROCESS, ProcessPoolExecutorConfig
 
    pipeline = (
        PipelineBuilder()
        .add_source(...)
-       .pipe(op1, executor=executor, concurrency=2)
-       .pipe(op2, executor=executor, concurrency=3)
+       .to(ProcessPoolExecutorConfig(max_workers=4))
+       .pipe(op1, concurrency=2)          # runs in a worker process
+       .aggregate(batch_size)             # runs in a worker process
+       .pipe(op2, concurrency=3)          # runs in a worker process
+       .to(MAIN_PROCESS)                  # data returns to the main process
        .add_sink(...)
-       .build(num_threads=..., fuse_subprocess_stages=True)
+       .build(num_threads=...)
    )
 
-Because ``op1`` and ``op2`` now run back-to-back inside one worker, the
-intermediate value is **not** copied back to the main process between them.
-This removes the inter-stage IPC entirely, and — unlike the per-stage
-multi-processing above — the value handed from ``op1`` to ``op2`` does **not**
-need to be picklable. Each fused stage keeps its own ``concurrency`` and its
-own per-stage performance stats (the nested pipeline is built with the usual
-hooks, so the stats are reported from inside the worker).
+Because the region's stages run back-to-back inside one worker, the value handed
+from one stage to the next is **not** copied back to the main process between
+them. This removes the inter-stage IPC entirely, and — unlike the per-stage
+multi-processing above — those intermediate values do **not** need to be
+picklable; only the region's inputs and outputs cross the process boundary. Each
+stage keeps its own ``concurrency`` and its own per-stage performance stats (the
+nested pipeline is built with the usual hooks, so the stats are reported from
+inside the worker).
 
-A **generator op** (a function that ``yield``\ s) is supported as a fused
-process-pool stage: each input item fans out into the values the generator
-yields, exactly as in an unfused pipeline. As with any sync generator on a
-process-pool executor, the yielded items are materialized once the generator is
-exhausted rather than streamed out incrementally.
+Unlike passing ``executor=`` to individual
+:py:meth:`~spdl.pipeline.PipelineBuilder.pipe` calls, a region also carries
+:py:meth:`~spdl.pipeline.PipelineBuilder.aggregate`,
+:py:meth:`~spdl.pipeline.PipelineBuilder.disaggregate`, and
+:py:meth:`~spdl.pipeline.PipelineBuilder.path_variants` stages into the worker,
+and gives the worker-pool configuration (worker count, ``mp_context``,
+``initializer``) a single home. A pipeline starts on the main process, so a
+region is opened by a ``.to(ProcessPoolExecutorConfig(...))`` and closed by
+``.to(MAIN_PROCESS)``; the region must be closed before
+:py:meth:`~spdl.pipeline.PipelineBuilder.add_sink`.
 
-An **async op** (an ``async def`` function or an async generator) can be fused
-too. Because an async op always runs on the event loop, it takes no executor to
-*run* it; instead, tag it with the **same** pool executor as its neighbours and
-it joins their fused run, executing on the worker's own event loop:
+A **generator op** (a function that ``yield``\ s) works inside a region: each
+input item fans out into the values it yields, exactly as in an unfused pipeline.
+An **async op** works too — it runs on the worker's own event loop. Every stage
+inside a region must be picklable, since the region config is shipped to the
+worker.
 
-.. code-block::
+Regions also compose with :py:func:`spdl.pipeline.run_pipeline_in_subprocess`:
+the region's worker pool is owned by the main process and the run executes in
+those workers, so the per-stage round-trip between the pipeline subprocess and
+the pool is removed as well.
 
-   .pipe(sync_op,  executor=executor)
-   .pipe(async_op, executor=executor)   # runs on the worker's event loop
-   .pipe(sync_op,  executor=executor)
-
-All three fuse into one subprocess run, so an async op between two pool stages no
-longer splits the run in two. The executor is used only to group the stage, not
-to run the coroutine; a fused async op must be picklable, like any fused stage.
-Passing a non-isolating executor (e.g. a thread pool) to an async op is an error.
-Unfused, the tag is ignored and the async op runs in the main process.
-
-Only *adjacent* pool stages on the same executor are fused. An
-:py:meth:`~spdl.pipeline.PipelineBuilder.aggregate` or
-:py:meth:`~spdl.pipeline.PipelineBuilder.disaggregate` between two pool stages
-is **not** fused — it runs in the main process and keeps its usual batching
-semantics, and it splits the surrounding pool stages into separate runs (so
-each side fuses on its own only if it has two or more adjacent pool stages).
-
-The same option is accepted by
-:py:func:`spdl.pipeline.run_pipeline_in_subprocess`, where the fused worker
-pool is owned by the main process and the run executes in those workers — so
-the per-stage round-trip between the pipeline subprocess and the pool is
-removed as well.
-
-Fusion also works with a **continuous source**
+Regions also work with a **continuous source**
 (:py:meth:`~spdl.pipeline.PipelineBuilder.add_source(..., continuous=True)
 <spdl.pipeline.PipelineBuilder.add_source>`). The worker sub-pipelines run in
-continuous mode and stay warm across epochs, and epoch boundaries are
-propagated across the pool: each fused stage emits one epoch boundary per epoch
-just like an unfused pipeline.
+continuous mode and stay warm across epochs, and epoch boundaries are propagated
+across the pool: each region emits one epoch boundary per epoch just like an
+unfused pipeline.
+
+To run a region in **subinterpreters** (Python 3.14+) instead of subprocesses,
+pass a :py:class:`~spdl.pipeline.defs.InterpreterPoolExecutorConfig`; the region's ops
+must avoid NumPy/PyTorch, which cannot be imported in a subinterpreter.
 
 .. note::
 
-   Fusion preserves results but produces them in completion order across the
-   pool workers. Stages built with ``output_order="input"`` are not fused.
+   A region produces results in completion order across its pool workers, so a
+   stage built with ``output_order="input"`` cannot appear inside a region.
 
 Multi-threading in subprocess
 -----------------------------
