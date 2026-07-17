@@ -298,7 +298,8 @@ The cost of crossing a process boundary
 
 Every time a stage is dispatched to a subprocess, its input is pickled and copied
 into the worker, and the result is pickled and copied back. For a single heavy,
-GIL-holding stage this overhead is easily worth it.
+GIL-holding stage this overhead is easily worth it. See :ref:`ipc-cost` for why
+this pickle-and-copy is expensive and how it scales with the payload.
 
 The *size* of what crosses the boundary matters too, since pickling and copying a
 large payload is costly and is paid on both sides. PyTorch tensors (and NumPy

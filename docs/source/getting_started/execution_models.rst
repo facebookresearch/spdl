@@ -285,10 +285,11 @@ The region's inputs and outputs cross a process boundary, so they must be
 `picklable <https://docs.python.org/3/library/pickle.html#pickle-picklable>`_;
 values passed between stages *inside* the region do not.
 **Reach for MP when** a CPU-bound Python stage that does not release the GIL
-dominates. The cost is IPC (data is copied across the boundary) and higher
-memory (each worker is a full interpreter). See :ref:`pipeline-parallelism` for
-the region and per-stage mechanics (including how a region composes with
-``run_pipeline_in_subprocess``) and the picklability rules.
+dominates. The cost is IPC (data is copied across the boundary; see
+:ref:`ipc-cost`) and higher memory (each worker is a full interpreter). See
+:ref:`pipeline-parallelism` for the region and per-stage mechanics (including how
+a region composes with ``run_pipeline_in_subprocess``) and the picklability
+rules.
 
 Choosing between them
 ---------------------

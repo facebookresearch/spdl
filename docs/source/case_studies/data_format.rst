@@ -77,7 +77,8 @@ The multi-processing can improve the throughput to certain degree.
 Its peak is at 4 workers.
 As we see later, even when we use a function that is significantly
 faster, the throughput of multi-processing is similar.
-So the bottleneck likely is at the inter-process communication.
+So the bottleneck likely is at the inter-process communication
+(see :ref:`ipc-cost`).
 
 With multi-threading, the throughput is highest when there is only one worker.
 The performance decreases as more workers are used.
