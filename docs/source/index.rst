@@ -53,7 +53,6 @@ Please use the following BibTex for citing our project if you find it useful.
    best_practice
    examples
    fb/examples
-   faq
 
 .. toctree::
    :maxdepth: 2

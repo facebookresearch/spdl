@@ -222,10 +222,9 @@ Now we can use this function to implement the equivalent of ``MyDataset``:
 
    # Create and use the pipeline
    pipeline = builder.build(num_threads=1)
-   with pipeline.auto_stop():
-       for batch in pipeline:
-           # batch is a torch.Tensor on GPU, ready for training
-           train_step(batch)
+   for batch in pipeline:
+       # batch is a torch.Tensor on GPU, ready for training
+       train_step(batch)
 
 Building a DataLoader-Style Interface
 --------------------------------------
@@ -307,8 +306,7 @@ Here's a complete implementation:
        def __iter__(self) -> Iterator:
            # Build a fresh pipeline for each iteration
            pipeline = self._builder.build(num_threads=1)
-           with pipeline.auto_stop():
-               yield from pipeline
+           yield from pipeline
 
 Usage example:
 
@@ -467,9 +465,21 @@ SPDL pipelines are particularly beneficial when:
 
 For simple datasets with minimal I/O and preprocessing, PyTorch's DataLoader may be sufficient. However, as your data loading becomes more complex, SPDL's staged approach provides better performance and flexibility.
 
+Going to Production: Isolate the Loader
+----------------------------------------
+
+The pipeline above runs entirely in the training process, GPU transfer included.
+For production GPU training, run the core loader you built above in a subprocess —
+the **MTP** pattern — so its CPU work does not compete with the training loop for
+the cores that drive the GPU (the noisy-neighbour effect), while the GPU transfer
+stays in the main process. The staged pipeline you built here is exactly what runs
+in that subprocess; see :ref:`execution-models` for the MT, MP, and MTP patterns
+(with code) and :ref:`pipeline-parallelism` for the underlying APIs.
+
 Next Steps
 ----------
 
+- See :ref:`working-around-the-gil` for which operations release the GIL
 - See :doc:`../migration/pytorch` for detailed migration examples
 - Explore :doc:`../case_studies/index` for real-world use cases
 - Read :doc:`../optimization_guide/index` for performance tuning

@@ -82,6 +82,15 @@ class SharedMemoryRingBuffer:
     .. versionadded:: 0.6.0
        The ``acquire_timeout`` argument.
 
+    .. seealso::
+
+       :py:mod:`benchmark_arena_transport`
+          Benchmarks this ring buffer against a plain pickle/queue transfer and
+          the segment pool, across payload types and sizes.
+
+       :ref:`shared-memory-arena`
+          Case study with the measured CPU, throughput, and memory numbers.
+
     Args:
         capacity: Size of the payload arena in bytes. Must be at least as large
             as the biggest single pipeline unit (the sum of the binaries

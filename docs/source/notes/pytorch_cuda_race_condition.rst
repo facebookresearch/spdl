@@ -39,9 +39,8 @@ Typically with :py:class:`~spdl.pipeline.Pipeline`, the pipeline is set up as fo
       .build(...)
    )
 
-   with pipeline.auto_stop():
-       for batch in pipeline:
-           model(batch)  # foreground model computation
+   for batch in pipeline:
+       model(batch)  # foreground model computation
 
 
 .. mermaid::

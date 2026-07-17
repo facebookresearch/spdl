@@ -7,5 +7,7 @@ Getting Started
    stages
    concurrency
    parallelism
+   execution_models
+   gil
    logging
    pytorch
