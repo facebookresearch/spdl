@@ -57,9 +57,8 @@ written as follows.
    )
 
    # Run
-   with pipeline.auto_stop():
-       for batch in pipeline.get_iterator(timeout):
-           ...
+   for batch in pipeline.get_iterator(timeout):
+       ...
 
 Typically, network calls are more efficient when requests are batched,
 so we aggregate the URLs before making a network call and then

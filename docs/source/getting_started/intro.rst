@@ -201,9 +201,8 @@ worth avoiding for prompt resource release.
 
           def __iter__(self) -> Iterator[T]:
               pipeline = self.get_pipeline()
-              with pipeline.auto_stop():
-                  for item in pipeline:
-                      yield item
+              for item in pipeline:
+                  yield item
 
       dataloader = DataLoader(...)
 

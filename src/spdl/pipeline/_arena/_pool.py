@@ -116,6 +116,15 @@ class SharedMemorySegmentPool:
        when many workers contend for host cores. Treat this as an opt-in
        optimization and measure your own pipeline before relying on it.
 
+    .. seealso::
+
+       :py:mod:`benchmark_arena_transport`
+          Benchmarks this pool against a plain pickle/queue transfer and the
+          ring buffer, across payload types and sizes.
+
+       :ref:`shared-memory-arena`
+          Case study with the measured CPU, throughput, and memory numbers.
+
     Args:
         segment_size: Size of each segment in bytes. Must be at least as large as
             the biggest single pipeline unit (the sum of its offloaded binaries).

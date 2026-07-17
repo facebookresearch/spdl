@@ -38,9 +38,8 @@ for cases where the data loading is fast enough and otherwise.
        .build(...)
    )
 
-   with pipeline.auto_stop():
-       for batch in pipeline.get_iterator():
-           process(batch)  # Assume this takes 30 ms
+   for batch in pipeline.get_iterator():
+       process(batch)  # Assume this takes 30 ms
 
 The following diagram illustrates the structure of a single-stage pipeline used in our performance analysis:
 
@@ -362,9 +361,8 @@ The following code and figure illustrate the 3-stage pipeline.
        .build(...)
    )
 
-   with pipeline.auto_stop():
-       for batch in pipeline.get_iterator():
-           process(batch)  # Assume this takes 30 ms
+   for batch in pipeline.get_iterator():
+       process(batch)  # Assume this takes 30 ms
 
 .. mermaid::
 

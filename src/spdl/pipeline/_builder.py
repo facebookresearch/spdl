@@ -322,6 +322,8 @@ class PipelineBuilder(Generic[T, U]):
     ) -> "PipelineBuilder[T, U]":
         """**[Experimental]** Designate where the subsequent stages execute.
 
+        .. versionadded:: 0.6.0
+
         Opens (or closes) an *execution region*: every stage added after this call runs on
         ``target`` until the next :py:meth:`to`. A pipeline starts on the main process, so a
         region is opened by ``to(ProcessPoolExecutorConfig(...))`` or ``to(InterpreterPoolExecutorConfig(...))``
@@ -334,6 +336,12 @@ class PipelineBuilder(Generic[T, U]):
         Unlike passing ``executor=`` to individual :py:meth:`pipe` calls, a region also carries
         :py:meth:`aggregate`, :py:meth:`disaggregate`, and :py:meth:`path_variants` stages into
         the worker, and gives the worker-pool configuration a single home.
+
+        Each stage's ``concurrency`` applies *within each worker*, so a stage's
+        effective concurrency across the pool is ``concurrency × max_workers``. For
+        example, ``pipe(op, concurrency=2)`` in a pool with ``max_workers=4`` runs
+        up to 8 invocations of ``op`` at once. Size each stage's ``concurrency``
+        together with ``max_workers`` to stay within your CPU budget.
 
         Args:
             target: Where the following stages run.
@@ -355,8 +363,6 @@ class PipelineBuilder(Generic[T, U]):
            stage inside a region may not use ``output_order="input"`` (order cannot be preserved
            across independent workers), and a subinterpreter region requires Python 3.14+. These
            are checked when the pipeline is built.
-
-        .. versionadded:: 0.6.0
         """
         if isinstance(target, Executor):
             raise TypeError(

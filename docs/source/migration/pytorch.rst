@@ -94,9 +94,8 @@ The following is an equivalent implementation using SPDL
        .build(num_threads=num_workers)
    )
 
-   with pipeline.auto_stop():
-       for batch, classes in dataloader:
-           ...
+   for batch, classes in dataloader:
+       ...
 
 Running them with different concurrency, we get the following
 performance.
