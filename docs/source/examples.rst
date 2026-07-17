@@ -26,3 +26,4 @@ Examples
    benchmark_video
    benchmark_thread_output_queue
    benchmark_arena_transport
+   benchmark_ipc_dataloader

@@ -18,7 +18,8 @@ the bytes through a multiprocessing queue — work that is paid on *both* sides 
 that grows with the payload size. For pipelines that move large payloads per item
 (NumPy arrays, Torch tensors, raw ``bytes``, or :py:class:`spdl.io.VideoPackets`),
 this transfer is itself a meaningful source of host CPU usage — the very thing we
-are trying to keep low.
+are trying to keep low. See :ref:`ipc-cost` for why crossing a process boundary
+is expensive in the first place.
 
 The shared-memory arena removes most of that cost.
 
