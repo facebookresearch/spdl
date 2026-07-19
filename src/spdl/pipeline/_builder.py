@@ -386,17 +386,30 @@ class PipelineBuilder(Generic[T, U]):
         router: Callable,
         paths: Sequence,
         name: str | None = None,
+        batched: bool = False,
     ) -> "PipelineBuilder[T, U]":
         """Route items to different processing paths based on a router function.
 
+        .. versionadded:: 0.6.0
+           The ``batched`` argument.
+
         Args:
-            router: A callable that takes an item and returns an int index
-                selecting which path the item should be routed to.
+            router: A callable that selects the path for each input. In per-item
+                mode (default) it takes an item and returns an int index. In
+                ``batched`` mode it takes a batch (list) and returns one int index
+                per element (same length as the batch).
             paths: A sequence of paths, where each path is a sequence of
                 pipe configs.
             name: Optional name for the stage.
+            batched: If True, route whole batches instead of single items: the
+                batch is partitioned into per-path sub-batches (each path op takes
+                and returns a list) and merged back into one batch. Aggregate the
+                source into batches upstream of this stage. See
+                :py:func:`~spdl.pipeline.defs.PathVariants`.
         """
-        self._process_args.append(PathVariants(router, paths, name=name))
+        self._process_args.append(
+            PathVariants(router, paths, name=name, batched=batched)
+        )
         return self
 
     def add_sink(

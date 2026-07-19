@@ -10,7 +10,8 @@
 
 import asyncio
 import unittest
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncIterator, Iterable, Sequence
+from typing import Any
 
 from spdl.pipeline import build_pipeline
 from spdl.pipeline._components._node import PipelineFailure
@@ -701,6 +702,152 @@ class PathVariantsReprTest(unittest.TestCase):
         self.assertIn("PathVariants", r)
         self.assertIn("path0", r)
         self.assertIn("path1", r)
+
+
+class PathVariantsBatchedTest(unittest.TestCase):
+    """Tests for batched routing (``batched=True``)."""
+
+    def test_basic_batched_routing(self) -> None:
+        """Router partitions each batch; branches process sub-batches; merge recombines.
+
+        Even elements are doubled, odd elements get +100. The output is one
+        recombined batch per input batch (a list), containing all the batch's
+        elements regardless of which path they took.
+        """
+        config = PipelineConfig(
+            src=SourceConfig([[0, 1, 2, 3], [4, 5, 6, 7]]),
+            pipes=[
+                PathVariants(
+                    router=lambda batch: [x % 2 for x in batch],
+                    paths=[
+                        [Pipe(lambda xs: [x * 2 for x in xs])],  # path 0: evens
+                        [Pipe(lambda xs: [x + 100 for x in xs])],  # path 1: odds
+                    ],
+                    batched=True,
+                ),
+            ],
+            sink=SinkConfig(buffer_size=10),
+        )
+        results = _run_pipeline(config)
+        # Each input batch -> one recombined batch (evens*2 ++ odds+100, in path order).
+        self.assertEqual(results, [[0, 4, 101, 103], [8, 12, 105, 107]])
+
+    def test_batched_all_to_one_path(self) -> None:
+        """Warm-cache steady state: every element routes to path 0; path 1 gets an
+        empty sub-batch each batch and must tolerate it."""
+        seen_empty: list[bool] = []
+
+        def _miss_branch(xs: list[int]) -> list[int]:
+            if not xs:  # a path that received no elements for this batch
+                seen_empty.append(True)
+                return []
+            return [x + 1000 for x in xs]
+
+        config = PipelineConfig(
+            src=SourceConfig([[1, 2, 3], [4, 5, 6]]),
+            pipes=[
+                PathVariants(
+                    router=lambda batch: [0 for _ in batch],
+                    paths=[
+                        [Pipe(lambda xs: [x * 10 for x in xs])],
+                        [Pipe(_miss_branch)],
+                    ],
+                    batched=True,
+                ),
+            ],
+            sink=SinkConfig(buffer_size=10),
+        )
+        results = _run_pipeline(config)
+        self.assertEqual(results, [[10, 20, 30], [40, 50, 60]])
+        # The empty (miss) branch was still invoked once per batch.
+        self.assertTrue(seen_empty)
+
+    def test_batched_branch_drops_elements(self) -> None:
+        """A branch may return a shorter list to drop elements; the recombined
+        batch reflects the drop (partial failure handling)."""
+        config = PipelineConfig(
+            src=SourceConfig([[1, 2, 3, 4, 5, 6]]),
+            pipes=[
+                PathVariants(
+                    router=lambda batch: [x % 2 for x in batch],
+                    paths=[
+                        # path 0 (evens): keep only those > 2
+                        [Pipe(lambda xs: [x for x in xs if x > 2])],
+                        # path 1 (odds): keep all
+                        [Pipe(lambda xs: list(xs))],
+                    ],
+                    batched=True,
+                ),
+            ],
+            sink=SinkConfig(buffer_size=10),
+        )
+        results = _run_pipeline(config)
+        # evens {2,4,6} -> keep {4,6}; odds {1,3,5} kept. Path order: evens then odds.
+        self.assertEqual(results, [[4, 6, 1, 3, 5]])
+
+    def test_batched_multi_stage_branch(self) -> None:
+        """A batched branch can be a multi-stage chain of list->list pipes."""
+        config = PipelineConfig(
+            src=SourceConfig([[0, 1, 2, 3]]),
+            pipes=[
+                PathVariants(
+                    router=lambda batch: [x % 2 for x in batch],
+                    paths=[
+                        [
+                            Pipe(lambda xs: [x + 1 for x in xs]),
+                            Pipe(lambda xs: [x * 10 for x in xs]),
+                        ],  # path 0 (evens 0,2): (+1)*10 -> 10, 30
+                        [Pipe(lambda xs: [x for x in xs])],  # path 1 (odds 1,3)
+                    ],
+                    batched=True,
+                ),
+            ],
+            sink=SinkConfig(buffer_size=10),
+        )
+        results = _run_pipeline(config)
+        self.assertEqual(results, [[10, 30, 1, 3]])
+
+    def test_batched_async_router(self) -> None:
+        """An async batched router (returning per-element indices) works."""
+
+        async def _router(batch: Sequence[Any]) -> list[int]:
+            return [x % 2 for x in batch]
+
+        config = PipelineConfig(
+            src=SourceConfig([[0, 1, 2, 3]]),
+            pipes=[
+                PathVariants(
+                    router=_router,
+                    paths=[
+                        [Pipe(lambda xs: [x * 2 for x in xs])],
+                        [Pipe(lambda xs: [x + 100 for x in xs])],
+                    ],
+                    batched=True,
+                ),
+            ],
+            sink=SinkConfig(buffer_size=10),
+        )
+        results = _run_pipeline(config)
+        self.assertEqual(results, [[0, 4, 101, 103]])
+
+    def test_batched_router_wrong_index_count_raises(self) -> None:
+        """A batched router that returns the wrong number of indices fails the pipeline."""
+        config = PipelineConfig(
+            src=SourceConfig([[1, 2, 3]]),
+            pipes=[
+                PathVariants(
+                    router=lambda batch: [0],  # one index for a 3-element batch
+                    paths=[
+                        [Pipe(lambda xs: list(xs))],
+                        [Pipe(lambda xs: list(xs))],
+                    ],
+                    batched=True,
+                ),
+            ],
+            sink=SinkConfig(buffer_size=10),
+        )
+        with self.assertRaises(PipelineFailure):
+            _run_pipeline(config)
 
 
 if __name__ == "__main__":

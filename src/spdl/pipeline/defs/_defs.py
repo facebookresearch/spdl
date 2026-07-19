@@ -19,7 +19,16 @@ from dataclasses import dataclass
 from enum import IntEnum
 from fractions import Fraction
 from functools import partial
-from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
+from typing import (
+    Any,
+    Generic,
+    Literal,
+    overload,
+    Protocol,
+    runtime_checkable,
+    TypeAlias,
+    TypeVar,
+)
 
 from spdl.pipeline._common._source_locator import locate_source
 from spdl.pipeline._common._types import _TCallables, _TMergeOp
@@ -544,6 +553,18 @@ class PlacementConfig:
 # PathVariants
 ################################################################################
 
+# path_variants routers. Per-item mode maps one item to one path index; ``batched``
+# mode maps a batch (Sequence) to one index per element. Either form may be sync or
+# async. The two are kept as distinct aliases so ``PathVariants`` can ``@overload`` on
+# ``batched`` and give each mode its own router signature; ``_TRouter`` is their union,
+# used where a value may be either (the config field, the internal router coroutine).
+_TItemRouter: TypeAlias = Callable[[Any], int] | Callable[[Any], Awaitable[int]]
+_TBatchRouter: TypeAlias = (
+    Callable[[Sequence[Any]], Sequence[int]]
+    | Callable[[Sequence[Any]], Awaitable[Sequence[int]]]
+)
+_TRouter: TypeAlias = _TItemRouter | _TBatchRouter
+
 
 @dataclass(frozen=True)
 class PathVariantsConfig(Generic[T]):
@@ -608,10 +629,12 @@ class PathVariantsConfig(Generic[T]):
     name: str
     """Name of the path variants stage."""
 
-    router: Callable[[Any], int] | Callable[[Any], Awaitable[int]]
-    """A function that takes an item and returns an index into the paths list.
+    router: _TRouter
+    """A function that selects the path for each input.
 
-    Can be a regular function or an async function/callable."""
+    In per-item mode (default) it takes an item and returns an int index. In
+    ``batched`` mode it takes a batch (list) and returns one int index per
+    element. Either form can be a regular function or an async function/callable."""
 
     paths: tuple[
         tuple[
@@ -625,6 +648,16 @@ class PathVariantsConfig(Generic[T]):
         ...,
     ]
     """Alternative processing paths. Each path is a tuple of pipe configs."""
+
+    batched: bool = False
+    """If True, route whole batches instead of single items.
+
+    Each incoming item is a batch (a list). ``router(batch)`` returns one path
+    index per element; the batch is partitioned into per-path sub-batches (lists,
+    order preserved), each path processes its sub-batch as a list, and the merge
+    concatenates the sub-batches back into one batch. This amortizes the routing
+    and fan-out/fan-in overhead over a whole batch instead of paying it per item.
+    Aggregate the source into batches upstream of this stage when using it."""
 
     def __post_init__(self) -> None:
         if not callable(self.router) and not hasattr(self.router, "__call__"):
@@ -1182,17 +1215,41 @@ def Disaggregate() -> DisaggregateConfig[Any]:
     return DisaggregateConfig(name="disaggregate")
 
 
+_TPaths: TypeAlias = Sequence[
+    Sequence[
+        PipeConfig[Any, Any]
+        | AggregateConfig[Any]
+        | DisaggregateConfig[Any]
+        | PathVariantsConfig[Any]
+    ]
+]
+
+
+@overload
 def PathVariants(
-    router: Callable[[Any], int] | Callable[[Any], Awaitable[int]],
-    paths: Sequence[
-        Sequence[
-            PipeConfig[Any, Any]
-            | AggregateConfig[Any]
-            | DisaggregateConfig[Any]
-            | PathVariantsConfig[Any]
-        ]
-    ],
+    router: _TItemRouter,
+    paths: _TPaths,
+    name: str | None = ...,
+    *,
+    batched: Literal[False] = ...,
+) -> PathVariantsConfig[Any]: ...
+
+
+@overload
+def PathVariants(
+    router: _TBatchRouter,
+    paths: _TPaths,
+    name: str | None = ...,
+    *,
+    batched: Literal[True],
+) -> PathVariantsConfig[Any]: ...
+
+
+def PathVariants(
+    router: _TRouter,
+    paths: _TPaths,
     name: str | None = None,
+    batched: bool = False,
 ) -> PathVariantsConfig[Any]:
     """Create a :py:class:`PathVariantsConfig` for variant path routing.
 
@@ -1210,18 +1267,34 @@ def PathVariants(
     uncached items go through full data loading, or splitting between local
     and remote processing.
 
+    With ``batched=True`` the routing is applied per batch instead of per item:
+    the router receives a whole batch (a list) and returns one path index per
+    element, the batch is partitioned into per-path sub-batches (each path's ops
+    then operate on a list), and the sub-batches are concatenated back into one
+    batch by the merge. This amortizes the per-item routing and fan-out/fan-in
+    overhead over a whole batch — aggregate the source into batches upstream of
+    the stage. Each path op receives and returns a ``list``; a path may drop
+    elements by returning a shorter list, and must tolerate an empty input list
+    (a path that received no elements for a given batch).
+
     .. versionchanged:: 0.6.0
        Fixed to work with a continuous source.
 
+    .. versionadded:: 0.6.0
+       The ``batched`` argument.
+
     Args:
-        router: A callable that takes an item and returns an int index
-            selecting which path the item should be routed to. The returned
-            index must be in range ``[0, len(paths))``.
+        router: A callable that selects the path for each input. In per-item mode
+            (default) it takes an item and returns an int index. In ``batched``
+            mode it takes a batch (list) and returns a sequence of per-element int
+            indices (one per item, same length as the batch). Every index must be
+            in range ``[0, len(paths))``.
         paths: A sequence of paths. Each path is a sequence of pipe configs
             (:py:class:`PipeConfig`, :py:class:`AggregateConfig`,
             :py:class:`DisaggregateConfig`, or nested :py:class:`PathVariantsConfig`).
             :py:class:`SourceConfig` and :py:class:`SinkConfig` are not allowed.
         name: Optional name for the stage.
+        batched: If True, route whole batches instead of single items (see above).
 
     Returns:
         The config object.
@@ -1249,9 +1322,30 @@ def PathVariants(
            ],
            sink=SinkConfig(buffer_size=10),
        )
+
+    Batched routing (aggregate first; each path op takes and returns a list):
+
+    .. code-block:: python
+
+       config = PipelineConfig(
+           src=SourceConfig(items),
+           pipes=[
+               Aggregate(64),
+               PathVariants(
+                   router=lambda batch: [0 if x in cache else 1 for x in batch],
+                   paths=[
+                       [Pipe(load_batch_from_cache)],   # path 0: cache hits
+                       [Pipe(load_batch_from_source)],  # path 1: cache misses
+                   ],
+                   batched=True,
+               ),
+           ],
+           sink=SinkConfig(buffer_size=10),
+       )
     """
     return PathVariantsConfig(
         name=name or "path_variants",
         router=router,
         paths=tuple(tuple(p) for p in paths),
+        batched=batched,
     )
