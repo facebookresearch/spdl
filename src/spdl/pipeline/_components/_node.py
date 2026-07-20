@@ -46,7 +46,7 @@ from ._queue import _ThreadBasedAsyncQueue, AsyncQueue, get_default_queue_class
 from ._sink import _sink
 from ._source import _source, _source_continuous
 from ._subprocess_pipe import _subprocess_pipeline
-from ._variants import _path_variants_router
+from ._variants import _batched_path_variants_merge, _path_variants_router
 
 T = TypeVar("T")
 S = TypeVar("S")
@@ -69,6 +69,7 @@ __all__ = [
 # pyre-strict
 
 
+@dataclass
 class _PathVariantsMergeConfig:
     """Internal config for the fan-in merge node of PathVariants.
 
@@ -76,7 +77,9 @@ class _PathVariantsMergeConfig:
     so that ``_build_node`` can dispatch to the correct coroutine builder.
     """
 
-    pass
+    batched: bool = False
+    """Whether the parent PathVariants stage routes batches (see
+    :py:func:`~spdl.pipeline._components._variants._batched_path_variants_merge`)."""
 
 
 # Used to express the upstream relation ship of coroutines,
@@ -434,7 +437,7 @@ def _convert_path_variants(
     merge_out_q = q_class(merge_info, buffer_size=_BUFFER_SIZE)
     merge_node = _FanInNode(
         merge_info,
-        _PathVariantsMergeConfig(),
+        _PathVariantsMergeConfig(batched=cfg.batched),
         end_nodes,
         input_queues=[n.output_queue for n in end_nodes],
         output_queue=merge_out_q,
@@ -570,6 +573,7 @@ def _build_node(
                 node.output_queues,
                 node.cfg.router,
                 hooks,
+                batched=node.cfg.batched,
             )
         case _FanInNode():
             hooks = task_hook_factory(node.info)
@@ -585,8 +589,16 @@ def _build_node(
                         cfg.op,
                     )
                 case _PathVariantsMergeConfig():
+                    # A batched stage recombines each input batch's per-path
+                    # sub-batches into one batch; the per-item stage passes items
+                    # through in arrival order (default merge).
                     node._coro = _merge(
-                        node.info, node.input_queues, node.output_queue, fc, hooks, None
+                        node.info,
+                        node.input_queues,
+                        node.output_queue,
+                        fc,
+                        hooks,
+                        _batched_path_variants_merge if cfg.batched else None,
                     )
                 case _:  # pragma: no cover
                     raise ValueError(
