@@ -11,6 +11,7 @@
 #include <libspdl/core/buffer.h>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>

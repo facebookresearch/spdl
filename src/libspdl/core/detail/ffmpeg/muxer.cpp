@@ -17,6 +17,7 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
+#include <cstring>
 #include <filesystem>
 #include <set>
 
