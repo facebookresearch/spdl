@@ -17,6 +17,8 @@
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/tracing.h"
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <cassert>
 
