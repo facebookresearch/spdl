@@ -32,6 +32,8 @@ To run the benchmark,  pass it to the script like the following.
 
 # pyre-strict
 
+from __future__ import annotations
+
 import argparse
 import logging
 import signal
@@ -42,6 +44,7 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from threading import Event
+from types import FrameType
 
 import spdl.io
 import spdl.io.utils
@@ -222,7 +225,7 @@ def worker_entrypoint(args_: list[str]) -> PerfResult:
 
     ev: Event = Event()
 
-    def handler_stop_signals(_signum, _frame) -> None:
+    def handler_stop_signals(_signum: int, _frame: FrameType | None) -> None:
         ev.set()
 
     signal.signal(signal.SIGTERM, handler_stop_signals)
