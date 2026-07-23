@@ -295,7 +295,13 @@ def _plot_headspace_line(
             break
 
 
-def _plot_crashes(ax, crashes, valid, y_key, lower_is_better=True):
+def _plot_crashes(
+    ax: plt.Axes,
+    crashes: list[dict],
+    valid: list[dict],
+    y_key: str,
+    lower_is_better: bool = True,
+) -> None:
     if not valid:
         crash_y = 0
     elif lower_is_better:
@@ -315,7 +321,7 @@ def _plot_crashes(ax, crashes, valid, y_key, lower_is_better=True):
     )
 
 
-def _plot_discarded(ax, discarded, y_key):
+def _plot_discarded(ax: plt.Axes, discarded: list[dict], y_key: str) -> None:
     ax.scatter(
         [e["idx"] for e in discarded],
         [e[y_key] for e in discarded],
@@ -327,7 +333,9 @@ def _plot_discarded(ax, discarded, y_key):
     )
 
 
-def _partition_experiments(experiments, y_key):
+def _partition_experiments(
+    experiments: list[dict], y_key: str
+) -> tuple[list[dict], list[dict], list[dict], list[dict]]:
     """Split experiments into valid, crashes, kept, discarded by status."""
     valid = [e for e in experiments if e["status"] == "VALID" and e.get(y_key)]
     crashes = [e for e in experiments if e["status"] == "CRASH"]
@@ -336,7 +344,9 @@ def _partition_experiments(experiments, y_key):
     return valid, crashes, kept, discarded
 
 
-def _collect_y_values(experiments, valid, metric):
+def _collect_y_values(
+    experiments: list[dict], valid: list[dict], metric: MetricSpec
+) -> list[float]:
     """Gather all y values including headspace for axis limits."""
     y_key = metric.key
     all_y = [e[y_key] for e in valid]
@@ -591,7 +601,15 @@ def _tree_font_sizes(node_count: int, max_level: int) -> dict[str, float]:
     }
 
 
-def _draw_edge_label(ax, label, x1, y1, x2, y2, fontsize):
+def _draw_edge_label(
+    ax: plt.Axes,
+    label: str,
+    x1: float,
+    y1: float,
+    x2: float,
+    y2: float,
+    fontsize: float,
+) -> None:
     ax.text(
         (x1 + x2) / 2.0,
         (y1 + y2) / 2.0,
@@ -612,8 +630,14 @@ def _draw_edge_label(ax, label, x1, y1, x2, y2, fontsize):
 
 
 def _draw_tree_edges(
-    ax, nodes, x_pos, y_pos, best_path_edges, show_edge_labels, edge_fontsize
-):
+    ax: plt.Axes,
+    nodes: dict[str, dict],
+    x_pos: dict[str, float],
+    y_pos: dict[str, float],
+    best_path_edges: set[tuple[str, str]],
+    show_edge_labels: bool,
+    edge_fontsize: float,
+) -> None:
     for nid, n in nodes.items():
         for child_id in n.get("children", []):
             if child_id not in x_pos:
@@ -642,7 +666,16 @@ def _draw_tree_edges(
                 )
 
 
-def _draw_tree_node(ax, nid, n, x, y, best_nid, fontsize, launch_order=None):
+def _draw_tree_node(
+    ax: plt.Axes,
+    nid: str,
+    n: dict,
+    x: float,
+    y: float,
+    best_nid: str | None,
+    fontsize: float,
+    launch_order: int | None = None,
+) -> None:
     box_w, box_h = 2.4, 1.0
     status = n.get("status", "queued")
     color = "#27ae60" if nid == best_nid else _STATUS_COLORS.get(status, "#ecf0f1")
