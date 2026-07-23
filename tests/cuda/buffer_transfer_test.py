@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
+
 import gc
 import unittest
 
@@ -85,14 +87,14 @@ class TestTransferBufferToCuda(unittest.TestCase):
 
         allocator_called, deleter_called = False, False
 
-        def allocator(size, device, stream):
+        def allocator(size: int, device: int, stream: int) -> int:
             print("Calling allocator", flush=True)
             ptr = torch.cuda.caching_allocator_alloc(size, device, stream)
             nonlocal allocator_called
             allocator_called = True
             return ptr
 
-        def deleter(ptr):
+        def deleter(ptr: int) -> None:
             print("Calling deleter", flush=True)
             torch.cuda.caching_allocator_delete(ptr)
             nonlocal deleter_called
@@ -104,7 +106,7 @@ class TestTransferBufferToCuda(unittest.TestCase):
             "image": spdl.io.demux_image,
         }[media_type]
 
-        def test():
+        def test() -> None:
             packets = demux_func(sample.path)
             frames = spdl.io.decode_packets(packets)
             buffer = spdl.io.convert_frames(frames)
