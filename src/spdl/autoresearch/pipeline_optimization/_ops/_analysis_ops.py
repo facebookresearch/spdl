@@ -12,6 +12,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from spdl.autoresearch._common._state import (
     _append_master_row,
@@ -42,6 +43,9 @@ from ._common import (
 from ._failures import _classify_terminal_job_failure, _failure_note, _make_failure
 from ._policy import _change_summary_for_spec, _format_best_metric, write_state
 
+if TYPE_CHECKING:
+    from spdl.autoresearch.core import FailureRecord
+
 __all__: list[str] = [
     "MASTER_TABLE_HEADERS",
     "_analyze_job",
@@ -52,7 +56,7 @@ __all__: list[str] = [
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
-MASTER_TABLE_HEADERS = [
+MASTER_TABLE_HEADERS: list[str] = [
     "run_id",
     "name",
     "job_id",
@@ -70,8 +74,8 @@ MASTER_TABLE_HEADERS = [
     "notes",
 ]
 
-_STRUCTURAL_PRACTICES = {"mtp"}
-_STRUCTURAL_ATTEMPT_THRESHOLD = 3
+_STRUCTURAL_PRACTICES: set[str] = {"mtp"}
+_STRUCTURAL_ATTEMPT_THRESHOLD: int = 3
 
 
 def _analyze_job(
@@ -182,7 +186,7 @@ def _append_master_result_row(
     status: str,
     duration: object,
     structured: dict | None,
-    terminal_failure,
+    terminal_failure: FailureRecord | None,
 ) -> None:
     # pyrefly: ignore [bad-assignment]
     row: dict[str, str | float] = {
