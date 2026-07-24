@@ -151,7 +151,7 @@ class TestArrayTransfer(unittest.TestCase):
             np.dtype("int64"): torch.int64,
         }
 
-        def test(array):
+        def test(array) -> None:
             buffer = spdl.io.transfer_buffer(
                 array, device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA)
             )
@@ -174,7 +174,7 @@ class TestArrayTransfer(unittest.TestCase):
 
         device_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
 
-        def test(cpu_tensor):
+        def test(cpu_tensor) -> None:
             buffer = spdl.io.transfer_buffer(cpu_tensor, device_config=device_config)
             cuda_tensor = spdl.io.to_torch(buffer)
 
