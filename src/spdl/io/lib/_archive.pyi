@@ -12,6 +12,8 @@
 # Use spdl/io/lib/stubgen.py to generate stubs.
 
 
+"""TAR file iterator for Python"""
+
 from collections.abc import Iterator
 from typing import overload
 
