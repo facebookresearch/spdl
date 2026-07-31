@@ -537,7 +537,7 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
         results = []
         errors = []
 
-        def get_decoder_in_thread():
+        def get_decoder_in_thread() -> None:
             try:
                 # This tests that getattr() works correctly even when _decoder doesn't exist yet
                 decoder = spdl.io.nvdec_decoder(
