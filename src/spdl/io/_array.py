@@ -10,7 +10,7 @@ __all__ = [
     "NpzFile",
 ]
 from collections.abc import Iterator, Mapping
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -26,6 +26,26 @@ Buffer: TypeAlias = "bytes | bytearray | memoryview[bytes]"
 
 def _get_pointer(data: Buffer) -> int:
     return np.frombuffer(data, dtype=np.byte).ctypes.data
+
+
+class _OwnedArrayInterface:
+    """Expose the array interface of ``obj`` while keeping ``owner`` alive.
+
+    The ``NPYArray`` object returned by the C++ extension points at a memory
+    region it does not own. NumPy sets the ``base`` of an array to the object it
+    was created from, so creating the array from this wrapper (instead of from
+    the ``NPYArray`` directly) keeps the object owning the memory alive for as
+    long as the array is.
+    """
+
+    def __init__(self, obj: object, owner: object) -> None:
+        self._obj = obj
+        self._owner = owner
+
+    @property
+    def __array_interface__(self) -> dict[str, Any]:
+        # pyre-ignore[16]
+        return self._obj.__array_interface__
 
 
 def load_npy(data: Buffer, *, copy: bool = False) -> NDArray:
@@ -97,7 +117,11 @@ class NpzFile(Mapping):
         data: "bytes | memoryview[bytes]",
         meta: dict[str, tuple[int, int, int, int]],
     ) -> None:
-        self._data: int = _get_pointer(data)
+        # `_data` is a raw pointer into `data`, so the archive must be kept
+        # alive. A memoryview also blocks resizing a mutable source, which
+        # would reallocate the buffer and leave `_data` dangling.
+        self._buf: "memoryview[bytes]" = memoryview(data)
+        self._data: int = _get_pointer(self._buf)
         self._len: int = len(data)
         self._meta = meta
         self.files: list[str] = [f.removesuffix(".npy") for f in meta]
@@ -125,11 +149,16 @@ class NpzFile(Mapping):
         offset, compressed_size, uncompressed_size, compression_method = self._meta[key]
         match compression_method:
             case 0:
+                # The data is stored uncompressed, so the resulting array refers
+                # to the archive itself. It must keep the archive alive, as it
+                # can outlive this `NpzFile` object.
                 buffer = _libspdl._archive.load_npy(
                     self._data, size=compressed_size, offset=offset
                 )
-                return np.array(buffer, copy=False)
+                return np.array(_OwnedArrayInterface(buffer, self._buf), copy=False)
             case 8:
+                # The data is inflated into a buffer owned by the `NPYArray`
+                # object, which NumPy keeps alive as the base of the array.
                 buffer = _libspdl._archive.load_npy_compressed(
                     self._data, offset, compressed_size, uncompressed_size
                 )
