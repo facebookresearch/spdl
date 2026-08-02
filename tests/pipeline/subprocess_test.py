@@ -433,7 +433,7 @@ def _src6() -> Iterable[int]:
     return SleepSourceIterable(3)
 
 
-def _fail_initializer():
+def _fail_initializer() -> None:
     raise RuntimeError("Failed!")
 
 
