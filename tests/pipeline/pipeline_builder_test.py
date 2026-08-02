@@ -444,7 +444,7 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
     def test_async_pipe_concurrency(self) -> None:
         """Changing concurrency changes the number of items fetched and processed."""
 
-        async def delay(val):
+        async def delay(val: int) -> int:
             await asyncio.sleep(0.5)
             return val
 
