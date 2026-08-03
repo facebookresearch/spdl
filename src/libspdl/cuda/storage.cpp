@@ -51,6 +51,9 @@ uintptr_t default_allocator(int size, int device, uintptr_t) {
     TRACE_EVENT("decoding", "cudaMalloc");
     CHECK_CUDA(cudaMalloc(&data, size), "Failed to allocate CUDA memory");
   }
+  if (data == nullptr) {
+    SPDL_FAIL("CUDA memory allocation returned a null pointer.");
+  }
   return reinterpret_cast<uintptr_t>(data);
 }
 
