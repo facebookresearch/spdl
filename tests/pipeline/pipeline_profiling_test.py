@@ -4,9 +4,12 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
+
 import unittest
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import contextmanager
+from typing import Any, cast, TYPE_CHECKING, TypeVar
 from unittest.mock import MagicMock, patch
 
 from spdl.pipeline import (
@@ -30,18 +33,25 @@ from spdl.pipeline.defs import (
     SourceConfig,
 )
 
+if TYPE_CHECKING:
+    from spdl.pipeline.defs import AggregateConfig, DisaggregateConfig
+
+
+_T = TypeVar("_T")
+_U = TypeVar("_U")
+
 
 class FetchInputsTest(unittest.TestCase):
     """Test _fetch_inputs functionality."""
 
-    def test_fetch_inputs(self):
+    def test_fetch_inputs(self) -> None:
         """_fetch_inputs collects input items"""
         src = SourceConfig(range(10))
 
         inputs = _fetch_inputs(src, num_items=3)
         self.assertEqual(inputs, list(range(3)))
 
-    def test_fetch_inputs_async(self):
+    def test_fetch_inputs_async(self) -> None:
         """_fetch_inputs collects input items"""
 
         async def arange(n: int) -> AsyncIterator[int]:
@@ -62,7 +72,7 @@ class ProfilePipelineTest(unittest.TestCase):
         config.set_default_profile_hook()
         config.set_default_profile_callback()
 
-    def test_profile_pipeline(self):
+    def test_profile_pipeline(self) -> None:
         def foo(i: int) -> int:
             return 2 * i
 
@@ -87,17 +97,27 @@ class ProfilePipelineTest(unittest.TestCase):
         )
 
         class Intercept_:
+            assertEqual: Callable[..., None]
+            assertIs: Callable[..., None]
+
             def __init__(self) -> None:
                 self.i = 0
 
-            def __call__(self, inputs, pipe, concurrency):
+            def __call__(
+                self,
+                inputs: list[_T],
+                pipe: PipeConfig[_T, _U] | AggregateConfig[_T] | DisaggregateConfig[_T],
+                concurrency: int,
+            ) -> PipelineConfig[_U]:
                 num_inputs = N if self.i < 2 else (N + m - 1) // m
                 self.assertEqual(len(inputs), num_inputs)
                 self.assertEqual(pipe, plc.pipes[self.i])
                 ret = _build_pipeline_config(inputs, pipe, concurrency)
                 self.assertEqual(len(ret.pipes), 1)
                 if isinstance(pipe, PipeConfig):
-                    self.assertIs(ret.pipes[0]._args.op, plc.pipes[self.i]._args.op)
+                    ret_pipe = cast("PipeConfig[Any, Any]", ret.pipes[0])
+                    plc_pipe = cast("PipeConfig[Any, Any]", plc.pipes[self.i])
+                    self.assertIs(ret_pipe._args.op, plc_pipe._args.op)
                 self.i += 1
                 return ret
 
@@ -109,7 +129,7 @@ class ProfilePipelineTest(unittest.TestCase):
 
         self.assertEqual(mock.i, 5)
 
-    def test_profile_pipeline_callback(self):
+    def test_profile_pipeline_callback(self) -> None:
         """Test that profile_pipeline calls the callback for each pipe stage."""
 
         def simple_op(i: int) -> int:
@@ -139,7 +159,7 @@ class ProfilePipelineTest(unittest.TestCase):
         self.assertEqual(results[0].name, called_result.name)
         self.assertEqual(len(results[0].stats), len(called_result.stats))
 
-    def test_profile_pipeline_no_callback(self):
+    def test_profile_pipeline_no_callback(self) -> None:
         """Test that profile_pipeline works correctly when no callback is provided."""
 
         def simple_op(i: int) -> int:
@@ -168,7 +188,7 @@ class ProfileHookTest(unittest.TestCase):
         config.set_default_profile_hook()
         config.set_default_profile_callback()
 
-    def test_profile_pipeline_custom_hook_methods_called(self):
+    def test_profile_pipeline_custom_hook_methods_called(self) -> None:
         """Test that custom ProfileHook's stage_profile_hook and
         pipeline_profile_hook methods are called.
         """
@@ -190,7 +210,9 @@ class ProfileHookTest(unittest.TestCase):
         class MockProfileHook(ProfileHook):
             @contextmanager
             def stage_profile_hook(
-                self, _stage: str, _concurrency: int
+                self,
+                stage: str,  # noqa: ARG002
+                concurrency: int,  # noqa: ARG002
             ) -> Iterator[None]:
                 stage_hook_mock()
                 try:
@@ -214,7 +236,7 @@ class ProfileHookTest(unittest.TestCase):
         self.assertEqual(pipeline_hook_mock.call_count, 2)
         self.assertEqual(stage_hook_mock.call_count, 10)
 
-    def test_profile_pipeline_skips_when_local_rank_not_zero(self):
+    def test_profile_pipeline_skips_when_local_rank_not_zero(self) -> None:
         """Test that profiling is skipped if LOCAL_RANK is not '0'."""
 
         def simple_op(i: int) -> int:
@@ -233,7 +255,7 @@ class ProfileHookTest(unittest.TestCase):
 
         self.assertEqual(results, [])
 
-    def test_profile_pipeline_runs_when_local_rank_zero(self):
+    def test_profile_pipeline_runs_when_local_rank_zero(self) -> None:
         """Test that profiling runs normally when LOCAL_RANK is '0'."""
 
         def simple_op(i: int) -> int:
@@ -263,7 +285,7 @@ class MergeConfigTest(unittest.TestCase):
         config.set_default_profile_hook()
         config.set_default_profile_callback()
 
-    def test_profile_pipeline_with_merge_config_and_post_merge_stages(self):
+    def test_profile_pipeline_with_merge_config_and_post_merge_stages(self) -> None:
         """Test that profile_pipeline profiles all stages including
         those in Merge and post-merge stages.
         """
