@@ -6,8 +6,11 @@
 
 # pyre-strict
 
+import gc
 import io
+import sys
 import unittest
+from collections.abc import Callable
 from io import BytesIO
 
 import numpy as np
@@ -256,3 +259,95 @@ class TestLoadNpz(unittest.TestCase):
             buffer = spdl.io.load_npy(data)
             hyp = np.array(buffer, copy=False)
             np.testing.assert_array_equal(hyp, ref)
+
+
+def _reuse_freed_memory(size: int, count: int = 2000) -> list[bytearray]:
+    """Allocate over recently freed memory.
+
+    If the archive was released, a stale pointer into it reads this pattern
+    instead of the original data.
+    """
+    return [bytearray(b"\xab" * size) for _ in range(count)]
+
+
+class TestNpzBufferLifetime(unittest.TestCase):
+    """`NpzFile` does not copy the archive.
+
+    It holds a raw pointer into the source buffer, and the arrays it returns for
+    stored (uncompressed) entries are views into the same memory. Both read
+    freed memory unless the source buffer is kept alive.
+    """
+
+    def test_load_npz_retains_source(self) -> None:
+        """`load_npz` keeps a reference to the source buffer."""
+        ref = np.arange(10)
+        data = _dump_npz(x=ref)
+
+        num_refs = sys.getrefcount(data)
+        npz = spdl.io.load_npz(data)
+
+        self.assertGreater(
+            sys.getrefcount(data),
+            num_refs,
+            "`NpzFile` must keep a reference to the source buffer, "
+            "as it holds a pointer into it.",
+        )
+        np.testing.assert_array_equal(npz["x"], ref)
+
+    def test_getitem_retains_source(self) -> None:
+        """Arrays of stored entries keep the source buffer alive.
+
+        Such an array is a view into the archive, so it can outlive the
+        `NpzFile` it was retrieved from.
+        """
+        ref = np.arange(10)
+        data = _dump_npz(x=ref)
+
+        num_refs = sys.getrefcount(data)
+        # The `NpzFile` is released as soon as the entry is retrieved.
+        arr = spdl.io.load_npz(data)["x"]
+        gc.collect()
+
+        self.assertGreater(
+            sys.getrefcount(data),
+            num_refs,
+            "The array must keep a reference to the source buffer, "
+            "as it is a view into it.",
+        )
+        np.testing.assert_array_equal(arr, ref)
+
+    @parameterized.expand(
+        [
+            ("stored", _dump_npz),
+            ("deflated", _dump_npz_compressed),
+        ]
+    )
+    def test_load_npz_source_may_be_temporary(
+        self, _: str, dump: Callable[..., bytes]
+    ) -> None:
+        """Entries are readable when the caller does not hold the source."""
+        ref = np.arange(1000, dtype=np.int64)
+        size = len(dump(x=ref))
+
+        # The source is a temporary, so it is released when `load_npz` returns
+        # unless `NpzFile` retains it.
+        npz = spdl.io.load_npz(dump(x=ref))
+        gc.collect()
+        clobber = _reuse_freed_memory(size)
+
+        np.testing.assert_array_equal(npz["x"], ref)
+
+        del clobber
+
+    def test_array_outlives_npz_file(self) -> None:
+        """A stored entry stays valid after the `NpzFile` is released."""
+        ref = np.arange(1000, dtype=np.int64)
+        size = len(_dump_npz(x=ref))
+
+        arr = spdl.io.load_npz(_dump_npz(x=ref))["x"]
+        gc.collect()
+        clobber = _reuse_freed_memory(size)
+
+        np.testing.assert_array_equal(arr, ref)
+
+        del clobber
