@@ -262,10 +262,22 @@ class TestLoadNpz(unittest.TestCase):
 
 
 def _reuse_freed_memory(size: int, count: int = 2000) -> list[bytearray]:
-    """Allocate over recently freed memory.
+    """Fill recently freed memory with a recognizable pattern.
 
-    If the archive was released, a stale pointer into it reads this pattern
-    instead of the original data.
+    This relies on an implementation detail of CPython: memory released by a
+    deallocated object is returned to the allocator, which hands it back out to
+    later allocations of a similar size. So allocating many `size`-byte buffers
+    right after the archive was freed is likely to land one of them on the
+    block the archive used to occupy. `count` repetitions raise that chance.
+
+    The buffers are filled with `0xAB` so that a stale pointer into the freed
+    block reads this pattern instead of the original data, and the subsequent
+    `assert_array_equal` fails. Without it, a use-after-free would most likely
+    still read the original bytes and the test would pass.
+
+    This is best-effort: it makes a regression *likely* to be caught, never
+    guaranteed. The deterministic guarantee comes from the refcount assertions
+    in `TestNpzBufferLifetime`.
     """
     return [bytearray(b"\xab" * size) for _ in range(count)]
 
@@ -276,6 +288,11 @@ class TestNpzBufferLifetime(unittest.TestCase):
     It holds a raw pointer into the source buffer, and the arrays it returns for
     stored (uncompressed) entries are views into the same memory. Both read
     freed memory unless the source buffer is kept alive.
+
+    The tests come in two flavors. The ones asserting on `sys.getrefcount`
+    check the contract directly, and are the authoritative check. The ones
+    calling `_reuse_freed_memory` additionally try to turn a violation into an
+    observable data corruption; see that function for the caveats.
     """
 
     def test_load_npz_retains_source(self) -> None:
@@ -333,6 +350,8 @@ class TestNpzBufferLifetime(unittest.TestCase):
         # unless `NpzFile` retains it.
         npz = spdl.io.load_npz(dump(x=ref))
         gc.collect()
+        # If `NpzFile` failed to retain the temporary, `npz["x"]` now points
+        # into freed memory, and reads `0xAB` instead of `ref`.
         clobber = _reuse_freed_memory(size)
 
         np.testing.assert_array_equal(npz["x"], ref)
@@ -346,6 +365,8 @@ class TestNpzBufferLifetime(unittest.TestCase):
 
         arr = spdl.io.load_npz(_dump_npz(x=ref))["x"]
         gc.collect()
+        # If the source buffer was not retained, `arr` now views freed memory,
+        # and reads `0xAB` instead of `ref`.
         clobber = _reuse_freed_memory(size)
 
         np.testing.assert_array_equal(arr, ref)
