@@ -264,20 +264,14 @@ class TestLoadNpz(unittest.TestCase):
 def _reuse_freed_memory(size: int, count: int = 2000) -> list[bytearray]:
     """Fill recently freed memory with a recognizable pattern.
 
-    This relies on an implementation detail of CPython: memory released by a
-    deallocated object is returned to the allocator, which hands it back out to
-    later allocations of a similar size. So allocating many `size`-byte buffers
-    right after the archive was freed is likely to land one of them on the
-    block the archive used to occupy. `count` repetitions raise that chance.
+    CPython hands memory from deallocated objects back out to later
+    allocations of a similar size, so `count` buffers of `size` bytes are
+    likely to land on the block the archive just freed. A stale pointer into
+    it then reads `0xAB` and the caller's `assert_array_equal` fails; without
+    this, it would likely read the original bytes and pass.
 
-    The buffers are filled with `0xAB` so that a stale pointer into the freed
-    block reads this pattern instead of the original data, and the subsequent
-    `assert_array_equal` fails. Without it, a use-after-free would most likely
-    still read the original bytes and the test would pass.
-
-    This is best-effort: it makes a regression *likely* to be caught, never
-    guaranteed. The deterministic guarantee comes from the refcount assertions
-    in `TestNpzBufferLifetime`.
+    Best-effort by nature -- the refcount assertions below are the
+    deterministic check.
     """
     return [bytearray(b"\xab" * size) for _ in range(count)]
 
