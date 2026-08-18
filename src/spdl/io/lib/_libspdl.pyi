@@ -408,10 +408,32 @@ class VideoFrames:
         """
 
     @overload
-    def __getitem__(self, arg: int, /) -> ImageFrames: ...
+    def __getitem__(self, arg: int, /) -> ImageFrames:
+        """
+        Slice frame by key.
+
+        Args:
+            key: If the key is int type, a single frame is returned as ``ImageFrames``.
+                If the key is slice type, a new ``VideoFrames`` object pointing the
+                corresponding frames are returned.
+
+        Returns:
+            The sliced frame.
+        """
 
     @overload
-    def __getitem__(self, arg: Sequence[int], /) -> VideoFrames: ...
+    def __getitem__(self, arg: Sequence[int], /) -> VideoFrames:
+        """
+        Slice frame by key.
+
+        Args:
+            key: If the key is int type, a single frame is returned as ``ImageFrames``.
+                If the key is slice type, a new ``VideoFrames`` object pointing the
+                corresponding frames are returned.
+
+        Returns:
+            The sliced frame.
+        """
 
     def get_timestamps(self) -> list[float]:
         """Get the timestamp of frames."""
