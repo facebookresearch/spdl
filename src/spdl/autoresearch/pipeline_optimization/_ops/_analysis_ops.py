@@ -184,11 +184,10 @@ def _append_master_result_row(
     workdir: Path,
     node: HypothesisNode,
     status: str,
-    duration: object,
+    duration: float | None,
     structured: dict | None,
     terminal_failure: FailureRecord | None,
 ) -> None:
-    # pyrefly: ignore [bad-assignment]
     row: dict[str, str | float] = {
         "run_id": node.node_id,
         "name": node.name,
@@ -196,7 +195,7 @@ def _append_master_result_row(
         "status": status,
         "changes": node.spec.get("description", ""),
         "change_summary": _change_summary_for_spec(node.spec),
-        "duration_s": duration or "",
+        "duration_s": duration if duration is not None else "",
     }
     if structured and "metrics" in structured:
         metrics = structured["metrics"]
