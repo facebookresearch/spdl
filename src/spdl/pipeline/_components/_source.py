@@ -14,8 +14,6 @@ from spdl.pipeline._common._convert import _to_async_gen
 from ._common import _EPOCH_END
 from ._queue import _queue_stage_hook, AsyncQueue
 
-# pyre-strict
-
 T = TypeVar("T")
 U = TypeVar("U")
 

@@ -17,8 +17,6 @@ from typing import Generic, TypeAlias, TypeVar
 from spdl._internal import log_api_usage_once
 from spdl.pipeline import Pipeline, PipelineBuilder
 
-# pyre-strict
-
 Source = TypeVar("Source")
 Output = TypeVar("Output")
 

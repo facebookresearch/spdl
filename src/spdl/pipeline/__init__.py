@@ -6,8 +6,6 @@
 
 """Implements :py:class:`~spdl.pipeline.Pipeline`, a generic task execution engine."""
 
-# pyre-strict
-
 from ._arena import SharedMemoryRingBuffer, SharedMemorySegmentPool
 from ._bg_task import BackgroundTask, BackgroundTaskFactory
 from ._build import (

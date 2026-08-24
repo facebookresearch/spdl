@@ -11,9 +11,6 @@ from typing import TypeVar
 from ._common import is_eof
 from ._queue import AsyncQueue
 
-# pyre-strict
-
-
 T = TypeVar("T")
 U = TypeVar("U")
 

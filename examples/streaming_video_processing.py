@@ -79,8 +79,6 @@ from spdl.io import (
     VideoPackets,
 )
 
-# pyre-strict
-
 
 def parse_args() -> argparse.Namespace:
     """Parse the command line arguments."""

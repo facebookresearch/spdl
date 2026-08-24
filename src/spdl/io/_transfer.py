@@ -32,8 +32,6 @@ _LG: logging.Logger = logging.getLogger(__name__)
 T = TypeVar("T")
 S = TypeVar("S")
 
-# pyre-strict
-
 
 def _recursive_apply(fn: Callable[[T], T], obj: T) -> T:
     """Recursively apply the given function to the given (container) object.

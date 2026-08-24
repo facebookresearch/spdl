@@ -23,8 +23,6 @@ To run the benchmark,  pass it to the script like the following.
        --split val
 """
 
-# pyre-strict
-
 import argparse
 import contextlib
 import logging

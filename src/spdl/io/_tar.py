@@ -11,8 +11,6 @@ from typing import overload, Protocol
 # so as to delay the import of C++ extension module
 from . import lib as _libspdl
 
-# pyre-strict
-
 __all__ = ["iter_tarfile"]
 
 

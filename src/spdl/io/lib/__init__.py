@@ -11,8 +11,6 @@ lazy access to the module so that the module won't be loaded until
 it's used by user code.
 """
 
-# pyre-strict
-
 import copyreg
 import importlib
 import importlib.resources

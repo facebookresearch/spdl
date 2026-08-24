@@ -48,8 +48,6 @@ from spdl.pipeline.defs import MergeConfig, PipelineConfig, SourceConfig
 
 from ._pipeline import Pipeline
 
-# pyre-strict
-
 T = TypeVar("T")
 U = TypeVar("U")
 

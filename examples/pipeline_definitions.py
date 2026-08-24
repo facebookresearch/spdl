@@ -108,8 +108,6 @@ from spdl.pipeline.defs import (
     SourceConfig,
 )
 
-# pyre-strict
-
 _LG: logging.Logger = logging.getLogger(__name__)
 
 

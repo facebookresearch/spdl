@@ -15,8 +15,6 @@ Usage:
     --output /tmp/dolly.jsonl
 """
 
-# pyre-strict
-
 import argparse
 import json
 import logging

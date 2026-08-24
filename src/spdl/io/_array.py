@@ -19,8 +19,6 @@ from numpy.typing import NDArray
 # so as to delay the import of C++ extension module
 from . import lib as _libspdl
 
-# pyre-strict
-
 Buffer: TypeAlias = "bytes | bytearray | memoryview[bytes]"
 
 

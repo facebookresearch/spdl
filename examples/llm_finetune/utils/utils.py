@@ -20,7 +20,6 @@ __all__ = [
     "resolve_model_path",
 ]
 
-# pyre-strict
 
 import builtins
 import json

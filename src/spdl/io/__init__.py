@@ -15,8 +15,6 @@ Please refer to :doc:`../io/index` for in-depth explanation of this module.
 # 2. If exposing new C++ class at the top-level, update the list of APIs
 #    in `__getattr__` function.
 
-# pyre-strict
-
 from . import (
     _array,
     _composite,

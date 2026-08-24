@@ -6,8 +6,6 @@
 
 """PathVariants support: fan-out routing and fan-in merging within a pipeline."""
 
-# pyre-strict
-
 __all__ = [
     "_batched_path_variants_merge",
     "_path_variants_router",

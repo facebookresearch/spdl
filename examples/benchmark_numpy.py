@@ -32,7 +32,6 @@ __all__ = [
     "BenchmarkConfig",
 ]
 
-# pyre-strict
 
 import argparse
 import os

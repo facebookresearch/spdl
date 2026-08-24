@@ -16,8 +16,6 @@ from pathlib import Path
 from ._type import IterableWithShuffle
 from .local_directory import LocalDirectory
 
-# pyre-strict
-
 
 class ImageNet(IterableWithShuffle[tuple[Path, int]]):
     """Traverse the local file directory contains ImageNet dataset.

@@ -33,8 +33,6 @@ from spdl.pipeline.defs import (
 from . import _build
 from ._pipeline import Pipeline
 
-# pyre-strict
-
 __all__ = [
     "profile_pipeline",
     "ProfileHook",
