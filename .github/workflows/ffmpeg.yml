@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "8.0", "master"]
+        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "8.0", "9.0.1", "master"]
         conf:
           - { arch: "x86_64", os: "ubuntu-latest" }
           - { arch: "aarch64", os: "ubuntu-24.04-arm" }
@@ -62,8 +62,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "8.0", "master"]
-    runs-on: macos-latest
+        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "8.0", "9.0", "master"]
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -95,8 +95,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "8.0", "master"]
-    runs-on: windows-latest
+        ffmpeg_version: ["4.4.5", "5.1.6", "6.1.2", "7.1.1", "8.0", "9.0", "master"]
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
         with:
