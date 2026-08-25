@@ -96,10 +96,11 @@ function(add_libspdl ffmpeg_version)
 
 endfunction()
 
-set(ffmpeg_versions 8 7 6 5 4)
+set(ffmpeg_versions 9 8 7 6 5 4)
 if (SPDL_USE_FFMPEG_VERSION IN_LIST ffmpeg_versions)
   add_libspdl("${SPDL_USE_FFMPEG_VERSION}")
 else()
+  add_libspdl(9)
   add_libspdl(8)
   add_libspdl(7)
   add_libspdl(6)

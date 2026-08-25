@@ -10,6 +10,7 @@ add_library(ffmpeg5 INTERFACE)
 add_library(ffmpeg6 INTERFACE)
 add_library(ffmpeg7 INTERFACE)
 add_library(ffmpeg8 INTERFACE)
+add_library(ffmpeg9 INTERFACE)
 
 ################################################################################
 
@@ -45,6 +46,12 @@ if (APPLE)
       f8
       URL ${base_url}/ffmpeg_8.0_macos_aarch64.tar.gz
       URL_HASH SHA256=c33d6df6aa2bce5152a1db3c6accdfc16fefdf4cfe61dcaf671cee6d4256037f
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
+    FetchContent_Declare(
+      f9
+      URL ${base_url}/ffmpeg_9.0_macos_aarch64.tar.gz
+      URL_HASH SHA256=b986cfc2b4deb47301f3490da4e5ec5865da2794d2c2271359268cc94b8181ba
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
@@ -89,6 +96,12 @@ elseif (UNIX)
       URL_HASH SHA256=45990fa09bfb32fbba28644677efe06ffe48d23d6913acb6911967367bc42e91
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
+    FetchContent_Declare(
+      f9
+      URL ${base_url}/ffmpeg_9.0.1_manylinux_2_28_aarch64.tar.gz
+      URL_HASH SHA256=016472d3602dfaf390101267d444efd3c3cfaba0b6212925d8973a7e45500cbc
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
   elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
     FetchContent_Declare(
       f4
@@ -118,6 +131,12 @@ elseif (UNIX)
       f8
       URL ${base_url}/ffmpeg_8.0_manylinux_2_28_x86_64.tar.gz
       URL_HASH SHA256=7be341ae94e5dcdd17a419f237365db03aaea6aa9550fb745469ffdde15b98b1
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
+    FetchContent_Declare(
+      f9
+      URL ${base_url}/ffmpeg_9.0.1_manylinux_2_28_x86_64.tar.gz
+      URL_HASH SHA256=642644eeaa5cb256839912a6c9b7328bf7cc0b431ba737b83eeb7ffa3b61628a
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
   else ()
@@ -162,16 +181,23 @@ elseif(WIN32)
       URL_HASH SHA256=cb1ec76e886ebb9f92ed4630104e2325f471c5ccd3faa484c9cace067de3bb21
       DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
       )
+    FetchContent_Declare(
+      f9
+      URL ${base_url}/ffmpeg_9.0_win64.tar.gz
+      URL_HASH SHA256=c9f9d04a08b74aac7acaefd1aa64336a8214bec57bb09d2057de3442d0c74dea
+      DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
+      )
 else()
   message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-FetchContent_MakeAvailable(f4 f5 f6 f7 f8)
+FetchContent_MakeAvailable(f4 f5 f6 f7 f8 f9)
 target_include_directories(ffmpeg4 INTERFACE ${f4_SOURCE_DIR}/include)
 target_include_directories(ffmpeg5 INTERFACE ${f5_SOURCE_DIR}/include)
 target_include_directories(ffmpeg6 INTERFACE ${f6_SOURCE_DIR}/include)
 target_include_directories(ffmpeg7 INTERFACE ${f7_SOURCE_DIR}/include)
 target_include_directories(ffmpeg8 INTERFACE ${f8_SOURCE_DIR}/include)
+target_include_directories(ffmpeg9 INTERFACE ${f9_SOURCE_DIR}/include)
 
 if(APPLE)
   target_link_libraries(
@@ -219,6 +245,15 @@ if(APPLE)
     ${f8_SOURCE_DIR}/lib/libavdevice.62.dylib
     ${f8_SOURCE_DIR}/lib/libavfilter.11.dylib
     )
+  target_link_libraries(
+    ffmpeg9
+    INTERFACE
+    ${f9_SOURCE_DIR}/lib/libavutil.61.dylib
+    ${f9_SOURCE_DIR}/lib/libavcodec.63.dylib
+    ${f9_SOURCE_DIR}/lib/libavformat.63.dylib
+    ${f9_SOURCE_DIR}/lib/libavdevice.63.dylib
+    ${f9_SOURCE_DIR}/lib/libavfilter.12.dylib
+    )
 elseif (UNIX)
   target_link_libraries(
     ffmpeg4
@@ -265,6 +300,15 @@ elseif (UNIX)
     ${f8_SOURCE_DIR}/lib/libavdevice.so.62
     ${f8_SOURCE_DIR}/lib/libavfilter.so.11
     )
+  target_link_libraries(
+    ffmpeg9
+    INTERFACE
+    ${f9_SOURCE_DIR}/lib/libavutil.so.61
+    ${f9_SOURCE_DIR}/lib/libavcodec.so.63
+    ${f9_SOURCE_DIR}/lib/libavformat.so.63
+    ${f9_SOURCE_DIR}/lib/libavdevice.so.63
+    ${f9_SOURCE_DIR}/lib/libavfilter.so.12
+    )
 elseif(MSVC)
   target_link_libraries(
     ffmpeg4
@@ -310,5 +354,14 @@ elseif(MSVC)
     ${f8_SOURCE_DIR}/bin/avformat.lib
     ${f8_SOURCE_DIR}/bin/avdevice.lib
     ${f8_SOURCE_DIR}/bin/avfilter.lib
+    )
+  target_link_libraries(
+    ffmpeg9
+    INTERFACE
+    ${f9_SOURCE_DIR}/bin/avutil.lib
+    ${f9_SOURCE_DIR}/bin/avcodec.lib
+    ${f9_SOURCE_DIR}/bin/avformat.lib
+    ${f9_SOURCE_DIR}/bin/avdevice.lib
+    ${f9_SOURCE_DIR}/bin/avfilter.lib
     )
 endif()
