@@ -43,10 +43,10 @@ class TestVideoFramesGetitem(unittest.TestCase):
         arr = _to_numpy(frames)
 
         self.assertEqual(len(f2), 50)
-        self.assertTrue(np.array_equal(arr[::2], _to_numpy(f2)))
+        np.testing.assert_array_equal(arr[::2], _to_numpy(f2), strict=True)
 
         self.assertEqual(len(f3), 34)
-        self.assertTrue(np.array_equal(arr[::3], _to_numpy(f3)))
+        np.testing.assert_array_equal(arr[::3], _to_numpy(f3), strict=True)
 
     def test_video_frames_getitem_int(self) -> None:
         """VideoFrames.__getitem__ works for index input"""
@@ -62,7 +62,7 @@ class TestVideoFramesGetitem(unittest.TestCase):
         arr = _to_numpy(frames)
         for i in range(n):
             arr0 = _to_numpy(frames_split[i])
-            self.assertTrue(np.array_equal(arr0, arr[i]))
+            np.testing.assert_array_equal(arr0, arr[i], strict=True)
 
     def test_video_frames_getitem_negative_int(self) -> None:
         """VideoFrames.__getitem__ works for negative index input"""
@@ -78,7 +78,7 @@ class TestVideoFramesGetitem(unittest.TestCase):
         arr = _to_numpy(frames)
         for i in range(n):
             arr0 = _to_numpy(frames_split[i])
-            self.assertTrue(np.array_equal(arr0, arr[-i - 1]))
+            np.testing.assert_array_equal(arr0, arr[-i - 1], strict=True)
 
     def test_video_frames_iterate(self) -> None:
         """VideoFrames can be iterated"""
@@ -94,7 +94,7 @@ class TestVideoFramesGetitem(unittest.TestCase):
         array = _to_numpy(frames)
 
         for i in range(n):
-            self.assertTrue(np.array_equal(array[i], arrs[i]))
+            np.testing.assert_array_equal(array[i], arrs[i], strict=True)
 
 
 class TestVideoFramesListSlice(unittest.TestCase):
@@ -117,7 +117,7 @@ class TestVideoFramesListSlice(unittest.TestCase):
         array = _to_numpy(sampled_frames)
 
         for i in range(len(idx)):
-            self.assertTrue(np.array_equal(array[i], refs[idx[i]]))
+            np.testing.assert_array_equal(array[i], refs[idx[i]], strict=True)
 
     def test_video_frames_list_slice_empty(self) -> None:
         """VideoFrames can be sliced with an empty list"""

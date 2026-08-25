@@ -165,7 +165,7 @@ class TestClonePackets(unittest.TestCase):
         array1 = _load_from_packets(packets1)
         array2 = _load_from_packets(packets2)
 
-        self.assertTrue(np.all(array1 == array2))
+        np.testing.assert_array_equal(array1, array2, strict=True)
 
     @parameterized.expand(
         [
@@ -226,7 +226,7 @@ class TestClonePackets(unittest.TestCase):
         arrays = [_load_from_packets(c) for c in clones]
 
         for i in range(N):
-            self.assertTrue(np.all(array == arrays[i]))
+            np.testing.assert_array_equal(array, arrays[i], strict=True)
 
 
 class TestSampleDecodingTime(unittest.TestCase):
@@ -261,7 +261,7 @@ class TestSampleDecodingTime(unittest.TestCase):
         array = spdl.io.to_numpy(buffer)
 
         print(f"{elapsed_ref=}, {elapsed=}")
-        self.assertTrue(np.all(array == array_ref))
+        np.testing.assert_array_equal(array, array_ref, strict=True)
 
         # should be much faster than 2x
         self.assertGreater(elapsed_ref / 2, elapsed)
@@ -297,7 +297,7 @@ class TestSampleDecodingTime(unittest.TestCase):
         array = spdl.io.to_numpy(buffer)
 
         print(f"{elapsed_ref=}, {elapsed=}")
-        self.assertTrue(np.all(array == array_ref))
+        np.testing.assert_array_equal(array, array_ref, strict=True)
 
         # should be much faster than 2x
         self.assertGreater(elapsed_ref / 2, elapsed)
@@ -324,7 +324,7 @@ class TestPacketLen(unittest.TestCase):
         self.assertEqual(num_frames, 25)
 
         array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
-        self.assertTrue(np.all(array == ref_array[25:50]))
+        np.testing.assert_array_equal(array, ref_array[25:50], strict=True)
 
     @parameterized.expand(
         [
@@ -405,7 +405,7 @@ class TestSampleDecodingWindow(unittest.TestCase):
         frames = spdl.io.decode_packets(packets.clone())
         self.assertEqual(len(frames), 25)
         array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
-        self.assertTrue(np.all(array == ref_array[25:50]))
+        np.testing.assert_array_equal(array, ref_array[25:50], strict=True)
 
         # Sample decode should offset the indices
         indices = list(range(0, 25, 2))
@@ -414,7 +414,7 @@ class TestSampleDecodingWindow(unittest.TestCase):
         self.assertEqual(len(frames), 13)
         array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
         print(f"{array.shape=}, {ref_array[25:50:2].shape=}")
-        self.assertTrue(np.all(array == ref_array[25:50:2]))
+        np.testing.assert_array_equal(array, ref_array[25:50:2], strict=True)
 
     def test_sample_decoding_window_sync(self) -> None:
         """sample_decode_video returns the correct frame when timestamps is specified."""
@@ -436,7 +436,7 @@ class TestSampleDecodingWindow(unittest.TestCase):
         frames = spdl.io.decode_packets(packets.clone())
         self.assertEqual(len(frames), 25)
         array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
-        self.assertTrue(np.all(array == ref_array[25:50]))
+        np.testing.assert_array_equal(array, ref_array[25:50], strict=True)
 
         # Sample decode should offset the indices
         indices = list(range(0, 25, 2))
@@ -445,7 +445,7 @@ class TestSampleDecodingWindow(unittest.TestCase):
         self.assertEqual(len(frames), 13)
         array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
         print(f"{array.shape=}, {ref_array[25:50:2].shape=}")
-        self.assertTrue(np.all(array == ref_array[25:50:2]))
+        np.testing.assert_array_equal(array, ref_array[25:50:2], strict=True)
 
 
 class TestSampleDecodeVideoDefaultColorSpace(unittest.TestCase):
@@ -510,7 +510,7 @@ class TestSamplePacketGetTimestamps(unittest.TestCase):
 
         packets = spdl.io.demux_video(sample.path)
         ts = packets.get_timestamps()
-        self.assertTrue(np.array_equal(ts, [t / 25 for t in range(10)]))
+        np.testing.assert_array_equal(ts, [t / 25 for t in range(10)])
 
 
 class TestUrl(unittest.TestCase):

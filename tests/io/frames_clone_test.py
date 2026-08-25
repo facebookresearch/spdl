@@ -56,7 +56,7 @@ class TestCloneFrames(unittest.TestCase):
         array1 = _load_from_frames(frames1)
         array2 = _load_from_frames(frames2)
 
-        self.assertTrue(np.all(array1 == array2))
+        np.testing.assert_array_equal(array1, array2, strict=True)
 
     @parameterized.expand(
         [
@@ -113,4 +113,4 @@ class TestCloneFrames(unittest.TestCase):
         arrays = [_load_from_frames(c) for c in clones]
 
         for i in range(N):
-            self.assertTrue(np.all(array == arrays[i]))
+            np.testing.assert_array_equal(array, arrays[i], strict=True)

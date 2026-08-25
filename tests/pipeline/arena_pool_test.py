@@ -201,7 +201,7 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
         arr = np.arange(1000, dtype=np.int64)
         out = _restore(_offload({"a": arr}, writer, registry), reader, registry)
         view = cast(dict[str, Any], out)["a"]
-        self.assertTrue(np.array_equal(view, arr))
+        np.testing.assert_array_equal(view, arr, strict=True)
         # Mutating the segment's first int64 is observed through the view, which
         # proves the view aliases shared memory rather than a copy.
         struct.pack_into("<q", pool._segment(0), 0, 999)

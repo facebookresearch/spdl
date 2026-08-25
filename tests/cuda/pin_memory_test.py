@@ -88,7 +88,7 @@ class TestPinMemory(unittest.TestCase):
         self.assertEqual(tensor.shape, (10,))
         self.assertEqual(tensor.dtype, torch.int64)
         self.assertEqual(tensor.device, torch.device("cuda:0"))
-        self.assertTrue((vals == tensor.cpu().numpy()).all())
+        np.testing.assert_array_equal(tensor.cpu().numpy(), vals, strict=True)
 
     def test_pin_memory_convert_array_invalid_size(self) -> None:
         """convert_array fails if storage is small."""

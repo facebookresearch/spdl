@@ -91,14 +91,14 @@ class TestDecodeAudio(unittest.TestCase):
         arr1 = _decode(num_frames=num_frames)
         self.assertEqual(arr1.dtype, np.int16)
         self.assertEqual(arr1.shape, (num_frames, 1))
-        self.assertTrue(np.all(arr1 == arr0[:num_frames]))
+        np.testing.assert_array_equal(arr1, arr0[:num_frames], strict=True)
 
         num_frames = 32000
         arr2 = _decode(num_frames=num_frames)
         self.assertEqual(arr2.dtype, np.int16)
         self.assertEqual(arr2.shape, (num_frames, 1))
-        self.assertTrue(np.all(arr2[:16000] == arr0))
-        self.assertTrue(np.all(arr2[16000:] == 0))
+        np.testing.assert_array_equal(arr2[:16000], arr0, strict=True)
+        np.testing.assert_array_equal(arr2[16000:], 0)
 
     def test_decode_audio_many_channels_6(self) -> None:
         """Can decode audio with more than 6 channels.
@@ -229,28 +229,30 @@ class TestDecodeVideo(unittest.TestCase):
         arr1 = _decode(num_frames=num_frames)
         self.assertEqual(arr1.dtype, np.uint8)
         self.assertEqual(arr1.shape, (num_frames, 240, 320, 3))
-        self.assertTrue(np.all(arr1 == arr0[:num_frames]))
+        np.testing.assert_array_equal(arr1, arr0[:num_frames], strict=True)
 
         num_frames = 100
         arr2 = _decode(num_frames=num_frames)
         self.assertEqual(arr2.dtype, np.uint8)
         self.assertEqual(arr2.shape, (num_frames, 240, 320, 3))
-        self.assertTrue(np.all(arr2[:50] == arr0))
-        self.assertTrue(np.all(arr2[50:] == arr2[50]))
+        np.testing.assert_array_equal(arr2[:50], arr0, strict=True)
+        np.testing.assert_array_equal(
+            arr2[50:], np.broadcast_to(arr2[50], arr2[50:].shape), strict=True
+        )
 
         num_frames = 100
         arr2 = _decode(num_frames=num_frames, pad_mode="black")
         self.assertEqual(arr2.dtype, np.uint8)
         self.assertEqual(arr2.shape, (num_frames, 240, 320, 3))
-        self.assertTrue(np.all(arr2[:50] == arr0))
-        self.assertTrue(np.all(arr2[50:] == 0))
+        np.testing.assert_array_equal(arr2[:50], arr0, strict=True)
+        np.testing.assert_array_equal(arr2[50:], 0)
 
         num_frames = 100
         arr2 = _decode(num_frames=num_frames, pad_mode="white")
         self.assertEqual(arr2.dtype, np.uint8)
         self.assertEqual(arr2.shape, (num_frames, 240, 320, 3))
-        self.assertTrue(np.all(arr2[:50] == arr0))
-        self.assertTrue(np.all(arr2[50:] == 255))
+        np.testing.assert_array_equal(arr2[:50], arr0, strict=True)
+        np.testing.assert_array_equal(arr2[50:], 255)
 
     def test_decode_video_frame_rate_pts(self) -> None:
         """Applying frame rate outputs correct PTS."""
@@ -267,7 +269,7 @@ class TestDecodeVideo(unittest.TestCase):
         pts = frames.get_timestamps()
         print(pts_ref, pts)
 
-        self.assertTrue(np.all(pts_ref[::2] == pts))
+        np.testing.assert_array_equal(pts_ref[::2], pts, strict=True)
 
 
 class TestConvertFrames(unittest.TestCase):

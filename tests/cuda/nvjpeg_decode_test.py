@@ -44,9 +44,9 @@ class TestNvjpegDecode(unittest.TestCase):
         rgb_tensor = _test(sample.path, "rgb")
         bgr_tensor = _test(sample.path, "bgr")
 
-        self.assertTrue(torch.equal(rgb_tensor[0], bgr_tensor[2]))
-        self.assertTrue(torch.equal(rgb_tensor[1], bgr_tensor[1]))
-        self.assertTrue(torch.equal(rgb_tensor[2], bgr_tensor[0]))
+        torch.testing.assert_close(rgb_tensor[0], bgr_tensor[2])
+        torch.testing.assert_close(rgb_tensor[1], bgr_tensor[1])
+        torch.testing.assert_close(rgb_tensor[2], bgr_tensor[0])
 
     def test_decode_rubbish(self) -> None:
         """When decoding fails, it should raise an error instead of segfault then,
