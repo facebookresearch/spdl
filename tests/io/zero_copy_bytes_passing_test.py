@@ -40,7 +40,7 @@ class TestDecodeBytes(unittest.TestCase):
             hyp = _decode("audio", f.read())
 
         self.assertEqual(hyp.shape, (1, 48000))
-        self.assertTrue(np.all(ref == hyp))
+        np.testing.assert_array_equal(hyp, ref, strict=True)
 
     def test_decode_video_bytes(self) -> None:
         """video can be decoded from bytes."""
@@ -52,7 +52,7 @@ class TestDecodeBytes(unittest.TestCase):
             hyp = _decode("video", f.read())
 
         self.assertEqual(hyp.shape, (1000, 240, 320, 3))
-        self.assertTrue(np.all(ref == hyp))
+        np.testing.assert_array_equal(hyp, ref, strict=True)
 
     def test_demux_image_bytes(self) -> None:
         """Image (gray) can be decoded from bytes."""
@@ -64,4 +64,4 @@ class TestDecodeBytes(unittest.TestCase):
             hyp = _decode("image", f.read())
 
         self.assertEqual(hyp.shape, (240, 320, 3))
-        self.assertTrue(np.all(ref == hyp))
+        np.testing.assert_array_equal(hyp, ref, strict=True)

@@ -139,7 +139,7 @@ class TestStreamingVideoDemuxing(unittest.TestCase):
         #     Image.fromarray(ref[i]).save(f"ref_{i}.png")
         #     Image.fromarray(hyp[i] - ref[i]).save(f"diff_{i}.png")
 
-        self.assertTrue(np.array_equal(hyp, ref))
+        np.testing.assert_array_equal(hyp, ref, strict=True)
 
     def test_demuxer_get_codec(self) -> None:
         cmd = f'{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -f lavfi -i sine=sample_rate=48000 -af "pan=stereo|c0=FR|c1=FR" -frames:v 30 sample.mp4'

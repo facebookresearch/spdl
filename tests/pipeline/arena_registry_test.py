@@ -133,13 +133,11 @@ class NumpyHandlerTest(unittest.TestCase):
 
         copied, anchor = _NumpyHandler().from_buffer(_copy_view(buf), meta, False)
         copied = cast(Any, copied)
-        self.assertTrue(np.array_equal(copied, arr))
-        self.assertEqual(copied.dtype, arr.dtype)
-        self.assertEqual(copied.shape, arr.shape)
+        np.testing.assert_array_equal(copied, arr, strict=True)
         self.assertIsNone(anchor)
 
         viewed, view_anchor = _NumpyHandler().from_buffer(_copy_view(buf), meta, True)
-        self.assertTrue(np.array_equal(cast(Any, viewed), arr))
+        np.testing.assert_array_equal(cast(Any, viewed), arr, strict=True)
         self.assertIsNotNone(view_anchor)
 
 
@@ -177,11 +175,11 @@ class TorchHandlerTest(unittest.TestCase):
         buf, meta = _TorchHandler().get_buffer(t)
 
         copied, anchor = _TorchHandler().from_buffer(_copy_view(buf), meta, False)
-        self.assertTrue(torch.equal(cast(Any, copied), t))
+        torch.testing.assert_close(cast(Any, copied), t)
         self.assertIsNone(anchor)
 
         viewed, view_anchor = _TorchHandler().from_buffer(_copy_view(buf), meta, True)
-        self.assertTrue(torch.equal(cast(Any, viewed), t))
+        torch.testing.assert_close(cast(Any, viewed), t)
         self.assertIsNotNone(view_anchor)
 
 

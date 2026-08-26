@@ -20,4 +20,4 @@ class TransferTest(unittest.TestCase):
         cuda = transfer_tensor(ref)
         print(cuda)
         self.assertEqual(cuda.device.type, "cuda")
-        self.assertTrue(torch.equal(cuda, ref.cuda()))
+        torch.testing.assert_close(cuda, ref.cuda())

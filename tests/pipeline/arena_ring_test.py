@@ -266,5 +266,4 @@ class OffloadRestoreTest(unittest.TestCase):
             dict[str, Any],
             _restore(_offload({"a": arr}, writer, registry), reader, registry),
         )
-        self.assertTrue(np.array_equal(out["a"], arr))
-        self.assertEqual(out["a"].dtype, arr.dtype)
+        np.testing.assert_array_equal(out["a"], arr, strict=True)

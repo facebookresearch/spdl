@@ -69,7 +69,7 @@ class TestTransferBufferToCuda(unittest.TestCase):
         self.assertTrue(cuda_tensor.is_cuda)
         self.assertEqual(cuda_tensor.device, torch.device(f"cuda:{DEFAULT_CUDA}"))
 
-        self.assertTrue(torch.allclose(cpu_tensor, cuda_tensor.cpu()))
+        torch.testing.assert_close(cpu_tensor, cuda_tensor.cpu())
 
     @parameterized.expand(
         [
@@ -128,7 +128,7 @@ class TestTransferBufferToCuda(unittest.TestCase):
             cuda_tensor = spdl.io.to_torch(cuda_buffer)
             self.assertTrue(cuda_tensor.is_cuda)
             self.assertEqual(cuda_tensor.device, torch.device(f"cuda:{DEFAULT_CUDA}"))
-            self.assertTrue(torch.allclose(cpu_tensor, cuda_tensor.cpu()))
+            torch.testing.assert_close(cpu_tensor, cuda_tensor.cpu())
 
             print("Asserting deleter was not yet called")
             self.assertFalse(deleter_called)
@@ -161,7 +161,7 @@ class TestArrayTransfer(unittest.TestCase):
             self.assertEqual(tensor.dtype, dtypes[array.dtype])
             self.assertEqual(tensor.shape, torch.Size(array.shape))
             self.assertEqual(tensor.device, torch.device(device))
-            self.assertTrue(torch.allclose(tensor, torch.from_numpy(array).to(device)))
+            torch.testing.assert_close(tensor, torch.from_numpy(array).to(device))
 
         for dtype in [np.uint8, np.int32, np.int64]:
             max_val = np.iinfo(dtype).max
@@ -182,7 +182,7 @@ class TestArrayTransfer(unittest.TestCase):
             self.assertEqual(cuda_tensor.dtype, cpu_tensor.dtype)
             self.assertEqual(cuda_tensor.shape, cpu_tensor.shape)
             self.assertEqual(cuda_tensor.device, device)
-            self.assertTrue(torch.allclose(cuda_tensor, cpu_tensor.to(device)))
+            torch.testing.assert_close(cuda_tensor, cpu_tensor.to(device))
 
         for dtype in [np.uint8, np.int32, np.int64]:
             max_val = np.iinfo(dtype).max
@@ -205,7 +205,7 @@ class TestArrayTransfer(unittest.TestCase):
         self.assertEqual(cuda_tensor.dtype, cpu_tensor.dtype)
         self.assertEqual(cuda_tensor.shape, cpu_tensor.shape)
         self.assertEqual(cuda_tensor.device, device)
-        self.assertTrue(torch.allclose(cuda_tensor, cpu_tensor.to(device)))
+        torch.testing.assert_close(cuda_tensor, cpu_tensor.to(device))
 
     def test_array_transfer_non_contiguous_numpy(self) -> None:
         """passing noncontiguous array/tensor to transfer_buffer works"""
@@ -224,7 +224,7 @@ class TestArrayTransfer(unittest.TestCase):
         self.assertEqual(tensor.dtype, torch.int64)
         self.assertEqual(tensor.shape, torch.Size(arr.shape))
         self.assertEqual(tensor.device, torch.device(device))
-        self.assertTrue(torch.allclose(tensor, torch.from_numpy(arr).to(device)))
+        torch.testing.assert_close(tensor, torch.from_numpy(arr).to(device))
 
     def test_array_transfer_smoke_test(self) -> None:
         """smoke test for transferring multiple arrays concurrently"""
@@ -253,4 +253,4 @@ class TestTransferCpu(unittest.TestCase):
             self.assertEqual(ref.dtype, cpu_tensor.dtype)
             self.assertEqual(ref.shape, cpu_tensor.shape)
             self.assertEqual(ref.device, cpu_tensor.device)
-            self.assertTrue(torch.allclose(ref, cpu_tensor))
+            torch.testing.assert_close(ref, cpu_tensor)

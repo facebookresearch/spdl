@@ -462,7 +462,7 @@ class TestDistributedSamplerWeighted(unittest.TestCase):
         print(f"{ref=}")
         print(f"{hyp=}")
 
-        self.assertTrue(np.allclose(hyp, ref, atol=1e-3))
+        np.testing.assert_allclose(hyp, ref, rtol=1e-5, atol=1e-3)
 
 
 class TestDistributedSamplerEmbedShuffle(unittest.TestCase):

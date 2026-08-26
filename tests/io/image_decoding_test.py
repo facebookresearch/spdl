@@ -6,6 +6,7 @@
 
 # pyre-unsafe
 
+import operator
 import unittest
 
 import numpy as np
@@ -19,6 +20,18 @@ from ..fixture import FFMPEG_CLI, get_sample, get_samples, load_ref_data, load_r
 
 def _load_image(src, filter_desc="format=pix_fmts=rgb24"):
     return spdl.io.to_numpy(spdl.io.load_image(src, filter_desc=filter_desc))
+
+
+def _assert_all_ge(x, val) -> None:
+    np.testing.assert_array_compare(
+        operator.ge, x, val, header=f"Arrays are not all >= {val}"
+    )
+
+
+def _assert_all_le(x, val) -> None:
+    np.testing.assert_array_compare(
+        operator.le, x, val, header=f"Arrays are not all <= {val}"
+    )
 
 
 class TestDecodeImage(unittest.TestCase):
@@ -44,8 +57,8 @@ class TestDecodeImage(unittest.TestCase):
 
         ffmpeg8 = get_ffmpeg_versions()["libavutil"][0] >= 60
 
-        self.assertTrue(np.all(hyp[..., :32] == 65535 if ffmpeg8 else 65022))
-        self.assertTrue(np.all(hyp[..., 32:] == 0 if ffmpeg8 else 256))
+        np.testing.assert_array_equal(hyp[..., :32], 65535 if ffmpeg8 else 65022)
+        np.testing.assert_array_equal(hyp[..., 32:], 0 if ffmpeg8 else 256)
 
     def test_decode_image_16be_rgb24(self) -> None:
         """Can decode gray16 PNG image (16be) as rgb24"""
@@ -67,8 +80,8 @@ class TestDecodeImage(unittest.TestCase):
         ref = load_ref_image(sample.path, shape)
         np.testing.assert_array_equal(hyp, ref, strict=True)
 
-        self.assertTrue(np.all(hyp[:, :32, :] == 255))
-        self.assertTrue(np.all(hyp[:, 32:, :] == 0))
+        np.testing.assert_array_equal(hyp[:, :32, :], 255)
+        np.testing.assert_array_equal(hyp[:, 32:, :], 0)
 
     def test_decode_image_yuvj422_native(self) -> None:
         """Can decode yuvj422p JPEG image as-is."""
@@ -153,17 +166,17 @@ class TestDecodeImage(unittest.TestCase):
 
         red, green, blue = hyp[:, :width], hyp[:, width:2*width], hyp[:, 2*width:]
 
-        self.assertTrue(np.all(red[..., 0] >= 254))
-        self.assertTrue(np.all(red[..., 1] <= 1))
-        self.assertTrue(np.all(red[..., 2] == 0))
+        _assert_all_ge(red[..., 0], 254)
+        _assert_all_le(red[..., 1], 1)
+        np.testing.assert_array_equal(red[..., 2], 0)
 
-        self.assertTrue(np.all(green[..., 0] == 0))
-        self.assertTrue(np.all(green[..., 1] >= 253))
-        self.assertTrue(np.all(green[..., 2] <= 1))
+        np.testing.assert_array_equal(green[..., 0], 0)
+        _assert_all_ge(green[..., 1], 253)
+        _assert_all_le(green[..., 2], 1)
 
-        self.assertTrue(np.all(blue[..., 0] <= 1))
-        self.assertTrue(np.all(blue[..., 1] <= 1))
-        self.assertTrue(np.all(blue[..., 2] >= 254))
+        _assert_all_le(blue[..., 0], 1)
+        _assert_all_le(blue[..., 1], 1)
+        _assert_all_ge(blue[..., 2], 254)
 
     def test_decode_image_yuvj444p_native(self) -> None:
         """Can decode yuvj444p JPEG image as-is."""
@@ -335,19 +348,19 @@ class TestLoadImageBatch(unittest.TestCase):
 
         left, middle, right = arr[..., :w, :], arr[..., w:-w, :], arr[..., -w:, :]
         # Red
-        self.assertTrue(np.all(left[..., 0] >= 252))
-        self.assertTrue(np.all(left[..., 1] == 0))
-        self.assertTrue(np.all(left[..., 2] == 0))
+        _assert_all_ge(left[..., 0], 252)
+        np.testing.assert_array_equal(left[..., 1], 0)
+        np.testing.assert_array_equal(left[..., 2], 0)
 
         # Green
-        self.assertTrue(np.all(middle[..., 0] == 0))
-        self.assertTrue(np.all(middle[..., 1] >= 253))
-        self.assertTrue(np.all(middle[..., 2] == 0))
+        np.testing.assert_array_equal(middle[..., 0], 0)
+        _assert_all_ge(middle[..., 1], 253)
+        np.testing.assert_array_equal(middle[..., 2], 0)
 
         # Blue
-        self.assertTrue(np.all(right[..., 0] == 0))
-        self.assertTrue(np.all(right[..., 1] == 0))
-        self.assertTrue(np.all(right[..., 2] >= 253))
+        np.testing.assert_array_equal(right[..., 0], 0)
+        np.testing.assert_array_equal(right[..., 1], 0)
+        _assert_all_ge(right[..., 2], 253)
 
     def test_batch_decode_image_handle_failure(self) -> None:
         """load_image_batch dismisses failures when strict=False."""
