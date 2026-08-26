@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="PyTorch CUDA Race Condition in Multi-threading" href="pytorch_cuda_race_condition.html" /><link rel="prev" title="Implementation detail of Pipeline" href="pipeline_impl.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Remote Iterable Protocol - SPDL 0.6.0 documentation</title>
+        <title>Remote Iterable Protocol - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -464,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -585,7 +586,7 @@ They are not public interface, but the logic is sufficiently elaborated,
 and it is helpful to have them in the documentation, so they are listed here.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="spdl.pipeline._iter_utils._Cmd">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_Cmd</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L65-L90"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._Cmd" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_Cmd</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L64-L89"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._Cmd" title="Link to this definition">¶</a></dt>
 <dd><p>Command issued to the worker.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="spdl.pipeline._iter_utils._Cmd.ABORT">
@@ -620,7 +621,7 @@ in the stand-by mode or failure mode, and not in iteration mode.)</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="spdl.pipeline._iter_utils._Status">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_Status</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L94-L140"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._Status" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_Status</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L93-L139"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._Status" title="Link to this definition">¶</a></dt>
 <dd><p>Status reported by the worker.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="spdl.pipeline._iter_utils._Status.INITIALIZATION_FAILED">
@@ -685,7 +686,7 @@ or the parent process issued <code class="docutils literal notranslate"><span cl
 
 <dl class="py function">
 <dt class="sig sig-object py" id="spdl.pipeline._iter_utils._enter_iteration_mode">
-<span class="sig-name descname"><span class="pre">_enter_iteration_mode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L372-L422"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._enter_iteration_mode" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">_enter_iteration_mode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L371-L421"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._enter_iteration_mode" title="Link to this definition">¶</a></dt>
 <dd><p>Instruct the worker to enter iteration mode and wait for the acknowledgement.</p>
 <p>Works with both <a class="reference external" href="https://docs.python.org/3/library/multiprocessing.html#multiprocessing.Queue" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">multiprocessing.Queue</span></code></a> and
 <code class="xref py py-class docutils literal notranslate"><span class="pre">concurrent.interpreters.Queue.</span></code></p>
@@ -703,7 +704,7 @@ or the parent process issued <code class="docutils literal notranslate"><span cl
 
 <dl class="py function">
 <dt class="sig sig-object py" id="spdl.pipeline._iter_utils._execute_iterable">
-<span class="sig-name descname"><span class="pre">_execute_iterable</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L165-L335"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._execute_iterable" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">_execute_iterable</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L164-L334"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._execute_iterable" title="Link to this definition">¶</a></dt>
 <dd><p>Worker implementation for <a class="reference internal" href="../generated/spdl.pipeline.iterate_in_subprocess.html#spdl.pipeline.iterate_in_subprocess" title="spdl.pipeline.iterate_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">iterate_in_subprocess()</span></code></a>
 and <a class="reference internal" href="../generated/spdl.pipeline.iterate_in_subinterpreter.html#spdl.pipeline.iterate_in_subinterpreter" title="spdl.pipeline.iterate_in_subinterpreter"><code class="xref py py-func docutils literal notranslate"><span class="pre">iterate_in_subinterpreter()</span></code></a>.</p>
 <p>The following diagram illustrates the state transition with more details.</p>
@@ -770,7 +771,7 @@ and <a class="reference internal" href="../generated/spdl.pipeline.iterate_in_su
 
 <dl class="py function">
 <dt class="sig sig-object py" id="spdl.pipeline._iter_utils._drain">
-<span class="sig-name descname"><span class="pre">_drain</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L152-L162"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._drain" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">_drain</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L151-L161"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._drain" title="Link to this definition">¶</a></dt>
 <dd><p>Drain a queue by removing all items.</p>
 <p>Works with both <a class="reference external" href="https://docs.python.org/3/library/multiprocessing.html#multiprocessing.Queue" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">multiprocessing.Queue</span></code></a>
 and <a class="reference external" href="https://docs.python.org/3/library/concurrent.interpreters.html#concurrent.interpreters.Queue" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">concurrent.interpreters.Queue</span></code></a>.</p>
@@ -778,7 +779,7 @@ and <a class="reference external" href="https://docs.python.org/3/library/concur
 
 <dl class="py function">
 <dt class="sig sig-object py" id="spdl.pipeline._iter_utils._iterate_results">
-<span class="sig-name descname"><span class="pre">_iterate_results</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L425-L469"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._iterate_results" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">_iterate_results</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_common.py?#L424-L468"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._iterate_results" title="Link to this definition">¶</a></dt>
 <dd><p>Watch the result queue and iterate on the results.</p>
 <p>Works with both multiprocessing.Queue and concurrent.interpreters.Queue.</p>
 <dl class="field-list simple">
@@ -797,7 +798,7 @@ and <a class="reference external" href="https://docs.python.org/3/library/concur
 
 <dl class="py class">
 <dt class="sig sig-object py" id="spdl.pipeline._iter_utils._SubprocessIterable">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_SubprocessIterable</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_subprocess.py?#L91-L136"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._SubprocessIterable" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_SubprocessIterable</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_subprocess.py?#L90-L135"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._SubprocessIterable" title="Link to this definition">¶</a></dt>
 <dd><p>An Iterable interface that manipulates the iterable in worker process
 and fetch the results.</p>
 <p>This object supports multiple iterations. Each call to <code class="docutils literal notranslate"><span class="pre">__iter__()</span></code>
@@ -806,7 +807,7 @@ underlying iterable (via <code class="docutils literal notranslate"><span class=
 process. The subprocess is reused across iterations.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.pipeline._iter_utils._SubprocessIterable.__iter__">
-<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_subprocess.py?#L110-L130"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._SubprocessIterable.__iter__" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_iter_utils/_subprocess.py?#L109-L129"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline._iter_utils._SubprocessIterable.__iter__" title="Link to this definition">¶</a></dt>
 <dd><p>Instruct the worker process to enter iteration mode and iterate on the results.</p>
 </dd></dl>
 
@@ -911,7 +912,7 @@ process. The subprocess is reused across iterations.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

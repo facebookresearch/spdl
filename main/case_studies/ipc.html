@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Shared-Memory Arena" href="shared_memory_arena.html" /><link rel="prev" title="Parallelism and Performance" href="parallelism.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>The Cost of Inter-Process Communication - SPDL 0.6.0 documentation</title>
+        <title>The Cost of Inter-Process Communication - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -464,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -529,7 +530,7 @@
 <p>Whenever data crosses a process boundary — a stage dispatched to a
 <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ProcessPoolExecutor" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code></a>, a pipeline run with
 <a class="reference internal" href="../generated/spdl.pipeline.run_pipeline_in_subprocess.html#spdl.pipeline.run_pipeline_in_subprocess" title="spdl.pipeline.run_pipeline_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">run_pipeline_in_subprocess()</span></code></a>, or the workers of a
-<a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code></a> — it is <strong>copied</strong> from one process to
+<a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code></a> — it is <strong>copied</strong> from one process to
 another. That copy is not free, and for large payloads it is easy to spend more
 time moving data between processes than doing useful work on it. This page
 explains where that cost comes from, measures it, and describes ways to avoid it.
@@ -538,7 +539,7 @@ to design around.</p>
 <section id="an-example-the-pytorch-dataloader">
 <h2>An example: the PyTorch DataLoader<a class="headerlink" href="#an-example-the-pytorch-dataloader" title="Link to this heading">¶</a></h2>
 <p>To make this concrete, let’s take a conventional
-<a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader</span></code></a> built around a large in-memory dataset.
+<a class="reference external" href="https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataLoader</span></code></a> built around a large in-memory dataset.
 Constructing TorchVision’s ImageNet dataset object takes well under a second — it
 scans the directory tree and builds a list of roughly 1.2 million
 <code class="docutils literal notranslate"><span class="pre">(path,</span> <span class="pre">label)</span></code> entries. But wrapping it in a <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code> with a few workers
@@ -637,7 +638,7 @@ do; see <a class="reference internal" href="../getting_started/execution_models.
 discussion in <a class="reference internal" href="../getting_started/parallelism.html#pipeline-parallelism"><span class="std std-ref">Pipeline Parallelism</span></a>.</p></li>
 <li><p><strong>Make each crossing cheaper.</strong> For the payloads you <em>do</em> send across, prefer
 types that move through shared memory instead of the pickle/pipe path.
-<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code></a> already does this: its multiprocessing reducer moves
+<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code></a> already does this: its multiprocessing reducer moves
 the tensor’s storage through shared memory and pickles only a small handle, so
 a tensor transfers far more cheaply than its size suggests. Python’s native
 <code class="docutils literal notranslate"><span class="pre">bytes</span></code> and NumPy arrays do <strong>not</strong> — they take the full pickle-and-copy path
@@ -725,7 +726,7 @@ and the IPC cost stops being the bottleneck.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

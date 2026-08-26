@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Benchmark wav" href="benchmark_wav.html" /><link rel="prev" title="Benchmark utils" href="benchmark_utils.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Benchmark numpy - SPDL 0.6.0 documentation</title>
+        <title>Benchmark numpy - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -464,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -574,236 +575,235 @@ $<span class="w"> </span>python<span class="w"> </span>benchmark_numpy_plot.py<s
 <span class="linenos"> 32</span>    <span class="s2">"BenchmarkConfig"</span><span class="p">,</span>
 <span class="linenos"> 33</span><span class="p">]</span>
 <span class="linenos"> 34</span>
-<span class="linenos"> 35</span><span class="c1"># pyre-strict</span>
-<span class="linenos"> 36</span>
-<span class="linenos"> 37</span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
-<span class="linenos"> 38</span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="linenos"> 39</span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
-<span class="linenos"> 40</span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<span class="linenos"> 41</span><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
-<span class="linenos"> 42</span><span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">BytesIO</span>
-<span class="linenos"> 43</span>
-<span class="linenos"> 44</span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="linenos"> 45</span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
-<span class="linenos"> 46</span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="linenos"> 47</span><span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NDArray</span>
-<span class="linenos"> 48</span>
-<span class="linenos"> 49</span><span class="k">try</span><span class="p">:</span>
-<span class="linenos"> 50</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># pyre-ignore[21]</span>
-<span class="linenos"> 51</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
-<span class="linenos"> 52</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
-<span class="linenos"> 53</span>        <span class="n">ExecutorType</span><span class="p">,</span>
-<span class="linenos"> 54</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
-<span class="linenos"> 55</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
-<span class="linenos"> 56</span>    <span class="p">)</span>
-<span class="linenos"> 57</span><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-<span class="linenos"> 58</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">spdl.examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-<span class="linenos"> 59</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
-<span class="linenos"> 60</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
-<span class="linenos"> 61</span>        <span class="n">ExecutorType</span><span class="p">,</span>
-<span class="linenos"> 62</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
-<span class="linenos"> 63</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
-<span class="linenos"> 64</span>    <span class="p">)</span>
+<span class="linenos"> 35</span>
+<span class="linenos"> 36</span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="linenos"> 37</span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="linenos"> 38</span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+<span class="linenos"> 39</span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="linenos"> 40</span><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+<span class="linenos"> 41</span><span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">BytesIO</span>
+<span class="linenos"> 42</span>
+<span class="linenos"> 43</span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="linenos"> 44</span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+<span class="linenos"> 45</span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="linenos"> 46</span><span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NDArray</span>
+<span class="linenos"> 47</span>
+<span class="linenos"> 48</span><span class="k">try</span><span class="p">:</span>
+<span class="linenos"> 49</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># pyre-ignore[21]</span>
+<span class="linenos"> 50</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
+<span class="linenos"> 51</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
+<span class="linenos"> 52</span>        <span class="n">ExecutorType</span><span class="p">,</span>
+<span class="linenos"> 53</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
+<span class="linenos"> 54</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
+<span class="linenos"> 55</span>    <span class="p">)</span>
+<span class="linenos"> 56</span><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+<span class="linenos"> 57</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">spdl.examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="linenos"> 58</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
+<span class="linenos"> 59</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
+<span class="linenos"> 60</span>        <span class="n">ExecutorType</span><span class="p">,</span>
+<span class="linenos"> 61</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
+<span class="linenos"> 62</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
+<span class="linenos"> 63</span>    <span class="p">)</span>
+<span class="linenos"> 64</span>
 <span class="linenos"> 65</span>
-<span class="linenos"> 66</span>
-<span class="linenos"> 67</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">get_default_result_path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+<span class="linenos"> 66</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">get_default_result_path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+<span class="linenos"> 67</span>
 <span class="linenos"> 68</span>
-<span class="linenos"> 69</span>
-<span class="linenos"> 70</span><span class="k">def</span><span class="w"> </span><span class="nf">load_npy</span><span class="p">(</span><span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bytes</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
-<span class="linenos"> 71</span><span class="w">    </span><span class="sd">"""Load arrays from serialized NPY binary strings using :py:func:`numpy.load`."""</span>
-<span class="linenos"> 72</span>    <span class="k">return</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+<span class="linenos"> 69</span><span class="k">def</span><span class="w"> </span><span class="nf">load_npy</span><span class="p">(</span><span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bytes</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
+<span class="linenos"> 70</span><span class="w">    </span><span class="sd">"""Load arrays from serialized NPY binary strings using :py:func:`numpy.load`."""</span>
+<span class="linenos"> 71</span>    <span class="k">return</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+<span class="linenos"> 72</span>
 <span class="linenos"> 73</span>
-<span class="linenos"> 74</span>
-<span class="linenos"> 75</span><span class="k">def</span><span class="w"> </span><span class="nf">load_npy_spdl</span><span class="p">(</span><span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bytes</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
-<span class="linenos"> 76</span><span class="w">    </span><span class="sd">"""Load arrays from serialized NPY binary strings using :py:func:`spdl.io.load_npy`."""</span>
-<span class="linenos"> 77</span>    <span class="k">return</span> <span class="p">[</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_npy</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+<span class="linenos"> 74</span><span class="k">def</span><span class="w"> </span><span class="nf">load_npy_spdl</span><span class="p">(</span><span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bytes</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
+<span class="linenos"> 75</span><span class="w">    </span><span class="sd">"""Load arrays from serialized NPY binary strings using :py:func:`spdl.io.load_npy`."""</span>
+<span class="linenos"> 76</span>    <span class="k">return</span> <span class="p">[</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_npy</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+<span class="linenos"> 77</span>
 <span class="linenos"> 78</span>
-<span class="linenos"> 79</span>
-<span class="linenos"> 80</span><span class="k">def</span><span class="w"> </span><span class="nf">load_npz</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
-<span class="linenos"> 81</span><span class="w">    </span><span class="sd">"""Load arrays from a serialized NPZ binary string using :py:func:`numpy.load`."""</span>
-<span class="linenos"> 82</span>    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
-<span class="linenos"> 83</span>    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<span class="linenos"> 79</span><span class="k">def</span><span class="w"> </span><span class="nf">load_npz</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
+<span class="linenos"> 80</span><span class="w">    </span><span class="sd">"""Load arrays from a serialized NPZ binary string using :py:func:`numpy.load`."""</span>
+<span class="linenos"> 81</span>    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
+<span class="linenos"> 82</span>    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<span class="linenos"> 83</span>
 <span class="linenos"> 84</span>
-<span class="linenos"> 85</span>
-<span class="linenos"> 86</span><span class="k">def</span><span class="w"> </span><span class="nf">load_npz_spdl</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
-<span class="linenos"> 87</span><span class="w">    </span><span class="sd">"""Load arrays from serialized NPZ binary strings using :py:func:`spdl.io.load_npz`."""</span>
-<span class="linenos"> 88</span>    <span class="n">data</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_npz</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-<span class="linenos"> 89</span>    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<span class="linenos"> 85</span><span class="k">def</span><span class="w"> </span><span class="nf">load_npz_spdl</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
+<span class="linenos"> 86</span><span class="w">    </span><span class="sd">"""Load arrays from serialized NPZ binary strings using :py:func:`spdl.io.load_npz`."""</span>
+<span class="linenos"> 87</span>    <span class="n">data</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load_npz</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+<span class="linenos"> 88</span>    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<span class="linenos"> 89</span>
 <span class="linenos"> 90</span>
-<span class="linenos"> 91</span>
-<span class="linenos"> 92</span><span class="k">def</span><span class="w"> </span><span class="nf">load_torch</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
-<span class="linenos"> 93</span><span class="w">    </span><span class="sd">"""Load arrays from a serialized PyTorch state dict."""</span>
-<span class="linenos"> 94</span>    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">item</span><span class="p">))</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<span class="linenos"> 91</span><span class="k">def</span><span class="w"> </span><span class="nf">load_torch</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
+<span class="linenos"> 92</span><span class="w">    </span><span class="sd">"""Load arrays from a serialized PyTorch state dict."""</span>
+<span class="linenos"> 93</span>    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">item</span><span class="p">))</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<span class="linenos"> 94</span>
 <span class="linenos"> 95</span>
-<span class="linenos"> 96</span>
-<span class="linenos"> 97</span><span class="k">def</span><span class="w"> </span><span class="nf">_get_load_fn</span><span class="p">(</span>
-<span class="linenos"> 98</span>    <span class="n">data_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">impl</span><span class="p">:</span> <span class="nb">str</span>
-<span class="linenos"> 99</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">list</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]],</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]]</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">bytes</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]]:</span>
-<span class="linenos">100</span>    <span class="k">match</span> <span class="n">data_format</span><span class="p">:</span>
-<span class="linenos">101</span>        <span class="k">case</span> <span class="s2">"torch"</span><span class="p">:</span>
-<span class="linenos">102</span>            <span class="k">return</span> <span class="n">load_torch</span>
-<span class="linenos">103</span>        <span class="k">case</span> <span class="s2">"npy"</span><span class="p">:</span>
-<span class="linenos">104</span>            <span class="k">if</span> <span class="n">impl</span> <span class="o">==</span> <span class="s2">"spdl"</span><span class="p">:</span>
-<span class="linenos">105</span>                <span class="k">return</span> <span class="n">load_npy_spdl</span>
-<span class="linenos">106</span>            <span class="k">return</span> <span class="n">load_npy</span>
-<span class="linenos">107</span>        <span class="k">case</span> <span class="s2">"npz"</span><span class="p">:</span>
-<span class="linenos">108</span>            <span class="k">if</span> <span class="n">impl</span> <span class="o">==</span> <span class="s2">"spdl"</span><span class="p">:</span>
-<span class="linenos">109</span>                <span class="k">return</span> <span class="n">load_npz_spdl</span>
-<span class="linenos">110</span>            <span class="k">return</span> <span class="n">load_npz</span>
-<span class="linenos">111</span>        <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
-<span class="linenos">112</span>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected data format: </span><span class="si">{</span><span class="n">data_format</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos"> 96</span><span class="k">def</span><span class="w"> </span><span class="nf">_get_load_fn</span><span class="p">(</span>
+<span class="linenos"> 97</span>    <span class="n">data_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">impl</span><span class="p">:</span> <span class="nb">str</span>
+<span class="linenos"> 98</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">list</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]],</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]]</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">bytes</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]]:</span>
+<span class="linenos"> 99</span>    <span class="k">match</span> <span class="n">data_format</span><span class="p">:</span>
+<span class="linenos">100</span>        <span class="k">case</span> <span class="s2">"torch"</span><span class="p">:</span>
+<span class="linenos">101</span>            <span class="k">return</span> <span class="n">load_torch</span>
+<span class="linenos">102</span>        <span class="k">case</span> <span class="s2">"npy"</span><span class="p">:</span>
+<span class="linenos">103</span>            <span class="k">if</span> <span class="n">impl</span> <span class="o">==</span> <span class="s2">"spdl"</span><span class="p">:</span>
+<span class="linenos">104</span>                <span class="k">return</span> <span class="n">load_npy_spdl</span>
+<span class="linenos">105</span>            <span class="k">return</span> <span class="n">load_npy</span>
+<span class="linenos">106</span>        <span class="k">case</span> <span class="s2">"npz"</span><span class="p">:</span>
+<span class="linenos">107</span>            <span class="k">if</span> <span class="n">impl</span> <span class="o">==</span> <span class="s2">"spdl"</span><span class="p">:</span>
+<span class="linenos">108</span>                <span class="k">return</span> <span class="n">load_npz_spdl</span>
+<span class="linenos">109</span>            <span class="k">return</span> <span class="n">load_npz</span>
+<span class="linenos">110</span>        <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+<span class="linenos">111</span>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected data format: </span><span class="si">{</span><span class="n">data_format</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos">112</span>
 <span class="linenos">113</span>
-<span class="linenos">114</span>
-<span class="linenos">115</span><span class="k">def</span><span class="w"> </span><span class="nf">_dump_np</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">NDArray</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">],</span> <span class="n">compressed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-<span class="linenos">116</span>    <span class="k">with</span> <span class="n">BytesIO</span><span class="p">()</span> <span class="k">as</span> <span class="n">buf</span><span class="p">:</span>
-<span class="linenos">117</span>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-<span class="linenos">118</span>            <span class="k">if</span> <span class="n">compressed</span><span class="p">:</span>
-<span class="linenos">119</span>                <span class="n">np</span><span class="o">.</span><span class="n">savez_compressed</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">arr</span><span class="p">)</span>
-<span class="linenos">120</span>            <span class="k">else</span><span class="p">:</span>
-<span class="linenos">121</span>                <span class="n">np</span><span class="o">.</span><span class="n">savez</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">arr</span><span class="p">)</span>
-<span class="linenos">122</span>        <span class="k">else</span><span class="p">:</span>
-<span class="linenos">123</span>            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">arr</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="linenos">124</span>        <span class="n">buf</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="linenos">125</span>        <span class="k">return</span> <span class="n">buf</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="linenos">114</span><span class="k">def</span><span class="w"> </span><span class="nf">_dump_np</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">NDArray</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">],</span> <span class="n">compressed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="linenos">115</span>    <span class="k">with</span> <span class="n">BytesIO</span><span class="p">()</span> <span class="k">as</span> <span class="n">buf</span><span class="p">:</span>
+<span class="linenos">116</span>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="linenos">117</span>            <span class="k">if</span> <span class="n">compressed</span><span class="p">:</span>
+<span class="linenos">118</span>                <span class="n">np</span><span class="o">.</span><span class="n">savez_compressed</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">arr</span><span class="p">)</span>
+<span class="linenos">119</span>            <span class="k">else</span><span class="p">:</span>
+<span class="linenos">120</span>                <span class="n">np</span><span class="o">.</span><span class="n">savez</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">arr</span><span class="p">)</span>
+<span class="linenos">121</span>        <span class="k">else</span><span class="p">:</span>
+<span class="linenos">122</span>            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">arr</span><span class="p">,</span> <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="linenos">123</span>        <span class="n">buf</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="linenos">124</span>        <span class="k">return</span> <span class="n">buf</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="linenos">125</span>
 <span class="linenos">126</span>
-<span class="linenos">127</span>
-<span class="linenos">128</span><span class="k">def</span><span class="w"> </span><span class="nf">_dump_torch</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-<span class="linenos">129</span>    <span class="k">with</span> <span class="n">BytesIO</span><span class="p">()</span> <span class="k">as</span> <span class="n">buf</span><span class="p">:</span>
-<span class="linenos">130</span>        <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">arr</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span> <span class="n">buf</span><span class="p">)</span>
-<span class="linenos">131</span>        <span class="n">buf</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="linenos">132</span>        <span class="k">return</span> <span class="n">buf</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="linenos">127</span><span class="k">def</span><span class="w"> </span><span class="nf">_dump_torch</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="linenos">128</span>    <span class="k">with</span> <span class="n">BytesIO</span><span class="p">()</span> <span class="k">as</span> <span class="n">buf</span><span class="p">:</span>
+<span class="linenos">129</span>        <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">arr</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span> <span class="n">buf</span><span class="p">)</span>
+<span class="linenos">130</span>        <span class="n">buf</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="linenos">131</span>        <span class="k">return</span> <span class="n">buf</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="linenos">132</span>
 <span class="linenos">133</span>
-<span class="linenos">134</span>
-<span class="linenos">135</span><span class="k">def</span><span class="w"> </span><span class="nf">get_mock_data</span><span class="p">(</span><span class="nb">format</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">compressed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">:</span>
-<span class="linenos">136</span><span class="w">    </span><span class="sd">"""Generate a single sample in the given format.</span>
-<span class="linenos">137</span>
-<span class="linenos">138</span><span class="sd">    The mock data resemboles an RGB image and its segmentation labels.</span>
-<span class="linenos">139</span>
-<span class="linenos">140</span><span class="sd">    Args:</span>
-<span class="linenos">141</span><span class="sd">        format: One of ``"npz"``, ``"npy"`` or ``"torch"``.</span>
-<span class="linenos">142</span><span class="sd">        compressed: If ``True``, NPZ file is compressed.</span>
-<span class="linenos">143</span><span class="sd">            (i.e. :py:func:`numpy.savez_compressed` is used.)</span>
-<span class="linenos">144</span>
-<span class="linenos">145</span><span class="sd">    Returns:</span>
-<span class="linenos">146</span><span class="sd">        Serialized mock arrays. If ``"npy"`` then arrays are serialized</span>
-<span class="linenos">147</span><span class="sd">        separately. Otherwise arrays are bundled together.</span>
-<span class="linenos">148</span><span class="sd">    """</span>
-<span class="linenos">149</span>    <span class="c1"># pyrefly: ignore [no-matching-overload]</span>
-<span class="linenos">150</span>    <span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
-<span class="linenos">151</span>    <span class="c1"># pyrefly: ignore [no-matching-overload]</span>
-<span class="linenos">152</span>    <span class="n">lbl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
-<span class="linenos">153</span>
-<span class="linenos">154</span>    <span class="k">match</span> <span class="nb">format</span><span class="p">:</span>
-<span class="linenos">155</span>        <span class="k">case</span> <span class="s2">"npz"</span><span class="p">:</span>
-<span class="linenos">156</span>            <span class="k">return</span> <span class="n">_dump_np</span><span class="p">({</span><span class="s2">"img"</span><span class="p">:</span> <span class="n">img</span><span class="p">,</span> <span class="s2">"lbl"</span><span class="p">:</span> <span class="n">lbl</span><span class="p">},</span> <span class="n">compressed</span><span class="o">=</span><span class="n">compressed</span><span class="p">)</span>
-<span class="linenos">157</span>        <span class="k">case</span> <span class="s2">"npy"</span><span class="p">:</span>
-<span class="linenos">158</span>            <span class="k">return</span> <span class="n">_dump_np</span><span class="p">(</span><span class="n">img</span><span class="p">),</span> <span class="n">_dump_np</span><span class="p">(</span><span class="n">lbl</span><span class="p">)</span>
-<span class="linenos">159</span>        <span class="k">case</span> <span class="s2">"torch"</span><span class="p">:</span>
-<span class="linenos">160</span>            <span class="k">return</span> <span class="n">_dump_torch</span><span class="p">({</span><span class="s2">"img"</span><span class="p">:</span> <span class="n">img</span><span class="p">,</span> <span class="s2">"lbl"</span><span class="p">:</span> <span class="n">lbl</span><span class="p">})</span>
-<span class="linenos">161</span>        <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
-<span class="linenos">162</span>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected `format`: </span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos">134</span><span class="k">def</span><span class="w"> </span><span class="nf">get_mock_data</span><span class="p">(</span><span class="nb">format</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">compressed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="linenos">135</span><span class="w">    </span><span class="sd">"""Generate a single sample in the given format.</span>
+<span class="linenos">136</span>
+<span class="linenos">137</span><span class="sd">    The mock data resemboles an RGB image and its segmentation labels.</span>
+<span class="linenos">138</span>
+<span class="linenos">139</span><span class="sd">    Args:</span>
+<span class="linenos">140</span><span class="sd">        format: One of ``"npz"``, ``"npy"`` or ``"torch"``.</span>
+<span class="linenos">141</span><span class="sd">        compressed: If ``True``, NPZ file is compressed.</span>
+<span class="linenos">142</span><span class="sd">            (i.e. :py:func:`numpy.savez_compressed` is used.)</span>
+<span class="linenos">143</span>
+<span class="linenos">144</span><span class="sd">    Returns:</span>
+<span class="linenos">145</span><span class="sd">        Serialized mock arrays. If ``"npy"`` then arrays are serialized</span>
+<span class="linenos">146</span><span class="sd">        separately. Otherwise arrays are bundled together.</span>
+<span class="linenos">147</span><span class="sd">    """</span>
+<span class="linenos">148</span>    <span class="c1"># pyrefly: ignore [no-matching-overload]</span>
+<span class="linenos">149</span>    <span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+<span class="linenos">150</span>    <span class="c1"># pyrefly: ignore [no-matching-overload]</span>
+<span class="linenos">151</span>    <span class="n">lbl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+<span class="linenos">152</span>
+<span class="linenos">153</span>    <span class="k">match</span> <span class="nb">format</span><span class="p">:</span>
+<span class="linenos">154</span>        <span class="k">case</span> <span class="s2">"npz"</span><span class="p">:</span>
+<span class="linenos">155</span>            <span class="k">return</span> <span class="n">_dump_np</span><span class="p">({</span><span class="s2">"img"</span><span class="p">:</span> <span class="n">img</span><span class="p">,</span> <span class="s2">"lbl"</span><span class="p">:</span> <span class="n">lbl</span><span class="p">},</span> <span class="n">compressed</span><span class="o">=</span><span class="n">compressed</span><span class="p">)</span>
+<span class="linenos">156</span>        <span class="k">case</span> <span class="s2">"npy"</span><span class="p">:</span>
+<span class="linenos">157</span>            <span class="k">return</span> <span class="n">_dump_np</span><span class="p">(</span><span class="n">img</span><span class="p">),</span> <span class="n">_dump_np</span><span class="p">(</span><span class="n">lbl</span><span class="p">)</span>
+<span class="linenos">158</span>        <span class="k">case</span> <span class="s2">"torch"</span><span class="p">:</span>
+<span class="linenos">159</span>            <span class="k">return</span> <span class="n">_dump_torch</span><span class="p">({</span><span class="s2">"img"</span><span class="p">:</span> <span class="n">img</span><span class="p">,</span> <span class="s2">"lbl"</span><span class="p">:</span> <span class="n">lbl</span><span class="p">})</span>
+<span class="linenos">160</span>        <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+<span class="linenos">161</span>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected `format`: </span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos">162</span>
 <span class="linenos">163</span>
-<span class="linenos">164</span>
-<span class="linenos">165</span><span class="nd">@dataclass</span>
-<span class="linenos">166</span><span class="k">class</span><span class="w"> </span><span class="nc">BenchmarkConfig</span><span class="p">:</span>
-<span class="linenos">167</span><span class="w">    </span><span class="sd">"""BenchmarkConfig()</span>
-<span class="linenos">168</span>
-<span class="linenos">169</span><span class="sd">    Configuration for a single benchmark run."""</span>
-<span class="linenos">170</span>
-<span class="linenos">171</span>    <span class="n">data_format</span><span class="p">:</span> <span class="nb">str</span>
-<span class="linenos">172</span><span class="w">    </span><span class="sd">"""Data format (``"npy"``, ``"npz"``, or ``"torch"``)"""</span>
-<span class="linenos">173</span>
-<span class="linenos">174</span>    <span class="n">compressed</span><span class="p">:</span> <span class="nb">bool</span>
-<span class="linenos">175</span><span class="w">    </span><span class="sd">"""Whether NPZ file is compressed"""</span>
-<span class="linenos">176</span>
-<span class="linenos">177</span>    <span class="n">impl</span><span class="p">:</span> <span class="nb">str</span>
-<span class="linenos">178</span><span class="w">    </span><span class="sd">"""Implementation (``"np"``, ``"spdl"``, or ``"torch"``)"""</span>
-<span class="linenos">179</span>
-<span class="linenos">180</span>    <span class="n">num_workers</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">181</span><span class="w">    </span><span class="sd">"""Number of concurrent workers"""</span>
+<span class="linenos">164</span><span class="nd">@dataclass</span>
+<span class="linenos">165</span><span class="k">class</span><span class="w"> </span><span class="nc">BenchmarkConfig</span><span class="p">:</span>
+<span class="linenos">166</span><span class="w">    </span><span class="sd">"""BenchmarkConfig()</span>
+<span class="linenos">167</span>
+<span class="linenos">168</span><span class="sd">    Configuration for a single benchmark run."""</span>
+<span class="linenos">169</span>
+<span class="linenos">170</span>    <span class="n">data_format</span><span class="p">:</span> <span class="nb">str</span>
+<span class="linenos">171</span><span class="w">    </span><span class="sd">"""Data format (``"npy"``, ``"npz"``, or ``"torch"``)"""</span>
+<span class="linenos">172</span>
+<span class="linenos">173</span>    <span class="n">compressed</span><span class="p">:</span> <span class="nb">bool</span>
+<span class="linenos">174</span><span class="w">    </span><span class="sd">"""Whether NPZ file is compressed"""</span>
+<span class="linenos">175</span>
+<span class="linenos">176</span>    <span class="n">impl</span><span class="p">:</span> <span class="nb">str</span>
+<span class="linenos">177</span><span class="w">    </span><span class="sd">"""Implementation (``"np"``, ``"spdl"``, or ``"torch"``)"""</span>
+<span class="linenos">178</span>
+<span class="linenos">179</span>    <span class="n">num_workers</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">180</span><span class="w">    </span><span class="sd">"""Number of concurrent workers"""</span>
+<span class="linenos">181</span>
 <span class="linenos">182</span>
-<span class="linenos">183</span>
-<span class="linenos">184</span><span class="k">def</span><span class="w"> </span><span class="nf">_parse_args</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">:</span>
-<span class="linenos">185</span><span class="w">    </span><span class="sd">"""Parse command line arguments.</span>
-<span class="linenos">186</span>
-<span class="linenos">187</span><span class="sd">    Returns:</span>
-<span class="linenos">188</span><span class="sd">        Parsed arguments.</span>
-<span class="linenos">189</span><span class="sd">    """</span>
-<span class="linenos">190</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
-<span class="linenos">191</span>        <span class="n">description</span><span class="o">=</span><span class="s2">"Benchmark data format loading performance"</span>
-<span class="linenos">192</span>    <span class="p">)</span>
-<span class="linenos">193</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-<span class="linenos">194</span>        <span class="s2">"--output"</span><span class="p">,</span>
-<span class="linenos">195</span>        <span class="nb">type</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">p</span><span class="p">),</span>
-<span class="linenos">196</span>        <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">,</span>
-<span class="linenos">197</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Output path for the results"</span><span class="p">,</span>
-<span class="linenos">198</span>    <span class="p">)</span>
-<span class="linenos">199</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="linenos">183</span><span class="k">def</span><span class="w"> </span><span class="nf">_parse_args</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">:</span>
+<span class="linenos">184</span><span class="w">    </span><span class="sd">"""Parse command line arguments.</span>
+<span class="linenos">185</span>
+<span class="linenos">186</span><span class="sd">    Returns:</span>
+<span class="linenos">187</span><span class="sd">        Parsed arguments.</span>
+<span class="linenos">188</span><span class="sd">    """</span>
+<span class="linenos">189</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+<span class="linenos">190</span>        <span class="n">description</span><span class="o">=</span><span class="s2">"Benchmark data format loading performance"</span>
+<span class="linenos">191</span>    <span class="p">)</span>
+<span class="linenos">192</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+<span class="linenos">193</span>        <span class="s2">"--output"</span><span class="p">,</span>
+<span class="linenos">194</span>        <span class="nb">type</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">p</span><span class="p">),</span>
+<span class="linenos">195</span>        <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">,</span>
+<span class="linenos">196</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Output path for the results"</span><span class="p">,</span>
+<span class="linenos">197</span>    <span class="p">)</span>
+<span class="linenos">198</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="linenos">199</span>
 <span class="linenos">200</span>
-<span class="linenos">201</span>
-<span class="linenos">202</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">203</span><span class="w">    </span><span class="sd">"""The entrypoint from CLI."""</span>
-<span class="linenos">204</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">_parse_args</span><span class="p">()</span>
-<span class="linenos">205</span>
-<span class="linenos">206</span>    <span class="c1"># Define explicit configuration lists</span>
-<span class="linenos">207</span>    <span class="n">worker_counts</span> <span class="o">=</span> <span class="p">[</span><span class="mi">32</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
-<span class="linenos">208</span>    <span class="n">executor_types</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExecutorType</span><span class="o">.</span><span class="n">PROCESS</span><span class="p">,</span> <span class="n">ExecutorType</span><span class="o">.</span><span class="n">THREAD</span><span class="p">]</span>
-<span class="linenos">209</span>
-<span class="linenos">210</span>    <span class="c1"># Define benchmark configurations</span>
-<span class="linenos">211</span>    <span class="c1"># (data_format, compressed, impl)</span>
-<span class="linenos">212</span>    <span class="n">data_configs</span> <span class="o">=</span> <span class="p">[</span>
-<span class="linenos">213</span>        <span class="p">(</span><span class="s2">"torch"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"torch"</span><span class="p">),</span>
-<span class="linenos">214</span>        <span class="p">(</span><span class="s2">"npy"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"np"</span><span class="p">),</span>
-<span class="linenos">215</span>        <span class="p">(</span><span class="s2">"npy"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"spdl"</span><span class="p">),</span>
-<span class="linenos">216</span>        <span class="p">(</span><span class="s2">"npz"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"np"</span><span class="p">),</span>
-<span class="linenos">217</span>        <span class="p">(</span><span class="s2">"npz"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"np"</span><span class="p">),</span>
-<span class="linenos">218</span>        <span class="p">(</span><span class="s2">"npz"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"spdl"</span><span class="p">),</span>
-<span class="linenos">219</span>        <span class="p">(</span><span class="s2">"npz"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"spdl"</span><span class="p">),</span>
-<span class="linenos">220</span>    <span class="p">]</span>
-<span class="linenos">221</span>
-<span class="linenos">222</span>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">BenchmarkConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="linenos">223</span>    <span class="n">iterations</span> <span class="o">=</span> <span class="mi">1000</span>
-<span class="linenos">224</span>    <span class="n">num_runs</span> <span class="o">=</span> <span class="mi">5</span>
-<span class="linenos">225</span>
-<span class="linenos">226</span>    <span class="k">for</span> <span class="n">num_workers</span> <span class="ow">in</span> <span class="n">worker_counts</span><span class="p">:</span>
-<span class="linenos">227</span>        <span class="k">for</span> <span class="n">executor_type</span> <span class="ow">in</span> <span class="n">executor_types</span><span class="p">:</span>
-<span class="linenos">228</span>            <span class="k">with</span> <span class="n">BenchmarkRunner</span><span class="p">(</span>
-<span class="linenos">229</span>                <span class="n">executor_type</span><span class="o">=</span><span class="n">executor_type</span><span class="p">,</span>
-<span class="linenos">230</span>                <span class="n">num_workers</span><span class="o">=</span><span class="n">num_workers</span><span class="p">,</span>
-<span class="linenos">231</span>                <span class="n">warmup_iterations</span><span class="o">=</span><span class="mi">30</span> <span class="o">*</span> <span class="n">num_workers</span><span class="p">,</span>
-<span class="linenos">232</span>            <span class="p">)</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
-<span class="linenos">233</span>                <span class="k">for</span> <span class="n">data_format</span><span class="p">,</span> <span class="n">compressed</span><span class="p">,</span> <span class="n">impl</span> <span class="ow">in</span> <span class="n">data_configs</span><span class="p">:</span>
-<span class="linenos">234</span>                    <span class="n">data</span> <span class="o">=</span> <span class="n">get_mock_data</span><span class="p">(</span><span class="n">data_format</span><span class="p">,</span> <span class="n">compressed</span><span class="p">)</span>
-<span class="linenos">235</span>
-<span class="linenos">236</span>                    <span class="n">load_fn</span> <span class="o">=</span> <span class="n">_get_load_fn</span><span class="p">(</span><span class="n">data_format</span><span class="p">,</span> <span class="n">impl</span><span class="p">)</span>
-<span class="linenos">237</span>
-<span class="linenos">238</span>                    <span class="n">result</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-<span class="linenos">239</span>                        <span class="n">BenchmarkConfig</span><span class="p">(</span>
-<span class="linenos">240</span>                            <span class="n">data_format</span><span class="o">=</span><span class="n">data_format</span><span class="p">,</span>
-<span class="linenos">241</span>                            <span class="n">compressed</span><span class="o">=</span><span class="n">compressed</span><span class="p">,</span>
-<span class="linenos">242</span>                            <span class="n">impl</span><span class="o">=</span><span class="n">impl</span><span class="p">,</span>
-<span class="linenos">243</span>                            <span class="n">num_workers</span><span class="o">=</span><span class="n">num_workers</span><span class="p">,</span>
-<span class="linenos">244</span>                        <span class="p">),</span>
-<span class="linenos">245</span>                        <span class="n">partial</span><span class="p">(</span><span class="n">load_fn</span><span class="p">,</span> <span class="n">data</span><span class="p">),</span>
-<span class="linenos">246</span>                        <span class="n">iterations</span><span class="p">,</span>
-<span class="linenos">247</span>                        <span class="n">num_runs</span><span class="o">=</span><span class="n">num_runs</span><span class="p">,</span>
-<span class="linenos">248</span>                    <span class="p">)</span>
-<span class="linenos">249</span>
-<span class="linenos">250</span>                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-<span class="linenos">251</span>                    <span class="nb">print</span><span class="p">(</span>
-<span class="linenos">252</span>                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">data_format</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">compressed</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">impl</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">executor_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">num_workers</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">qps</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">"</span>
-<span class="linenos">253</span>                    <span class="p">)</span>
-<span class="linenos">254</span>
-<span class="linenos">255</span>    <span class="n">save_results_to_csv</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
-<span class="linenos">256</span>    <span class="n">plot_output</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">".csv"</span><span class="p">,</span> <span class="s2">".png"</span><span class="p">)</span>
-<span class="linenos">257</span>    <span class="nb">print</span><span class="p">(</span>
-<span class="linenos">258</span>        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Benchmark complete. To generate plots, run:</span><span class="se">\n</span><span class="s2">"</span>
-<span class="linenos">259</span>        <span class="sa">f</span><span class="s2">"python benchmark_numpy_plot.py --input </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="si">}</span><span class="s2"> --output </span><span class="si">{</span><span class="n">plot_output</span><span class="si">}</span><span class="s2">"</span>
-<span class="linenos">260</span>    <span class="p">)</span>
+<span class="linenos">201</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">202</span><span class="w">    </span><span class="sd">"""The entrypoint from CLI."""</span>
+<span class="linenos">203</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">_parse_args</span><span class="p">()</span>
+<span class="linenos">204</span>
+<span class="linenos">205</span>    <span class="c1"># Define explicit configuration lists</span>
+<span class="linenos">206</span>    <span class="n">worker_counts</span> <span class="o">=</span> <span class="p">[</span><span class="mi">32</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="linenos">207</span>    <span class="n">executor_types</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExecutorType</span><span class="o">.</span><span class="n">PROCESS</span><span class="p">,</span> <span class="n">ExecutorType</span><span class="o">.</span><span class="n">THREAD</span><span class="p">]</span>
+<span class="linenos">208</span>
+<span class="linenos">209</span>    <span class="c1"># Define benchmark configurations</span>
+<span class="linenos">210</span>    <span class="c1"># (data_format, compressed, impl)</span>
+<span class="linenos">211</span>    <span class="n">data_configs</span> <span class="o">=</span> <span class="p">[</span>
+<span class="linenos">212</span>        <span class="p">(</span><span class="s2">"torch"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"torch"</span><span class="p">),</span>
+<span class="linenos">213</span>        <span class="p">(</span><span class="s2">"npy"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"np"</span><span class="p">),</span>
+<span class="linenos">214</span>        <span class="p">(</span><span class="s2">"npy"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"spdl"</span><span class="p">),</span>
+<span class="linenos">215</span>        <span class="p">(</span><span class="s2">"npz"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"np"</span><span class="p">),</span>
+<span class="linenos">216</span>        <span class="p">(</span><span class="s2">"npz"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"np"</span><span class="p">),</span>
+<span class="linenos">217</span>        <span class="p">(</span><span class="s2">"npz"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"spdl"</span><span class="p">),</span>
+<span class="linenos">218</span>        <span class="p">(</span><span class="s2">"npz"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"spdl"</span><span class="p">),</span>
+<span class="linenos">219</span>    <span class="p">]</span>
+<span class="linenos">220</span>
+<span class="linenos">221</span>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">BenchmarkConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="linenos">222</span>    <span class="n">iterations</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="linenos">223</span>    <span class="n">num_runs</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="linenos">224</span>
+<span class="linenos">225</span>    <span class="k">for</span> <span class="n">num_workers</span> <span class="ow">in</span> <span class="n">worker_counts</span><span class="p">:</span>
+<span class="linenos">226</span>        <span class="k">for</span> <span class="n">executor_type</span> <span class="ow">in</span> <span class="n">executor_types</span><span class="p">:</span>
+<span class="linenos">227</span>            <span class="k">with</span> <span class="n">BenchmarkRunner</span><span class="p">(</span>
+<span class="linenos">228</span>                <span class="n">executor_type</span><span class="o">=</span><span class="n">executor_type</span><span class="p">,</span>
+<span class="linenos">229</span>                <span class="n">num_workers</span><span class="o">=</span><span class="n">num_workers</span><span class="p">,</span>
+<span class="linenos">230</span>                <span class="n">warmup_iterations</span><span class="o">=</span><span class="mi">30</span> <span class="o">*</span> <span class="n">num_workers</span><span class="p">,</span>
+<span class="linenos">231</span>            <span class="p">)</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
+<span class="linenos">232</span>                <span class="k">for</span> <span class="n">data_format</span><span class="p">,</span> <span class="n">compressed</span><span class="p">,</span> <span class="n">impl</span> <span class="ow">in</span> <span class="n">data_configs</span><span class="p">:</span>
+<span class="linenos">233</span>                    <span class="n">data</span> <span class="o">=</span> <span class="n">get_mock_data</span><span class="p">(</span><span class="n">data_format</span><span class="p">,</span> <span class="n">compressed</span><span class="p">)</span>
+<span class="linenos">234</span>
+<span class="linenos">235</span>                    <span class="n">load_fn</span> <span class="o">=</span> <span class="n">_get_load_fn</span><span class="p">(</span><span class="n">data_format</span><span class="p">,</span> <span class="n">impl</span><span class="p">)</span>
+<span class="linenos">236</span>
+<span class="linenos">237</span>                    <span class="n">result</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+<span class="linenos">238</span>                        <span class="n">BenchmarkConfig</span><span class="p">(</span>
+<span class="linenos">239</span>                            <span class="n">data_format</span><span class="o">=</span><span class="n">data_format</span><span class="p">,</span>
+<span class="linenos">240</span>                            <span class="n">compressed</span><span class="o">=</span><span class="n">compressed</span><span class="p">,</span>
+<span class="linenos">241</span>                            <span class="n">impl</span><span class="o">=</span><span class="n">impl</span><span class="p">,</span>
+<span class="linenos">242</span>                            <span class="n">num_workers</span><span class="o">=</span><span class="n">num_workers</span><span class="p">,</span>
+<span class="linenos">243</span>                        <span class="p">),</span>
+<span class="linenos">244</span>                        <span class="n">partial</span><span class="p">(</span><span class="n">load_fn</span><span class="p">,</span> <span class="n">data</span><span class="p">),</span>
+<span class="linenos">245</span>                        <span class="n">iterations</span><span class="p">,</span>
+<span class="linenos">246</span>                        <span class="n">num_runs</span><span class="o">=</span><span class="n">num_runs</span><span class="p">,</span>
+<span class="linenos">247</span>                    <span class="p">)</span>
+<span class="linenos">248</span>
+<span class="linenos">249</span>                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="linenos">250</span>                    <span class="nb">print</span><span class="p">(</span>
+<span class="linenos">251</span>                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">data_format</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">compressed</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">impl</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">executor_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">num_workers</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">qps</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">"</span>
+<span class="linenos">252</span>                    <span class="p">)</span>
+<span class="linenos">253</span>
+<span class="linenos">254</span>    <span class="n">save_results_to_csv</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+<span class="linenos">255</span>    <span class="n">plot_output</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">".csv"</span><span class="p">,</span> <span class="s2">".png"</span><span class="p">)</span>
+<span class="linenos">256</span>    <span class="nb">print</span><span class="p">(</span>
+<span class="linenos">257</span>        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Benchmark complete. To generate plots, run:</span><span class="se">\n</span><span class="s2">"</span>
+<span class="linenos">258</span>        <span class="sa">f</span><span class="s2">"python benchmark_numpy_plot.py --input </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="si">}</span><span class="s2"> --output </span><span class="si">{</span><span class="n">plot_output</span><span class="si">}</span><span class="s2">"</span>
+<span class="linenos">259</span>    <span class="p">)</span>
+<span class="linenos">260</span>
 <span class="linenos">261</span>
-<span class="linenos">262</span>
-<span class="linenos">263</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-<span class="linenos">264</span>    <span class="n">main</span><span class="p">()</span>
+<span class="linenos">262</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+<span class="linenos">263</span>    <span class="n">main</span><span class="p">()</span>
 </pre></div>
 </div>
 </details></section>
@@ -812,13 +812,13 @@ $<span class="w"> </span>python<span class="w"> </span>benchmark_numpy_plot.py<s
 <p class="rubric">Functions</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_numpy.main">
-<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L202-L260"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.main" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L201-L259"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.main" title="Link to this definition">¶</a></dt>
 <dd><p>The entrypoint from CLI.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_numpy.get_mock_data">
-<span class="sig-name descname"><span class="pre">get_mock_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">compressed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L135-L162"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.get_mock_data" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_mock_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">compressed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L134-L161"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.get_mock_data" title="Link to this definition">¶</a></dt>
 <dd><p>Generate a single sample in the given format.</p>
 <p>The mock data resemboles an RGB image and its segmentation labels.</p>
 <dl class="field-list simple">
@@ -838,38 +838,38 @@ separately. Otherwise arrays are bundled together.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_numpy.load_npy">
-<span class="sig-name descname"><span class="pre">load_npy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L70-L72"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.load_npy" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">load_npy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L69-L71"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.load_npy" title="Link to this definition">¶</a></dt>
 <dd><p>Load arrays from serialized NPY binary strings using <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.load.html#numpy.load" title="(in NumPy v2.5)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.load()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_numpy.load_npy_spdl">
-<span class="sig-name descname"><span class="pre">load_npy_spdl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L75-L77"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.load_npy_spdl" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">load_npy_spdl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L74-L76"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.load_npy_spdl" title="Link to this definition">¶</a></dt>
 <dd><p>Load arrays from serialized NPY binary strings using <a class="reference internal" href="spdl.io.load_npy.html#spdl.io.load_npy" title="spdl.io.load_npy"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.load_npy()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_numpy.load_npz">
-<span class="sig-name descname"><span class="pre">load_npz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L80-L83"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.load_npz" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">load_npz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L79-L82"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.load_npz" title="Link to this definition">¶</a></dt>
 <dd><p>Load arrays from a serialized NPZ binary string using <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.load.html#numpy.load" title="(in NumPy v2.5)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.load()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_numpy.load_npz_spdl">
-<span class="sig-name descname"><span class="pre">load_npz_spdl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L86-L89"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.load_npz_spdl" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">load_npz_spdl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L85-L88"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.load_npz_spdl" title="Link to this definition">¶</a></dt>
 <dd><p>Load arrays from serialized NPZ binary strings using <a class="reference internal" href="spdl.io.load_npz.html#spdl.io.load_npz" title="spdl.io.load_npz"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.load_npz()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_numpy.load_torch">
-<span class="sig-name descname"><span class="pre">load_torch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L92-L94"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.load_torch" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">load_torch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">NDArray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L91-L93"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.load_torch" title="Link to this definition">¶</a></dt>
 <dd><p>Load arrays from a serialized PyTorch state dict.</p>
 </dd></dl>
 
 <p class="rubric">Classes</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="benchmark_numpy.BenchmarkConfig">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BenchmarkConfig</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L165-L181"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.BenchmarkConfig" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BenchmarkConfig</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_numpy.py?#L164-L180"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_numpy.BenchmarkConfig" title="Link to this definition">¶</a></dt>
 <dd><p>Configuration for a single benchmark run.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="benchmark_numpy.BenchmarkConfig.compressed">
@@ -986,7 +986,7 @@ separately. Otherwise arrays are bundled together.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

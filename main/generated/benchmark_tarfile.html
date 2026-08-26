@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Benchmark video" href="benchmark_video.html" /><link rel="prev" title="Benchmark wav" href="benchmark_wav.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Benchmark tarfile - SPDL 0.6.0 documentation</title>
+        <title>Benchmark tarfile - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -464,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -587,362 +588,361 @@ which is a pure-Python implementation and thus holds the GIL almost entirely.</p
 <span class="linenos">  5</span><span class="c1"># This source code is licensed under the BSD-style license found in the</span>
 <span class="linenos">  6</span><span class="c1"># LICENSE file in the root directory of this source tree.</span>
 <span class="linenos">  7</span>
-<span class="linenos">  8</span><span class="c1"># pyre-strict</span>
-<span class="linenos">  9</span>
-<span class="linenos"> 10</span><span class="sd">"""Benchmark script for :py:func:`spdl.io.iter_tarfile` function.</span>
-<span class="linenos"> 11</span>
-<span class="linenos"> 12</span><span class="sd">This script benchmarks the performance of :py:func:`~spdl.io.iter_tarfile` against</span>
-<span class="linenos"> 13</span><span class="sd">Python's built-in :py:mod:`tarfile` module using multi-threading.</span>
-<span class="linenos"> 14</span><span class="sd">Two types of inputs are tested for :py:func:`~spdl.io.iter_tarfile`.</span>
-<span class="linenos"> 15</span><span class="sd">Byte string and a file-like object returns byte string by chunk.</span>
-<span class="linenos"> 16</span>
-<span class="linenos"> 17</span><span class="sd">The benchmark:</span>
-<span class="linenos"> 18</span>
-<span class="linenos"> 19</span><span class="sd">1. Creates test tar archives with various numbers of files</span>
-<span class="linenos"> 20</span><span class="sd">2. Runs both implementations with different thread counts</span>
-<span class="linenos"> 21</span><span class="sd">3. Measures queries per second (QPS) for each configuration</span>
-<span class="linenos"> 22</span><span class="sd">4. Plots the results comparing the three implementations</span>
-<span class="linenos"> 23</span>
-<span class="linenos"> 24</span><span class="sd">**Example**</span>
-<span class="linenos"> 25</span>
-<span class="linenos"> 26</span><span class="sd">.. code-block:: shell</span>
-<span class="linenos"> 27</span>
-<span class="linenos"> 28</span><span class="sd">   $ numactl --membind 0 --cpubind 0 python benchmark_tarfile.py --output results.csv</span>
-<span class="linenos"> 29</span><span class="sd">   # Plot results</span>
-<span class="linenos"> 30</span><span class="sd">   $ python benchmark_tarfile_plot.py --input results.csv --output wav_benchmark_plot.png</span>
-<span class="linenos"> 31</span><span class="sd">   # Plot results without load_wav</span>
-<span class="linenos"> 32</span><span class="sd">   $ python benchmark_tarfile_plot.py --input results.csv --output wav_benchmark_plot_2.png \\</span>
-<span class="linenos"> 33</span><span class="sd">     --filter '4. SPDL iter_tarfile (bytes w/o convert)'</span>
-<span class="linenos"> 34</span>
-<span class="linenos"> 35</span><span class="sd">**Result**</span>
-<span class="linenos"> 36</span>
-<span class="linenos"> 37</span><span class="sd">The following plot shows the QPS (measured by the number of files processed) of each</span>
-<span class="linenos"> 38</span><span class="sd">functions with different file size.</span>
-<span class="linenos"> 39</span>
-<span class="linenos"> 40</span><span class="sd">.. image:: ../../_static/data/example_benchmark_tarfile.png</span>
-<span class="linenos"> 41</span>
-<span class="linenos"> 42</span><span class="sd">.. image:: ../../_static/data/example_benchmark_tarfile_2.png</span>
-<span class="linenos"> 43</span>
-<span class="linenos"> 44</span><span class="sd">The :py:func:`spdl.io.iter_tarfile` function processes data fastest when the input is a byte</span>
-<span class="linenos"> 45</span><span class="sd">string.</span>
-<span class="linenos"> 46</span><span class="sd">Its performance is consistent across different file sizes.</span>
-<span class="linenos"> 47</span><span class="sd">This is because, when the entire TAR file is loaded into memory as a contiguous array,</span>
-<span class="linenos"> 48</span><span class="sd">the function only needs to read the header and return the address of the corresponding data</span>
-<span class="linenos"> 49</span><span class="sd">(note that :py:func:`~spdl.io.iter_tarfile` returns a memory view when the input is a byte</span>
-<span class="linenos"> 50</span><span class="sd">string).</span>
-<span class="linenos"> 51</span><span class="sd">Since reading the header is very fast, most of the time is spent creating memory view objects</span>
-<span class="linenos"> 52</span><span class="sd">while holding the GIL (Global Interpreter Lock).</span>
-<span class="linenos"> 53</span><span class="sd">As a result, the speed of loading files decreases as more threads are used.</span>
-<span class="linenos"> 54</span>
-<span class="linenos"> 55</span><span class="sd">When the input data type is switched from a byte string to a file-like object,</span>
-<span class="linenos"> 56</span><span class="sd">the performance of :py:func:`spdl.io.iter_tarfile` is also affected by the size of</span>
-<span class="linenos"> 57</span><span class="sd">the input data.</span>
-<span class="linenos"> 58</span><span class="sd">This is because data is processed incrementally, and for each file in the TAR archive,</span>
-<span class="linenos"> 59</span><span class="sd">a new byte string object is created.</span>
-<span class="linenos"> 60</span><span class="sd">The implementation tries to request the exact amount of bytes needed, but file-like objects</span>
-<span class="linenos"> 61</span><span class="sd">do not guarantee that they return the requested length,</span>
-<span class="linenos"> 62</span><span class="sd">instead, they return at most the requested number of bytes.</span>
-<span class="linenos"> 63</span><span class="sd">Therefore, many intermediate byte string objects must be created.</span>
-<span class="linenos"> 64</span><span class="sd">As the file size grows, it takes longer to process the data.</span>
-<span class="linenos"> 65</span><span class="sd">Since the GIL must be locked while byte strings are created,</span>
-<span class="linenos"> 66</span><span class="sd">performance degrades as more threads are used.</span>
-<span class="linenos"> 67</span><span class="sd">At some point, the performance becomes similar to Python's built-in ``tarfile`` module,</span>
-<span class="linenos"> 68</span><span class="sd">which is a pure-Python implementation and thus holds the GIL almost entirely.</span>
-<span class="linenos"> 69</span><span class="sd">"""</span>
-<span class="linenos"> 70</span>
-<span class="linenos"> 71</span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-<span class="linenos"> 72</span>    <span class="s2">"BenchmarkConfig"</span><span class="p">,</span>
-<span class="linenos"> 73</span>    <span class="s2">"create_test_tar"</span><span class="p">,</span>
-<span class="linenos"> 74</span>    <span class="s2">"iter_tarfile_builtin"</span><span class="p">,</span>
-<span class="linenos"> 75</span>    <span class="s2">"main"</span><span class="p">,</span>
-<span class="linenos"> 76</span>    <span class="s2">"process_tar_builtin"</span><span class="p">,</span>
-<span class="linenos"> 77</span>    <span class="s2">"process_tar_spdl"</span><span class="p">,</span>
-<span class="linenos"> 78</span>    <span class="s2">"process_tar_spdl_filelike"</span><span class="p">,</span>
-<span class="linenos"> 79</span><span class="p">]</span>
-<span class="linenos"> 80</span>
-<span class="linenos"> 81</span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
-<span class="linenos"> 82</span><span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
-<span class="linenos"> 83</span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="linenos"> 84</span><span class="kn">import</span><span class="w"> </span><span class="nn">tarfile</span>
-<span class="linenos"> 85</span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterator</span>
-<span class="linenos"> 86</span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<span class="linenos"> 87</span><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
-<span class="linenos"> 88</span>
-<span class="linenos"> 89</span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
-<span class="linenos"> 90</span>
-<span class="linenos"> 91</span><span class="k">try</span><span class="p">:</span>
-<span class="linenos"> 92</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># pyre-ignore[21]</span>
-<span class="linenos"> 93</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
-<span class="linenos"> 94</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
-<span class="linenos"> 95</span>        <span class="n">ExecutorType</span><span class="p">,</span>
-<span class="linenos"> 96</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
-<span class="linenos"> 97</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
-<span class="linenos"> 98</span>    <span class="p">)</span>
-<span class="linenos"> 99</span><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-<span class="linenos">100</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">spdl.examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-<span class="linenos">101</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
-<span class="linenos">102</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
-<span class="linenos">103</span>        <span class="n">ExecutorType</span><span class="p">,</span>
-<span class="linenos">104</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
-<span class="linenos">105</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
-<span class="linenos">106</span>    <span class="p">)</span>
+<span class="linenos">  8</span>
+<span class="linenos">  9</span><span class="sd">"""Benchmark script for :py:func:`spdl.io.iter_tarfile` function.</span>
+<span class="linenos"> 10</span>
+<span class="linenos"> 11</span><span class="sd">This script benchmarks the performance of :py:func:`~spdl.io.iter_tarfile` against</span>
+<span class="linenos"> 12</span><span class="sd">Python's built-in :py:mod:`tarfile` module using multi-threading.</span>
+<span class="linenos"> 13</span><span class="sd">Two types of inputs are tested for :py:func:`~spdl.io.iter_tarfile`.</span>
+<span class="linenos"> 14</span><span class="sd">Byte string and a file-like object returns byte string by chunk.</span>
+<span class="linenos"> 15</span>
+<span class="linenos"> 16</span><span class="sd">The benchmark:</span>
+<span class="linenos"> 17</span>
+<span class="linenos"> 18</span><span class="sd">1. Creates test tar archives with various numbers of files</span>
+<span class="linenos"> 19</span><span class="sd">2. Runs both implementations with different thread counts</span>
+<span class="linenos"> 20</span><span class="sd">3. Measures queries per second (QPS) for each configuration</span>
+<span class="linenos"> 21</span><span class="sd">4. Plots the results comparing the three implementations</span>
+<span class="linenos"> 22</span>
+<span class="linenos"> 23</span><span class="sd">**Example**</span>
+<span class="linenos"> 24</span>
+<span class="linenos"> 25</span><span class="sd">.. code-block:: shell</span>
+<span class="linenos"> 26</span>
+<span class="linenos"> 27</span><span class="sd">   $ numactl --membind 0 --cpubind 0 python benchmark_tarfile.py --output results.csv</span>
+<span class="linenos"> 28</span><span class="sd">   # Plot results</span>
+<span class="linenos"> 29</span><span class="sd">   $ python benchmark_tarfile_plot.py --input results.csv --output wav_benchmark_plot.png</span>
+<span class="linenos"> 30</span><span class="sd">   # Plot results without load_wav</span>
+<span class="linenos"> 31</span><span class="sd">   $ python benchmark_tarfile_plot.py --input results.csv --output wav_benchmark_plot_2.png \\</span>
+<span class="linenos"> 32</span><span class="sd">     --filter '4. SPDL iter_tarfile (bytes w/o convert)'</span>
+<span class="linenos"> 33</span>
+<span class="linenos"> 34</span><span class="sd">**Result**</span>
+<span class="linenos"> 35</span>
+<span class="linenos"> 36</span><span class="sd">The following plot shows the QPS (measured by the number of files processed) of each</span>
+<span class="linenos"> 37</span><span class="sd">functions with different file size.</span>
+<span class="linenos"> 38</span>
+<span class="linenos"> 39</span><span class="sd">.. image:: ../../_static/data/example_benchmark_tarfile.png</span>
+<span class="linenos"> 40</span>
+<span class="linenos"> 41</span><span class="sd">.. image:: ../../_static/data/example_benchmark_tarfile_2.png</span>
+<span class="linenos"> 42</span>
+<span class="linenos"> 43</span><span class="sd">The :py:func:`spdl.io.iter_tarfile` function processes data fastest when the input is a byte</span>
+<span class="linenos"> 44</span><span class="sd">string.</span>
+<span class="linenos"> 45</span><span class="sd">Its performance is consistent across different file sizes.</span>
+<span class="linenos"> 46</span><span class="sd">This is because, when the entire TAR file is loaded into memory as a contiguous array,</span>
+<span class="linenos"> 47</span><span class="sd">the function only needs to read the header and return the address of the corresponding data</span>
+<span class="linenos"> 48</span><span class="sd">(note that :py:func:`~spdl.io.iter_tarfile` returns a memory view when the input is a byte</span>
+<span class="linenos"> 49</span><span class="sd">string).</span>
+<span class="linenos"> 50</span><span class="sd">Since reading the header is very fast, most of the time is spent creating memory view objects</span>
+<span class="linenos"> 51</span><span class="sd">while holding the GIL (Global Interpreter Lock).</span>
+<span class="linenos"> 52</span><span class="sd">As a result, the speed of loading files decreases as more threads are used.</span>
+<span class="linenos"> 53</span>
+<span class="linenos"> 54</span><span class="sd">When the input data type is switched from a byte string to a file-like object,</span>
+<span class="linenos"> 55</span><span class="sd">the performance of :py:func:`spdl.io.iter_tarfile` is also affected by the size of</span>
+<span class="linenos"> 56</span><span class="sd">the input data.</span>
+<span class="linenos"> 57</span><span class="sd">This is because data is processed incrementally, and for each file in the TAR archive,</span>
+<span class="linenos"> 58</span><span class="sd">a new byte string object is created.</span>
+<span class="linenos"> 59</span><span class="sd">The implementation tries to request the exact amount of bytes needed, but file-like objects</span>
+<span class="linenos"> 60</span><span class="sd">do not guarantee that they return the requested length,</span>
+<span class="linenos"> 61</span><span class="sd">instead, they return at most the requested number of bytes.</span>
+<span class="linenos"> 62</span><span class="sd">Therefore, many intermediate byte string objects must be created.</span>
+<span class="linenos"> 63</span><span class="sd">As the file size grows, it takes longer to process the data.</span>
+<span class="linenos"> 64</span><span class="sd">Since the GIL must be locked while byte strings are created,</span>
+<span class="linenos"> 65</span><span class="sd">performance degrades as more threads are used.</span>
+<span class="linenos"> 66</span><span class="sd">At some point, the performance becomes similar to Python's built-in ``tarfile`` module,</span>
+<span class="linenos"> 67</span><span class="sd">which is a pure-Python implementation and thus holds the GIL almost entirely.</span>
+<span class="linenos"> 68</span><span class="sd">"""</span>
+<span class="linenos"> 69</span>
+<span class="linenos"> 70</span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+<span class="linenos"> 71</span>    <span class="s2">"BenchmarkConfig"</span><span class="p">,</span>
+<span class="linenos"> 72</span>    <span class="s2">"create_test_tar"</span><span class="p">,</span>
+<span class="linenos"> 73</span>    <span class="s2">"iter_tarfile_builtin"</span><span class="p">,</span>
+<span class="linenos"> 74</span>    <span class="s2">"main"</span><span class="p">,</span>
+<span class="linenos"> 75</span>    <span class="s2">"process_tar_builtin"</span><span class="p">,</span>
+<span class="linenos"> 76</span>    <span class="s2">"process_tar_spdl"</span><span class="p">,</span>
+<span class="linenos"> 77</span>    <span class="s2">"process_tar_spdl_filelike"</span><span class="p">,</span>
+<span class="linenos"> 78</span><span class="p">]</span>
+<span class="linenos"> 79</span>
+<span class="linenos"> 80</span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="linenos"> 81</span><span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="linenos"> 82</span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="linenos"> 83</span><span class="kn">import</span><span class="w"> </span><span class="nn">tarfile</span>
+<span class="linenos"> 84</span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterator</span>
+<span class="linenos"> 85</span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="linenos"> 86</span><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+<span class="linenos"> 87</span>
+<span class="linenos"> 88</span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+<span class="linenos"> 89</span>
+<span class="linenos"> 90</span><span class="k">try</span><span class="p">:</span>
+<span class="linenos"> 91</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># pyre-ignore[21]</span>
+<span class="linenos"> 92</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
+<span class="linenos"> 93</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
+<span class="linenos"> 94</span>        <span class="n">ExecutorType</span><span class="p">,</span>
+<span class="linenos"> 95</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
+<span class="linenos"> 96</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
+<span class="linenos"> 97</span>    <span class="p">)</span>
+<span class="linenos"> 98</span><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+<span class="linenos"> 99</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">spdl.examples.benchmark_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="linenos">100</span>        <span class="n">BenchmarkResult</span><span class="p">,</span>
+<span class="linenos">101</span>        <span class="n">BenchmarkRunner</span><span class="p">,</span>
+<span class="linenos">102</span>        <span class="n">ExecutorType</span><span class="p">,</span>
+<span class="linenos">103</span>        <span class="n">get_default_result_path</span><span class="p">,</span>
+<span class="linenos">104</span>        <span class="n">save_results_to_csv</span><span class="p">,</span>
+<span class="linenos">105</span>    <span class="p">)</span>
+<span class="linenos">106</span>
 <span class="linenos">107</span>
-<span class="linenos">108</span>
-<span class="linenos">109</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">get_default_result_path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+<span class="linenos">108</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">get_default_result_path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+<span class="linenos">109</span>
 <span class="linenos">110</span>
-<span class="linenos">111</span>
-<span class="linenos">112</span><span class="nd">@dataclass</span>
-<span class="linenos">113</span><span class="k">class</span><span class="w"> </span><span class="nc">BenchmarkConfig</span><span class="p">:</span>
-<span class="linenos">114</span><span class="w">    </span><span class="sd">"""BenchmarkConfig()</span>
-<span class="linenos">115</span>
-<span class="linenos">116</span><span class="sd">    Configuration for a single TAR benchmark run."""</span>
-<span class="linenos">117</span>
-<span class="linenos">118</span>    <span class="n">function_name</span><span class="p">:</span> <span class="nb">str</span>
-<span class="linenos">119</span><span class="w">    </span><span class="sd">"""Name of the function being tested"""</span>
-<span class="linenos">120</span>
-<span class="linenos">121</span>    <span class="n">tar_size</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">122</span><span class="w">    </span><span class="sd">"""Total size of the TAR archive in bytes"""</span>
-<span class="linenos">123</span>
-<span class="linenos">124</span>    <span class="n">file_size</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">125</span><span class="w">    </span><span class="sd">"""Size of each file in the TAR archive in bytes"""</span>
-<span class="linenos">126</span>
-<span class="linenos">127</span>    <span class="n">num_files</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">128</span><span class="w">    </span><span class="sd">"""Number of files in the TAR archive"""</span>
-<span class="linenos">129</span>
-<span class="linenos">130</span>    <span class="n">num_threads</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">131</span><span class="w">    </span><span class="sd">"""Number of concurrent threads"""</span>
-<span class="linenos">132</span>
-<span class="linenos">133</span>    <span class="n">num_iterations</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">134</span><span class="w">    </span><span class="sd">"""Number of iterations per run"""</span>
-<span class="linenos">135</span>
-<span class="linenos">136</span>    <span class="n">total_files_processed</span><span class="p">:</span> <span class="nb">int</span>
-<span class="linenos">137</span><span class="w">    </span><span class="sd">"""Total number of files processed across all iterations"""</span>
+<span class="linenos">111</span><span class="nd">@dataclass</span>
+<span class="linenos">112</span><span class="k">class</span><span class="w"> </span><span class="nc">BenchmarkConfig</span><span class="p">:</span>
+<span class="linenos">113</span><span class="w">    </span><span class="sd">"""BenchmarkConfig()</span>
+<span class="linenos">114</span>
+<span class="linenos">115</span><span class="sd">    Configuration for a single TAR benchmark run."""</span>
+<span class="linenos">116</span>
+<span class="linenos">117</span>    <span class="n">function_name</span><span class="p">:</span> <span class="nb">str</span>
+<span class="linenos">118</span><span class="w">    </span><span class="sd">"""Name of the function being tested"""</span>
+<span class="linenos">119</span>
+<span class="linenos">120</span>    <span class="n">tar_size</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">121</span><span class="w">    </span><span class="sd">"""Total size of the TAR archive in bytes"""</span>
+<span class="linenos">122</span>
+<span class="linenos">123</span>    <span class="n">file_size</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">124</span><span class="w">    </span><span class="sd">"""Size of each file in the TAR archive in bytes"""</span>
+<span class="linenos">125</span>
+<span class="linenos">126</span>    <span class="n">num_files</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">127</span><span class="w">    </span><span class="sd">"""Number of files in the TAR archive"""</span>
+<span class="linenos">128</span>
+<span class="linenos">129</span>    <span class="n">num_threads</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">130</span><span class="w">    </span><span class="sd">"""Number of concurrent threads"""</span>
+<span class="linenos">131</span>
+<span class="linenos">132</span>    <span class="n">num_iterations</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">133</span><span class="w">    </span><span class="sd">"""Number of iterations per run"""</span>
+<span class="linenos">134</span>
+<span class="linenos">135</span>    <span class="n">total_files_processed</span><span class="p">:</span> <span class="nb">int</span>
+<span class="linenos">136</span><span class="w">    </span><span class="sd">"""Total number of files processed across all iterations"""</span>
+<span class="linenos">137</span>
 <span class="linenos">138</span>
-<span class="linenos">139</span>
-<span class="linenos">140</span><span class="k">def</span><span class="w"> </span><span class="nf">iter_tarfile_builtin</span><span class="p">(</span><span class="n">tar_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]]:</span>
-<span class="linenos">141</span><span class="w">    </span><span class="sd">"""Iterate over TAR file using Python's built-in ``tarfile`` module.</span>
-<span class="linenos">142</span>
-<span class="linenos">143</span><span class="sd">    Args:</span>
-<span class="linenos">144</span><span class="sd">        tar_data: TAR archive as bytes.</span>
-<span class="linenos">145</span>
-<span class="linenos">146</span><span class="sd">    Yields:</span>
-<span class="linenos">147</span><span class="sd">        Tuple of ``(filename, content)`` for each file in the archive.</span>
-<span class="linenos">148</span><span class="sd">    """</span>
-<span class="linenos">149</span>    <span class="k">with</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">tar_data</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">tar</span><span class="p">:</span>
-<span class="linenos">150</span>        <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">tar</span><span class="o">.</span><span class="n">getmembers</span><span class="p">():</span>
-<span class="linenos">151</span>            <span class="k">if</span> <span class="n">member</span><span class="o">.</span><span class="n">isfile</span><span class="p">():</span>
-<span class="linenos">152</span>                <span class="n">file_obj</span> <span class="o">=</span> <span class="n">tar</span><span class="o">.</span><span class="n">extractfile</span><span class="p">(</span><span class="n">member</span><span class="p">)</span>
-<span class="linenos">153</span>                <span class="k">if</span> <span class="n">file_obj</span><span class="p">:</span>
-<span class="linenos">154</span>                    <span class="n">content</span> <span class="o">=</span> <span class="n">file_obj</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-<span class="linenos">155</span>                    <span class="k">yield</span> <span class="n">member</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">content</span>
+<span class="linenos">139</span><span class="k">def</span><span class="w"> </span><span class="nf">iter_tarfile_builtin</span><span class="p">(</span><span class="n">tar_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]]:</span>
+<span class="linenos">140</span><span class="w">    </span><span class="sd">"""Iterate over TAR file using Python's built-in ``tarfile`` module.</span>
+<span class="linenos">141</span>
+<span class="linenos">142</span><span class="sd">    Args:</span>
+<span class="linenos">143</span><span class="sd">        tar_data: TAR archive as bytes.</span>
+<span class="linenos">144</span>
+<span class="linenos">145</span><span class="sd">    Yields:</span>
+<span class="linenos">146</span><span class="sd">        Tuple of ``(filename, content)`` for each file in the archive.</span>
+<span class="linenos">147</span><span class="sd">    """</span>
+<span class="linenos">148</span>    <span class="k">with</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">tar_data</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">tar</span><span class="p">:</span>
+<span class="linenos">149</span>        <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">tar</span><span class="o">.</span><span class="n">getmembers</span><span class="p">():</span>
+<span class="linenos">150</span>            <span class="k">if</span> <span class="n">member</span><span class="o">.</span><span class="n">isfile</span><span class="p">():</span>
+<span class="linenos">151</span>                <span class="n">file_obj</span> <span class="o">=</span> <span class="n">tar</span><span class="o">.</span><span class="n">extractfile</span><span class="p">(</span><span class="n">member</span><span class="p">)</span>
+<span class="linenos">152</span>                <span class="k">if</span> <span class="n">file_obj</span><span class="p">:</span>
+<span class="linenos">153</span>                    <span class="n">content</span> <span class="o">=</span> <span class="n">file_obj</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="linenos">154</span>                    <span class="k">yield</span> <span class="n">member</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">content</span>
+<span class="linenos">155</span>
 <span class="linenos">156</span>
-<span class="linenos">157</span>
-<span class="linenos">158</span><span class="k">def</span><span class="w"> </span><span class="nf">process_tar_spdl</span><span class="p">(</span><span class="n">tar_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">convert</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="linenos">159</span><span class="w">    </span><span class="sd">"""Process TAR archive using :py:func:`spdl.io.iter_tarfile`.</span>
-<span class="linenos">160</span>
-<span class="linenos">161</span><span class="sd">    Args:</span>
-<span class="linenos">162</span><span class="sd">        tar_data: TAR archive as bytes.</span>
-<span class="linenos">163</span>
-<span class="linenos">164</span><span class="sd">    Returns:</span>
-<span class="linenos">165</span><span class="sd">        Number of files processed.</span>
-<span class="linenos">166</span><span class="sd">    """</span>
-<span class="linenos">167</span>    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="linenos">168</span>    <span class="k">if</span> <span class="n">convert</span><span class="p">:</span>
-<span class="linenos">169</span>        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">content</span> <span class="ow">in</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">iter_tarfile</span><span class="p">(</span><span class="n">tar_data</span><span class="p">):</span>
-<span class="linenos">170</span>            <span class="nb">bytes</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
-<span class="linenos">171</span>            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
-<span class="linenos">172</span>        <span class="k">return</span> <span class="n">count</span>
-<span class="linenos">173</span>    <span class="k">else</span><span class="p">:</span>
-<span class="linenos">174</span>        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">iter_tarfile</span><span class="p">(</span><span class="n">tar_data</span><span class="p">):</span>
-<span class="linenos">175</span>            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
-<span class="linenos">176</span>        <span class="k">return</span> <span class="n">count</span>
+<span class="linenos">157</span><span class="k">def</span><span class="w"> </span><span class="nf">process_tar_spdl</span><span class="p">(</span><span class="n">tar_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">convert</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos">158</span><span class="w">    </span><span class="sd">"""Process TAR archive using :py:func:`spdl.io.iter_tarfile`.</span>
+<span class="linenos">159</span>
+<span class="linenos">160</span><span class="sd">    Args:</span>
+<span class="linenos">161</span><span class="sd">        tar_data: TAR archive as bytes.</span>
+<span class="linenos">162</span>
+<span class="linenos">163</span><span class="sd">    Returns:</span>
+<span class="linenos">164</span><span class="sd">        Number of files processed.</span>
+<span class="linenos">165</span><span class="sd">    """</span>
+<span class="linenos">166</span>    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="linenos">167</span>    <span class="k">if</span> <span class="n">convert</span><span class="p">:</span>
+<span class="linenos">168</span>        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">content</span> <span class="ow">in</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">iter_tarfile</span><span class="p">(</span><span class="n">tar_data</span><span class="p">):</span>
+<span class="linenos">169</span>            <span class="nb">bytes</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+<span class="linenos">170</span>            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="linenos">171</span>        <span class="k">return</span> <span class="n">count</span>
+<span class="linenos">172</span>    <span class="k">else</span><span class="p">:</span>
+<span class="linenos">173</span>        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">iter_tarfile</span><span class="p">(</span><span class="n">tar_data</span><span class="p">):</span>
+<span class="linenos">174</span>            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="linenos">175</span>        <span class="k">return</span> <span class="n">count</span>
+<span class="linenos">176</span>
 <span class="linenos">177</span>
-<span class="linenos">178</span>
-<span class="linenos">179</span><span class="k">def</span><span class="w"> </span><span class="nf">process_tar_builtin</span><span class="p">(</span><span class="n">tar_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="linenos">180</span><span class="w">    </span><span class="sd">"""Process TAR archive using Python's built-in ``tarfile`` module.</span>
-<span class="linenos">181</span>
-<span class="linenos">182</span><span class="sd">    Args:</span>
-<span class="linenos">183</span><span class="sd">        tar_data: TAR archive as bytes.</span>
-<span class="linenos">184</span>
-<span class="linenos">185</span><span class="sd">    Returns:</span>
-<span class="linenos">186</span><span class="sd">        Number of files processed.</span>
-<span class="linenos">187</span><span class="sd">    """</span>
-<span class="linenos">188</span>    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="linenos">189</span>    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">iter_tarfile_builtin</span><span class="p">(</span><span class="n">tar_data</span><span class="p">):</span>
-<span class="linenos">190</span>        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
-<span class="linenos">191</span>    <span class="k">return</span> <span class="n">count</span>
+<span class="linenos">178</span><span class="k">def</span><span class="w"> </span><span class="nf">process_tar_builtin</span><span class="p">(</span><span class="n">tar_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos">179</span><span class="w">    </span><span class="sd">"""Process TAR archive using Python's built-in ``tarfile`` module.</span>
+<span class="linenos">180</span>
+<span class="linenos">181</span><span class="sd">    Args:</span>
+<span class="linenos">182</span><span class="sd">        tar_data: TAR archive as bytes.</span>
+<span class="linenos">183</span>
+<span class="linenos">184</span><span class="sd">    Returns:</span>
+<span class="linenos">185</span><span class="sd">        Number of files processed.</span>
+<span class="linenos">186</span><span class="sd">    """</span>
+<span class="linenos">187</span>    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="linenos">188</span>    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">iter_tarfile_builtin</span><span class="p">(</span><span class="n">tar_data</span><span class="p">):</span>
+<span class="linenos">189</span>        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="linenos">190</span>    <span class="k">return</span> <span class="n">count</span>
+<span class="linenos">191</span>
 <span class="linenos">192</span>
-<span class="linenos">193</span>
-<span class="linenos">194</span><span class="k">def</span><span class="w"> </span><span class="nf">process_tar_spdl_filelike</span><span class="p">(</span><span class="n">tar_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="linenos">195</span><span class="w">    </span><span class="sd">"""Process TAR archive using :py:func:`spdl.io.iter_tarfile` with file-like object.</span>
-<span class="linenos">196</span>
-<span class="linenos">197</span><span class="sd">    Args:</span>
-<span class="linenos">198</span><span class="sd">        tar_data: TAR archive as bytes.</span>
-<span class="linenos">199</span>
-<span class="linenos">200</span><span class="sd">    Returns:</span>
-<span class="linenos">201</span><span class="sd">        Number of files processed.</span>
-<span class="linenos">202</span><span class="sd">    """</span>
-<span class="linenos">203</span>    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="linenos">204</span>    <span class="n">file_like</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">tar_data</span><span class="p">)</span>
-<span class="linenos">205</span>    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">iter_tarfile</span><span class="p">(</span><span class="n">file_like</span><span class="p">):</span>  <span class="c1"># pyre-ignore[6]</span>
-<span class="linenos">206</span>        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
-<span class="linenos">207</span>    <span class="k">return</span> <span class="n">count</span>
+<span class="linenos">193</span><span class="k">def</span><span class="w"> </span><span class="nf">process_tar_spdl_filelike</span><span class="p">(</span><span class="n">tar_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos">194</span><span class="w">    </span><span class="sd">"""Process TAR archive using :py:func:`spdl.io.iter_tarfile` with file-like object.</span>
+<span class="linenos">195</span>
+<span class="linenos">196</span><span class="sd">    Args:</span>
+<span class="linenos">197</span><span class="sd">        tar_data: TAR archive as bytes.</span>
+<span class="linenos">198</span>
+<span class="linenos">199</span><span class="sd">    Returns:</span>
+<span class="linenos">200</span><span class="sd">        Number of files processed.</span>
+<span class="linenos">201</span><span class="sd">    """</span>
+<span class="linenos">202</span>    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="linenos">203</span>    <span class="n">file_like</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">tar_data</span><span class="p">)</span>
+<span class="linenos">204</span>    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">iter_tarfile</span><span class="p">(</span><span class="n">file_like</span><span class="p">):</span>  <span class="c1"># pyre-ignore[6]</span>
+<span class="linenos">205</span>        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="linenos">206</span>    <span class="k">return</span> <span class="n">count</span>
+<span class="linenos">207</span>
 <span class="linenos">208</span>
-<span class="linenos">209</span>
-<span class="linenos">210</span><span class="k">def</span><span class="w"> </span><span class="nf">_size_str</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="linenos">211</span>    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1024</span><span class="p">:</span>
-<span class="linenos">212</span>        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> B"</span>
-<span class="linenos">213</span>    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">:</span>
-<span class="linenos">214</span>        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="si">:</span><span class="s2"> .2f</span><span class="si">}</span><span class="s2"> kB"</span>
-<span class="linenos">215</span>    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">:</span>
-<span class="linenos">216</span>        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span><span class="si">:</span><span class="s2"> .2f</span><span class="si">}</span><span class="s2"> MB"</span>
-<span class="linenos">217</span>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span><span class="si">:</span><span class="s2"> .2f</span><span class="si">}</span><span class="s2"> GB"</span>
+<span class="linenos">209</span><span class="k">def</span><span class="w"> </span><span class="nf">_size_str</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="linenos">210</span>    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1024</span><span class="p">:</span>
+<span class="linenos">211</span>        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> B"</span>
+<span class="linenos">212</span>    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">:</span>
+<span class="linenos">213</span>        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="si">:</span><span class="s2"> .2f</span><span class="si">}</span><span class="s2"> kB"</span>
+<span class="linenos">214</span>    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">:</span>
+<span class="linenos">215</span>        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span><span class="si">:</span><span class="s2"> .2f</span><span class="si">}</span><span class="s2"> MB"</span>
+<span class="linenos">216</span>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span><span class="si">:</span><span class="s2"> .2f</span><span class="si">}</span><span class="s2"> GB"</span>
+<span class="linenos">217</span>
 <span class="linenos">218</span>
-<span class="linenos">219</span>
-<span class="linenos">220</span><span class="k">def</span><span class="w"> </span><span class="nf">create_test_tar</span><span class="p">(</span><span class="n">num_files</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">file_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-<span class="linenos">221</span><span class="w">    </span><span class="sd">"""Create a TAR archive in memory with specified number of files.</span>
-<span class="linenos">222</span>
-<span class="linenos">223</span><span class="sd">    Args:</span>
-<span class="linenos">224</span><span class="sd">        num_files: Number of files to include in the archive.</span>
-<span class="linenos">225</span><span class="sd">        file_size: Size of each file in bytes.</span>
-<span class="linenos">226</span>
-<span class="linenos">227</span><span class="sd">    Returns:</span>
-<span class="linenos">228</span><span class="sd">        TAR archive as bytes.</span>
-<span class="linenos">229</span><span class="sd">    """</span>
-<span class="linenos">230</span>    <span class="n">tar_buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
-<span class="linenos">231</span>    <span class="k">with</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">tar_buffer</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">tar</span><span class="p">:</span>
-<span class="linenos">232</span>        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_files</span><span class="p">):</span>
-<span class="linenos">233</span>            <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"file_</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">06d</span><span class="si">}</span><span class="s2">.txt"</span>
-<span class="linenos">234</span>            <span class="n">content</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">"1"</span> <span class="o">*</span> <span class="n">file_size</span>
-<span class="linenos">235</span>            <span class="n">info</span> <span class="o">=</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">TarInfo</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
-<span class="linenos">236</span>            <span class="n">info</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
-<span class="linenos">237</span>            <span class="n">tar</span><span class="o">.</span><span class="n">addfile</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">content</span><span class="p">))</span>
-<span class="linenos">238</span>    <span class="n">tar_buffer</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="linenos">239</span>    <span class="k">return</span> <span class="n">tar_buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+<span class="linenos">219</span><span class="k">def</span><span class="w"> </span><span class="nf">create_test_tar</span><span class="p">(</span><span class="n">num_files</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">file_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="linenos">220</span><span class="w">    </span><span class="sd">"""Create a TAR archive in memory with specified number of files.</span>
+<span class="linenos">221</span>
+<span class="linenos">222</span><span class="sd">    Args:</span>
+<span class="linenos">223</span><span class="sd">        num_files: Number of files to include in the archive.</span>
+<span class="linenos">224</span><span class="sd">        file_size: Size of each file in bytes.</span>
+<span class="linenos">225</span>
+<span class="linenos">226</span><span class="sd">    Returns:</span>
+<span class="linenos">227</span><span class="sd">        TAR archive as bytes.</span>
+<span class="linenos">228</span><span class="sd">    """</span>
+<span class="linenos">229</span>    <span class="n">tar_buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+<span class="linenos">230</span>    <span class="k">with</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">tar_buffer</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">tar</span><span class="p">:</span>
+<span class="linenos">231</span>        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_files</span><span class="p">):</span>
+<span class="linenos">232</span>            <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"file_</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">06d</span><span class="si">}</span><span class="s2">.txt"</span>
+<span class="linenos">233</span>            <span class="n">content</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">"1"</span> <span class="o">*</span> <span class="n">file_size</span>
+<span class="linenos">234</span>            <span class="n">info</span> <span class="o">=</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">TarInfo</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
+<span class="linenos">235</span>            <span class="n">info</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+<span class="linenos">236</span>            <span class="n">tar</span><span class="o">.</span><span class="n">addfile</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">content</span><span class="p">))</span>
+<span class="linenos">237</span>    <span class="n">tar_buffer</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="linenos">238</span>    <span class="k">return</span> <span class="n">tar_buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+<span class="linenos">239</span>
 <span class="linenos">240</span>
-<span class="linenos">241</span>
-<span class="linenos">242</span><span class="k">def</span><span class="w"> </span><span class="nf">_parse_args</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">:</span>
-<span class="linenos">243</span><span class="w">    </span><span class="sd">"""Parse command line arguments.</span>
-<span class="linenos">244</span>
-<span class="linenos">245</span><span class="sd">    Returns:</span>
-<span class="linenos">246</span><span class="sd">        Parsed arguments.</span>
-<span class="linenos">247</span><span class="sd">    """</span>
-<span class="linenos">248</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
-<span class="linenos">249</span>        <span class="n">description</span><span class="o">=</span><span class="s2">"Benchmark iter_tarfile performance with multi-threading"</span>
-<span class="linenos">250</span>    <span class="p">)</span>
-<span class="linenos">251</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-<span class="linenos">252</span>        <span class="s2">"--num-files"</span><span class="p">,</span>
-<span class="linenos">253</span>        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
-<span class="linenos">254</span>        <span class="n">default</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-<span class="linenos">255</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of files in the test TAR archive"</span><span class="p">,</span>
-<span class="linenos">256</span>    <span class="p">)</span>
-<span class="linenos">257</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-<span class="linenos">258</span>        <span class="s2">"--num-iterations"</span><span class="p">,</span>
-<span class="linenos">259</span>        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
-<span class="linenos">260</span>        <span class="n">default</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-<span class="linenos">261</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of iterations for each thread count"</span><span class="p">,</span>
-<span class="linenos">262</span>    <span class="p">)</span>
-<span class="linenos">263</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-<span class="linenos">264</span>        <span class="s2">"--output"</span><span class="p">,</span>
-<span class="linenos">265</span>        <span class="nb">type</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">p</span><span class="p">),</span>
-<span class="linenos">266</span>        <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">,</span>
-<span class="linenos">267</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Output path for the results"</span><span class="p">,</span>
-<span class="linenos">268</span>    <span class="p">)</span>
-<span class="linenos">269</span>
-<span class="linenos">270</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="linenos">241</span><span class="k">def</span><span class="w"> </span><span class="nf">_parse_args</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">:</span>
+<span class="linenos">242</span><span class="w">    </span><span class="sd">"""Parse command line arguments.</span>
+<span class="linenos">243</span>
+<span class="linenos">244</span><span class="sd">    Returns:</span>
+<span class="linenos">245</span><span class="sd">        Parsed arguments.</span>
+<span class="linenos">246</span><span class="sd">    """</span>
+<span class="linenos">247</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+<span class="linenos">248</span>        <span class="n">description</span><span class="o">=</span><span class="s2">"Benchmark iter_tarfile performance with multi-threading"</span>
+<span class="linenos">249</span>    <span class="p">)</span>
+<span class="linenos">250</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+<span class="linenos">251</span>        <span class="s2">"--num-files"</span><span class="p">,</span>
+<span class="linenos">252</span>        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+<span class="linenos">253</span>        <span class="n">default</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+<span class="linenos">254</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of files in the test TAR archive"</span><span class="p">,</span>
+<span class="linenos">255</span>    <span class="p">)</span>
+<span class="linenos">256</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+<span class="linenos">257</span>        <span class="s2">"--num-iterations"</span><span class="p">,</span>
+<span class="linenos">258</span>        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+<span class="linenos">259</span>        <span class="n">default</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+<span class="linenos">260</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of iterations for each thread count"</span><span class="p">,</span>
+<span class="linenos">261</span>    <span class="p">)</span>
+<span class="linenos">262</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+<span class="linenos">263</span>        <span class="s2">"--output"</span><span class="p">,</span>
+<span class="linenos">264</span>        <span class="nb">type</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">p</span><span class="p">),</span>
+<span class="linenos">265</span>        <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_RESULT_PATH</span><span class="p">,</span>
+<span class="linenos">266</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Output path for the results"</span><span class="p">,</span>
+<span class="linenos">267</span>    <span class="p">)</span>
+<span class="linenos">268</span>
+<span class="linenos">269</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="linenos">270</span>
 <span class="linenos">271</span>
-<span class="linenos">272</span>
-<span class="linenos">273</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">274</span><span class="w">    </span><span class="sd">"""Main entry point for the benchmark script.</span>
-<span class="linenos">275</span>
-<span class="linenos">276</span><span class="sd">    Parses command-line arguments, runs benchmarks, and generates plots.</span>
-<span class="linenos">277</span><span class="sd">    """</span>
-<span class="linenos">278</span>
-<span class="linenos">279</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">_parse_args</span><span class="p">()</span>
-<span class="linenos">280</span>
-<span class="linenos">281</span>    <span class="c1"># Define explicit configuration lists</span>
-<span class="linenos">282</span>    <span class="n">thread_counts</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">32</span><span class="p">]</span>
-<span class="linenos">283</span>    <span class="n">file_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="o">**</span><span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="mi">12</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="mi">16</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="mi">20</span><span class="p">]</span>
-<span class="linenos">284</span>
-<span class="linenos">285</span>    <span class="c1"># Define benchmark function configurations</span>
-<span class="linenos">286</span>    <span class="c1"># (function_name, function)</span>
-<span class="linenos">287</span>    <span class="n">benchmark_functions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">bytes</span><span class="p">],</span> <span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[</span>
-<span class="linenos">288</span>        <span class="p">(</span><span class="s2">"1. Python tarfile"</span><span class="p">,</span> <span class="n">process_tar_builtin</span><span class="p">),</span>
-<span class="linenos">289</span>        <span class="p">(</span><span class="s2">"2. SPDL iter_tarfile (file-like)"</span><span class="p">,</span> <span class="n">process_tar_spdl_filelike</span><span class="p">),</span>
-<span class="linenos">290</span>        <span class="p">(</span>
-<span class="linenos">291</span>            <span class="s2">"3. SPDL iter_tarfile (bytes w/ convert)"</span><span class="p">,</span>
-<span class="linenos">292</span>            <span class="n">partial</span><span class="p">(</span><span class="n">process_tar_spdl</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-<span class="linenos">293</span>        <span class="p">),</span>
-<span class="linenos">294</span>        <span class="p">(</span>
-<span class="linenos">295</span>            <span class="s2">"4. SPDL iter_tarfile (bytes w/o convert)"</span><span class="p">,</span>
-<span class="linenos">296</span>            <span class="n">partial</span><span class="p">(</span><span class="n">process_tar_spdl</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
-<span class="linenos">297</span>        <span class="p">),</span>
-<span class="linenos">298</span>    <span class="p">]</span>
-<span class="linenos">299</span>
-<span class="linenos">300</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">"Starting benchmark with configuration:"</span><span class="p">)</span>
-<span class="linenos">301</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Number of files: </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">num_files</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="linenos">302</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  File sizes: </span><span class="si">{</span><span class="n">file_sizes</span><span class="si">}</span><span class="s2"> bytes"</span><span class="p">)</span>
-<span class="linenos">303</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Iterations per thread count: </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">num_iterations</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="linenos">304</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Thread counts: </span><span class="si">{</span><span class="n">thread_counts</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="linenos">305</span>
-<span class="linenos">306</span>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">BenchmarkConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="linenos">307</span>    <span class="n">num_runs</span> <span class="o">=</span> <span class="mi">5</span>
-<span class="linenos">308</span>
-<span class="linenos">309</span>    <span class="k">for</span> <span class="n">num_threads</span> <span class="ow">in</span> <span class="n">thread_counts</span><span class="p">:</span>
-<span class="linenos">310</span>        <span class="k">with</span> <span class="n">BenchmarkRunner</span><span class="p">(</span>
-<span class="linenos">311</span>            <span class="n">executor_type</span><span class="o">=</span><span class="n">ExecutorType</span><span class="o">.</span><span class="n">THREAD</span><span class="p">,</span>
-<span class="linenos">312</span>            <span class="n">num_workers</span><span class="o">=</span><span class="n">num_threads</span><span class="p">,</span>
-<span class="linenos">313</span>            <span class="n">warmup_iterations</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="n">num_threads</span><span class="p">,</span>
-<span class="linenos">314</span>        <span class="p">)</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
-<span class="linenos">315</span>            <span class="k">for</span> <span class="n">file_size</span> <span class="ow">in</span> <span class="n">file_sizes</span><span class="p">:</span>
-<span class="linenos">316</span>                <span class="n">tar_data</span> <span class="o">=</span> <span class="n">create_test_tar</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">num_files</span><span class="p">,</span> <span class="n">file_size</span><span class="p">)</span>
-<span class="linenos">317</span>                <span class="k">for</span> <span class="n">func_name</span><span class="p">,</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">benchmark_functions</span><span class="p">:</span>
-<span class="linenos">318</span>                    <span class="nb">print</span><span class="p">(</span>
-<span class="linenos">319</span>                        <span class="sa">f</span><span class="s2">"TAR size: </span><span class="si">{</span><span class="n">_size_str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tar_data</span><span class="p">))</span><span class="si">}</span><span class="s2"> "</span>
-<span class="linenos">320</span>                        <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">num_files</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">_size_str</span><span class="p">(</span><span class="n">file_size</span><span class="p">)</span><span class="si">}</span><span class="s2">), "</span>
-<span class="linenos">321</span>                        <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">func_name</span><span class="si">}</span><span class="s2">', </span><span class="si">{</span><span class="n">num_threads</span><span class="si">}</span><span class="s2"> threads"</span>
-<span class="linenos">322</span>                    <span class="p">)</span>
-<span class="linenos">323</span>
-<span class="linenos">324</span>                    <span class="n">total_files_processed</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">num_files</span> <span class="o">*</span> <span class="n">args</span><span class="o">.</span><span class="n">num_iterations</span>
-<span class="linenos">325</span>
-<span class="linenos">326</span>                    <span class="n">config</span> <span class="o">=</span> <span class="n">BenchmarkConfig</span><span class="p">(</span>
-<span class="linenos">327</span>                        <span class="n">function_name</span><span class="o">=</span><span class="n">func_name</span><span class="p">,</span>
-<span class="linenos">328</span>                        <span class="n">tar_size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">tar_data</span><span class="p">),</span>
-<span class="linenos">329</span>                        <span class="n">file_size</span><span class="o">=</span><span class="n">file_size</span><span class="p">,</span>
-<span class="linenos">330</span>                        <span class="n">num_files</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">num_files</span><span class="p">,</span>
-<span class="linenos">331</span>                        <span class="n">num_threads</span><span class="o">=</span><span class="n">num_threads</span><span class="p">,</span>
-<span class="linenos">332</span>                        <span class="n">num_iterations</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">num_iterations</span><span class="p">,</span>
-<span class="linenos">333</span>                        <span class="n">total_files_processed</span><span class="o">=</span><span class="n">total_files_processed</span><span class="p">,</span>
-<span class="linenos">334</span>                    <span class="p">)</span>
-<span class="linenos">335</span>
-<span class="linenos">336</span>                    <span class="n">result</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-<span class="linenos">337</span>                        <span class="n">config</span><span class="p">,</span>
-<span class="linenos">338</span>                        <span class="n">partial</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">tar_data</span><span class="p">),</span>
-<span class="linenos">339</span>                        <span class="n">args</span><span class="o">.</span><span class="n">num_iterations</span><span class="p">,</span>
-<span class="linenos">340</span>                        <span class="n">num_runs</span><span class="o">=</span><span class="n">num_runs</span><span class="p">,</span>
-<span class="linenos">341</span>                    <span class="p">)</span>
-<span class="linenos">342</span>
-<span class="linenos">343</span>                    <span class="n">margin</span> <span class="o">=</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">ci_upper</span> <span class="o">-</span> <span class="n">result</span><span class="o">.</span><span class="n">ci_lower</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
-<span class="linenos">344</span>                    <span class="nb">print</span><span class="p">(</span>
-<span class="linenos">345</span>                        <span class="sa">f</span><span class="s2">"  QPS: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">qps</span><span class="si">:</span><span class="s2">8.2f</span><span class="si">}</span><span class="s2"> ± </span><span class="si">{</span><span class="n">margin</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">  "</span>
-<span class="linenos">346</span>                        <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">ci_lower</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">ci_upper</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, "</span>
-<span class="linenos">347</span>                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">num_runs</span><span class="si">}</span><span class="s2"> runs, </span><span class="si">{</span><span class="n">total_files_processed</span><span class="si">}</span><span class="s2"> files)"</span>
-<span class="linenos">348</span>                    <span class="p">)</span>
-<span class="linenos">349</span>
-<span class="linenos">350</span>                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-<span class="linenos">351</span>
-<span class="linenos">352</span>    <span class="c1"># Save results to CSV</span>
-<span class="linenos">353</span>    <span class="n">save_results_to_csv</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
-<span class="linenos">354</span>
-<span class="linenos">355</span>    <span class="nb">print</span><span class="p">(</span>
-<span class="linenos">356</span>        <span class="sa">f</span><span class="s2">"Benchmark complete. To generate plots, run: "</span>
-<span class="linenos">357</span>        <span class="sa">f</span><span class="s2">"python benchmark_tarfile_plot.py --input </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="si">}</span><span class="s2"> "</span>
-<span class="linenos">358</span>        <span class="sa">f</span><span class="s2">"--output </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'.csv'</span><span class="p">,</span><span class="w"> </span><span class="s1">'.png'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
-<span class="linenos">359</span>    <span class="p">)</span>
+<span class="linenos">272</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">273</span><span class="w">    </span><span class="sd">"""Main entry point for the benchmark script.</span>
+<span class="linenos">274</span>
+<span class="linenos">275</span><span class="sd">    Parses command-line arguments, runs benchmarks, and generates plots.</span>
+<span class="linenos">276</span><span class="sd">    """</span>
+<span class="linenos">277</span>
+<span class="linenos">278</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">_parse_args</span><span class="p">()</span>
+<span class="linenos">279</span>
+<span class="linenos">280</span>    <span class="c1"># Define explicit configuration lists</span>
+<span class="linenos">281</span>    <span class="n">thread_counts</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">32</span><span class="p">]</span>
+<span class="linenos">282</span>    <span class="n">file_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="o">**</span><span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="mi">12</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="mi">16</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="mi">20</span><span class="p">]</span>
+<span class="linenos">283</span>
+<span class="linenos">284</span>    <span class="c1"># Define benchmark function configurations</span>
+<span class="linenos">285</span>    <span class="c1"># (function_name, function)</span>
+<span class="linenos">286</span>    <span class="n">benchmark_functions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">bytes</span><span class="p">],</span> <span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[</span>
+<span class="linenos">287</span>        <span class="p">(</span><span class="s2">"1. Python tarfile"</span><span class="p">,</span> <span class="n">process_tar_builtin</span><span class="p">),</span>
+<span class="linenos">288</span>        <span class="p">(</span><span class="s2">"2. SPDL iter_tarfile (file-like)"</span><span class="p">,</span> <span class="n">process_tar_spdl_filelike</span><span class="p">),</span>
+<span class="linenos">289</span>        <span class="p">(</span>
+<span class="linenos">290</span>            <span class="s2">"3. SPDL iter_tarfile (bytes w/ convert)"</span><span class="p">,</span>
+<span class="linenos">291</span>            <span class="n">partial</span><span class="p">(</span><span class="n">process_tar_spdl</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+<span class="linenos">292</span>        <span class="p">),</span>
+<span class="linenos">293</span>        <span class="p">(</span>
+<span class="linenos">294</span>            <span class="s2">"4. SPDL iter_tarfile (bytes w/o convert)"</span><span class="p">,</span>
+<span class="linenos">295</span>            <span class="n">partial</span><span class="p">(</span><span class="n">process_tar_spdl</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+<span class="linenos">296</span>        <span class="p">),</span>
+<span class="linenos">297</span>    <span class="p">]</span>
+<span class="linenos">298</span>
+<span class="linenos">299</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">"Starting benchmark with configuration:"</span><span class="p">)</span>
+<span class="linenos">300</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Number of files: </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">num_files</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos">301</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  File sizes: </span><span class="si">{</span><span class="n">file_sizes</span><span class="si">}</span><span class="s2"> bytes"</span><span class="p">)</span>
+<span class="linenos">302</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Iterations per thread count: </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">num_iterations</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos">303</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Thread counts: </span><span class="si">{</span><span class="n">thread_counts</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos">304</span>
+<span class="linenos">305</span>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchmarkResult</span><span class="p">[</span><span class="n">BenchmarkConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="linenos">306</span>    <span class="n">num_runs</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="linenos">307</span>
+<span class="linenos">308</span>    <span class="k">for</span> <span class="n">num_threads</span> <span class="ow">in</span> <span class="n">thread_counts</span><span class="p">:</span>
+<span class="linenos">309</span>        <span class="k">with</span> <span class="n">BenchmarkRunner</span><span class="p">(</span>
+<span class="linenos">310</span>            <span class="n">executor_type</span><span class="o">=</span><span class="n">ExecutorType</span><span class="o">.</span><span class="n">THREAD</span><span class="p">,</span>
+<span class="linenos">311</span>            <span class="n">num_workers</span><span class="o">=</span><span class="n">num_threads</span><span class="p">,</span>
+<span class="linenos">312</span>            <span class="n">warmup_iterations</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="n">num_threads</span><span class="p">,</span>
+<span class="linenos">313</span>        <span class="p">)</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
+<span class="linenos">314</span>            <span class="k">for</span> <span class="n">file_size</span> <span class="ow">in</span> <span class="n">file_sizes</span><span class="p">:</span>
+<span class="linenos">315</span>                <span class="n">tar_data</span> <span class="o">=</span> <span class="n">create_test_tar</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">num_files</span><span class="p">,</span> <span class="n">file_size</span><span class="p">)</span>
+<span class="linenos">316</span>                <span class="k">for</span> <span class="n">func_name</span><span class="p">,</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">benchmark_functions</span><span class="p">:</span>
+<span class="linenos">317</span>                    <span class="nb">print</span><span class="p">(</span>
+<span class="linenos">318</span>                        <span class="sa">f</span><span class="s2">"TAR size: </span><span class="si">{</span><span class="n">_size_str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tar_data</span><span class="p">))</span><span class="si">}</span><span class="s2"> "</span>
+<span class="linenos">319</span>                        <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">num_files</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">_size_str</span><span class="p">(</span><span class="n">file_size</span><span class="p">)</span><span class="si">}</span><span class="s2">), "</span>
+<span class="linenos">320</span>                        <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">func_name</span><span class="si">}</span><span class="s2">', </span><span class="si">{</span><span class="n">num_threads</span><span class="si">}</span><span class="s2"> threads"</span>
+<span class="linenos">321</span>                    <span class="p">)</span>
+<span class="linenos">322</span>
+<span class="linenos">323</span>                    <span class="n">total_files_processed</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">num_files</span> <span class="o">*</span> <span class="n">args</span><span class="o">.</span><span class="n">num_iterations</span>
+<span class="linenos">324</span>
+<span class="linenos">325</span>                    <span class="n">config</span> <span class="o">=</span> <span class="n">BenchmarkConfig</span><span class="p">(</span>
+<span class="linenos">326</span>                        <span class="n">function_name</span><span class="o">=</span><span class="n">func_name</span><span class="p">,</span>
+<span class="linenos">327</span>                        <span class="n">tar_size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">tar_data</span><span class="p">),</span>
+<span class="linenos">328</span>                        <span class="n">file_size</span><span class="o">=</span><span class="n">file_size</span><span class="p">,</span>
+<span class="linenos">329</span>                        <span class="n">num_files</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">num_files</span><span class="p">,</span>
+<span class="linenos">330</span>                        <span class="n">num_threads</span><span class="o">=</span><span class="n">num_threads</span><span class="p">,</span>
+<span class="linenos">331</span>                        <span class="n">num_iterations</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">num_iterations</span><span class="p">,</span>
+<span class="linenos">332</span>                        <span class="n">total_files_processed</span><span class="o">=</span><span class="n">total_files_processed</span><span class="p">,</span>
+<span class="linenos">333</span>                    <span class="p">)</span>
+<span class="linenos">334</span>
+<span class="linenos">335</span>                    <span class="n">result</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+<span class="linenos">336</span>                        <span class="n">config</span><span class="p">,</span>
+<span class="linenos">337</span>                        <span class="n">partial</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">tar_data</span><span class="p">),</span>
+<span class="linenos">338</span>                        <span class="n">args</span><span class="o">.</span><span class="n">num_iterations</span><span class="p">,</span>
+<span class="linenos">339</span>                        <span class="n">num_runs</span><span class="o">=</span><span class="n">num_runs</span><span class="p">,</span>
+<span class="linenos">340</span>                    <span class="p">)</span>
+<span class="linenos">341</span>
+<span class="linenos">342</span>                    <span class="n">margin</span> <span class="o">=</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">ci_upper</span> <span class="o">-</span> <span class="n">result</span><span class="o">.</span><span class="n">ci_lower</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+<span class="linenos">343</span>                    <span class="nb">print</span><span class="p">(</span>
+<span class="linenos">344</span>                        <span class="sa">f</span><span class="s2">"  QPS: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">qps</span><span class="si">:</span><span class="s2">8.2f</span><span class="si">}</span><span class="s2"> ± </span><span class="si">{</span><span class="n">margin</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">  "</span>
+<span class="linenos">345</span>                        <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">ci_lower</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">ci_upper</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, "</span>
+<span class="linenos">346</span>                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">num_runs</span><span class="si">}</span><span class="s2"> runs, </span><span class="si">{</span><span class="n">total_files_processed</span><span class="si">}</span><span class="s2"> files)"</span>
+<span class="linenos">347</span>                    <span class="p">)</span>
+<span class="linenos">348</span>
+<span class="linenos">349</span>                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="linenos">350</span>
+<span class="linenos">351</span>    <span class="c1"># Save results to CSV</span>
+<span class="linenos">352</span>    <span class="n">save_results_to_csv</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+<span class="linenos">353</span>
+<span class="linenos">354</span>    <span class="nb">print</span><span class="p">(</span>
+<span class="linenos">355</span>        <span class="sa">f</span><span class="s2">"Benchmark complete. To generate plots, run: "</span>
+<span class="linenos">356</span>        <span class="sa">f</span><span class="s2">"python benchmark_tarfile_plot.py --input </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="si">}</span><span class="s2"> "</span>
+<span class="linenos">357</span>        <span class="sa">f</span><span class="s2">"--output </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'.csv'</span><span class="p">,</span><span class="w"> </span><span class="s1">'.png'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+<span class="linenos">358</span>    <span class="p">)</span>
+<span class="linenos">359</span>
 <span class="linenos">360</span>
-<span class="linenos">361</span>
-<span class="linenos">362</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-<span class="linenos">363</span>    <span class="n">main</span><span class="p">()</span>
+<span class="linenos">361</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+<span class="linenos">362</span>    <span class="n">main</span><span class="p">()</span>
 </pre></div>
 </div>
 </details></section>
@@ -951,7 +951,7 @@ which is a pure-Python implementation and thus holds the GIL almost entirely.</p
 <p class="rubric">Functions</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_tarfile.create_test_tar">
-<span class="sig-name descname"><span class="pre">create_test_tar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L220-L239"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.create_test_tar" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_test_tar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L219-L238"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.create_test_tar" title="Link to this definition">¶</a></dt>
 <dd><p>Create a TAR archive in memory with specified number of files.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -968,7 +968,7 @@ which is a pure-Python implementation and thus holds the GIL almost entirely.</p
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_tarfile.iter_tarfile_builtin">
-<span class="sig-name descname"><span class="pre">iter_tarfile_builtin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tar_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L140-L155"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.iter_tarfile_builtin" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">iter_tarfile_builtin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tar_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L139-L154"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.iter_tarfile_builtin" title="Link to this definition">¶</a></dt>
 <dd><p>Iterate over TAR file using Python’s built-in <code class="docutils literal notranslate"><span class="pre">tarfile</span></code> module.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -982,14 +982,14 @@ which is a pure-Python implementation and thus holds the GIL almost entirely.</p
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_tarfile.main">
-<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L273-L359"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.main" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L272-L358"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.main" title="Link to this definition">¶</a></dt>
 <dd><p>Main entry point for the benchmark script.</p>
 <p>Parses command-line arguments, runs benchmarks, and generates plots.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_tarfile.process_tar_builtin">
-<span class="sig-name descname"><span class="pre">process_tar_builtin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tar_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L179-L191"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.process_tar_builtin" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">process_tar_builtin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tar_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L178-L190"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.process_tar_builtin" title="Link to this definition">¶</a></dt>
 <dd><p>Process TAR archive using Python’s built-in <code class="docutils literal notranslate"><span class="pre">tarfile</span></code> module.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1003,7 +1003,7 @@ which is a pure-Python implementation and thus holds the GIL almost entirely.</p
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_tarfile.process_tar_spdl">
-<span class="sig-name descname"><span class="pre">process_tar_spdl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tar_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">convert</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L158-L176"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.process_tar_spdl" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">process_tar_spdl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tar_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">convert</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L157-L175"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.process_tar_spdl" title="Link to this definition">¶</a></dt>
 <dd><p>Process TAR archive using <a class="reference internal" href="spdl.io.iter_tarfile.html#spdl.io.iter_tarfile" title="spdl.io.iter_tarfile"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.iter_tarfile()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1017,7 +1017,7 @@ which is a pure-Python implementation and thus holds the GIL almost entirely.</p
 
 <dl class="py function">
 <dt class="sig sig-object py" id="benchmark_tarfile.process_tar_spdl_filelike">
-<span class="sig-name descname"><span class="pre">process_tar_spdl_filelike</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tar_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L194-L207"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.process_tar_spdl_filelike" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">process_tar_spdl_filelike</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tar_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L193-L206"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.process_tar_spdl_filelike" title="Link to this definition">¶</a></dt>
 <dd><p>Process TAR archive using <a class="reference internal" href="spdl.io.iter_tarfile.html#spdl.io.iter_tarfile" title="spdl.io.iter_tarfile"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.iter_tarfile()</span></code></a> with file-like object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1032,7 +1032,7 @@ which is a pure-Python implementation and thus holds the GIL almost entirely.</p
 <p class="rubric">Classes</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="benchmark_tarfile.BenchmarkConfig">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BenchmarkConfig</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L112-L137"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.BenchmarkConfig" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BenchmarkConfig</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_tarfile.py?#L111-L136"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_tarfile.BenchmarkConfig" title="Link to this definition">¶</a></dt>
 <dd><p>Configuration for a single TAR benchmark run.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="benchmark_tarfile.BenchmarkConfig.file_size">
@@ -1169,7 +1169,7 @@ which is a pure-Python implementation and thus holds the GIL almost entirely.</p
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

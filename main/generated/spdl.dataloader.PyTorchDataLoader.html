@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.dataloader.PyTorchDataLoader - SPDL 0.6.0 documentation</title>
+        <title>spdl.dataloader.PyTorchDataLoader - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -464,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -528,7 +529,7 @@
 <h1>spdl.dataloader.PyTorchDataLoader<a class="headerlink" href="#spdl-dataloader-pytorchdataloader" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="spdl.dataloader.PyTorchDataLoader">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">PyTorchDataLoader</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/dataloader/_pytorch_dataloader.py?#L103-L193"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.dataloader.PyTorchDataLoader" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">PyTorchDataLoader</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/dataloader/_pytorch_dataloader.py?#L102-L192"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.dataloader.PyTorchDataLoader" title="Link to this definition">¶</a></dt>
 <dd><p>A PyTorch-style data loader that works on map-style dataset.
 Use <a class="reference internal" href="spdl.dataloader.get_pytorch_dataloader.html#spdl.dataloader.get_pytorch_dataloader" title="spdl.dataloader.get_pytorch_dataloader"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_pytorch_dataloader()</span></code></a> to instantiate this class.
 You can use this class as almost drop-in replacement of PyTorch’s DataLoader class.</p>
@@ -553,13 +554,13 @@ this implementation faster than PyTorch DataLoader.</p>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.dataloader.PyTorchDataLoader.__iter__">
-<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><span class="pre">V</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/dataloader/_pytorch_dataloader.py?#L188-L193"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.dataloader.PyTorchDataLoader.__iter__" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><span class="pre">V</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/dataloader/_pytorch_dataloader.py?#L187-L192"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.dataloader.PyTorchDataLoader.__iter__" title="Link to this definition">¶</a></dt>
 <dd><p>Iterate on the dataset and yields samples/batches.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.dataloader.PyTorchDataLoader.__len__">
-<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/dataloader/_pytorch_dataloader.py?#L161-L163"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.dataloader.PyTorchDataLoader.__len__" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/dataloader/_pytorch_dataloader.py?#L160-L162"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.dataloader.PyTorchDataLoader.__len__" title="Link to this definition">¶</a></dt>
 <dd><p>Returns the number of samples/batches this data loader returns.</p>
 </dd></dl>
 
@@ -622,7 +623,7 @@ this implementation faster than PyTorch DataLoader.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
