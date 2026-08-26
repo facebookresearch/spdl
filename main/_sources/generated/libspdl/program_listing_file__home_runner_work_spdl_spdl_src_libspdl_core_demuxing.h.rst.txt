@@ -26,6 +26,7 @@ Program Listing for File demuxing.h
    #include <libspdl/core/packets.h>
    #include <libspdl/core/types.h>
    
+   #include <memory>
    #include <optional>
    #include <set>
    #include <string_view>
@@ -41,10 +42,15 @@ Program Listing for File demuxing.h
    // Demuxer
    
    class Demuxer {
-     detail::DemuxerImpl* pImpl_;
+     std::unique_ptr<detail::DemuxerImpl> pImpl_;
    
     public:
      explicit Demuxer(DataInterfacePtr di);
+   
+     Demuxer(const Demuxer&) = delete;
+     Demuxer& operator=(const Demuxer&) = delete;
+     Demuxer(Demuxer&&) = delete;
+     Demuxer& operator=(Demuxer&&) = delete;
    
      ~Demuxer();
    

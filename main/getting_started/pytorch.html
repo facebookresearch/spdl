@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Introduction to Async I/O" href="../async/index.html" /><link rel="prev" title="Collecting Runtime Statistics" href="logging.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Building High-Performance DataLoaders - SPDL 0.6.0 documentation</title>
+        <title>Building High-Performance DataLoaders - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
@@ -303,6 +304,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
 </li>
 </ul>
@@ -464,6 +466,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -693,7 +696,7 @@
     <span class="n">builder</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">collate_fn</span><span class="p">)</span>
 
     <span class="c1"># Stage 4: GPU transfer (serial execution)</span>
-    <span class="n">builder</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">transfer_tensor</span><span class="p">)</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">transfer_tensor_h2d</span><span class="p">)</span>
 
     <span class="c1"># Prefetch buffer</span>
     <span class="n">builder</span><span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="n">buffer_size</span><span class="p">)</span>
@@ -703,7 +706,7 @@
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The <a class="reference internal" href="../generated/spdl.io.transfer_tensor.html#spdl.io.transfer_tensor" title="spdl.io.transfer_tensor"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.transfer_tensor()</span></code></a> function combines and encapsulates multiple operations required to transfer data from CPU to GPU in the background without interrupting model computation in the default CUDA stream. This includes the “pin memory” operation, which moves data to page-locked memory regions for faster transfer. Unlike PyTorch’s DataLoader, there is no separate <code class="docutils literal notranslate"><span class="pre">pin_memory</span></code> parameter—this optimization is built into <code class="docutils literal notranslate"><span class="pre">transfer_tensor</span></code>.</p>
+<p>The <a class="reference internal" href="../generated/spdl.io.transfer_tensor_h2d.html#spdl.io.transfer_tensor_h2d" title="spdl.io.transfer_tensor_h2d"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.transfer_tensor_h2d()</span></code></a> function combines and encapsulates multiple operations required to transfer data from CPU to GPU in the background without interrupting model computation in the default CUDA stream. This includes the “pin memory” operation, which moves data to page-locked memory regions for faster transfer. Unlike PyTorch’s DataLoader, there is no separate <code class="docutils literal notranslate"><span class="pre">pin_memory</span></code> parameter—this optimization is built into <code class="docutils literal notranslate"><span class="pre">transfer_tensor_h2d</span></code>.</p>
 </div>
 <p>Now we can use this function to implement the equivalent of <code class="docutils literal notranslate"><span class="pre">MyDataset</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define the processing functions that match MyDataset's logic</span>
@@ -1085,7 +1088,7 @@ in that subprocess; see <a class="reference internal" href="execution_models.htm
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

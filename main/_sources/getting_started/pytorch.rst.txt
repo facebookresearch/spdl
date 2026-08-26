@@ -179,7 +179,7 @@ To use this with SPDL effectively, decompose it into a pipeline builder function
        builder.pipe(collate_fn)
 
        # Stage 4: GPU transfer (serial execution)
-       builder.pipe(spdl.io.transfer_tensor)
+       builder.pipe(spdl.io.transfer_tensor_h2d)
 
        # Prefetch buffer
        builder.add_sink(buffer_size)
@@ -188,7 +188,7 @@ To use this with SPDL effectively, decompose it into a pipeline builder function
 
 .. note::
 
-   The :py:func:`spdl.io.transfer_tensor` function combines and encapsulates multiple operations required to transfer data from CPU to GPU in the background without interrupting model computation in the default CUDA stream. This includes the "pin memory" operation, which moves data to page-locked memory regions for faster transfer. Unlike PyTorch's DataLoader, there is no separate ``pin_memory`` parameter—this optimization is built into ``transfer_tensor``.
+   The :py:func:`spdl.io.transfer_tensor_h2d` function combines and encapsulates multiple operations required to transfer data from CPU to GPU in the background without interrupting model computation in the default CUDA stream. This includes the "pin memory" operation, which moves data to page-locked memory regions for faster transfer. Unlike PyTorch's DataLoader, there is no separate ``pin_memory`` parameter—this optimization is built into ``transfer_tensor_h2d``.
 
 Now we can use this function to implement the equivalent of ``MyDataset``:
 

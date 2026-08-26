@@ -29,10 +29,10 @@ Program Listing for File codec.h
    namespace spdl::core {
    template <MediaType media>
    class Codec {
-     AVCodecParameters* codecpar_;
+     AVCodecParameters* codecpar_ = nullptr;
    
-     Rational time_base_;
-     Rational frame_rate_;
+     Rational time_base_{};
+     Rational frame_rate_{};
    
     public:
      Codec() = default;
@@ -40,7 +40,7 @@ Program Listing for File codec.h
      Codec(
          const AVCodecParameters* codecpar,
          Rational time_base,
-         Rational frame_rate) noexcept;
+         Rational frame_rate);
    
      ~Codec();
    

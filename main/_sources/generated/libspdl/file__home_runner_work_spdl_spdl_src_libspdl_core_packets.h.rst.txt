@@ -35,6 +35,8 @@ Includes
 
 - ``memory``
 
+- ``optional``
+
 - ``string``
 
 - ``tuple``

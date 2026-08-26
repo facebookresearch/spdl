@@ -185,7 +185,7 @@ Hypothesis Tree
 ---------------
 
 Experiments are organized in a tree structure. The seed experiments
-(baseline, headspace, MTP) are root nodes. Follow-up experiments
+(baseline, headspace, MTP, and MP region) are root nodes. Follow-up experiments
 proposed by the coding agent become children of the node that triggered
 the planning.
 
@@ -193,6 +193,7 @@ the planning.
 
    baseline
    headspace
+   mp_region
    mtp
    ├── gpu_nvdec_decode
    │   ├── split_demux_decode
