@@ -15,7 +15,8 @@
 from collections.abc import Mapping, Sequence, Set
 from typing import Annotated, overload
 
-from numpy.typing import ArrayLike
+import numpy
+from numpy.typing import NDArray
 
 
 class DemuxConfig:
@@ -394,32 +395,10 @@ class VideoFrames:
         """Returns the number of frames. Same as ``num_frames``."""
 
     @overload
-    def __getitem__(self, arg: slice, /) -> VideoFrames:
-        """
-        Slice frame by key.
-
-        Args:
-            key: If the key is int type, a single frame is returned as ``ImageFrames``.
-                If the key is slice type, a new ``VideoFrames`` object pointing the
-                corresponding frames are returned.
-
-        Returns:
-            The sliced frame.
-        """
+    def __getitem__(self, arg: slice, /) -> VideoFrames: ...
 
     @overload
-    def __getitem__(self, arg: int, /) -> ImageFrames:
-        """
-        Slice frame by key.
-
-        Args:
-            key: If the key is int type, a single frame is returned as ``ImageFrames``.
-                If the key is slice type, a new ``VideoFrames`` object pointing the
-                corresponding frames are returned.
-
-        Returns:
-            The sliced frame.
-        """
+    def __getitem__(self, arg: int, /) -> ImageFrames: ...
 
     @overload
     def __getitem__(self, arg: Sequence[int], /) -> VideoFrames:
@@ -794,11 +773,11 @@ def convert_frames(frames: Sequence[VideoFrames], storage: CPUStorage | None = N
 @overload
 def convert_frames(frames: Sequence[ImageFrames], storage: CPUStorage | None = None) -> CPUBuffer: ...
 
-def convert_array(vals: Annotated[ArrayLike, dict(dtype='int64', order='C', device='cpu')], storage: CPUStorage | None = None) -> CPUBuffer: ...
+def convert_array(vals: Annotated[NDArray[numpy.int64], dict(order='C', device='cpu')], storage: CPUStorage | None = None) -> CPUBuffer: ...
 
-def create_reference_audio_frame(array: Annotated[ArrayLike, dict(shape=(None, None), device='cpu')], *, sample_fmt: str, sample_rate: int, pts: int) -> AudioFrames: ...
+def create_reference_audio_frame(array: Annotated[NDArray, dict(shape=(None, None), device='cpu')], *, sample_fmt: str, sample_rate: int, pts: int) -> AudioFrames: ...
 
-def create_reference_video_frame(array: Annotated[ArrayLike, dict(device='cpu')], *, pix_fmt: str, frame_rate: tuple[int, int], pts: int) -> VideoFrames: ...
+def create_reference_video_frame(array: Annotated[NDArray, dict(device='cpu')], *, pix_fmt: str, frame_rate: tuple[int, int], pts: int) -> VideoFrames: ...
 
 class Muxer:
     def open(self, muxer_config: Mapping[str, str] | None = None) -> None: ...
