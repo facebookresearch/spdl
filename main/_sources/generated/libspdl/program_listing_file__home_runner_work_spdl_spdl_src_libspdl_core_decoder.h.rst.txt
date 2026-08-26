@@ -26,6 +26,7 @@ Program Listing for File decoder.h
    #include <libspdl/core/packets.h>
    #include <libspdl/core/types.h>
    
+   #include <memory>
    #include <optional>
    
    namespace spdl::core {
@@ -38,7 +39,7 @@ Program Listing for File decoder.h
    
    template <MediaType media>
    class Decoder {
-     detail::DecoderImpl<media>* pImpl_;
+     std::unique_ptr<detail::DecoderImpl<media>> pImpl_;
    
     public:
      Decoder(

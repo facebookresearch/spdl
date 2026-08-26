@@ -204,13 +204,14 @@ subprocess keeps loading:
        .build(...)
    )
 
-**Reach for MTP when** you are training on the GPU. Because the entire loader
-runs in the subprocess, the main process spends its CPU on GPU kernel launches
-rather than data loading -- directly avoiding the noisy-neighbour effect -- and
-it has fewer Python objects to manage. This is why MTP is the recommended
-production pattern; see :ref:`parallelism-performance`. A continuous source
-matters most here: it keeps the subprocess pipeline warm across epochs and avoids
-a per-epoch rebuild that would otherwise stall the GPU.
+**Reach for MTP when** you are training on the GPU, especially when the loader
+handles large payloads such as video. Because the entire loader runs in the
+subprocess, the main process spends its CPU on GPU kernel launches rather than
+data loading -- directly avoiding the noisy-neighbour effect -- and only
+finished batches cross back. A continuous source matters most here: it keeps the
+subprocess pipeline warm across epochs and avoids a per-epoch rebuild that would
+otherwise stall the GPU. Treat MTP as a strong benchmark, not a universal
+winner; compare it with the MP region below.
 
 MP -- multi-processing
 ----------------------
@@ -285,8 +286,13 @@ The region's inputs and outputs cross a process boundary, so they must be
 `picklable <https://docs.python.org/3/library/pickle.html#pickle-picklable>`_;
 values passed between stages *inside* the region do not.
 **Reach for MP when** a CPU-bound Python stage that does not release the GIL
-dominates. The cost is IPC (data is copied across the boundary; see
-:ref:`ipc-cost`) and higher memory (each worker is a full interpreter). See
+dominates, and always benchmark it for small text or image records. When
+boundary values are small, the cost of IPC can be low enough for parallel
+worker processes to outperform MTP and conventional data loaders. Keep adjacent
+stages in one region so each worker runs its own nested pipeline and async event
+loop; then large intermediate values never cross between stages. The remaining
+cost is IPC at the region boundaries (see :ref:`ipc-cost`) and higher memory
+(each worker is a full interpreter). See
 :ref:`pipeline-parallelism` for the region and per-stage mechanics (including how
 a region composes with ``run_pipeline_in_subprocess``) and the picklability
 rules.
@@ -299,8 +305,14 @@ Choosing between them
   when data starvation is severe and the noisy-neighbour effect is not a concern:
   reach for MT first to raise throughput, then optimize the stage functions, and
   if that makes loading fast enough, MT alone may suffice.
-- For GPU training, prefer **MTP** so the loader's CPU work stays off the process
-  that drives the GPU (the noisy-neighbour effect).
+- For GPU training, benchmark both **MTP** and **MP** so the loader's CPU work
+  stays off the process that drives the GPU (the noisy-neighbour effect).
+- For large payloads such as video, start with **MTP**, but still benchmark an
+  **MP** region. It is most promising when it can take small metadata, produce
+  and consume the large intermediate values inside a worker, and return only a
+  finished batch.
+- For small text or image records, always try an **MP** region. Process
+  parallelism can more than repay the relatively cheap boundary transfer.
 - If a pure-Python, GIL-holding stage dominates, move it into an **MP** region so
   it runs across processes. For GPU training, run that region in an intermediate
   process (or inside MTP) so the main process still only issues GPU work.

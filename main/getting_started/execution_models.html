@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Working Around the GIL" href="gil.html" /><link rel="prev" title="Pipeline Parallelism" href="parallelism.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Execution Models: MT, MTP, and MP - SPDL 0.6.0 documentation</title>
+        <title>Execution Models: MT, MTP, and MP - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
@@ -464,6 +465,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -710,13 +712,14 @@ subprocess keeps loading:</p>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p><strong>Reach for MTP when</strong> you are training on the GPU. Because the entire loader
-runs in the subprocess, the main process spends its CPU on GPU kernel launches
-rather than data loading – directly avoiding the noisy-neighbour effect – and
-it has fewer Python objects to manage. This is why MTP is the recommended
-production pattern; see <a class="reference internal" href="../case_studies/parallelism.html#parallelism-performance"><span class="std std-ref">Parallelism and Performance</span></a>. A continuous source
-matters most here: it keeps the subprocess pipeline warm across epochs and avoids
-a per-epoch rebuild that would otherwise stall the GPU.</p>
+<p><strong>Reach for MTP when</strong> you are training on the GPU, especially when the loader
+handles large payloads such as video. Because the entire loader runs in the
+subprocess, the main process spends its CPU on GPU kernel launches rather than
+data loading – directly avoiding the noisy-neighbour effect – and only
+finished batches cross back. A continuous source matters most here: it keeps the
+subprocess pipeline warm across epochs and avoids a per-epoch rebuild that would
+otherwise stall the GPU. Treat MTP as a strong benchmark, not a universal
+winner; compare it with the MP region below.</p>
 </section>
 <section id="mp-multi-processing">
 <h2>MP – multi-processing<a class="headerlink" href="#mp-multi-processing" title="Link to this heading">¶</a></h2>
@@ -785,8 +788,13 @@ iterating it directly – but then the main process runs the orchestration.)</p>
 <a class="reference external" href="https://docs.python.org/3/library/pickle.html#pickle-picklable">picklable</a>;
 values passed between stages <em>inside</em> the region do not.
 <strong>Reach for MP when</strong> a CPU-bound Python stage that does not release the GIL
-dominates. The cost is IPC (data is copied across the boundary; see
-<a class="reference internal" href="../case_studies/ipc.html#ipc-cost"><span class="std std-ref">The Cost of Inter-Process Communication</span></a>) and higher memory (each worker is a full interpreter). See
+dominates, and always benchmark it for small text or image records. When
+boundary values are small, the cost of IPC can be low enough for parallel
+worker processes to outperform MTP and conventional data loaders. Keep adjacent
+stages in one region so each worker runs its own nested pipeline and async event
+loop; then large intermediate values never cross between stages. The remaining
+cost is IPC at the region boundaries (see <a class="reference internal" href="../case_studies/ipc.html#ipc-cost"><span class="std std-ref">The Cost of Inter-Process Communication</span></a>) and higher memory
+(each worker is a full interpreter). See
 <a class="reference internal" href="parallelism.html#pipeline-parallelism"><span class="std std-ref">Pipeline Parallelism</span></a> for the region and per-stage mechanics (including how
 a region composes with <code class="docutils literal notranslate"><span class="pre">run_pipeline_in_subprocess</span></code>) and the picklability
 rules.</p>
@@ -799,8 +807,14 @@ free-threaded Python – it is the simplest option. MT is also the right call
 when data starvation is severe and the noisy-neighbour effect is not a concern:
 reach for MT first to raise throughput, then optimize the stage functions, and
 if that makes loading fast enough, MT alone may suffice.</p></li>
-<li><p>For GPU training, prefer <strong>MTP</strong> so the loader’s CPU work stays off the process
-that drives the GPU (the noisy-neighbour effect).</p></li>
+<li><p>For GPU training, benchmark both <strong>MTP</strong> and <strong>MP</strong> so the loader’s CPU work
+stays off the process that drives the GPU (the noisy-neighbour effect).</p></li>
+<li><p>For large payloads such as video, start with <strong>MTP</strong>, but still benchmark an
+<strong>MP</strong> region. It is most promising when it can take small metadata, produce
+and consume the large intermediate values inside a worker, and return only a
+finished batch.</p></li>
+<li><p>For small text or image records, always try an <strong>MP</strong> region. Process
+parallelism can more than repay the relatively cheap boundary transfer.</p></li>
 <li><p>If a pure-Python, GIL-holding stage dominates, move it into an <strong>MP</strong> region so
 it runs across processes. For GPU training, run that region in an intermediate
 process (or inside MTP) so the main process still only issues GPU work.</p></li>
@@ -886,7 +900,7 @@ of the two.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

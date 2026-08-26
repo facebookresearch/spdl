@@ -386,6 +386,63 @@ worker sub-pipelines warm across epochs, and a region composes with
 since the region config is shipped to the worker. See the
 :py:meth:`~spdl.pipeline.PipelineBuilder.to` reference for the details.
 
+Buffering the boundary
+^^^^^^^^^^^^^^^^^^^^^^
+
+Crossing the region boundary costs a fixed amount *per transfer* — pickling, a
+queue handoff, and (for tensors) a shared-memory allocation — no matter how small
+the item is. When the items are small, that fixed cost dominates. Pass
+``buffer_size`` to :py:meth:`~PipelineBuilder.to` to buffer several items into one
+transfer:
+
+.. code-block::
+
+   pipeline = (
+       PipelineBuilder()
+       .add_source(rows)                  # small per-row items
+       .to(ProcessPoolExecutorConfig(max_workers=4), buffer_size=32)
+       .pipe(decode)                      # still receives ONE row at a time
+       .aggregate(batch_size)             # independent of buffer_size
+       .to(MAIN_PROCESS, buffer_size=2)   # 2 batches per transfer coming back
+       .add_sink()
+       .build(num_threads=...)
+   )
+
+Each marker sizes the handoff that happens where it sits, so a region's two
+directions are configured independently: the ``to()`` that opens the region sizes
+the data flowing into its workers, and the one that closes it sizes the results
+flowing back. That separation matters because the two directions rarely carry
+comparable items — in the example above, single rows go in and whole batches come
+back, so one number could not be right for both. A marker sitting between two
+adjacent regions sizes that single handoff for both sides.
+
+The buffering is transparent: the boundary packs items on one side and unpacks them
+on the other, so stages on both sides — and every stage after the region — still see
+individual items. In particular ``buffer_size`` is independent of any
+:py:meth:`~spdl.pipeline.PipelineBuilder.aggregate` you use, so the training batch
+size and the IPC transfer size can be tuned separately. The default, ``1``,
+transfers one item at a time.
+
+It is an upper bound rather than a fixed grouping: a partial buffer is flushed at
+the end of a stream and at every epoch boundary, so the last transfer of each is
+usually short.
+
+Nothing assumes the region emits as many items as it received: a ``None``-returning
+op, a generator op, and an ``aggregate`` inside the region all work unchanged.
+
+The cost is latency and memory. Up to ``buffer_size - 1`` items are held while a
+transfer fills, so a value well above what the producing side can keep up with
+delays the first results; and because each queued transfer holds up to
+``buffer_size`` items, the in-flight item bound scales with it. Start at the batch
+size you would otherwise have aggregated before the region, then tune.
+
+.. note::
+
+   Placing ``aggregate`` *inside* a region means each worker aggregates only the
+   items routed to it, so batches are formed per worker rather than globally. With
+   ``drop_last=True`` that discards up to ``max_workers × (batch_size - 1)`` items
+   per epoch instead of ``batch_size - 1``.
+
 To run a region in **subinterpreters** (Python 3.14+) instead of subprocesses,
 pass a :py:class:`~spdl.pipeline.defs.InterpreterPoolExecutorConfig`; the region's ops
 must avoid NumPy/PyTorch, which cannot be imported in a subinterpreter.

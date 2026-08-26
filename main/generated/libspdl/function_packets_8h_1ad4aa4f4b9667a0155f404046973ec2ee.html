@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Function spdl::core::set_ffmpeg_log_level" href="function_utils_8h_1a49d051162e06f26b896c8aef4605524b.html" /><link rel="prev" title="Function spdl::core::register_avdevices" href="function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Template Function spdl::core::serialize_packets - SPDL 0.6.0 documentation</title>
+        <title>Template Function spdl::core::serialize_packets - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../best_practice.html">Best Practices</a></li>
@@ -464,6 +465,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -536,7 +538,7 @@
 <span id="_CPPv3I_9MediaTypeEN4spdl4core17serialize_packetsERK7PacketsI5mediaE"></span><span id="_CPPv2I_9MediaTypeEN4spdl4core17serialize_packetsERK7PacketsI5mediaE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c.html#_CPPv4N4spdl4core9MediaTypeE" title="spdl::core::MediaType"><span class="n"><span class="pre">MediaType</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">media</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="packets_8h_1ad4aa4f4b9667a0155f404046973ec2ee"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">uint8_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">spdl</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">core</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">serialize_packets</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="structspdl_1_1core_1_1Packets.html#_CPPv4I_9MediaTypeEN4spdl4core7PacketsE" title="spdl::core::Packets"><span class="n"><span class="pre">Packets</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I_9MediaTypeEN4spdl4core17serialize_packetsENSt6vectorI7uint8_tEERK7PacketsI5mediaE" title="spdl::core::serialize_packets::media"><span class="n"><span class="pre">media</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">packets</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I_9MediaTypeEN4spdl4core17serialize_packetsENSt6vectorI7uint8_tEERK7PacketsI5mediaE" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Serialize <a class="reference internal" href="structspdl_1_1core_1_1Packets.html#structspdl_1_1core_1_1Packets"><span class="std std-ref">Packets</span></a> to a byte vector for IPC (e.g., multiprocessing).</p>
 <p>NOTE: This byte format is <strong>internal and process-local</strong>. It is only ever produced and consumed by the same build (e.g. an <code class="docutils literal notranslate"><span class="pre">iterate_in_subprocess</span></code> worker and its parent), and is <strong>not</strong> stable for on-disk persistence or cross-version exchange. The layout may change without a version bump; the embedded magic/version bytes are an internal sanity check, not a compatibility contract. Each packet payload is written followed by <code class="docutils literal notranslate"><span class="pre">AV_INPUT_BUFFER_PADDING_SIZE</span></code> zeroed bytes so it can be restored as a zero-copy view (see <code class="docutils literal notranslate"><span class="pre">deserialize_packets_view</span></code>).</p>
-<p>Throws std::runtime_error if any non-serializable pointer field (AVPacket::opaque, AVPacket::opaque_ref) is non-NULL.</p>
+<p>Throws std::runtime_error if an engaged <a class="reference internal" href="classspdl_1_1core_1_1Codec.html#classspdl_1_1core_1_1Codec"><span class="std std-ref">Codec</span></a> has null parameters, or if any non-serializable pointer field (AVPacket::opaque, AVPacket::opaque_ref) is non-NULL.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>media</strong> – Media type (Audio, Video, or Image). </p>
@@ -625,7 +627,7 @@
     </aside>
   </div>
 </div>
-    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

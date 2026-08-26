@@ -1,0 +1,1755 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Best Practices" href="../best_practice.html" /><link rel="prev" title="Migrating from PyTorch DataLoader" href="pytorch.html" />
+
+    <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
+        <title>Migrating from Grain - SPDL 0.7.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
+    <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=a8e03d5d" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-SNXS50Q2E3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-SNXS50Q2E3');
+</script>
+</head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../getting_started/index.html">Getting Started</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Getting Started</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/intro.html">Building and Running Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/stages.html">Pipeline Stages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/concurrency.html">Concurrency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/parallelism.html">Pipeline Parallelism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/execution_models.html">Execution Models: MT, MTP, and MP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/gil.html">Working Around the GIL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/logging.html">Collecting Runtime Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/pytorch.html">Building High-Performance DataLoaders</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../async/index.html">Introduction to Async I/O</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Introduction to Async I/O</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../async/problem.html">Implementing an Orchestration Mechanism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/event_loop.html">The Event Loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/unit.html">The <code class="docutils literal notranslate"><span class="pre">async</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../async/sync.html">Running Synchronous Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../io/index.html">IO Module</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of IO Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../io/basic.html">High-Level Loading Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/decoding_overview.html">Decoding Process Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/packets_frames_concepts.html">Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/filtering.html">Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/color_space.html">Video Color Space</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/encoding.html">Media Encoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/ffmpeg_cheatsheet.html">FFmpeg CLI Cheat Sheet</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/headspace_analysis.html">Headspace Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/noisy_neighbour.html">Noisy Neighbour</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/setup.html">Composition of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/analysis.html">Analyzing the Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/stats.html">Understanding the performance statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/data_format.html">Data Format and Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch.html">How It Works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example.html">Example: Video Classification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example_v2.html">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_architecture.html">Architecture</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Migration Guide</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="why.html">Why migrate to SPDL?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="paradigm_shift.html">Paradigm Shift</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Migrating from Grain</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../generated/llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/image_dataloading.html">Image dataloading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/video_dataloading.html">Video dataloading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/imagenet_classification.html">Imagenet classification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/multi_thread_preprocessing.html">Multi thread preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/streaming_nvdec_decoding.html">Streaming nvdec decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/streaming_video_processing.html">Streaming video processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/performance_analysis.html">Performance analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/performance_simulation.html">Performance simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/hydra_integration.html">Hydra integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/pipeline_definitions.html">Pipeline definitions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/pipeline_profiling.html">Pipeline profiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_utils.html">Benchmark utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_numpy.html">Benchmark numpy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_wav.html">Benchmark wav</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_tarfile.html">Benchmark tarfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_video.html">Benchmark video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API References</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.html">spdl.pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.pipeline.config.html">spdl.pipeline.config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.io.html">spdl.io</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.io.utils.html">spdl.io.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.autoresearch.html">spdl.autoresearch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.autoresearch.core.html">spdl.autoresearch.core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.dataloader.html">spdl.dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/spdl.source.html">spdl.source</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../generated/libspdl/libspdl_class.html">Class List</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/libspdl/libspdl_file.html">File List</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../generated/libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl.html">Namespace spdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/namespace_std.html">Namespace std</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structAVRational.html">Struct AVRational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1BytesAdaptor.html">Struct BytesAdaptor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1CPUBuffer.html">Struct CPUBuffer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DataInterface.html">Struct DataInterface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DecodeConfig.html">Struct DecodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1DemuxConfig.html">Struct DemuxConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase.html">Template Struct EncodeConfigBase</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html">Template Struct EncodeConfigBase&lt; MediaType::Audio &gt;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html">Template Struct EncodeConfigBase&lt; MediaType::Video &gt;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator.html">Template Struct Generator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator_1_1iterator.html">Struct Generator::iterator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Generator_1_1promise__type.html">Struct Generator::promise_type</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Packets.html">Template Struct Packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1RawPacketData.html">Struct RawPacketData</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1SourceAdaptor.html">Struct SourceAdaptor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/structspdl_1_1core_1_1Storage.html">Struct Storage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1BSF.html">Template Class BSF</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Codec.html">Template Class Codec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1CPUStorage.html">Class CPUStorage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Decoder.html">Template Class Decoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Demuxer.html">Class Demuxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1detail_1_1DecoderImpl.html">Template Class DecoderImpl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1detail_1_1EncoderImpl.html">Template Class EncoderImpl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Encoder.html">Template Class Encoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1FilterGraph.html">Class FilterGraph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Frames.html">Template Class Frames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1InternalError.html">Class InternalError</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1Muxer.html">Class Muxer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1PacketSeries.html">Class PacketSeries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/classspdl_1_1core_1_1TracingSession.html">Class TracingSession</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1a5422694500d2203e301dc182e5f63d22.html">Enum CodecID</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html">Enum ElemClass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c.html">Enum MediaType</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_frames_8h_1a30fbfab5f9ecfb208928ebdaca7f4349.html">Template Function spdl::core::clone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a3f08ca7a5c09ab82603e239e50dff4d7.html">Template Function spdl::core::convert_frames(const std::vector&lt;const Frames&lt;media&gt; *&gt;&amp;, std::shared_ptr&lt;CPUStorage&gt;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1ae55bfac2f391205603d77241fc25ca1a.html">Template Function spdl::core::convert_frames(const Frames&lt;media&gt; *, std::shared_ptr&lt;CPUStorage&gt;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_buffer_8h_1abb668d9a68635211e5e07bd5038df4aa.html">Function spdl::core::cpu_buffer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a295b42ad20d2569806d9a15009a44ca8.html">Function spdl::core::create_reference_audio_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe.html">Template Function spdl::core::deserialize_packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1a17e80346c554363a3ca0f92f23f35d61.html">Template Function spdl::core::deserialize_packets_view</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1a375c1c657bca786016f8a705e3f2a624.html">Template Function spdl::core::get_timestamps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1af82c781c7484afbad6cbac32ff925793.html">Function spdl::core::init_glog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1abbebef003881d8734c12e03a47814732.html">Function spdl::core::init_tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7.html">Function spdl::core::is_within_window</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_demuxing_8h_1a78b157beb45e215aad69f013831788ac.html">Function spdl::core::make_demuxer(const std::string&amp;, const SourceAdaptorPtr&amp;, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_demuxing_8h_1a325a3202908e610862ad04182e7da81a.html">Function spdl::core::make_demuxer(const std::string_view, const std::optional&lt;DemuxConfig&gt;&amp;, const std::optional&lt;std::string&gt;&amp;)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16.html">Function spdl::core::make_filter_graph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a471d41ab59aa4991181e401a18e23a74.html">Function spdl::core::make_rational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1aa1e91130e5d71e8c2a104e4f72296ff3.html">Function spdl::core::register_avdevices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_packets_8h_1ad4aa4f4b9667a0155f404046973ec2ee.html">Template Function spdl::core::serialize_packets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a49d051162e06f26b896c8aef4605524b.html">Function spdl::core::set_ffmpeg_log_level</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a14aa39c30ba418319ac13a94fea74420.html">Function spdl::core::to_double</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_rational__utils_8h_1a7a439114de303090f89dcc44f8c62d6d.html">Function spdl::core::to_rational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a893d39670b4169063d8f6e3723f4bc11.html">Template Function spdl::core::trace_counter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1ae27a1cc3e5bfd9997090eb40711cc6c6.html">Function spdl::core::trace_event_begin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/function_utils_8h_1a8f29c25b417b77e9dfb5a769b418c169.html">Function spdl::core::trace_event_end</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/define_types_8h_1a3a6c4d7f842d451acf8717ce734385f2.html">Define SPDL_DEFAULT_BUFFER_SIZE</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a6eff035c271caa5a533987a1e00ad43e.html">Typedef AVRational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1aba3a9982b74abb6be181dc4d247d53fa.html">Typedef spdl::core::AnyFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1ac39ed67e74a726de6b86fbcc91e57971.html">Typedef spdl::core::AnyPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_demuxing_8h_1adea1b8858a2b74c8f97ad9978e051b22.html">Typedef spdl::core::AnyPacketsGenerator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1a9098e05b01da4afd02090b0d6d7624ba.html">Typedef spdl::core::AudioCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a23b168da4cdf96923387b92a43f20038.html">Typedef spdl::core::AudioEncodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a57216492ce017017647dba9d1f6f2a5d.html">Typedef spdl::core::AudioEncoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a0dfcc06d4bbea67c7f45399be8719fa6.html">Typedef spdl::core::AudioEncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a5be56dffe8f2b76de9540fb1ad8b83bf.html">Typedef spdl::core::AudioFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a9db8234daca15eb073d00fa762641b62.html">Typedef spdl::core::AudioFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a9644f8aa13f0e4db02d8ab60673563a3.html">Typedef spdl::core::AudioPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1ab2cc72fb6b931466960bd4b9f812784c.html">Typedef spdl::core::AudioPacketsPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_buffer_8h_1ab6e5b43497adbd35e9fbc35cf5be7101.html">Typedef spdl::core::CPUBufferPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_adaptor_8h_1adcb670a31326eb24268b384396736cd6.html">Typedef spdl::core::DataInterfacePtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_decoder_8h_1a4b0502ea20d1dda958a67deeb582a74b.html">Typedef spdl::core::DecoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_demuxing_8h_1a4b53016f9b756cc2c2cfbd0e5ad9558b.html">Typedef spdl::core::DemuxerPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1aacfba556b86e2d663a004b8677567339.html">Typedef spdl::core::EncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_filter__graph_8h_1a29554b40f89e4b227521ff86ccf69b8b.html">Typedef spdl::core::FilterGraphPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1ad628496b3863230dd76eeccc4fa66437.html">Typedef spdl::core::FramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1a606d432c7b033a787f653c4992937e6f.html">Typedef spdl::core::ImageCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a53a3c93ef56a4400fabd3a553ab21c4a.html">Typedef spdl::core::ImageFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1a3760130bba382ba7f15df177ca3374c7.html">Typedef spdl::core::ImageFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1af018ade1cd38831c342686abbcb787a8.html">Typedef spdl::core::ImagePackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a8b9c8b08fcbf891fa939700ecd807ce1.html">Typedef spdl::core::ImagePacketsPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_muxer_8h_1aaa76352d246819df02bc407729f69dda.html">Typedef spdl::core::MuxerPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1aa5d8175da6bbcbe93e7191461f7baa20.html">Typedef spdl::core::OptionDict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a331b599d0eceb00ebef166d64623c71a.html">Typedef spdl::core::PacketSeriesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1aad5761fe07714efccc2be969a4397354.html">Typedef spdl::core::PacketsPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html">Typedef spdl::core::Rational</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_adaptor_8h_1adfe58c3c3a3d3171c1d69c2e9924f2a7.html">Typedef spdl::core::SourceAdaptorPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a49247f362e405e358b40d1de70d44a27.html">Typedef spdl::core::TimeWindow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_codec_8h_1ac7441badce2b2aa467eac09b35d4f81e.html">Typedef spdl::core::VideoCodec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_types_8h_1a8b310bdb98714a971b07aa58f7403529.html">Typedef spdl::core::VideoEncodeConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a383bf2b0ac1564702f10e3b5f3ef03f6.html">Typedef spdl::core::VideoEncoder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_encoder_8h_1a39ace4ea741767fa3d802040a9bc22e1.html">Typedef spdl::core::VideoEncoderPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1af1892953097f3723455403752ef79fc5.html">Typedef spdl::core::VideoFrames</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_frames_8h_1acb0efeb222082bf955c71c74964d301d.html">Typedef spdl::core::VideoFramesPtr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1a7be7c9faccc623d12fb33ec966f84b4c.html">Typedef spdl::core::VideoPackets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generated/libspdl/typedef_packets_8h_1aa21b44d594bfc132b4252fd2f544a691.html">Typedef spdl::core::VideoPacketsPtr</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../genindex.html">API Index</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+<div class="sidebar-tree">
+<ul>
+  <li class="toctree-l1 has-children">
+    <span class="reference">Versions</span>
+    <input class="toctree-checkbox" id="toctree-checkbox-versions" name="toctree-checkbox-versions" role="switch" type="checkbox">
+    <label for="toctree-checkbox-versions">
+      <div class="visually-hidden">Toggle navigattion of Versions</div>
+      <i class="icon">
+        <svg>
+          <use href="#svg-arrow-right"></use>
+        </svg>
+      </i>
+    </label>
+    <ul>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.1">0.3.1</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.3.0">0.3.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.2.0">0.2.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.7">0.1.7</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.6">0.1.6</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.5">0.1.5</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.4">0.1.4</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.3">0.1.3</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.2">0.1.2</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.1">0.1.1</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.1.0">0.1.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.14">0.0.14</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.13">0.0.13</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.12">0.0.12</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.11">0.0.11</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.10">0.0.10</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.9">0.0.9</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.0.8">0.0.8</a></li>
+    </ul>
+  </li>
+</ul>
+</div>
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/migration/grain.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="migrating-from-grain">
+<h1>Migrating from Grain<a class="headerlink" href="#migrating-from-grain" title="Link to this heading">¶</a></h1>
+<p><a class="reference external" href="https://github.com/google/grain">Grain</a> and SPDL can both construct concurrent
+input pipelines, but they expose different abstractions. Grain is dataset-first:
+it preserves lazy random access through <code class="xref py py-class docutils literal notranslate"><span class="pre">grain.MapDataset</span></code> and later
+turns the dataset into an iterator. SPDL is stage-first: it connects a source,
+independently scheduled operations, bounded queues, and a sink.</p>
+<p>Migration is therefore a pipeline redesign, not an import replacement. SPDL is
+a strong fit when the workload benefits from stage-specific concurrency or
+async I/O. Its task and queue statistics provide the structured feedback needed
+for manual tuning and agentic performance optimization. Features without a
+built-in equivalent require an application-level adapter during migration.</p>
+<section id="why-spdl-uses-a-stage-first-pipeline">
+<h2>Why SPDL uses a stage-first pipeline<a class="headerlink" href="#why-spdl-uses-a-stage-first-pipeline" title="Link to this heading">¶</a></h2>
+<p>A production input pipeline often combines remote network reads, CPU decoding
+or preprocessing, host-to-device transfer, accelerator computation, and
+device-to-host transfer. These operations are limited by different resources,
+so one concurrency setting is rarely appropriate for the entire pipeline.</p>
+<p>For example, a remote read spends much of its lifetime waiting rather than
+using a CPU and can often benefit from substantially more concurrency than a
+CPU-bound transform. CPU work should keep the available cores busy, but
+unbounded workers can delay the training loop through CPU contention and the
+<a class="reference internal" href="../optimization_guide/noisy_neighbour.html"><span class="doc">noisy-neighbour effect</span></a>. Device
+transfers have a different constraint again: accelerator copy engines commonly
+allow one host-to-device and one device-to-host transfer to overlap with
+computation, so transfer stages are usually kept at low concurrency and
+scheduled independently in each direction.</p>
+<p>SPDL represents these resource boundaries as pipeline stages. Each stage can
+select its own execution model, concurrency, output ordering, and bounded queue,
+which makes the scheduling policy correspond directly to the production data
+path. A dataset abstraction is familiar and convenient for expressing samples
+and transformations, but packaging heterogeneous work behind one dataset
+iterator makes independent concurrency, buffering, and backpressure harder to
+observe and tune.</p>
+<p>This structure also makes the main performance knobs direct and local. For
+example, <code class="docutils literal notranslate"><span class="pre">pipe(fetch,</span> <span class="pre">concurrency=32)</span></code> controls network concurrency while
+<code class="docutils literal notranslate"><span class="pre">pipe(decode,</span> <span class="pre">concurrency=8)</span></code> independently controls CPU decode concurrency;
+the worker-pool size and sink buffer are separate settings. Grain exposes
+effective iterator-level controls through <code class="docutils literal notranslate"><span class="pre">ReadOptions</span></code> and
+<code class="docutils literal notranslate"><span class="pre">MultiprocessingOptions</span></code>, but those controls govern the worker layer around a
+sequence of transforms rather than one named operation. The SPDL stage model
+therefore makes it more intuitive to change one resource constraint at a time
+and attribute the measured result to that change.</p>
+<p>SPDL also records per-stage task time, throughput, queue wait time, and queue
+occupancy. These measurements expose the current bottleneck and the effect of a
+configuration change. Besides supporting manual tuning, the structured feedback
+can drive an agentic optimization loop that measures the pipeline, changes one
+stage’s concurrency or buffering, and validates the end-to-end result. See the
+<a class="reference internal" href="../optimization_guide/index.html"><span class="doc">SPDL optimization guide</span></a> and its
+<a class="reference internal" href="../optimization_guide/stats.html"><span class="doc">performance-statistics reference</span></a>.</p>
+</section>
+<section id="how-grain-is-commonly-used">
+<h2>How Grain is commonly used<a class="headerlink" href="#how-grain-is-commonly-used" title="Link to this heading">¶</a></h2>
+<p>Grain has two APIs:</p>
+<ul class="simple">
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">grain.DataLoader</span></code> combines a random-access data source, sampler,
+flat operation list, worker pool, and output buffer.</p></li>
+<li><p>The Dataset API chains <code class="xref py py-class docutils literal notranslate"><span class="pre">grain.MapDataset</span></code> and
+<code class="xref py py-class docutils literal notranslate"><span class="pre">grain.IterDataset</span></code> transformations. It preserves random access as
+long as possible, then adds threaded reads, prefetching, or multiprocessing
+when converted to an iterable dataset.</p></li>
+</ul>
+<p>In large training codebases, the Dataset API is the more common integration
+shape. Representative pipelines use it to:</p>
+<ul class="simple">
+<li><p>wrap custom file, record, Hive, or in-memory random-access sources;</p></li>
+<li><p>seed, globally shuffle, repeat, and shard a dataset;</p></li>
+<li><p>map tokenization, decoding, augmentation, and collation functions;</p></li>
+<li><p>filter invalid examples and batch or pack variable-length examples;</p></li>
+<li><p>mix multiple datasets with weights;</p></li>
+<li><p>prefetch with <code class="xref py py-class docutils literal notranslate"><span class="pre">grain.ReadOptions</span></code> and run transforms with
+<code class="xref py py-class docutils literal notranslate"><span class="pre">grain.MultiprocessingOptions</span></code>; and</p></li>
+<li><p>save and restore <code class="xref py py-class docutils literal notranslate"><span class="pre">grain.DatasetIterator</span></code> or elastic-iterator state
+with a training checkpoint.</p></li>
+</ul>
+<p>Grain does have multithreading: <code class="docutils literal notranslate"><span class="pre">ReadOptions(num_threads=N)</span></code> concurrently
+reads and applies <code class="docutils literal notranslate"><span class="pre">MapDataset</span></code> transformations with a
+<code class="docutils literal notranslate"><span class="pre">concurrent.futures.ThreadPoolExecutor</span></code> while returning elements in input
+order. Without <code class="docutils literal notranslate"><span class="pre">mp_prefetch</span></code>, that pool runs in the main process and no worker
+process is created. When <code class="docutils literal notranslate"><span class="pre">mp_prefetch</span></code> wraps the iterator, <code class="docutils literal notranslate"><span class="pre">ReadOptions</span></code>
+instead configures each worker process. Grain’s Dataset API does not expose an
+equivalent completion-order switch.</p>
+</section>
+<section id="equivalent-pipeline-structure">
+<h2>Equivalent pipeline structure<a class="headerlink" href="#equivalent-pipeline-structure" title="Link to this heading">¶</a></h2>
+<p>The following single-rank example applies the same source lookup, transform,
+ordering, and fixed-size batching contract in each library. A typical Grain
+pipeline separates the random-access graph from iteration:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">grain.python</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">grain</span>
+
+<span class="n">dataset</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">grain</span><span class="o">.</span><span class="n">MapDataset</span><span class="o">.</span><span class="n">source</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">shuffle</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">to_iter_dataset</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">ReadOptions</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">8</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">drop_remainder</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">dataset</span><span class="p">:</span>
+    <span class="n">train_step</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The corresponding SPDL pipeline makes the execution stages explicit:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineBuilder</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">spdl.source</span><span class="w"> </span><span class="kn">import</span> <span class="n">DistributedRandomSampler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">spdl.source.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">embed_shuffle</span>
+
+<span class="n">sampler</span> <span class="o">=</span> <span class="n">embed_shuffle</span><span class="p">(</span>
+    <span class="n">DistributedRandomSampler</span><span class="p">(</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">),</span> <span class="n">rank</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">output_order</span><span class="o">=</span><span class="s2">"input"</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">transform</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">output_order</span><span class="o">=</span><span class="s2">"input"</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">collate</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="p">:</span>
+    <span class="n">train_step</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Both versions emit fixed-size batches without reordering after sampling. A
+distributed migration must additionally match the application’s exact sharding
+and shuffle contract. The SPDL form makes lookup and transform scheduling
+independent, so each stage can be tuned for its own resource constraint.
+Collation is serial here because the example assumes it is inexpensive; give
+it separate measured concurrency when it performs substantial CPU work.</p>
+</section>
+<section id="component-mapping">
+<h2>Component mapping<a class="headerlink" href="#component-mapping" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-given docutils container" id="id1">
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Grain to SPDL mapping</span><a class="headerlink" href="#id1" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 28.0%" />
+<col style="width: 30.0%" />
+<col style="width: 42.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Grain</p></th>
+<th class="head"><p>SPDL</p></th>
+<th class="head"><p>Migration note</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">RandomAccessDataSource</span></code></p></td>
+<td><p>An index iterable plus <code class="docutils literal notranslate"><span class="pre">pipe(source)</span></code></p></td>
+<td><p>Yield records directly if random access is unnecessary. Yield indices and
+pass the random-access source to a pipe when lookup needs concurrency.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">IndexSampler</span></code> or <code class="docutils literal notranslate"><span class="pre">ShardOptions</span></code></p></td>
+<td><p><a class="reference internal" href="../generated/spdl.source.DistributedRandomSampler.html#spdl.source.DistributedRandomSampler" title="spdl.source.DistributedRandomSampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.source.DistributedRandomSampler</span></code></a> or
+<a class="reference internal" href="../generated/spdl.source.DistributedDeterministicSampler.html#spdl.source.DistributedDeterministicSampler" title="spdl.source.DistributedDeterministicSampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.source.DistributedDeterministicSampler</span></code></a></p></td>
+<td><p>Match rank, world size, draw count, seed, and drop behavior before tuning.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MapDataset</span></code> or <code class="docutils literal notranslate"><span class="pre">IterDataset</span></code></p></td>
+<td><p><a class="reference internal" href="../generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.pipeline.Pipeline</span></code></a></p></td>
+<td><p>SPDL is streaming and does not preserve a random-access dataset view.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">map</span></code> or <code class="docutils literal notranslate"><span class="pre">MapTransform</span></code></p></td>
+<td><p><a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.pipe" title="spdl.pipeline.PipelineBuilder.pipe"><code class="xref py py-meth docutils literal notranslate"><span class="pre">spdl.pipeline.PipelineBuilder.pipe()</span></code></a></p></td>
+<td><p>Give I/O, decode, tokenization, collation, and transfer separate stages.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">random_map</span></code> or <code class="docutils literal notranslate"><span class="pre">RandomMapTransform</span></code></p></td>
+<td><p>A source or <code class="docutils literal notranslate"><span class="pre">pipe</span></code> stage that carries an explicit per-record RNG</p></td>
+<td><p>Derive the RNG from the global seed, epoch, rank, and stable sample
+identity instead of sharing mutable global state.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">filter</span></code> or <code class="docutils literal notranslate"><span class="pre">FilterTransform</span></code></p></td>
+<td><p>A <code class="docutils literal notranslate"><span class="pre">pipe</span></code> operation that returns <code class="docutils literal notranslate"><span class="pre">None</span></code> for rejected items</p></td>
+<td><p>Measure rejection rates; filtering changes downstream batch boundaries.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">flat_map</span></code></p></td>
+<td><p>A generator operation, or <code class="docutils literal notranslate"><span class="pre">pipe</span></code> followed by
+<a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.disaggregate" title="spdl.pipeline.PipelineBuilder.disaggregate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">spdl.pipeline.PipelineBuilder.disaggregate()</span></code></a></p></td>
+<td><p>Preserve ordering explicitly if downstream logic depends on it.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">batch</span></code> or <code class="docutils literal notranslate"><span class="pre">Batch</span></code></p></td>
+<td><p><a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.aggregate" title="spdl.pipeline.PipelineBuilder.aggregate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">spdl.pipeline.PipelineBuilder.aggregate()</span></code></a>, followed by a collate
+<code class="docutils literal notranslate"><span class="pre">pipe</span></code></p></td>
+<td><p>Match <code class="docutils literal notranslate"><span class="pre">drop_remainder</span></code> with <code class="docutils literal notranslate"><span class="pre">drop_last</span></code>. Use a custom
+<a class="reference internal" href="../generated/spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.pipeline.defs.Aggregator</span></code></a> for size-aware packing.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">repeat</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">add_source(...,</span> <span class="pre">continuous=True)</span></code> or
+<a class="reference internal" href="../generated/spdl.source.utils.repeat_source.html#spdl.source.utils.repeat_source" title="spdl.source.utils.repeat_source"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.source.utils.repeat_source()</span></code></a></p></td>
+<td><p>Decide where epoch boundaries and reshuffling occur.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">shuffle</span></code></p></td>
+<td><p>A random sampler, optionally wrapped by
+<a class="reference internal" href="../generated/spdl.source.utils.embed_shuffle.html#spdl.source.utils.embed_shuffle" title="spdl.source.utils.embed_shuffle"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.source.utils.embed_shuffle()</span></code></a></p></td>
+<td><p>This covers index shuffling, not arbitrary streaming-buffer shuffle.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ReadOptions</span></code> and prefetch</p></td>
+<td><p>Per-stage <code class="docutils literal notranslate"><span class="pre">concurrency</span></code>, <code class="docutils literal notranslate"><span class="pre">add_sink(buffer_size)</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">build(num_threads)</span></code></p></td>
+<td><p>SPDL makes scheduling and buffer choices explicit for each stage.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">MultiprocessingOptions</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code> for one stage, an SPDL process execution region,
+or a subprocess pipeline</p></td>
+<td><p>Put only GIL-holding work across a process boundary; serialization can
+erase the gain.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MapDataset.mix</span></code></p></td>
+<td><p>Application composition of iterables or maps</p></td>
+<td><p><a class="reference internal" href="../generated/spdl.source.utils.MergeIterator.html#spdl.source.utils.MergeIterator" title="spdl.source.utils.MergeIterator"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.source.utils.MergeIterator</span></code></a> is one weighted-iterable
+implementation. Match stopping, exhaustion, repetition, seeding, and
+checkpoint behavior.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Dataset statistics and profiling</p></td>
+<td><p>Pipeline task statistics, queue statistics, custom
+<a class="reference internal" href="../generated/spdl.pipeline.TaskHook.html#spdl.pipeline.TaskHook" title="spdl.pipeline.TaskHook"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.pipeline.TaskHook</span></code></a> objects, and
+<a class="reference internal" href="../generated/spdl.pipeline.profile_pipeline.html#spdl.pipeline.profile_pipeline" title="spdl.pipeline.profile_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.pipeline.profile_pipeline()</span></code></a></p></td>
+<td><p>Stage boundaries expose bottlenecks and backpressure. Task hooks can add
+per-sample pre/post-processing and measurements.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="migration-work-for-non-equivalent-features">
+<h2>Migration work for non-equivalent features<a class="headerlink" href="#migration-work-for-non-equivalent-features" title="Link to this heading">¶</a></h2>
+<p>As of SPDL 0.7.0, implement and validate the following behaviors in application
+code. These sketches show the relevant builder fragment and omit the common
+<code class="docutils literal notranslate"><span class="pre">add_sink(...).build(...)</span></code> suffix, application-specific failure handling, and
+checkpoint storage.</p>
+<ul>
+<li><p><strong>Checkpointable iterator state and elastic resume.</strong> SPDL does not provide a
+general <code class="docutils literal notranslate"><span class="pre">DatasetIterator.get_state</span></code>/<code class="docutils literal notranslate"><span class="pre">set_state</span></code> equivalent. Persist the
+source epoch and committed source offset, then reconstruct the sampler on
+resume. Track consumed source positions directly because filtering can break
+the relationship between batch count and source position:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">islice</span>
+
+<span class="n">state</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"epoch"</span><span class="p">:</span> <span class="n">epoch</span><span class="p">,</span> <span class="s2">"source_offset"</span><span class="p">:</span> <span class="n">committed_source_offset</span><span class="p">}</span>
+<span class="n">save_with_training_checkpoint</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">make_sampler</span><span class="p">(</span><span class="n">epoch</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">DistributedRandomSampler</span><span class="p">(</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">),</span>
+        <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+        <span class="n">world_size</span><span class="o">=</span><span class="n">world_size</span><span class="p">,</span>
+        <span class="n">seed</span><span class="o">=</span><span class="n">base_seed</span> <span class="o">+</span> <span class="n">epoch</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ResumedEpoch</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sampler</span> <span class="o">=</span> <span class="n">make_sampler</span><span class="p">(</span><span class="n">epoch</span><span class="o">=</span><span class="n">state</span><span class="p">[</span><span class="s2">"epoch"</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">islice</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">sampler</span><span class="p">),</span> <span class="n">state</span><span class="p">[</span><span class="s2">"source_offset"</span><span class="p">],</span> <span class="kc">None</span><span class="p">)</span>
+
+<span class="n">builder</span> <span class="o">=</span> <span class="n">PipelineBuilder</span><span class="p">()</span><span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">ResumedEpoch</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Rebuild the source with offset zero when advancing to the next epoch. The
+epoch-to-seed mapping is part of the checkpoint contract and must be identical
+before and after resume.</p>
+</li>
+<li><p><strong>Lazy random access after transformations.</strong> A running SPDL pipeline is an
+iterator, not an indexable dataset. Keep a separate transformed view when
+indexed debugging or evaluation requires one:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">TransformedView</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">transform</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+
+<span class="n">debug_view</span> <span class="o">=</span> <span class="n">TransformedView</span><span class="p">()</span>
+<span class="n">builder</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">debug_view</span><span class="p">)))</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">debug_view</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">output_order</span><span class="o">=</span><span class="s2">"input"</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Random-access and checkpointable mixture state.</strong> Compose application
+iterables or maps according to the required semantics. <code class="docutils literal notranslate"><span class="pre">MergeIterator</span></code> is
+one ready-made weighted iterable, but it does not preserve Grain
+<code class="docutils literal notranslate"><span class="pre">MapDataset.mix</span></code> random access or expose its RNG and parent iterator states:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">chain</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">spdl.source.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">MergeIterator</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Concatenated</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">chain</span><span class="p">(</span><span class="n">source_a</span><span class="p">,</span> <span class="n">source_b</span><span class="p">)</span>
+
+<span class="n">concatenated_builder</span> <span class="o">=</span> <span class="n">PipelineBuilder</span><span class="p">()</span><span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">Concatenated</span><span class="p">())</span>
+
+<span class="n">weighted</span> <span class="o">=</span> <span class="n">MergeIterator</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">source_a</span><span class="p">,</span> <span class="n">source_b</span><span class="p">],</span>
+    <span class="n">weights</span><span class="o">=</span><span class="p">[</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">],</span>
+    <span class="n">stop_after</span><span class="o">=</span><span class="n">epoch_size</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="n">epoch_seed</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">weighted_builder</span> <span class="o">=</span> <span class="n">PipelineBuilder</span><span class="p">()</span><span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">weighted</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Automatic per-record random keys.</strong> Inject an RNG in the source or a pipe
+stage, derived from stable record metadata. A shared mutable global RNG is
+unsafe when a stage has concurrency greater than one:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">load_with_rng</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
+    <span class="n">identity</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">global_seed</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">rank</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">"</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+    <span class="n">seed</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span>
+        <span class="n">hashlib</span><span class="o">.</span><span class="n">blake2b</span><span class="p">(</span><span class="n">identity</span><span class="p">,</span> <span class="n">digest_size</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">digest</span><span class="p">(),</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">"big"</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">source</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">random_transform</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
+    <span class="n">sample</span><span class="p">,</span> <span class="n">rng</span> <span class="o">=</span> <span class="n">item</span>
+    <span class="k">return</span> <span class="n">augment</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">rng</span><span class="p">)</span>
+
+<span class="n">builder</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">load_with_rng</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">random_transform</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Drop-in elastic global batching.</strong> Global batch size, worker topology,
+resharding, and resume behavior must be expressed by the application:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">global_batch_size</span> <span class="o">%</span> <span class="n">world_size</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"global batch size must be divisible by world size"</span><span class="p">)</span>
+<span class="n">rank_batch_size</span> <span class="o">=</span> <span class="n">global_batch_size</span> <span class="o">//</span> <span class="n">world_size</span>
+<span class="n">sampler</span> <span class="o">=</span> <span class="n">DistributedRandomSampler</span><span class="p">(</span>
+    <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">),</span>
+    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+    <span class="n">world_size</span><span class="o">=</span><span class="n">world_size</span><span class="p">,</span>
+    <span class="n">ddp_drop_last_distributed_round</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">builder</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">sampler</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">rank_batch_size</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Keeping distributed-round dropping enabled gives every rank the same source
+length. <code class="docutils literal notranslate"><span class="pre">drop_last=True</span></code> then removes an incomplete per-rank batch, so all
+ranks emit the same number of batches. Change either policy only when the
+application explicitly synchronizes uneven ranks.</p>
+</li>
+<li><p><strong>Dataset transformation introspection.</strong> SPDL reports runtime stage behavior,
+and a custom <code class="docutils literal notranslate"><span class="pre">TaskHook</span></code> can capture per-sample inputs, timing, or failure
+metadata. It does not reproduce Grain’s index-level dataset debugging model:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">asynccontextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">perf_counter</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">TaskHook</span><span class="p">,</span> <span class="n">TaskStatsHook</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SampleTiming</span><span class="p">(</span><span class="n">TaskHook</span><span class="p">):</span>
+    <span class="nd">@asynccontextmanager</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">task_hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_item</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">started</span> <span class="o">=</span> <span class="n">perf_counter</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">yield</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">record_latency</span><span class="p">(</span><span class="n">input_item</span><span class="p">,</span> <span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">started</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">hook_factory</span><span class="p">(</span><span class="n">stage</span><span class="p">):</span>
+    <span class="n">hooks</span> <span class="o">=</span> <span class="p">[</span><span class="n">TaskStatsHook</span><span class="p">(</span><span class="n">stage</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">stage</span><span class="o">.</span><span class="n">stage_name</span> <span class="o">==</span> <span class="s2">"decode"</span><span class="p">:</span>
+        <span class="n">hooks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SampleTiming</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">hooks</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">decode</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"decode"</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span>
+        <span class="n">num_threads</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+        <span class="n">task_hook_factory</span><span class="o">=</span><span class="n">hook_factory</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>Packing is not a fundamental gap: implement token- or byte-budget packing with
+a custom <a class="reference internal" href="../generated/spdl.pipeline.defs.Aggregator.html#spdl.pipeline.defs.Aggregator" title="spdl.pipeline.defs.Aggregator"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.pipeline.defs.Aggregator</span></code></a>. Multiprocessing is also not a
+gap, but SPDL asks you to choose the process boundary instead of applying one
+worker setting to the whole dataset.</p>
+</section>
+<section id="migration-workflow">
+<h2>Migration workflow<a class="headerlink" href="#migration-workflow" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p><strong>Write down the semantic contract.</strong> Record the exact sample order, epoch
+length, sharding, shuffle seed, filtering, batch/drop behavior, random
+augmentation, mixture weights, and checkpoint/resume guarantees.</p></li>
+<li><p><strong>Create a parity test.</strong> Compare stable sample identifiers and batch shapes
+over multiple epochs and ranks. Test restart from a mid-epoch checkpoint if
+the Grain pipeline supports it.</p></li>
+<li><p><strong>Move sampling into the source.</strong> Start with the matching SPDL distributed
+sampler. Feed its indices to <code class="docutils literal notranslate"><span class="pre">pipe(source)</span></code> for automatic <code class="docutils literal notranslate"><span class="pre">__getitem__</span></code>
+lookup, or make the source yield records directly.</p></li>
+<li><p><strong>Split work by resource.</strong> Use separate stages for remote read, decode,
+tokenization or augmentation, collation, and device transfer. This is the
+change that enables SPDL’s stage-level optimization.</p></li>
+<li><p><strong>Choose execution per stage.</strong> Prefer async functions for async I/O and
+threads for native operators that release the GIL. For measured GIL-holding
+work, use <code class="docutils literal notranslate"><span class="pre">pipe(...,</span> <span class="pre">executor=ProcessPoolExecutor(...),</span>
+<span class="pre">output_order=&quot;input&quot;)</span></code> when order is required. A multi-stage
+<code class="docutils literal notranslate"><span class="pre">to(ProcessPoolExecutorConfig(...))</span></code> region instead emits in completion
+order, requires application-level reordering, and must be closed with
+<code class="docutils literal notranslate"><span class="pre">to(MAIN_PROCESS)</span></code> before adding the sink.</p></li>
+<li><p><strong>Batch late enough to expose parallelism.</strong> Aggregate records, then collate
+once. For variable-length data, use a custom aggregator and test its final
+flush and <code class="docutils literal notranslate"><span class="pre">drop_last</span></code> behavior.</p></li>
+<li><p><strong>Bound every queue.</strong> Start with small sink and inter-stage buffers. Large
+prefetch values can hide a bottleneck while increasing host memory and
+checkpoint replay distance.</p></li>
+<li><p><strong>Tune from measurements.</strong> Inspect queue occupancy and per-stage task time,
+then change one stage’s concurrency at a time. Optimize end-to-end training
+step time, not loader microbenchmark throughput alone.</p></li>
+<li><p><strong>Roll out with measured gates.</strong> Compare output fingerprints, recovery
+behavior, and training metrics while moving traffic to the SPDL path.</p></li>
+</ol>
+</section>
+<section id="benchmark-the-replacement">
+<h2>Benchmark the replacement<a class="headerlink" href="#benchmark-the-replacement" title="Link to this heading">¶</a></h2>
+<p>We benchmarked an end-to-end video-loading task that reads encoded videos from
+remote storage, demuxes and decodes two-second clips on CPU, collates batches,
+and copies tensors to a GPU on a dedicated CUDA stream. The task was implemented
+with Grain and SPDL and run with threading and multiprocessing configurations
+across Python 3.12, 3.14, and free-threaded 3.14. The following plot shows the
+relationship between CPU utilization and video throughput.</p>
+<p>The libraries expose different scaling controls. Grain configures worker threads
+and prefetch for the composed dataset, while SPDL configures concurrency for
+individual pipeline stages. Worker counts are therefore not directly
+comparable, so the plots use measured CPU utilization as the common resource
+axis. Grain preserves input order. SPDL threading was measured with both input
+and completion order; process-region measurements remain in the table for
+reference.</p>
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../_images/grain_spdl_cpu_throughput.png"><img alt="../_images/grain_spdl_cpu_throughput.png" src="../_images/grain_spdl_cpu_throughput.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">CPU utilization versus video throughput. Squares are Grain with input order,
+circles are SPDL with input order, and dashed triangles are SPDL with
+completion order. Process measurements remain in the table below.</span><a class="headerlink" href="#id2" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>The two solid input-order series are the direct migration comparison. At
+roughly matched CPU utilization, Grain with 16 threads and prefetch 16 processed
+22.7 videos/s using 7.21 CPU cores on Python 3.12, while SPDL with twelve decode
+workers processed 23.4 videos/s using 6.99 cores. The corresponding results were
+22.9 videos/s at 7.29 cores for Grain versus 24.4 at 7.10 for SPDL on Python
+3.14, and 23.2 at 7.42 versus 23.9 at 6.92 on Python 3.14t. Across the sweep,
+SPDL generally delivered more throughput for the same measured CPU budget. In
+this workload, the result indicates that SPDL’s stage-wise orchestration uses
+CPU more efficiently. As the memory plot below shows, that gain came with a
+small host-memory premium: 0.02–0.16 GiB at the matched points.</p>
+<p>Input order holds a completed item until every preceding item is ready.
+Completion order emits each item as soon as it finishes, avoiding that
+head-of-line wait but changing observable ordering. At the same 16-worker decode
+setting, completion order reached 40.7–43.3 videos/s using 12.47–13.49 cores,
+compared with 28.3–28.8 videos/s using 8.28–8.65 cores for input order. The
+completion-order series demonstrates the additional throughput available when
+the application does not require Grain-equivalent ordering; it is not the
+apples-to-apples migration result.</p>
+<p>The SPDL sweep illustrates stage-local tuning: after identifying decode as the
+CPU-bound stage, only decode concurrency changes. Increasing decode concurrency
+to 24 reached 37.1 videos/s using 11.24 CPU cores on Python 3.12 and 38.3 using
+11.77 cores on Python 3.14. Python 3.14t reached 43.3 videos/s using 13.21 cores
+with 32 workers. These results demonstrate the tuning mechanism for this
+workload rather than a universal concurrency setting.</p>
+<section id="benchmark-setup">
+<h3>Benchmark setup<a class="headerlink" href="#benchmark-setup" title="Link to this heading">¶</a></h3>
+<p>The measured workload reads 128 videos in four-record bulks, decodes eight
+224-by-224 RGB frames per video, batches eight videos, discards one warmup, and
+performs three measured runs. The reported Grain results use Grain 0.2.16.
+That release does not provide free-threaded <code class="docutils literal notranslate"><span class="pre">cp314t</span></code> builds of its native
+ArrayRecord and index-shuffle modules. The 3.14t experiment packages Grain’s
+Python sources and replaces imports of those two unused modules with stubs; the
+measured pipeline does not call either feature.</p>
+<p>Stripped of storage-specific types and names, the Grain implementation has this
+shape. <code class="docutils literal notranslate"><span class="pre">BulkVideoSource</span></code> performs the remote read, and <code class="docutils literal notranslate"><span class="pre">ExpandBulk</span></code> turns
+each returned bulk into individual encoded-video records:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">grain_dataset</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">grain</span><span class="o">.</span><span class="n">MapDataset</span><span class="o">.</span><span class="n">source</span><span class="p">(</span><span class="n">BulkVideoSource</span><span class="p">(</span><span class="o">...</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">ExpandBulk</span><span class="p">(</span><span class="n">max_fan_out</span><span class="o">=</span><span class="n">bulk_size</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">demux_video</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">decode_video</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">to_iter_dataset</span><span class="p">(</span>
+        <span class="n">grain</span><span class="o">.</span><span class="n">ReadOptions</span><span class="p">(</span>
+            <span class="n">num_threads</span><span class="o">=</span><span class="n">grain_workers</span><span class="p">,</span>
+            <span class="n">prefetch_buffer_size</span><span class="o">=</span><span class="n">grain_prefetch</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">drop_remainder</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">grain_dataset</span><span class="p">:</span>
+    <span class="n">consume</span><span class="p">(</span><span class="n">transfer_to_gpu</span><span class="p">(</span><span class="n">collate</span><span class="p">(</span><span class="n">batch</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>The equivalent SPDL implementation exposes each operation as a separately
+tunable stage. <code class="docutils literal notranslate"><span class="pre">gpu_transfer_executor</span></code> is a dedicated one-thread executor so
+the copy uses its own CUDA stream:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bulk_video_source</span><span class="p">)))</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span>
+        <span class="n">bulk_video_source</span><span class="p">,</span>
+        <span class="n">concurrency</span><span class="o">=</span><span class="n">fetch_workers</span><span class="p">,</span>
+        <span class="n">output_order</span><span class="o">=</span><span class="n">output_order</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="o">.</span><span class="n">disaggregate</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">demux_video</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="n">demux_workers</span><span class="p">,</span> <span class="n">output_order</span><span class="o">=</span><span class="n">output_order</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">decode_video</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="n">decode_workers</span><span class="p">,</span> <span class="n">output_order</span><span class="o">=</span><span class="n">output_order</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">drop_last</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">collate</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span>
+        <span class="n">transfer_to_gpu</span><span class="p">,</span>
+        <span class="n">concurrency</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">executor</span><span class="o">=</span><span class="n">gpu_transfer_executor</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="n">prefetch</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="n">spdl_threads</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="p">:</span>
+    <span class="n">consume</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The baseline Grain threading configuration sets
+<code class="docutils literal notranslate"><span class="pre">ReadOptions(num_threads=16,</span> <span class="pre">prefetch_buffer_size=4)</span></code>. Its multiprocessing
+configuration disables those two controls and instead sets
+<code class="docutils literal notranslate"><span class="pre">MultiprocessingOptions(num_workers=8,</span> <span class="pre">per_worker_buffer_size=4)</span></code>. The SPDL
+threading configuration sets fetch, demux, decode, and H2D concurrency to four,
+three, eight, and one respectively, uses a 40-thread shared pool, and holds four
+batches at the sink. Its process configuration puts fetch through decode in an
+eight-worker process region while keeping H2D transfer in the main process.
+That region sends decoded frame arrays back to the main process for collation;
+the resulting inter-process communication makes this pipeline unsuited to
+multiprocessing.</p>
+<p>CPU usage and throughput cover the same end-to-end interval, including pipeline
+setup and shutdown, aggregated over the measured runs. The RSS baseline is
+captured in the spawned benchmark interpreter after module imports and before
+pipeline construction or warmup. Peak RSS is the sampled aggregate process-tree
+resident memory during warmup and measured runs; the reported delta subtracts
+that baseline. Process-mode deltas therefore include the additional worker
+interpreters. The benchmark host exposed 48 CPU cores and about 1.5 TiB of host
+memory.</p>
+<p>These configurations are starting points for the two libraries, not a claim
+that their worker counts or CPU consumption are equivalent. In particular,
+Grain’s <code class="docutils literal notranslate"><span class="pre">prefetch_buffer_size</span></code> limits how many read threads can make progress.
+Raising <code class="docutils literal notranslate"><span class="pre">num_threads</span></code> while leaving the prefetch depth at four did not raise
+CPU utilization in this workload, so the Grain sweep changes both
+<code class="docutils literal notranslate"><span class="pre">num_threads</span></code> and <code class="docutils literal notranslate"><span class="pre">prefetch_buffer_size</span></code> together.</p>
+<p>A preliminary Python 3.14 fetch-stage sweep found that raising SPDL fetch
+concurrency from four to 32 left throughput at 23.3 videos/s while increasing
+incremental peak RSS from 1.34 to 1.80 GiB; one fetch worker reduced throughput
+to 18.0 videos/s. The main matrix therefore uses four fetch workers. The SPDL
+decode sweep keeps fetch, demux, H2D transfer, pool size, and sink size fixed and
+changes only the decode stage’s <code class="docutils literal notranslate"><span class="pre">concurrency</span></code>. This illustrates how the stage
+model exposes a direct tuning knob once a bottleneck is identified.</p>
+<div class="table-wrapper docutils container" id="id3">
+<table class="docutils align-default" id="id3">
+<caption><span class="caption-text">Video-to-GPU results</span><a class="headerlink" href="#id3" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Python</p></th>
+<th class="head"><p>Library</p></th>
+<th class="head"><p>Execution</p></th>
+<th class="head"><p>Order</p></th>
+<th class="head"><p>Concurrency</p></th>
+<th class="head"><p>Videos/s</p></th>
+<th class="head"><p>CPU cores (host %)</p></th>
+<th class="head"><p>RSS baseline → peak; Δ GiB (host %)</p></th>
+<th class="head"><p>CUDA MiB</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>Grain</p></td>
+<td><p>Threads</p></td>
+<td><p>Input</p></td>
+<td><p>threads=16; prefetch=4</p></td>
+<td><p>9.6</p></td>
+<td><p>2.79 (5.8%)</p></td>
+<td><p>1.40 → 2.93; Δ 1.53 (0.10%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.12</p></td>
+<td><p>Grain</p></td>
+<td><p>Processes</p></td>
+<td><p>Input</p></td>
+<td><p>processes=8; read threads=0; buffer/worker=4</p></td>
+<td><p>5.2</p></td>
+<td><p>7.22 (15.0%)</p></td>
+<td><p>1.41 → 22.80; Δ 21.39 (1.42%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>SPDL</p></td>
+<td><p>Threads</p></td>
+<td><p>Input</p></td>
+<td><p>fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4</p></td>
+<td><p>18.9</p></td>
+<td><p>5.61 (11.7%)</p></td>
+<td><p>1.41 → 3.35; Δ 1.95 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.12</p></td>
+<td><p>SPDL</p></td>
+<td><p>Threads</p></td>
+<td><p>Completion</p></td>
+<td><p>fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4</p></td>
+<td><p>23.4</p></td>
+<td><p>7.66 (16.0%)</p></td>
+<td><p>1.40 → 3.36; Δ 1.95 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>SPDL</p></td>
+<td><p>Processes</p></td>
+<td><p>Completion</p></td>
+<td><p>region=8; H2D=1; main pool=2; sink=4</p></td>
+<td><p>5.7</p></td>
+<td><p>7.75 (16.2%)</p></td>
+<td><p>1.41 → 23.20; Δ 21.79 (1.44%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>Grain</p></td>
+<td><p>Threads</p></td>
+<td><p>Input</p></td>
+<td><p>threads=16; prefetch=4</p></td>
+<td><p>9.7</p></td>
+<td><p>2.78 (5.8%)</p></td>
+<td><p>1.46 → 3.05; Δ 1.60 (0.11%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14</p></td>
+<td><p>Grain</p></td>
+<td><p>Processes</p></td>
+<td><p>Input</p></td>
+<td><p>processes=8; read threads=0; buffer/worker=4</p></td>
+<td><p>5.3</p></td>
+<td><p>7.21 (15.0%)</p></td>
+<td><p>1.46 → 23.39; Δ 21.93 (1.45%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>SPDL</p></td>
+<td><p>Threads</p></td>
+<td><p>Input</p></td>
+<td><p>fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4</p></td>
+<td><p>19.5</p></td>
+<td><p>5.57 (11.6%)</p></td>
+<td><p>1.46 → 3.39; Δ 1.93 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14</p></td>
+<td><p>SPDL</p></td>
+<td><p>Threads</p></td>
+<td><p>Completion</p></td>
+<td><p>fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4</p></td>
+<td><p>23.8</p></td>
+<td><p>7.65 (15.9%)</p></td>
+<td><p>1.46 → 3.27; Δ 1.81 (0.12%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>SPDL</p></td>
+<td><p>Processes</p></td>
+<td><p>Completion</p></td>
+<td><p>region=8; H2D=1; main pool=2; sink=4</p></td>
+<td><p>5.8</p></td>
+<td><p>7.67 (16.0%)</p></td>
+<td><p>1.46 → 23.51; Δ 22.06 (1.46%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>Grain</p></td>
+<td><p>Threads</p></td>
+<td><p>Input</p></td>
+<td><p>threads=16; prefetch=4</p></td>
+<td><p>10.1</p></td>
+<td><p>2.97 (6.2%)</p></td>
+<td><p>1.55 → 3.13; Δ 1.58 (0.10%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14t</p></td>
+<td><p>Grain</p></td>
+<td><p>Processes</p></td>
+<td><p>Input</p></td>
+<td><p>processes=8; read threads=0; buffer/worker=4</p></td>
+<td><p>14.8</p></td>
+<td><p>4.83 (10.1%)</p></td>
+<td><p>1.55 → 3.35; Δ 1.80 (0.12%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>SPDL</p></td>
+<td><p>Threads</p></td>
+<td><p>Input</p></td>
+<td><p>fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4</p></td>
+<td><p>18.2</p></td>
+<td><p>5.42 (11.3%)</p></td>
+<td><p>1.55 → 3.45; Δ 1.89 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14t</p></td>
+<td><p>SPDL</p></td>
+<td><p>Threads</p></td>
+<td><p>Completion</p></td>
+<td><p>fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4</p></td>
+<td><p>23.6</p></td>
+<td><p>7.61 (15.8%)</p></td>
+<td><p>1.55 → 3.51; Δ 1.96 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>SPDL</p></td>
+<td><p>Processes</p></td>
+<td><p>Completion</p></td>
+<td><p>region=8; H2D=1; main pool=2; sink=4</p></td>
+<td><p>5.8</p></td>
+<td><p>7.73 (16.1%)</p></td>
+<td><p>1.56 → 24.91; Δ 23.35 (1.55%)</p></td>
+<td><p>160</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The Grain thread sweep produced the following results. The 16-thread rows are
+different from the first table because this sweep raises prefetch from four to
+16, allowing all configured threads to make progress.</p>
+<div class="table-wrapper docutils container" id="id4">
+<table class="docutils align-default" id="id4">
+<caption><span class="caption-text">Grain thread and prefetch sweep</span><a class="headerlink" href="#id4" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Python</p></th>
+<th class="head"><p>Threads</p></th>
+<th class="head"><p>Prefetch</p></th>
+<th class="head"><p>Videos/s</p></th>
+<th class="head"><p>CPU cores (host %)</p></th>
+<th class="head"><p>RSS baseline → peak; Δ GiB (host %)</p></th>
+<th class="head"><p>CUDA MiB</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>8</p></td>
+<td><p>8</p></td>
+<td><p>13.4</p></td>
+<td><p>4.19 (8.7%)</p></td>
+<td><p>1.40 → 3.16; Δ 1.76 (0.12%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.12</p></td>
+<td><p>12</p></td>
+<td><p>12</p></td>
+<td><p>19.3</p></td>
+<td><p>6.11 (12.7%)</p></td>
+<td><p>1.41 → 3.30; Δ 1.89 (0.13%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>16</p></td>
+<td><p>16</p></td>
+<td><p>22.7</p></td>
+<td><p>7.21 (15.0%)</p></td>
+<td><p>1.42 → 3.35; Δ 1.94 (0.13%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.12</p></td>
+<td><p>18</p></td>
+<td><p>18</p></td>
+<td><p>25.7</p></td>
+<td><p>8.18 (17.0%)</p></td>
+<td><p>1.40 → 3.52; Δ 2.11 (0.14%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>20</p></td>
+<td><p>20</p></td>
+<td><p>26.1</p></td>
+<td><p>8.26 (17.2%)</p></td>
+<td><p>1.41 → 3.27; Δ 1.86 (0.12%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.12</p></td>
+<td><p>24</p></td>
+<td><p>24</p></td>
+<td><p>30.9</p></td>
+<td><p>9.87 (20.6%)</p></td>
+<td><p>1.40 → 3.65; Δ 2.25 (0.15%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>32</p></td>
+<td><p>32</p></td>
+<td><p>36.8</p></td>
+<td><p>11.83 (24.6%)</p></td>
+<td><p>1.41 → 3.86; Δ 2.46 (0.16%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>8</p></td>
+<td><p>8</p></td>
+<td><p>14.2</p></td>
+<td><p>4.37 (9.1%)</p></td>
+<td><p>1.46 → 3.18; Δ 1.72 (0.11%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14</p></td>
+<td><p>12</p></td>
+<td><p>12</p></td>
+<td><p>19.1</p></td>
+<td><p>6.00 (12.5%)</p></td>
+<td><p>1.47 → 3.38; Δ 1.91 (0.13%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>16</p></td>
+<td><p>16</p></td>
+<td><p>22.9</p></td>
+<td><p>7.29 (15.2%)</p></td>
+<td><p>1.45 → 3.48; Δ 2.03 (0.13%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14</p></td>
+<td><p>18</p></td>
+<td><p>18</p></td>
+<td><p>25.6</p></td>
+<td><p>8.09 (16.8%)</p></td>
+<td><p>1.46 → 3.49; Δ 2.03 (0.13%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>20</p></td>
+<td><p>20</p></td>
+<td><p>26.2</p></td>
+<td><p>8.13 (16.9%)</p></td>
+<td><p>1.47 → 3.55; Δ 2.08 (0.14%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14</p></td>
+<td><p>24</p></td>
+<td><p>24</p></td>
+<td><p>33.6</p></td>
+<td><p>10.36 (21.6%)</p></td>
+<td><p>1.46 → 3.66; Δ 2.20 (0.15%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>32</p></td>
+<td><p>32</p></td>
+<td><p>39.8</p></td>
+<td><p>12.76 (26.6%)</p></td>
+<td><p>1.46 → 4.03; Δ 2.57 (0.17%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>8</p></td>
+<td><p>8</p></td>
+<td><p>14.2</p></td>
+<td><p>4.47 (9.3%)</p></td>
+<td><p>1.55 → 3.42; Δ 1.86 (0.12%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14t</p></td>
+<td><p>12</p></td>
+<td><p>12</p></td>
+<td><p>19.7</p></td>
+<td><p>6.23 (13.0%)</p></td>
+<td><p>1.55 → 3.61; Δ 2.06 (0.14%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>16</p></td>
+<td><p>16</p></td>
+<td><p>23.2</p></td>
+<td><p>7.42 (15.5%)</p></td>
+<td><p>1.55 → 3.78; Δ 2.23 (0.15%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14t</p></td>
+<td><p>18</p></td>
+<td><p>18</p></td>
+<td><p>25.4</p></td>
+<td><p>8.06 (16.8%)</p></td>
+<td><p>1.56 → 3.96; Δ 2.40 (0.16%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>20</p></td>
+<td><p>20</p></td>
+<td><p>25.5</p></td>
+<td><p>8.02 (16.7%)</p></td>
+<td><p>1.55 → 3.90; Δ 2.35 (0.16%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14t</p></td>
+<td><p>24</p></td>
+<td><p>24</p></td>
+<td><p>32.2</p></td>
+<td><p>10.14 (21.1%)</p></td>
+<td><p>1.56 → 4.16; Δ 2.60 (0.17%)</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>32</p></td>
+<td><p>32</p></td>
+<td><p>41.6</p></td>
+<td><p>13.60 (28.3%)</p></td>
+<td><p>1.56 → 4.37; Δ 2.81 (0.19%)</p></td>
+<td><p>40</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The SPDL sweep changes only decode-stage concurrency. Fetch remains at four,
+demux at three, H2D transfer at one, the shared pool at 40 threads, and the sink
+at four batches. The eight-worker entry is a new isolated repeat of the same
+configuration in the original matrix, so normal run-to-run variation is
+visible.</p>
+<div class="table-wrapper docutils container" id="id5">
+<table class="docutils align-default" id="id5">
+<caption><span class="caption-text">SPDL input-order decode-stage concurrency sweep</span><a class="headerlink" href="#id5" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Python</p></th>
+<th class="head"><p>Decode workers</p></th>
+<th class="head"><p>Videos/s</p></th>
+<th class="head"><p>CPU cores (host %)</p></th>
+<th class="head"><p>RSS baseline → peak; Δ GiB (host %)</p></th>
+<th class="head"><p>CUDA MiB</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>4</p></td>
+<td><p>13.3</p></td>
+<td><p>3.78 (7.9%)</p></td>
+<td><p>1.40 → 3.36; Δ 1.95 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.12</p></td>
+<td><p>6</p></td>
+<td><p>16.6</p></td>
+<td><p>4.86 (10.1%)</p></td>
+<td><p>1.41 → 3.22; Δ 1.81 (0.12%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>8</p></td>
+<td><p>18.9</p></td>
+<td><p>5.58 (11.6%)</p></td>
+<td><p>1.41 → 3.37; Δ 1.96 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.12</p></td>
+<td><p>10</p></td>
+<td><p>21.5</p></td>
+<td><p>6.50 (13.5%)</p></td>
+<td><p>1.41 → 3.49; Δ 2.08 (0.14%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>12</p></td>
+<td><p>23.4</p></td>
+<td><p>6.99 (14.6%)</p></td>
+<td><p>1.41 → 3.51; Δ 2.10 (0.14%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.12</p></td>
+<td><p>16</p></td>
+<td><p>28.8</p></td>
+<td><p>8.65 (18.0%)</p></td>
+<td><p>1.41 → 3.69; Δ 2.28 (0.15%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.12</p></td>
+<td><p>24</p></td>
+<td><p>37.1</p></td>
+<td><p>11.24 (23.4%)</p></td>
+<td><p>1.41 → 3.22; Δ 1.81 (0.12%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>4</p></td>
+<td><p>13.2</p></td>
+<td><p>3.68 (7.7%)</p></td>
+<td><p>1.46 → 3.16; Δ 1.70 (0.11%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14</p></td>
+<td><p>6</p></td>
+<td><p>16.7</p></td>
+<td><p>4.79 (10.0%)</p></td>
+<td><p>1.46 → 3.38; Δ 1.92 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>8</p></td>
+<td><p>18.9</p></td>
+<td><p>5.47 (11.4%)</p></td>
+<td><p>1.47 → 3.47; Δ 2.00 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14</p></td>
+<td><p>10</p></td>
+<td><p>22.3</p></td>
+<td><p>6.55 (13.7%)</p></td>
+<td><p>1.47 → 3.48; Δ 2.01 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>12</p></td>
+<td><p>24.4</p></td>
+<td><p>7.10 (14.8%)</p></td>
+<td><p>1.46 → 3.61; Δ 2.15 (0.14%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14</p></td>
+<td><p>16</p></td>
+<td><p>28.8</p></td>
+<td><p>8.49 (17.7%)</p></td>
+<td><p>1.46 → 3.60; Δ 2.15 (0.14%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14</p></td>
+<td><p>24</p></td>
+<td><p>38.3</p></td>
+<td><p>11.77 (24.5%)</p></td>
+<td><p>1.46 → 3.75; Δ 2.29 (0.15%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>4</p></td>
+<td><p>12.9</p></td>
+<td><p>3.72 (7.8%)</p></td>
+<td><p>1.56 → 3.46; Δ 1.90 (0.13%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14t</p></td>
+<td><p>6</p></td>
+<td><p>16.4</p></td>
+<td><p>4.72 (9.8%)</p></td>
+<td><p>1.55 → 3.63; Δ 2.07 (0.14%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>8</p></td>
+<td><p>19.0</p></td>
+<td><p>5.48 (11.4%)</p></td>
+<td><p>1.55 → 3.61; Δ 2.05 (0.14%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14t</p></td>
+<td><p>10</p></td>
+<td><p>22.4</p></td>
+<td><p>6.53 (13.6%)</p></td>
+<td><p>1.56 → 3.65; Δ 2.10 (0.14%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>12</p></td>
+<td><p>23.9</p></td>
+<td><p>6.92 (14.4%)</p></td>
+<td><p>1.55 → 3.80; Δ 2.25 (0.15%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.14t</p></td>
+<td><p>16</p></td>
+<td><p>28.3</p></td>
+<td><p>8.28 (17.2%)</p></td>
+<td><p>1.55 → 3.82; Δ 2.26 (0.15%)</p></td>
+<td><p>160</p></td>
+</tr>
+<tr class="row-even"><td><p>3.14t</p></td>
+<td><p>32</p></td>
+<td><p>43.3</p></td>
+<td><p>13.21 (27.5%)</p></td>
+<td><p>1.55 → 3.70; Δ 2.14 (0.14%)</p></td>
+<td><p>160</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure class="align-default" id="id6">
+<a class="reference internal image-reference" href="../_images/grain_spdl_peak_rss.png"><img alt="../_images/grain_spdl_peak_rss.png" src="../_images/grain_spdl_peak_rss.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Peak aggregate process-tree RSS above each interpreter’s post-import
+baseline for threaded configurations. Process configurations remain in the
+results table because their different memory scale obscures the threaded
+comparison. Point labels show the configured Grain threads/prefetch or SPDL
+decode concurrency; <code class="docutils literal notranslate"><span class="pre">S-i</span></code> and <code class="docutils literal notranslate"><span class="pre">S-c</span></code> denote SPDL input and completion
+order. The horizontal axis shows measured CPU utilization.</span><a class="headerlink" href="#id6" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>The post-import interpreter baseline was 1.40–1.56 GiB. Thread configurations
+added 1.29–2.81 GiB above that baseline. At the near-matched 16-thread Grain
+and twelve-worker SPDL input-order points, SPDL used 0.02–0.16 GiB more
+incremental host memory. Input ordering can retain completed intermediate items
+while waiting for earlier records; at twelve workers, allowing completion order
+reduced SPDL’s incremental RSS by 0.06–0.46 GiB. The input-order comparison
+therefore shows a modest memory cost alongside SPDL’s higher throughput at a
+similar CPU budget.</p>
+<p>Process cases other than patched Grain on Python 3.14t added 21.39–23.35 GiB
+because their worker interpreters are included; patched Grain on Python 3.14t
+added 1.80 GiB. SPDL reserved more CUDA cache memory than Grain in these runs.
+Choose a configuration using end-to-end training throughput, ordering
+requirements, and resource limits rather than loader throughput alone. Results
+can vary with storage locality and host load; rerun this harness for the target
+dataset and placement.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="../optimization_guide/index.html"><span class="doc">Optimization Guide</span></a></dt><dd><p>Measure stage statistics and tune concurrency.</p>
+</dd>
+<dt><a class="reference internal" href="../getting_started/execution_models.html"><span class="doc">Execution Models: MT, MTP, and MP</span></a></dt><dd><p>Choose threading, multiprocessing, or hybrid execution.</p>
+</dd>
+<dt><a class="reference internal" href="pytorch.html"><span class="doc">PyTorch migration guide</span></a></dt><dd><p>See another dataset-first loader translated into SPDL stages.</p>
+</dd>
+</dl>
+</div>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="../best_practice.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Best Practices</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="pytorch.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Migrating from PyTorch DataLoader</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, Meta Platforms, Inc.
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Migrating from Grain</a><ul>
+<li><a class="reference internal" href="#why-spdl-uses-a-stage-first-pipeline">Why SPDL uses a stage-first pipeline</a></li>
+<li><a class="reference internal" href="#how-grain-is-commonly-used">How Grain is commonly used</a></li>
+<li><a class="reference internal" href="#equivalent-pipeline-structure">Equivalent pipeline structure</a></li>
+<li><a class="reference internal" href="#component-mapping">Component mapping</a></li>
+<li><a class="reference internal" href="#migration-work-for-non-equivalent-features">Migration work for non-equivalent features</a></li>
+<li><a class="reference internal" href="#migration-workflow">Migration workflow</a></li>
+<li><a class="reference internal" href="#benchmark-the-replacement">Benchmark the replacement</a><ul>
+<li><a class="reference internal" href="#benchmark-setup">Benchmark setup</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../_static/collapsible-lists/js/CollapsibleLists.compressed.js?v=73120307"></script>
+    <script src="../_static/collapsible-lists/js/apply-collapsible-lists.js?v=660e4f45"></script>
+    </body>
+</html>
