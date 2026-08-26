@@ -28,9 +28,6 @@ from ._common import _EOF, _EPOCH_END, _SKIP, is_eof, is_epoch_end, StageInfo
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._queue import _queue_stage_hook, AsyncQueue
 
-# pyre-strict
-
-
 T = TypeVar("T")
 U = TypeVar("U")
 

@@ -30,8 +30,6 @@ To run the benchmark,  pass it to the script like the following.
        --num-workers 8 # The number of GPUs
 """
 
-# pyre-strict
-
 from __future__ import annotations
 
 import argparse

@@ -6,8 +6,6 @@
 
 """Tests for MergeConfig class."""
 
-# pyre-strict
-
 import asyncio
 import unittest
 from collections.abc import Sequence

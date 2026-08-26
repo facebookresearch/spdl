@@ -66,8 +66,6 @@ __all__ = [
     "PipelineFailure",
 ]
 
-# pyre-strict
-
 
 @dataclass
 class _PathVariantsMergeConfig:

@@ -6,8 +6,6 @@
 
 """Utility functions."""
 
-# pyre-strict
-
 from ._build import (
     built_with_cuda,
     built_with_nvcodec,

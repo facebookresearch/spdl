@@ -16,5 +16,3 @@ __all__ = [
     "get_pytorch_dataloader",
     "PyTorchDataLoader",
 ]
-
-# pyre-strict

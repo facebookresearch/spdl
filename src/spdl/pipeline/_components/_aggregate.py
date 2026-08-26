@@ -19,8 +19,6 @@ from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._pipe import _FailCounter
 from ._queue import _queue_stage_hook, AsyncQueue
 
-# pyre-strict
-
 
 class _AggregatorWrapper:
     def __init__(self, agg: Aggregator) -> None:

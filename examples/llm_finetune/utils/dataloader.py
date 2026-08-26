@@ -10,7 +10,6 @@ from __future__ import annotations
 
 __all__ = ["build_pytorch_dataloader"]
 
-# pyre-strict
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 

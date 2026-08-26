@@ -21,9 +21,6 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
-# pyre-strict
-
-
 class PipelineDefTest(unittest.TestCase):
     def test_source_repr(self) -> None:
         """`repr` of SourceConfig should not generate a huge string."""

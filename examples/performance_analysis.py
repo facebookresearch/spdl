@@ -165,7 +165,6 @@ __all__ = [
     "SQLiteStatsWriter",
 ]
 
-# pyre-strict
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

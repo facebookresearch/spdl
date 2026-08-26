@@ -13,8 +13,6 @@ from spdl.pipeline import build_pipeline
 from spdl.pipeline._profile import _ProfilePipeline
 from spdl.pipeline.defs import Pipe, PipelineConfig, SinkConfig, SourceConfig
 
-# pyre-strict
-
 
 class TestBuildPipeline(unittest.TestCase):
     """Test class for build_pipeline functionality."""

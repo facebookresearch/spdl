@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# pyre-strict
 
 """Interpreter-exit teardown of a held `.to(ProcessPoolExecutorConfig)` region pipeline.
 

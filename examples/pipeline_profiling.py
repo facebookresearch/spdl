@@ -56,7 +56,6 @@ __all__ = [
     "run_profiling_example",
 ]
 
-# pyre-strict
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

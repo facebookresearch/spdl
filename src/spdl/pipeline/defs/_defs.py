@@ -33,8 +33,6 @@ from typing import (
 from spdl.pipeline._common._source_locator import locate_source
 from spdl.pipeline._common._types import _TCallables, _TMergeOp
 
-# pyre-strict
-
 T = TypeVar("T")
 U = TypeVar("U")
 

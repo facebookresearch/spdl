@@ -64,7 +64,6 @@ __all__ = [
     "train",
 ]
 
-# pyre-strict
 
 import argparse
 import logging

@@ -51,8 +51,6 @@ For the details, please refer to https://developer.nvidia.com/video-encode-and-d
    CPU decoding with higher concurrency often yields higher throughput.
 """
 
-# pyre-strict
-
 import argparse
 import logging
 import signal

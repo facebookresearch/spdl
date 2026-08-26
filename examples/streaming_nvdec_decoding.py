@@ -26,8 +26,6 @@ from PIL import Image
 from spdl.io import CUDAConfig
 from torch.profiler import profile
 
-# pyre-strict
-
 
 def parse_args(args: list[str] | None = None) -> tuple[argparse.Namespace, list[str]]:
     """Parse command line arguments.

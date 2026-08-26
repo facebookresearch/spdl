@@ -6,8 +6,6 @@
 
 """Iterables for traversing datasets and utilities for transforming them."""
 
-# pyre-strict
-
 from ._sampler import (
     DistributedDeterministicSampler,
     DistributedRandomSampler,

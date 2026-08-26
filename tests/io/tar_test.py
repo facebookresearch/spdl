@@ -10,8 +10,6 @@ import unittest
 
 import spdl.io
 
-# pyre-strict
-
 
 def _create_test_tar(
     files: list[tuple[str, bytes]], format: int = tarfile.PAX_FORMAT

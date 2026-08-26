@@ -24,8 +24,6 @@ V = TypeVar("V")
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
-# pyre-strict
-
 
 ################################################################################
 # MergeIterator

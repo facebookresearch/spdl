@@ -6,8 +6,6 @@
 
 """Tests for PathVariants feature."""
 
-# pyre-strict
-
 import asyncio
 import unittest
 from collections.abc import AsyncIterator, Iterable, Sequence

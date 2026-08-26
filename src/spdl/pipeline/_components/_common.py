@@ -29,9 +29,6 @@ from typing import Any, AsyncContextManager, TypeVar
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._common._types import StageInfo as StageInfo  # noqa: F811
 
-# pyre-strict
-
-
 T = TypeVar("T")
 U = TypeVar("U")
 
