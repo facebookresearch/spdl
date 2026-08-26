@@ -14,6 +14,9 @@ message(STATUS "########################################")
 message(STATUS "# Configuring nanobind")
 message(STATUS "########################################")
 
+# NOTE
+# When updating nanobind, also update the version in stubgen CI job
+# .github/workflows/_build_linux[_cuda].yml
 FetchContent_Declare(
   nanobind
   URL https://github.com/wjakob/nanobind/archive/refs/tags/v2.13.0.zip
