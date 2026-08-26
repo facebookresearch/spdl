@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#" /><link rel="search" title="Search" href="search.html" />
 
-    <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 --><title>Index - SPDL 0.6.0 documentation</title>
+    <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 --><title>Index - SPDL 0.7.0 documentation</title>
 <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -176,7 +176,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -200,7 +200,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -277,6 +277,7 @@
 <li class="toctree-l2"><a class="reference internal" href="migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="best_practice.html">Best Practices</a></li>
@@ -462,6 +463,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -807,8 +809,12 @@
 </li>
         <li><a href="generated/spdl.io.BSF.html#spdl.io.BSF">BSF (class in spdl.io)</a>
 </li>
-        <li><a href="generated/spdl.pipeline.defs.SinkConfig.html#spdl.pipeline.defs.SinkConfig.buffer_size">buffer_size (SinkConfig attribute)</a>
+        <li><a href="generated/spdl.pipeline.defs.PlacementConfig.html#spdl.pipeline.defs.PlacementConfig.buffer_size">buffer_size (PlacementConfig attribute)</a>
+
+        <ul>
+          <li><a href="generated/spdl.pipeline.defs.SinkConfig.html#spdl.pipeline.defs.SinkConfig.buffer_size">(SinkConfig attribute)</a>
 </li>
+        </ul></li>
         <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.BUILD">BUILD (FailurePhase attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.build">build() (PipelineBuilder method)</a>
@@ -2543,13 +2549,15 @@
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4I_9MediaTypeEN4spdl4core7Demuxer12demux_windowE10PacketsPtrI5mediaERKNSt8optionalI10TimeWindowEERKNSt8optionalINSt6stringEEE">spdl::core::Demuxer::demux_window (C++ function)</a>
 </li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer7DemuxerE16DataInterfacePtr">spdl::core::Demuxer::Demuxer (C++ function)</a>
+        <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer7DemuxerE16DataInterfacePtr">spdl::core::Demuxer::Demuxer (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer7DemuxerERK7Demuxer">[1]</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer7DemuxerERR7Demuxer">[2]</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4I_9MediaTypeENK4spdl4core7Demuxer17get_default_codecE5CodecI5mediaEv">spdl::core::Demuxer::get_default_codec (C++ function)</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4I_9MediaTypeENK4spdl4core7Demuxer24get_default_stream_indexEiv">spdl::core::Demuxer::get_default_stream_index (C++ function)</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4NK4spdl4core7Demuxer9has_audioEv">spdl::core::Demuxer::has_audio (C++ function)</a>
+</li>
+        <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7DemuxeraSERK7Demuxer">spdl::core::Demuxer::operator= (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7DemuxeraSERR7Demuxer">[1]</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer15streaming_demuxERKNSt3setIiEEid">spdl::core::Demuxer::streaming_demux (C++ function)</a>
 </li>
@@ -2573,55 +2581,45 @@
 </li>
         <li><a href="generated/libspdl/enum_types_8h_1adb4e1adb2b3a59148c2797f903ead06f.html#_CPPv4N4spdl4core9ElemClass4UIntE">spdl::core::ElemClass::UInt (C++ enumerator)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase.html#_CPPv4I_9MediaTypeEN4spdl4core16EncodeConfigBaseE">spdl::core::EncodeConfigBase (C++ struct)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase.html#_CPPv4I_9MediaTypeEN4spdl4core16EncodeConfigBaseE">spdl::core::EncodeConfigBase (C++ struct)</a>, <a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4IEN4spdl4core16EncodeConfigBaseE">[1]</a>, <a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4IEN4spdl4core16EncodeConfigBaseE">[2]</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4IEN4spdl4core16EncodeConfigBaseIN9MediaType5AudioEEE">spdl::core::EncodeConfigBase&lt;MediaType::Audio&gt; (C++ struct)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase8bit_rateE">spdl::core::EncodeConfigBase::bit_rate (C++ member)</a>, <a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase8bit_rateE">[1]</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5AudioEE8bit_rateE">spdl::core::EncodeConfigBase&lt;MediaType::Audio&gt;::bit_rate (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase15color_primariesE">spdl::core::EncodeConfigBase::color_primaries (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5AudioEE17compression_levelE">spdl::core::EncodeConfigBase&lt;MediaType::Audio&gt;::compression_level (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase9color_trcE">spdl::core::EncodeConfigBase::color_trc (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5AudioEE12num_channelsE">spdl::core::EncodeConfigBase&lt;MediaType::Audio&gt;::num_channels (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase10colorspaceE">spdl::core::EncodeConfigBase::colorspace (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5AudioEE6qscaleE">spdl::core::EncodeConfigBase&lt;MediaType::Audio&gt;::qscale (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase17compression_levelE">spdl::core::EncodeConfigBase::compression_level (C++ member)</a>, <a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase17compression_levelE">[1]</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5AudioEE10sample_fmtE">spdl::core::EncodeConfigBase&lt;MediaType::Audio&gt;::sample_fmt (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase10frame_rateE">spdl::core::EncodeConfigBase::frame_rate (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5AudioEE11sample_rateE">spdl::core::EncodeConfigBase&lt;MediaType::Audio&gt;::sample_rate (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase8gop_sizeE">spdl::core::EncodeConfigBase::gop_size (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4IEN4spdl4core16EncodeConfigBaseIN9MediaType5VideoEEE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt; (C++ struct)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase6heightE">spdl::core::EncodeConfigBase::height (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8bit_rateE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::bit_rate (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase12max_b_framesE">spdl::core::EncodeConfigBase::max_b_frames (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE15color_primariesE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::color_primaries (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase12num_channelsE">spdl::core::EncodeConfigBase::num_channels (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE9color_trcE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::color_trc (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase7pix_fmtE">spdl::core::EncodeConfigBase::pix_fmt (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10colorspaceE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::colorspace (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase6qscaleE">spdl::core::EncodeConfigBase::qscale (C++ member)</a>, <a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase6qscaleE">[1]</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE17compression_levelE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::compression_level (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase10sample_fmtE">spdl::core::EncodeConfigBase::sample_fmt (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10frame_rateE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::frame_rate (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase11sample_rateE">spdl::core::EncodeConfigBase::sample_rate (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8gop_sizeE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::gop_size (C++ member)</a>
+        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBase5widthE">spdl::core::EncodeConfigBase::width (C++ member)</a>
 </li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6heightE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::height (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE12max_b_framesE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::max_b_frames (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE7pix_fmtE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::pix_fmt (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6qscaleE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::qscale (C++ member)</a>
-</li>
-        <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE5widthE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::width (C++ member)</a>
-</li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4I_9MediaTypeEN4spdl4core7EncoderE">spdl::core::Encoder (C++ class)</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder6encodeERRK9FramesPtrI5mediaE">spdl::core::Encoder::encode (C++ function)</a>
 </li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderEPN6detail11EncoderImplI5mediaEE">spdl::core::Encoder::Encoder (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderERK7EncoderI5mediaE">[1]</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderERR7EncoderI5mediaE">[2]</a>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderENSt10unique_ptrIN6detail11EncoderImplI5mediaEEEE">spdl::core::Encoder::Encoder (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderERK7EncoderI5mediaE">[1]</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderERR7EncoderI5mediaE">[2]</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder5flushEv">spdl::core::Encoder::flush (C++ function)</a>
 </li>
@@ -3273,7 +3271,7 @@
     </aside>
   </div>
 </div>
-    <script src="_static/js/custom.js"></script><script src="_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="_static/js/custom.js"></script><script src="_static/documentation_options.js?v=b9678aa1"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=5fa4622c"></script>

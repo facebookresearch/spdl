@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Template Struct Generator" href="structspdl_1_1core_1_1Generator.html" /><link rel="prev" title="Template Struct EncodeConfigBase&lt; MediaType::Audio &gt;" href="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Audio_01_4.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Template Struct EncodeConfigBase&lt; MediaType::Video &gt; - SPDL 0.6.0 documentation</title>
+        <title>Template Struct EncodeConfigBase&lt; MediaType::Video &gt; - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../best_practice.html">Best Practices</a></li>
@@ -464,6 +465,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -532,79 +534,79 @@
 <section id="struct-documentation">
 <h2>Struct Documentation<a class="headerlink" href="#struct-documentation" title="Link to this heading">¶</a></h2>
 <dl class="cpp struct">
-<dt class="sig sig-object cpp" id="_CPPv4IEN4spdl4core16EncodeConfigBaseIN9MediaType5VideoEEE">
-<span id="_CPPv3IEN4spdl4core16EncodeConfigBaseIN9MediaType5VideoEEE"></span><span id="_CPPv2IEN4spdl4core16EncodeConfigBaseIN9MediaType5VideoEEE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">EncodeConfigBase</span></span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c.html#_CPPv4N4spdl4core9MediaTypeE" title="spdl::core::MediaType"><span class="n"><span class="pre">MediaType</span></span></a><span class="p"><span class="pre">::</span></span><a class="reference internal" href="enum_types_8h_1ac22438cfd069f0b1b6a736e73e8d244c.html#_CPPv4N4spdl4core9MediaType5VideoE" title="spdl::core::MediaType::Video"><span class="n"><span class="pre">Video</span></span></a><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4IEN4spdl4core16EncodeConfigBaseIN9MediaType5VideoEEE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4IEN4spdl4core16EncodeConfigBaseE">
+<span id="_CPPv3IEN4spdl4core16EncodeConfigBaseE"></span><span id="_CPPv2IEN4spdl4core16EncodeConfigBaseE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">EncodeConfigBase</span></span></span><br /></dt>
 <dd><p>Video encoding configuration. </p>
 <div class="breathe-sectiondef docutils container">
 <p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-members">Public Members</p>
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6heightE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6heightE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6heightE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::height__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1afa3ef473c1a5ef4f4d13f995b749e937"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">height</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6heightE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase6heightE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase6heightE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase6heightE"></span><span id="spdl::core::EncodeConfigBase::height__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1afa3ef473c1a5ef4f4d13f995b749e937"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">height</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBase6heightE" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Output video height in pixels. </p>
 </dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE5widthE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE5widthE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE5widthE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::width__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1ac6a40ac18d20bffd20db38639cf074c2"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">width</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE5widthE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase5widthE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase5widthE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase5widthE"></span><span id="spdl::core::EncodeConfigBase::width__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1ac6a40ac18d20bffd20db38639cf074c2"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">width</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBase5widthE" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Output video width in pixels. </p>
 </dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE7pix_fmtE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE7pix_fmtE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE7pix_fmtE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::pix_fmt__std::optional:ss:C"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1a303f552ad25b80b2a231a7107f2ebf07"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">pix_fmt</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">nullopt</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE7pix_fmtE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase7pix_fmtE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase7pix_fmtE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase7pix_fmtE"></span><span id="spdl::core::EncodeConfigBase::pix_fmt__std::optional:ss:C"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1a303f552ad25b80b2a231a7107f2ebf07"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">pix_fmt</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">nullopt</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBase7pix_fmtE" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Pixel format override. If not specified, uses encoder default. </p>
 </dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10frame_rateE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10frame_rateE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10frame_rateE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::frame_rate__std::optional:Rational:C"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1a96c8a718b0043f2345b7cf6e1f3f535f"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html#_CPPv4N4spdl4core8RationalE" title="spdl::core::Rational"><span class="n"><span class="pre">Rational</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">frame_rate</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">nullopt</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10frame_rateE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase10frame_rateE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase10frame_rateE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase10frame_rateE"></span><span id="spdl::core::EncodeConfigBase::frame_rate__std::optional:Rational:C"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1a96c8a718b0043f2345b7cf6e1f3f535f"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="typedef_types_8h_1a8bd80c8465b1f3e17b564c5ced977a2d.html#_CPPv4N4spdl4core8RationalE" title="spdl::core::Rational"><span class="n"><span class="pre">Rational</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">frame_rate</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">nullopt</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBase10frame_rateE" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Frame rate override. If not specified, uses encoder default. </p>
 </dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8bit_rateE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8bit_rateE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8bit_rateE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::bit_rate__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1ae4aa5c7c7c23142742bf00770bfa072f"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">bit_rate</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="o"><span class="pre">-</span></span><span class="m"><span class="pre">1</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8bit_rateE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase8bit_rateE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase8bit_rateE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase8bit_rateE"></span><span id="spdl::core::EncodeConfigBase::bit_rate__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1ae4aa5c7c7c23142742bf00770bfa072f"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">bit_rate</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="o"><span class="pre">-</span></span><span class="m"><span class="pre">1</span></span><br /></dt>
 <dd><p>Target bit rate in bits per second. Negative values use encoder default. </p>
 </dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE17compression_levelE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE17compression_levelE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE17compression_levelE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::compression_level__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1a2477db1dbc8302eda2fb6185a4de5474"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">compression_level</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="o"><span class="pre">-</span></span><span class="m"><span class="pre">1</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE17compression_levelE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase17compression_levelE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase17compression_levelE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase17compression_levelE"></span><span id="spdl::core::EncodeConfigBase::compression_level__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1a2477db1dbc8302eda2fb6185a4de5474"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">compression_level</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="o"><span class="pre">-</span></span><span class="m"><span class="pre">1</span></span><br /></dt>
 <dd><p>Compression level. Negative values use encoder default. </p>
 </dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6qscaleE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6qscaleE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6qscaleE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::qscale__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1acfa838a033215e38a8a6e01842aa9e12"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">qscale</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="o"><span class="pre">-</span></span><span class="m"><span class="pre">1</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6qscaleE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase6qscaleE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase6qscaleE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase6qscaleE"></span><span id="spdl::core::EncodeConfigBase::qscale__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1acfa838a033215e38a8a6e01842aa9e12"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">qscale</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="o"><span class="pre">-</span></span><span class="m"><span class="pre">1</span></span><br /></dt>
 <dd></dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8gop_sizeE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8gop_sizeE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8gop_sizeE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::gop_size__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1ae30d32d60676f18de355273d2ca26ff9"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">gop_size</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="o"><span class="pre">-</span></span><span class="m"><span class="pre">1</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8gop_sizeE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase8gop_sizeE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase8gop_sizeE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase8gop_sizeE"></span><span id="spdl::core::EncodeConfigBase::gop_size__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1ae30d32d60676f18de355273d2ca26ff9"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">gop_size</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="o"><span class="pre">-</span></span><span class="m"><span class="pre">1</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBase8gop_sizeE" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Group of Pictures (GOP) size. Negative values use encoder default. </p>
 </dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE12max_b_framesE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE12max_b_framesE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE12max_b_framesE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::max_b_frames__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1adf93560a1f11b94cbdffab0fd7aad419"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">max_b_frames</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="o"><span class="pre">-</span></span><span class="m"><span class="pre">1</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE12max_b_framesE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase12max_b_framesE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase12max_b_framesE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase12max_b_framesE"></span><span id="spdl::core::EncodeConfigBase::max_b_frames__i"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1adf93560a1f11b94cbdffab0fd7aad419"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">max_b_frames</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="o"><span class="pre">-</span></span><span class="m"><span class="pre">1</span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBase12max_b_framesE" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Maximum number of B-frames. Negative values use encoder default. </p>
 </dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10colorspaceE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10colorspaceE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10colorspaceE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::colorspace__std::optional:ss:"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1a0e8ee4a38e34f97f0dca5c5d882e6ea4"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">colorspace</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10colorspaceE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase10colorspaceE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase10colorspaceE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase10colorspaceE"></span><span id="spdl::core::EncodeConfigBase::colorspace__std::optional:ss:"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1a0e8ee4a38e34f97f0dca5c5d882e6ea4"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">colorspace</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBase10colorspaceE" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Optional colorspace specification. </p>
 </dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE15color_primariesE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE15color_primariesE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE15color_primariesE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::color_primaries__std::optional:ss:"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1ac4dbcb2b94d3ce075ba4477c3e9e547c"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">color_primaries</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE15color_primariesE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase15color_primariesE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase15color_primariesE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase15color_primariesE"></span><span id="spdl::core::EncodeConfigBase::color_primaries__std::optional:ss:"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1ac4dbcb2b94d3ce075ba4477c3e9e547c"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">color_primaries</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBase15color_primariesE" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Optional color primaries specification. </p>
 </dd></dl>
 
 <dl class="cpp var">
-<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE9color_trcE">
-<span id="_CPPv3N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE9color_trcE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE9color_trcE"></span><span id="spdl::core::EncodeConfigBase:MediaType::Video:::color_trc__std::optional:ss:"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1aca47a2df42164eee0fb11fe1d3995d0c"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">color_trc</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE9color_trcE" title="Link to this definition">¶</a><br /></dt>
+<dt class="sig sig-object cpp" id="_CPPv4N4spdl4core16EncodeConfigBase9color_trcE">
+<span id="_CPPv3N4spdl4core16EncodeConfigBase9color_trcE"></span><span id="_CPPv2N4spdl4core16EncodeConfigBase9color_trcE"></span><span id="spdl::core::EncodeConfigBase::color_trc__std::optional:ss:"></span><span class="target" id="structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4_1aca47a2df42164eee0fb11fe1d3995d0c"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">color_trc</span></span></span><a class="headerlink" href="#_CPPv4N4spdl4core16EncodeConfigBase9color_trcE" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Optional color transfer characteristics specification. </p>
 </dd></dl>
 
@@ -671,19 +673,19 @@
             <ul>
 <li><a class="reference internal" href="#">Template Struct EncodeConfigBase&lt; MediaType::Video &gt;</a><ul>
 <li><a class="reference internal" href="#struct-documentation">Struct Documentation</a><ul>
-<li><a class="reference internal" href="#_CPPv4IEN4spdl4core16EncodeConfigBaseIN9MediaType5VideoEEE"><code class="docutils literal notranslate"><span class="pre">spdl::core::EncodeConfigBase&lt;</span> <span class="pre">MediaType::Video</span> <span class="pre">&gt;</span></code></a><ul>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6heightE"><code class="docutils literal notranslate"><span class="pre">height</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE5widthE"><code class="docutils literal notranslate"><span class="pre">width</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE7pix_fmtE"><code class="docutils literal notranslate"><span class="pre">pix_fmt</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10frame_rateE"><code class="docutils literal notranslate"><span class="pre">frame_rate</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8bit_rateE"><code class="docutils literal notranslate"><span class="pre">bit_rate</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE17compression_levelE"><code class="docutils literal notranslate"><span class="pre">compression_level</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE6qscaleE"><code class="docutils literal notranslate"><span class="pre">qscale</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8gop_sizeE"><code class="docutils literal notranslate"><span class="pre">gop_size</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE12max_b_framesE"><code class="docutils literal notranslate"><span class="pre">max_b_frames</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10colorspaceE"><code class="docutils literal notranslate"><span class="pre">colorspace</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE15color_primariesE"><code class="docutils literal notranslate"><span class="pre">color_primaries</span></code></a></li>
-<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE9color_trcE"><code class="docutils literal notranslate"><span class="pre">color_trc</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4IEN4spdl4core16EncodeConfigBaseE"><code class="docutils literal notranslate"><span class="pre">spdl::core::EncodeConfigBase&lt;</span> <span class="pre">MediaType::Video</span> <span class="pre">&gt;</span></code></a><ul>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase6heightE"><code class="docutils literal notranslate"><span class="pre">height</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase5widthE"><code class="docutils literal notranslate"><span class="pre">width</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase7pix_fmtE"><code class="docutils literal notranslate"><span class="pre">pix_fmt</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase10frame_rateE"><code class="docutils literal notranslate"><span class="pre">frame_rate</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase8bit_rateE"><code class="docutils literal notranslate"><span class="pre">bit_rate</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase17compression_levelE"><code class="docutils literal notranslate"><span class="pre">compression_level</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase6qscaleE"><code class="docutils literal notranslate"><span class="pre">qscale</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase8gop_sizeE"><code class="docutils literal notranslate"><span class="pre">gop_size</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase12max_b_framesE"><code class="docutils literal notranslate"><span class="pre">max_b_frames</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase10colorspaceE"><code class="docutils literal notranslate"><span class="pre">colorspace</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase15color_primariesE"><code class="docutils literal notranslate"><span class="pre">color_primaries</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4N4spdl4core16EncodeConfigBase9color_trcE"><code class="docutils literal notranslate"><span class="pre">color_trc</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -700,7 +702,7 @@
     </aside>
   </div>
 </div>
-    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

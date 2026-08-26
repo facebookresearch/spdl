@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Example: Video Classification" href="autoresearch_example.html" /><link rel="prev" title="Autoresearch" href="index.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>How It Works - SPDL 0.6.0 documentation</title>
+        <title>How It Works - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
@@ -464,6 +465,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -534,7 +536,7 @@
 and GC alignment, establish a baseline, and measure headspace.</p></li>
 <li><p><strong>Seed experiments</strong> – Launch structural optimizations that are known
 to be high-impact (baseline measurement, headspace analysis,
-subprocess pipeline).</p></li>
+subprocess pipeline, and multiprocessing region).</p></li>
 <li><p><strong>Iterative optimization</strong> – The coding agent analyzes results,
 proposes follow-up experiments, and the engine executes them
 concurrently until metrics plateau.</p></li>
@@ -625,7 +627,7 @@ creating a clean baseline for subsequent experiments to branch from.</p>
 </section>
 <section id="seed-experiments">
 <h3>Seed Experiments<a class="headerlink" href="#seed-experiments" title="Link to this heading">¶</a></h3>
-<p>The engine schedules three seed experiments before entering the
+<p>The engine schedules four seed experiments before entering the
 iterative loop. Each addresses a known high-impact area and forms a
 root node in the hypothesis tree.</p>
 <p><strong>Baseline</strong></p>
@@ -645,6 +647,19 @@ between the data loading threads and the training loop. This is often
 a high-impact optimization, as discussed in <span class="xref std std-ref">resolution</span>. By
 running the pipeline in a separate process, the data loading threads
 no longer compete with PyTorch for the GIL.</p>
+<p><strong>Multiprocessing region (MP)</strong></p>
+<p>The pipeline is also benchmarked with adjacent I/O and CPU stages inside
+a <a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.to" title="spdl.pipeline.PipelineBuilder.to"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to()</span></code></a> region backed by
+<a class="reference internal" href="../generated/spdl.pipeline.defs.ProcessPoolExecutorConfig.html#spdl.pipeline.defs.ProcessPoolExecutorConfig" title="spdl.pipeline.defs.ProcessPoolExecutorConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProcessPoolExecutorConfig</span></code></a>. Each worker
+runs a nested pipeline and its own async event loop, so intermediate
+values stay in the worker instead of crossing IPC between every stage.
+This topology is always benchmarked regardless of data modality. It is
+especially promising for small text and image records, where boundary
+transfers are relatively cheap and true process parallelism can
+outperform MTP and conventional data loaders. Large video workloads
+generally start with MTP, but the region benchmark still runs; it can
+win when it receives small metadata and keeps large fetched or decoded
+values inside the worker.</p>
 </section>
 <section id="iterative-optimization">
 <h3>Iterative Optimization<a class="headerlink" href="#iterative-optimization" title="Link to this heading">¶</a></h3>
@@ -893,7 +908,7 @@ see <a class="reference internal" href="autoresearch_example.html#autoresearch-e
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

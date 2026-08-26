@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.autoresearch.core.WorkflowSpec - SPDL 0.6.0 documentation</title>
+        <title>spdl.autoresearch.core.WorkflowSpec - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
@@ -464,6 +465,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -590,7 +592,7 @@ that returns a value satisfying this protocol.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.autoresearch.core.WorkflowSpec.description">
-<span class="sig-name descname"><span class="pre">description</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L74-L96"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.description" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">description</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L74-L96"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.description" title="Link to this definition">¶</a></dt>
 <dd><p>Return free-form domain context for the supervisor.</p>
 <p>Describes the workflow domain, the meaning of its config
 fields, and what happens during a run. The framework joins this
@@ -614,7 +616,7 @@ like, what the engine will do with them.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.autoresearch.core.WorkflowSpec.engine_argv_tail">
-<span class="sig-name descname"><span class="pre">engine_argv_tail</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L62-L72"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.engine_argv_tail" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">engine_argv_tail</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L62-L72"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.engine_argv_tail" title="Link to this definition">¶</a></dt>
 <dd><p>Return the workflow-specific flags for the engine command.</p>
 <p>Appended after the framework’s own arguments when the supervisor
 builds the engine invocation. The returned list typically encodes
@@ -628,13 +630,13 @@ domain config such as <code class="docutils literal notranslate"><span class="pr
 
 <dl class="py property">
 <dt class="sig sig-object py" id="spdl.autoresearch.core.WorkflowSpec.max_concurrency">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">max_concurrency</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L55-L58"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.max_concurrency" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">max_concurrency</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L55-L58"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.max_concurrency" title="Link to this definition">¶</a></dt>
 <dd><p>Maximum concurrent coroutines the orchestrator should run.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.autoresearch.core.WorkflowSpec.setup">
-<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">workdir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L124-L137"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.setup" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">workdir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L124-L137"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.setup" title="Link to this definition">¶</a></dt>
 <dd><p>Perform fresh-run workdir initialisation, idempotent on resume.</p>
 <p>Called once at the start of each engine invocation. Workflows
 detect re-runs internally (for example, by checking for
@@ -651,7 +653,7 @@ argv.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.autoresearch.core.WorkflowSpec.supervisor_known_config">
-<span class="sig-name descname"><span class="pre">supervisor_known_config</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L98-L108"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.supervisor_known_config" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">supervisor_known_config</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L98-L108"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.supervisor_known_config" title="Link to this definition">¶</a></dt>
 <dd><p>Return key/value pairs for the supervisor’s “known config” block.</p>
 <p>Rendered as a bullet list inside the supervisor prompt so the
 agent can summarise what is already set. Empty values are still
@@ -665,7 +667,7 @@ rendered to make missing-but-named fields visible.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.autoresearch.core.WorkflowSpec.supervisor_missing_config">
-<span class="sig-name descname"><span class="pre">supervisor_missing_config</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L110-L120"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.supervisor_missing_config" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">supervisor_missing_config</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/autoresearch/core/_workflow.py?#L110-L120"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.autoresearch.core.WorkflowSpec.supervisor_missing_config" title="Link to this definition">¶</a></dt>
 <dd><p>Return human-readable names of required values not yet supplied.</p>
 <p>An empty list signals the workflow is ready to run the engine
 without further user interaction.</p>
@@ -741,7 +743,7 @@ without further user interaction.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

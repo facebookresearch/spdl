@@ -24,6 +24,7 @@ Program Listing for File muxer.h
    #include <libspdl/core/packets.h>
    #include <libspdl/core/types.h>
    
+   #include <memory>
    #include <optional>
    #include <string>
    
@@ -33,7 +34,7 @@ Program Listing for File muxer.h
    } // namespace detail
    
    class Muxer {
-     detail::MuxerImpl* pImpl_;
+     std::unique_ptr<detail::MuxerImpl> pImpl_;
      std::vector<MediaType> types_;
    
     public:
