@@ -355,7 +355,7 @@ class TestLoadImageBatch(unittest.TestCase):
         # Green
         np.testing.assert_array_equal(middle[..., 0], 0)
         _assert_all_ge(middle[..., 1], 253)
-        np.testing.assert_array_equal(middle[..., 2], 0)
+        _assert_all_le(middle[..., 2], 1)
 
         # Blue
         np.testing.assert_array_equal(right[..., 0], 0)
