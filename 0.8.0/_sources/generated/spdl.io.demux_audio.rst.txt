@@ -1,0 +1,6 @@
+spdl.io.demux\_audio
+====================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: demux_audio

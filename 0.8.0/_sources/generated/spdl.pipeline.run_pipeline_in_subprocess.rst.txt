@@ -1,0 +1,6 @@
+spdl.pipeline.run\_pipeline\_in\_subprocess
+===========================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autofunction:: run_pipeline_in_subprocess

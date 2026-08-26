@@ -1,0 +1,14 @@
+.. _exhale_function_utils_8h_1abbebef003881d8734c12e03a47814732:
+
+Function spdl::core::init_tracing
+=================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::init_tracing()
+   :project: libspdl

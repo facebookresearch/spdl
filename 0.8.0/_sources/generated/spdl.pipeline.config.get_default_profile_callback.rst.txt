@@ -1,0 +1,6 @@
+spdl.pipeline.config.get\_default\_profile\_callback
+====================================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: get_default_profile_callback

@@ -1,0 +1,6 @@
+spdl.io.transfer\_tensor\_d2h
+=============================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: transfer_tensor_d2h

@@ -1,0 +1,14 @@
+spdl.pipeline.defs.ExecutorConfig
+=================================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: ExecutorConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~ExecutorConfig.initargs
+      ~ExecutorConfig.initializer
+      ~ExecutorConfig.max_workers

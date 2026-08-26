@@ -1,0 +1,15 @@
+spdl.pipeline.defs.ProcessPoolExecutorConfig
+============================================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autoclass:: ProcessPoolExecutorConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~ProcessPoolExecutorConfig.initargs
+      ~ProcessPoolExecutorConfig.initializer
+      ~ProcessPoolExecutorConfig.max_workers
+      ~ProcessPoolExecutorConfig.mp_context

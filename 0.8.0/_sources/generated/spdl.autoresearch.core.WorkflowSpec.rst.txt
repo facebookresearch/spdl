@@ -1,0 +1,22 @@
+spdl.autoresearch.core.WorkflowSpec
+===================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoclass:: WorkflowSpec
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~WorkflowSpec.build_workflow
+      ~WorkflowSpec.description
+      ~WorkflowSpec.engine_argv_tail
+      ~WorkflowSpec.setup
+      ~WorkflowSpec.supervisor_known_config
+      ~WorkflowSpec.supervisor_missing_config
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~WorkflowSpec.max_concurrency

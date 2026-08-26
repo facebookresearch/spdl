@@ -35,6 +35,8 @@ Includes
 
 - ``libspdl/core/types.h`` (:ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_types.h`)
 
+- ``memory``
+
 - ``optional``
 
 - ``set``
@@ -70,9 +72,9 @@ Functions
 ---------
 
 
-- :ref:`exhale_function_demuxing_8h_1a325a3202908e610862ad04182e7da81a`
-
 - :ref:`exhale_function_demuxing_8h_1a78b157beb45e215aad69f013831788ac`
+
+- :ref:`exhale_function_demuxing_8h_1a325a3202908e610862ad04182e7da81a`
 
 
 Typedefs

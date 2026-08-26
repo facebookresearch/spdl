@@ -1,0 +1,7 @@
+spdl.dataloader.DataLoader
+==========================
+
+.. currentmodule:: spdl.dataloader
+
+.. autoclass:: DataLoader
+   :members:

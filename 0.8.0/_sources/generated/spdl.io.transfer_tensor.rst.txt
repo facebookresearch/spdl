@@ -1,0 +1,6 @@
+spdl.io.transfer\_tensor
+========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: transfer_tensor

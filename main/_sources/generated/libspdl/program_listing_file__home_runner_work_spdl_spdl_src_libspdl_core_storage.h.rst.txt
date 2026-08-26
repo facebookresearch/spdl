@@ -39,10 +39,10 @@ Program Listing for File storage.h
      static void* default_alloc(size_t s);
      static void default_dealloc(void* p);
    
-     deallocator_type deallocator_;
+     deallocator_type deallocator_ = nullptr;
    
     public:
-     size_t size;
+     size_t size = 0;
      // So far, we only need this in CPUStorage. So we are not adding it
      // in CUDAStorage. If we need to add that to CUDAStorage, revisit
      // the interface/abstraction. (Is virtual `get_size` better?)

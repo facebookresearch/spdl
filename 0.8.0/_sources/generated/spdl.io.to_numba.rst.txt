@@ -1,0 +1,6 @@
+spdl.io.to\_numba
+=================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: to_numba

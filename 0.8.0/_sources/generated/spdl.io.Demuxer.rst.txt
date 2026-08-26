@@ -1,0 +1,25 @@
+spdl.io.Demuxer
+===============
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: Demuxer
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~Demuxer.demux_audio
+      ~Demuxer.demux_image
+      ~Demuxer.demux_video
+      ~Demuxer.has_audio
+      ~Demuxer.streaming_demux
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~Demuxer.audio_codec
+      ~Demuxer.audio_stream_index
+      ~Demuxer.image_codec
+      ~Demuxer.video_codec
+      ~Demuxer.video_stream_index

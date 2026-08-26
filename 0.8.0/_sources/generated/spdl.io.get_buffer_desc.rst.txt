@@ -1,0 +1,6 @@
+spdl.io.get\_buffer\_desc
+=========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: get_buffer_desc

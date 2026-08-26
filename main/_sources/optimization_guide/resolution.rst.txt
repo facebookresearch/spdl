@@ -64,13 +64,27 @@ so an event loop is created and destroyed for each call.
 A lot of time is consumed in construction and destruction of
 redundant event loops.
 
-The PyTorch Profiler also annotates GPU and Tensor metadata, so it is
-useful to verify GPU-related activities.
-For example, to ensure that the data transfer is not interrupting the
-the main training, we can check that the data transfer is happening in
-a separate stream.
+The PyTorch Profiler also annotates GPU and Tensor metadata, so it is useful to
+verify GPU-related activities. For example, inspect the CUDA stream timeline to
+verify that host-to-device transfer with :py:func:`spdl.io.transfer_tensor_h2d`
+overlaps independent model computation instead of delaying it. The following
+trace illustrates host-to-device transfer on a dedicated stream.
 
 .. image:: ../../_static/data/parallelism_transfer.png
+   :alt: Host-to-device transfer overlapping foreground CUDA work.
+
+Device-to-host transfer can use the same pattern with
+:py:func:`spdl.io.transfer_tensor_d2h`. The following Perfetto view shows its
+dedicated stream (stream 13) overlapping foreground SGEMM kernels on the
+default stream (stream 7). In this capture, 19.4 ms of the 21.3 ms transfer
+overlaps compute (91%).
+
+.. image:: ../../_static/data/parallelism_transfer_d2h.png
+   :alt: Device-to-host transfer on stream 13 overlapping SGEMM kernels on the default stream.
+   :width: 100%
+
+See :py:mod:`benchmark_transfer_overlap` for a reproducible device-to-host
+overlap benchmark.
 
 Sampler
 ~~~~~~~

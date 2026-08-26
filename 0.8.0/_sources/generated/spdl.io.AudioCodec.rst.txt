@@ -1,0 +1,17 @@
+spdl.io.AudioCodec
+==================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: AudioCodec
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~AudioCodec.channel_layout
+      ~AudioCodec.name
+      ~AudioCodec.num_channels
+      ~AudioCodec.sample_fmt
+      ~AudioCodec.sample_rate
+      ~AudioCodec.time_base

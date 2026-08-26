@@ -1,0 +1,6 @@
+spdl.io.demux\_video
+====================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: demux_video

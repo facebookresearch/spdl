@@ -1,0 +1,14 @@
+.. _exhale_typedef_encoder_8h_1a57216492ce017017647dba9d1f6f2a5d:
+
+Typedef spdl::core::AudioEncoder
+================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_encoder.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::AudioEncoder
+   :project: libspdl

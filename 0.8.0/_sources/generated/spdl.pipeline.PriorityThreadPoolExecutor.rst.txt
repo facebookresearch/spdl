@@ -1,0 +1,13 @@
+spdl.pipeline.PriorityThreadPoolExecutor
+========================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: PriorityThreadPoolExecutor
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~PriorityThreadPoolExecutor.get_executor
+      ~PriorityThreadPoolExecutor.shutdown

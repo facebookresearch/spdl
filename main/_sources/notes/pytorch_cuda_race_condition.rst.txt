@@ -9,7 +9,7 @@ a subtle race condition can occur that affects the reliability and correctness o
 Background
 ----------
 
-The :py:func:`transfer_tensor` function is a handy function that encapsulates the steps required to
+The :py:func:`transfer_tensor_h2d` function is a handy function that encapsulates the steps required to
 transfer data to the GPU without interfering with the main thread and the default CUDA stream.
 
 It does the following:
@@ -32,7 +32,7 @@ Typically with :py:class:`~spdl.pipeline.Pipeline`, the pipeline is set up as fo
       .add_source(dataset)
       .pipe(preprocess)
       .pipe(  # Background data transfer
-          transfer_tensor,
+          transfer_tensor_h2d,
           executor=io_executor,
       )
       .add_sink()
@@ -111,15 +111,15 @@ The result is data corruption. The following diagram illustrates this:
 .. image:: ../../_static/data/pytorch_cuda_race_condition.png
 
 
-The Solution: Caching the reference in ``transfer_tensor``
-----------------------------------------------------------
+The Solution: Caching the reference in ``transfer_tensor_h2d``
+---------------------------------------------------------------
 
 PyTorch provides a mitigation for multi-stream applications, such as
 :py:meth:`~torch.Tensor.record_stream`.
 However, we are not certain that this works for multi-threading situations,
 so we resort to a more primitive approach.
 
-The :py:func:`transfer_tensor` function now holds a strong reference to the batches
+The :py:func:`transfer_tensor_h2d` function holds a strong reference to the batches
 transferred to the GPU.
 It holds references to the last 4 batches it transferred.
 4 is the number of batches that can exist in the current pipeline stage and
@@ -149,7 +149,7 @@ The pipeline stages are connected with queues and each queue can hold up to 2 it
    e2@{ animation: slow }
 
 By holding the last 4 batches, even if the reference is lost in the model stage,
-the last reference is still held by the cache of :py:func:`transfer_tensor`, so
+the last reference is still held by the cache of :py:func:`transfer_tensor_h2d`, so
 the CCA will not immediately reuse the underlying memory.
 
 

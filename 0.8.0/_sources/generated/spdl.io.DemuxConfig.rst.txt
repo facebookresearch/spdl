@@ -1,0 +1,7 @@
+spdl.io.DemuxConfig
+===================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: DemuxConfig
+   :members:

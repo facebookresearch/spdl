@@ -1,0 +1,30 @@
+spdl.autoresearch.core.HypothesisNode
+=====================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoclass:: HypothesisNode
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~HypothesisNode.from_dict
+      ~HypothesisNode.to_dict
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~HypothesisNode.commit
+      ~HypothesisNode.duration
+      ~HypothesisNode.failure
+      ~HypothesisNode.job_id
+      ~HypothesisNode.launched_at
+      ~HypothesisNode.parent_id
+      ~HypothesisNode.priority
+      ~HypothesisNode.result
+      ~HypothesisNode.status
+      ~HypothesisNode.node_id
+      ~HypothesisNode.name
+      ~HypothesisNode.spec
+      ~HypothesisNode.children

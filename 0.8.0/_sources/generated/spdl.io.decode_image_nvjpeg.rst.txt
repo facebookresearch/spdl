@@ -1,0 +1,6 @@
+spdl.io.decode\_image\_nvjpeg
+=============================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: decode_image_nvjpeg

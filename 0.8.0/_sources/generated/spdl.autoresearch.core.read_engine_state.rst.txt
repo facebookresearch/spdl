@@ -1,0 +1,6 @@
+spdl.autoresearch.core.read\_engine\_state
+==========================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autofunction:: read_engine_state

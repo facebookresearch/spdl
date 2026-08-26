@@ -1,0 +1,18 @@
+spdl.io.ImageFrames
+===================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: ImageFrames
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~ImageFrames.clone
+      ~ImageFrames.height
+      ~ImageFrames.metadata
+      ~ImageFrames.num_planes
+      ~ImageFrames.pix_fmt
+      ~ImageFrames.pts
+      ~ImageFrames.width

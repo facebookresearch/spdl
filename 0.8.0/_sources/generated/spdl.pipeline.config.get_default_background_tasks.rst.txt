@@ -1,0 +1,6 @@
+spdl.pipeline.config.get\_default\_background\_tasks
+====================================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: get_default_background_tasks

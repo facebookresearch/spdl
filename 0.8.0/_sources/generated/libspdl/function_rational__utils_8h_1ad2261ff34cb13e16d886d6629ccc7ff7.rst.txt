@@ -1,0 +1,14 @@
+.. _exhale_function_rational__utils_8h_1ad2261ff34cb13e16d886d6629ccc7ff7:
+
+Function spdl::core::is_within_window
+=====================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_rational_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::is_within_window(const Rational&, const Rational&, const Rational&)
+   :project: libspdl

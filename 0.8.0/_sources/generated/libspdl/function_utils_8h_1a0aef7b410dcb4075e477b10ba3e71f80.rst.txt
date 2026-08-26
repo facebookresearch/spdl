@@ -1,0 +1,14 @@
+.. _exhale_function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80:
+
+Function spdl::core::get_ffmpeg_filters
+=======================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::get_ffmpeg_filters()
+   :project: libspdl

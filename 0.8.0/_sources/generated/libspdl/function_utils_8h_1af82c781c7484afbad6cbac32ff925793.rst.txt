@@ -1,0 +1,14 @@
+.. _exhale_function_utils_8h_1af82c781c7484afbad6cbac32ff925793:
+
+Function spdl::core::init_glog
+==============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_utils.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::init_glog(const char *)
+   :project: libspdl

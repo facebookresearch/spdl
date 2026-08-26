@@ -1,0 +1,14 @@
+.. _exhale_typedef_muxer_8h_1aaa76352d246819df02bc407729f69dda:
+
+Typedef spdl::core::MuxerPtr
+============================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_muxer.h`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: spdl::core::MuxerPtr
+   :project: libspdl

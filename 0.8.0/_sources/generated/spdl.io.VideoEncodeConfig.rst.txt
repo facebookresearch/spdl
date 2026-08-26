@@ -1,0 +1,7 @@
+spdl.io.VideoEncodeConfig
+=========================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: VideoEncodeConfig
+   :members:

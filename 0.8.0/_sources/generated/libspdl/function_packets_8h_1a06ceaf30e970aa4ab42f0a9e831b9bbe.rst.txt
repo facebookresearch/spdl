@@ -1,0 +1,14 @@
+.. _exhale_function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe:
+
+Template Function spdl::core::deserialize_packets
+=================================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_packets.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::deserialize_packets(const std::vector<uint8_t>&)
+   :project: libspdl

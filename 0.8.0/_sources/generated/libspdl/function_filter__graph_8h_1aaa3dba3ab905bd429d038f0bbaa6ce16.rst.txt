@@ -1,0 +1,14 @@
+.. _exhale_function_filter__graph_8h_1aaa3dba3ab905bd429d038f0bbaa6ce16:
+
+Function spdl::core::make_filter_graph
+======================================
+
+- Defined in :ref:`file__home_runner_work_spdl_spdl_src_libspdl_core_filter_graph.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: spdl::core::make_filter_graph(const std::string&)
+   :project: libspdl

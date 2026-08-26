@@ -1,0 +1,8 @@
+spdl.pipeline.defs.MAIN\_PROCESS
+================================
+
+.. currentmodule:: spdl.pipeline.defs
+
+.. autodata:: MAIN_PROCESS
+   :annotation:
+   :no-value:

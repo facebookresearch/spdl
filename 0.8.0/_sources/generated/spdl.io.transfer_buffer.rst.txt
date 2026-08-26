@@ -1,0 +1,6 @@
+spdl.io.transfer\_buffer
+========================
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: transfer_buffer

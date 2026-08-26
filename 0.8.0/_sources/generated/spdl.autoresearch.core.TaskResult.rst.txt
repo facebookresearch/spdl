@@ -1,0 +1,12 @@
+spdl.autoresearch.core.TaskResult
+=================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoclass:: TaskResult
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~TaskResult.children

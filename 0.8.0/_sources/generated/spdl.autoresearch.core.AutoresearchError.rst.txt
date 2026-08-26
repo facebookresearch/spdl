@@ -1,0 +1,6 @@
+spdl.autoresearch.core.AutoresearchError
+========================================
+
+.. currentmodule:: spdl.autoresearch.core
+
+.. autoexception:: AutoresearchError

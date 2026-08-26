@@ -1,0 +1,7 @@
+spdl.io.DecodeConfig
+====================
+
+.. currentmodule:: spdl.io
+
+.. autoclass:: DecodeConfig
+   :members:

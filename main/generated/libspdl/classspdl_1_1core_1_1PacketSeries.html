@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Class TracingSession" href="classspdl_1_1core_1_1TracingSession.html" /><link rel="prev" title="Class Muxer" href="classspdl_1_1core_1_1Muxer.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Class PacketSeries - SPDL 0.6.0 documentation</title>
+        <title>Class PacketSeries - SPDL 0.8.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../../index.html"><div class="brand">SPDL 0.8.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.8.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../best_practice.html">Best Practices</a></li>
@@ -303,6 +304,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_arena_transport.html">Benchmark arena transport</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
 </li>
 </ul>
@@ -464,6 +466,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -597,6 +600,23 @@
 </dd></dl>
 
 <dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core12PacketSeries11clone_rangeE6size_t6size_t">
+<span id="_CPPv3NK4spdl4core12PacketSeries11clone_rangeE6size_t6size_t"></span><span id="_CPPv2NK4spdl4core12PacketSeries11clone_rangeE6size_t6size_t"></span><span id="spdl::core::PacketSeries::clone_range__s.sC"></span><span class="target" id="classspdl_1_1core_1_1PacketSeries_1aecd01bf22a0ab0b0ddd11579ce5b2881"></span><a class="reference internal" href="#_CPPv4N4spdl4core12PacketSeriesE" title="spdl::core::PacketSeries"><span class="n"><span class="pre">PacketSeries</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">clone_range</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">start</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">end</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core12PacketSeries11clone_rangeE6size_t6size_t" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Deep-copy a range of packets and their transport metadata.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> – Start index (inclusive). </p></li>
+<li><p><strong>end</strong> – End index (exclusive). </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>New packet series containing the selected range. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4spdl4core12PacketSeries9iter_dataEv">
 <span id="_CPPv3NK4spdl4core12PacketSeries9iter_dataEv"></span><span id="_CPPv2NK4spdl4core12PacketSeries9iter_dataEv"></span><span id="spdl::core::PacketSeries::iter_dataC"></span><span class="target" id="classspdl_1_1core_1_1PacketSeries_1afe43f5358e689df61241be679cb79d64"></span><a class="reference internal" href="structspdl_1_1core_1_1Generator.html#_CPPv4I0EN4spdl4core9GeneratorE" title="spdl::core::Generator"><span class="n"><span class="pre">Generator</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="structspdl_1_1core_1_1RawPacketData.html#_CPPv4N4spdl4core13RawPacketDataE" title="spdl::core::RawPacketData"><span class="n"><span class="pre">RawPacketData</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">iter_data</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4spdl4core12PacketSeries9iter_dataEv" title="Link to this definition">¶</a><br /></dt>
 <dd><p>Iterate through packet data.</p>
@@ -679,6 +699,7 @@
 <li><a class="reference internal" href="#_CPPv4N4spdl4core12PacketSeriesaSERR12PacketSeries"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
 <li><a class="reference internal" href="#_CPPv4N4spdl4core12PacketSeries4pushEP8AVPacket"><code class="docutils literal notranslate"><span class="pre">push()</span></code></a></li>
 <li><a class="reference internal" href="#_CPPv4NK4spdl4core12PacketSeries11get_packetsEv"><code class="docutils literal notranslate"><span class="pre">get_packets()</span></code></a></li>
+<li><a class="reference internal" href="#_CPPv4NK4spdl4core12PacketSeries11clone_rangeE6size_t6size_t"><code class="docutils literal notranslate"><span class="pre">clone_range()</span></code></a></li>
 <li><a class="reference internal" href="#_CPPv4NK4spdl4core12PacketSeries9iter_dataEv"><code class="docutils literal notranslate"><span class="pre">iter_data()</span></code></a></li>
 </ul>
 </li>
@@ -696,7 +717,7 @@
     </aside>
   </div>
 </div>
-    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=cce5339e"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

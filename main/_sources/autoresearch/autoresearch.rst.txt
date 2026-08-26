@@ -13,7 +13,7 @@ Autoresearch operates in three phases:
    and GC alignment, establish a baseline, and measure headspace.
 2. **Seed experiments** -- Launch structural optimizations that are known
    to be high-impact (baseline measurement, headspace analysis,
-   subprocess pipeline).
+   subprocess pipeline, and multiprocessing region).
 3. **Iterative optimization** -- The coding agent analyzes results,
    proposes follow-up experiments, and the engine executes them
    concurrently until metrics plateau.
@@ -126,7 +126,7 @@ creating a clean baseline for subsequent experiments to branch from.
 Seed Experiments
 ~~~~~~~~~~~~~~~~
 
-The engine schedules three seed experiments before entering the
+The engine schedules four seed experiments before entering the
 iterative loop. Each addresses a known high-impact area and forms a
 root node in the hypothesis tree.
 
@@ -152,6 +152,21 @@ between the data loading threads and the training loop. This is often
 a high-impact optimization, as discussed in :ref:`resolution`. By
 running the pipeline in a separate process, the data loading threads
 no longer compete with PyTorch for the GIL.
+
+**Multiprocessing region (MP)**
+
+The pipeline is also benchmarked with adjacent I/O and CPU stages inside
+a :py:meth:`~spdl.pipeline.PipelineBuilder.to` region backed by
+:py:class:`~spdl.pipeline.defs.ProcessPoolExecutorConfig`. Each worker
+runs a nested pipeline and its own async event loop, so intermediate
+values stay in the worker instead of crossing IPC between every stage.
+This topology is always benchmarked regardless of data modality. It is
+especially promising for small text and image records, where boundary
+transfers are relatively cheap and true process parallelism can
+outperform MTP and conventional data loaders. Large video workloads
+generally start with MTP, but the region benchmark still runs; it can
+win when it receives small metadata and keeps large fetched or decoded
+values inside the worker.
 
 Iterative Optimization
 ~~~~~~~~~~~~~~~~~~~~~~

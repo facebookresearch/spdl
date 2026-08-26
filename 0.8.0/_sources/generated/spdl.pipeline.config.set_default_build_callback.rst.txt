@@ -1,0 +1,6 @@
+spdl.pipeline.config.set\_default\_build\_callback
+==================================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: set_default_build_callback
