@@ -122,12 +122,18 @@ There are cases where you want to use a dedicated thread for certain task.
    (caching for faster execution or storing the application context)
 #. You want to specify a different number of concurrency.
 
-One notable example that meets these conditions is transferring data to the GPU.
-Due to the hardware constraints, only one data transfer can be performed
-at a time.
-To transfer data without interrupting the model training,
-you need to use a stream object dedicated for the transfer, and you want
-to keep using the same stream object across multiple function invocations.
+One notable example that meets these conditions is transferring data between
+the CPU and GPU. CUDA streams provide independent scheduling lanes, but they do
+not bypass the GPU's copy-engine limits. On the hardware configuration
+discussed here, at most one host-to-device transfer and one device-to-host
+transfer can run at the same time. Transfers in opposite directions can overlap
+each other, while additional transfers in the same direction are serialized.
+Compute kernels use separate execution resources, so multiple kernels can
+overlap these transfers and one another when the GPU has sufficient resources.
+Creating more CUDA streams does not by itself increase the amount of concurrent
+work. To overlap a transfer with model computation, use a CUDA stream dedicated
+to that transfer direction and reuse the same stream across function
+invocations.
 
 To maintain a state, you can either encapsulate it in a callable class
 instance, or put it in a
@@ -137,7 +143,8 @@ in a thread-local storage.
 
 .. note::
 
-   The following code is now available as :py:func:`spdl.io.transfer_tensor`.
+   The following code is now available as
+   :py:func:`spdl.io.transfer_tensor_h2d`.
 
 .. code-block:: python
 
@@ -187,12 +194,50 @@ the pipeline.
 This way, the transfer function is always executed in a dedicated thread, so that
 it keeps using the same CUDA stream.
 
-When tracing this pipeline with
-`PyTorch Profiler <https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html>`_,
-we can see that it is always the one background thread that issues data transfer,
-and the transfer overlaps with the stream executing the model training.
+`PyTorch Profiler <https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html>`_
+can verify that the background thread issues transfers on a dedicated CUDA
+stream while the foreground stream executes model work. The following trace
+shows host-to-device transfer using this pattern.
 
 .. image:: ../../_static/data/parallelism_transfer.png
+   :alt: Host-to-device transfer overlapping foreground CUDA work.
+
+The same pattern applies when moving model outputs from the GPU back to the
+CPU. :py:func:`spdl.io.transfer_tensor_d2h` uses a dedicated CUDA stream and a
+cached page-locked staging buffer. Run it on a persistent single-worker
+executor so that consecutive calls reuse both resources while the foreground
+thread continues to submit independent work to its compute stream.
+
+.. code-block:: python
+
+   d2h_executor = ThreadPoolExecutor(max_workers=1)
+
+   with d2h_executor:
+       future = d2h_executor.submit(
+           spdl.io.transfer_tensor_d2h,
+           model_output,
+       )
+
+       # Independent work submitted to the foreground CUDA stream can overlap
+       # with the device-to-host transfer.
+       next_output = model(next_batch)
+       cpu_output = future.result()
+
+The inputs must be ready on the current CUDA stream when
+:py:func:`~spdl.io.transfer_tensor_d2h` is called. The function establishes the
+required ordering between that producer stream and its transfer stream before
+returning CPU tensors. See :py:mod:`benchmark_transfer_overlap` for a
+reproducible benchmark of serialized and concurrent transfer-plus-compute
+makespans.
+
+The following Perfetto view shows the corresponding device-to-host pattern.
+Four ``Memcpy DtoH`` operations on stream 13 overlap the foreground SGEMM
+kernels on the default stream (stream 7). In this capture, 19.4 ms of the
+21.3 ms device-to-host transfer overlaps compute (91%).
+
+.. image:: ../../_static/data/parallelism_transfer_d2h.png
+   :alt: Device-to-host transfer on stream 13 overlapping SGEMM kernels on the default stream.
+   :width: 100%
 
 Multi-processing (stage)
 ------------------------
@@ -385,6 +430,63 @@ worker sub-pipelines warm across epochs, and a region composes with
 :py:func:`~spdl.pipeline.run_pipeline_in_subprocess`. Every op must be picklable,
 since the region config is shipped to the worker. See the
 :py:meth:`~spdl.pipeline.PipelineBuilder.to` reference for the details.
+
+Buffering the boundary
+^^^^^^^^^^^^^^^^^^^^^^
+
+Crossing the region boundary costs a fixed amount *per transfer* — pickling, a
+queue handoff, and (for tensors) a shared-memory allocation — no matter how small
+the item is. When the items are small, that fixed cost dominates. Pass
+``buffer_size`` to :py:meth:`~PipelineBuilder.to` to buffer several items into one
+transfer:
+
+.. code-block::
+
+   pipeline = (
+       PipelineBuilder()
+       .add_source(rows)                  # small per-row items
+       .to(ProcessPoolExecutorConfig(max_workers=4), buffer_size=32)
+       .pipe(decode)                      # still receives ONE row at a time
+       .aggregate(batch_size)             # independent of buffer_size
+       .to(MAIN_PROCESS, buffer_size=2)   # 2 batches per transfer coming back
+       .add_sink()
+       .build(num_threads=...)
+   )
+
+Each marker sizes the handoff that happens where it sits, so a region's two
+directions are configured independently: the ``to()`` that opens the region sizes
+the data flowing into its workers, and the one that closes it sizes the results
+flowing back. That separation matters because the two directions rarely carry
+comparable items — in the example above, single rows go in and whole batches come
+back, so one number could not be right for both. A marker sitting between two
+adjacent regions sizes that single handoff for both sides.
+
+The buffering is transparent: the boundary packs items on one side and unpacks them
+on the other, so stages on both sides — and every stage after the region — still see
+individual items. In particular ``buffer_size`` is independent of any
+:py:meth:`~spdl.pipeline.PipelineBuilder.aggregate` you use, so the training batch
+size and the IPC transfer size can be tuned separately. The default, ``1``,
+transfers one item at a time.
+
+It is an upper bound rather than a fixed grouping: a partial buffer is flushed at
+the end of a stream and at every epoch boundary, so the last transfer of each is
+usually short.
+
+Nothing assumes the region emits as many items as it received: a ``None``-returning
+op, a generator op, and an ``aggregate`` inside the region all work unchanged.
+
+The cost is latency and memory. Up to ``buffer_size - 1`` items are held while a
+transfer fills, so a value well above what the producing side can keep up with
+delays the first results; and because each queued transfer holds up to
+``buffer_size`` items, the in-flight item bound scales with it. Start at the batch
+size you would otherwise have aggregated before the region, then tune.
+
+.. note::
+
+   Placing ``aggregate`` *inside* a region means each worker aggregates only the
+   items routed to it, so batches are formed per worker rather than globally. With
+   ``drop_last=True`` that discards up to ``max_workers × (batch_size - 1)`` items
+   per epoch instead of ``batch_size - 1``.
 
 To run a region in **subinterpreters** (Python 3.14+) instead of subprocesses,
 pass a :py:class:`~spdl.pipeline.defs.InterpreterPoolExecutorConfig`; the region's ops

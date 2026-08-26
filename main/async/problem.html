@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="The Event Loop" href="event_loop.html" /><link rel="prev" title="Introduction to Async I/O" href="index.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Implementing an Orchestration Mechanism - SPDL 0.6.0 documentation</title>
+        <title>Implementing an Orchestration Mechanism - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
@@ -303,6 +304,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
 </li>
 </ul>
@@ -464,6 +466,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -538,8 +541,8 @@ which motivates the use of an alternative abstraction: the event loop.</p>
 For the sake of simplicity, let’s assume that the tasks are independent each
 other so we don’t need to think about synchronization and such.</p>
 <p>There are multiple ways to concurrently execute functions.
-Python’s <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#module-concurrent.futures" title="(in Python v3.14)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">concurrent.futures</span></code></a> module offers
-<a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code></a> and <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ProcessPoolExecutor" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code></a>.
+Python’s <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#module-concurrent.futures" title="(in Python v3.15)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">concurrent.futures</span></code></a> module offers
+<a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code></a> and <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ProcessPoolExecutor" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code></a>.
 (Python 3.14 will introduce <a class="reference external" href="https://docs.python.org/3.14/library/concurrent.futures.html#concurrent.futures.InterpreterPoolExecutor"><code class="docutils literal notranslate"><span class="pre">InterpreterPoolExecutor</span></code></a>.)
 Each executor has different constraints, but here,
 we use multi-threading just for an illustration purpose.†</p>
@@ -548,7 +551,7 @@ we use multi-threading just for an illustration purpose.†</p>
 <p>You might be aware that Python’s GIL prevents effective use of
 multi-threading.
 The same rule applies in the Async I/O as well, as noted in the docstring of
-<a class="reference external" href="https://docs.python.org/3/library/asyncio-task.html#asyncio.to_thread" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">asyncio.to_thread()</span></code></a>.
+<a class="reference external" href="https://docs.python.org/3/library/asyncio-task.html#asyncio.to_thread" title="(in Python v3.15)"><code class="xref py py-func docutils literal notranslate"><span class="pre">asyncio.to_thread()</span></code></a>.
 However if we only use functions that release the GIL,
 it is possible to run operations concurrently,
 even when using multi-threading.</p>
@@ -648,7 +651,7 @@ though we skip the intermediate and go straight to the Async I/O)</p>
 </pre></div>
 </div>
 <p>This looks simpler but there is a fundamental problem.
-We need to attend to a task completion with <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future.result" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Future.result()</span></code></a> method
+We need to attend to a task completion with <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future.result" title="(in Python v3.15)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Future.result()</span></code></a> method
 for each task.
 However, since this method will block until the task is completed,
 we are not able to do other works while waiting.
@@ -658,7 +661,7 @@ In the end, without composability, this function is not so different
 from the regular synchronous function.</p>
 <a class="reference internal image-reference" href="../_images/concurrent_2.png"><img alt="../_images/concurrent_2.png" src="../_images/concurrent_2.png" style="width: 180px;" />
 </a>
-<p>The <code class="docutils literal notranslate"><span class="pre">Future</span></code> class has <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future.add_done_callback" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_done_callback()</span></code></a> method.
+<p>The <code class="docutils literal notranslate"><span class="pre">Future</span></code> class has <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future.add_done_callback" title="(in Python v3.15)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_done_callback()</span></code></a> method.
 So we could chain the tasks using the callback.
 The following code is one attempt.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">callback_chain</span><span class="p">(</span><span class="n">fns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="nb">input</span><span class="p">,</span> <span class="n">executor</span><span class="p">):</span>
@@ -714,8 +717,8 @@ We cannot assume that the tasks complete in the order they are scheduled.
 So instead of iterating the <code class="docutils literal notranslate"><span class="pre">Future</span></code> objects, we rather want to react to a
 completed task, when it is completed.</p>
 <p>Fortunately, there is a out-of-box solution for this.
-The <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.wait" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">concurrent.futures.wait()</span></code></a> function can attend to multiple of
-<a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">concurrent.futures.Future</span></code></a> objects and return when one of them is completed.</p>
+The <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.wait" title="(in Python v3.15)"><code class="xref py py-func docutils literal notranslate"><span class="pre">concurrent.futures.wait()</span></code></a> function can attend to multiple of
+<a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">concurrent.futures.Future</span></code></a> objects and return when one of them is completed.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">futures</span> <span class="o">=</span> <span class="p">{</span><span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">task</span><span class="o">...</span><span class="p">)</span> <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">}</span>
 
 <span class="k">while</span> <span class="n">futures</span><span class="p">:</span>
@@ -871,7 +874,7 @@ address this challenge elegantly, and that is the Async I/O.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

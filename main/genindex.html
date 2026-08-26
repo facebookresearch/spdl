@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#" /><link rel="search" title="Search" href="search.html" />
 
-    <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 --><title>Index - SPDL 0.6.0 documentation</title>
+    <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 --><title>Index - SPDL 0.7.0 documentation</title>
 <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -176,7 +176,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -200,7 +200,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -277,6 +277,7 @@
 <li class="toctree-l2"><a class="reference internal" href="migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="best_practice.html">Best Practices</a></li>
@@ -301,6 +302,7 @@
 <li class="toctree-l2"><a class="reference internal" href="generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
 </li>
 </ul>
@@ -462,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -532,6 +535,8 @@
         <ul>
           <li><a href="generated/spdl.io.NpzFile.html#spdl.io.NpzFile.__getitem__">(NpzFile method)</a>
 </li>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Sequence.__getitem__">(Sequence method)</a>
+</li>
         </ul></li>
         <li><a href="notes/remote_iterable_protocol.html#spdl.pipeline._iter_utils._SubprocessIterable.__iter__">__iter__() (_SubprocessIterable method)</a>
 
@@ -555,6 +560,8 @@
           <li><a href="generated/spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline.__iter__">(Pipeline method)</a>
 </li>
           <li><a href="generated/spdl.dataloader.PyTorchDataLoader.html#spdl.dataloader.PyTorchDataLoader.__iter__">(PyTorchDataLoader method)</a>
+</li>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Sequence.__iter__">(Sequence method)</a>
 </li>
         </ul></li>
         <li><a href="generated/spdl.io.AudioFrames.html#spdl.io.AudioFrames.__len__">__len__ (AudioFrames attribute)</a>
@@ -635,6 +642,8 @@
         </ul></li>
         <li><a href="generated/pipeline_definitions.html#pipeline_definitions.add_100">add_100() (in module pipeline_definitions)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future.add_done_callback">add_done_callback() (Future method)</a>
+</li>
         <li><a href="generated/spdl.io.Muxer.html#spdl.io.Muxer.add_encode_stream">add_encode_stream() (Muxer method)</a>
 </li>
         <li><a href="generated/spdl.io.FilterGraph.html#spdl.io.FilterGraph.add_frames">add_frames (FilterGraph attribute)</a>
@@ -661,10 +670,14 @@
 </li>
         <li><a href="generated/spdl.io.apply_bsf.html#spdl.io.apply_bsf">apply_bsf() (in module spdl.io)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.partial.args">args (partial attribute)</a>
+</li>
         <li><a href="generated/spdl.io.ArrayInterface.html#spdl.io.ArrayInterface">ArrayInterface (class in spdl.io)</a>
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.astimezone">astimezone() (datetime method)</a>
+</li>
         <li><a href="generated/spdl.pipeline.AsyncQueue.html#spdl.pipeline.AsyncQueue">AsyncQueue (class in spdl.pipeline)</a>
 </li>
         <li><a href="generated/spdl.io.Demuxer.html#spdl.io.Demuxer.audio_codec">audio_codec (Demuxer property)</a>
@@ -765,6 +778,13 @@
 </li>
         </ul></li>
         <li>
+    benchmark_transfer_overlap
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#module-benchmark_transfer_overlap">module</a>
+</li>
+        </ul></li>
+        <li>
     benchmark_utils
 
         <ul>
@@ -790,6 +810,8 @@
         <ul>
           <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.BenchmarkConfig">(class in benchmark_tarfile)</a>
 </li>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkConfig">(class in benchmark_transfer_overlap)</a>
+</li>
           <li><a href="generated/benchmark_video.html#benchmark_video.BenchmarkConfig">(class in benchmark_video)</a>
 </li>
           <li><a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig">(class in benchmark_wav)</a>
@@ -801,14 +823,28 @@
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkRunner">BenchmarkRunner (class in benchmark_utils)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary">BenchmarkSummary (class in benchmark_transfer_overlap)</a>
+</li>
         <li><a href="generated/benchmark_thread_output_queue.html#benchmark_thread_output_queue.BenchResult">BenchResult (class in benchmark_thread_output_queue)</a>
 </li>
         <li><a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig.bits_per_sample">bits_per_sample (BenchmarkConfig attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkConfig.bootstrap_resamples">bootstrap_resamples (BenchmarkConfig attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.bootstrap_resamples">(BenchmarkSummary attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.bootstrap_seed">bootstrap_seed (BenchmarkSummary attribute)</a>
+</li>
         <li><a href="generated/spdl.io.BSF.html#spdl.io.BSF">BSF (class in spdl.io)</a>
 </li>
-        <li><a href="generated/spdl.pipeline.defs.SinkConfig.html#spdl.pipeline.defs.SinkConfig.buffer_size">buffer_size (SinkConfig attribute)</a>
+        <li><a href="generated/spdl.pipeline.defs.PlacementConfig.html#spdl.pipeline.defs.PlacementConfig.buffer_size">buffer_size (PlacementConfig attribute)</a>
+
+        <ul>
+          <li><a href="generated/spdl.pipeline.defs.SinkConfig.html#spdl.pipeline.defs.SinkConfig.buffer_size">(SinkConfig attribute)</a>
 </li>
+        </ul></li>
         <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.BUILD">BUILD (FailurePhase attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.build">build() (PipelineBuilder method)</a>
@@ -856,6 +892,12 @@
         <li><a href="generated/pipeline_definitions.html#pipeline_definitions.cache_router">cache_router() (in module pipeline_definitions)</a>
 </li>
         <li><a href="generated/spdl.dataloader.CacheDataLoader.html#spdl.dataloader.CacheDataLoader">CacheDataLoader (class in spdl.dataloader)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Callable">Callable (class in benchmark_transfer_overlap)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future.cancel">cancel() (Future method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future.cancelled">cancelled() (Future method)</a>
 </li>
         <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.capacity">capacity (SharedMemoryRingBuffer property)</a>
 </li>
@@ -913,13 +955,47 @@
         </ul></li>
         <li><a href="generated/spdl.pipeline.defs.Collate.html#spdl.pipeline.defs.Collate">Collate (class in spdl.pipeline.defs)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.combine">combine() (datetime method)</a>
+</li>
         <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.commit">commit (HypothesisNode attribute)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/benchmark_numpy.html#benchmark_numpy.BenchmarkConfig.compressed">compressed (BenchmarkConfig attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkConfig.compute_iterations">compute_iterations (BenchmarkConfig attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.compute_iterations">(BenchmarkSummary attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.compute_median_ms">compute_median_ms (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample.compute_only_ms">compute_only_ms (OverlapSample attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.compute_only_ms">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.compute_p95_ms">compute_p95_ms (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkConfig.compute_target_ms">compute_target_ms (BenchmarkConfig attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.compute_target_ms">(BenchmarkSummary attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.pipeline.StageInfo.html#spdl.pipeline.StageInfo.concurrency">concurrency (StageInfo attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.concurrent_median_ms">concurrent_median_ms (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample.concurrent_ms">concurrent_ms (OverlapSample attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.concurrent_ms">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.concurrent_p95_ms">concurrent_p95_ms (BenchmarkSummary attribute)</a>
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.config">config (BenchmarkResult attribute)</a>
 </li>
@@ -930,6 +1006,16 @@
         <li><a href="generated/spdl.io.convert_frames.html#spdl.io.convert_frames">convert_frames() (in module spdl.io)</a>
 </li>
         <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool.count">count (SharedMemorySegmentPool property)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Sequence.count">count() (Sequence method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample.cpu_launch_skew_ms">cpu_launch_skew_ms (OverlapSample attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.cpu_launch_skew_ms">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.cpu_launch_skew_p95_ms">cpu_launch_skew_p95_ms (BenchmarkSummary attribute)</a>
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.cpu_percent">cpu_percent (BenchmarkResult attribute)</a>
 
@@ -971,7 +1057,17 @@
 </li>
         <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.created_at">created_at (FailureRecord attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.created_utc">created_utc (BenchmarkSummary attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.created_utc">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.ctime">ctime() (datetime method)</a>
+</li>
         <li><a href="generated/spdl.io.cuda_config.html#spdl.io.cuda_config">cuda_config() (in module spdl.io)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.cuda_version">cuda_version (BenchmarkSummary attribute)</a>
 </li>
         <li><a href="generated/spdl.io.CUDAArrayInterface.html#spdl.io.CUDAArrayInterface">CUDAArrayInterface (class in spdl.io)</a>
 </li>
@@ -989,9 +1085,15 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/benchmark_numpy.html#benchmark_numpy.BenchmarkConfig.data_format">data_format (BenchmarkConfig attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.dataclass">dataclass() (in module benchmark_transfer_overlap)</a>
+</li>
         <li><a href="generated/spdl.dataloader.DataLoader.html#spdl.dataloader.DataLoader">DataLoader (class in spdl.dataloader)</a>
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.date">date (BenchmarkResult attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.date">date() (datetime method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime">datetime (class in benchmark_transfer_overlap)</a>
 </li>
         <li><a href="generated/performance_analysis.html#performance_analysis.decode">decode() (in module performance_analysis)</a>
 
@@ -1041,10 +1143,10 @@
         </ul></li>
         <li><a href="generated/spdl.io.DemuxConfig.html#spdl.io.DemuxConfig">DemuxConfig (class in spdl.io)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.io.Demuxer.html#spdl.io.Demuxer">Demuxer (class in spdl.io)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.autoresearch.core.WorkflowSpec.html#spdl.autoresearch.core.WorkflowSpec.description">description() (WorkflowSpec method)</a>
 </li>
         <li><a href="generated/spdl.io.AudioPackets.html#spdl.io.AudioPackets.deserialize">deserialize (AudioPackets attribute)</a>
@@ -1065,7 +1167,11 @@
         </ul></li>
         <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.details">details (FailureRecord attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.device_capability">device_capability (BenchmarkSummary attribute)</a>
+</li>
         <li><a href="generated/spdl.io.CUDABuffer.html#spdl.io.CUDABuffer.device_index">device_index (CUDABuffer property)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.device_name">device_name (BenchmarkSummary attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.config.diagnostic_mode_num_sources.html#spdl.pipeline.config.diagnostic_mode_num_sources">diagnostic_mode_num_sources() (in module spdl.pipeline.config)</a>
 </li>
@@ -1083,7 +1189,17 @@
 </li>
         <li><a href="generated/spdl.source.DistributedRandomSampler.html#spdl.source.DistributedRandomSampler">DistributedRandomSampler (class in spdl.source)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future.done">done() (Future method)</a>
+</li>
         <li><a href="generated/spdl.pipeline.defs.AggregateConfig.html#spdl.pipeline.defs.AggregateConfig.drop_last">drop_last (AggregateConfig attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.dst">dst() (datetime method)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.timezone.dst">(timezone method)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.dtype">dtype (BenchmarkSummary attribute)</a>
 </li>
         <li><a href="generated/spdl.io.FilterGraph.html#spdl.io.FilterGraph.dump">dump (FilterGraph attribute)</a>
 </li>
@@ -1131,8 +1247,22 @@
           <li><a href="generated/video_dataloading.html#video_dataloading.entrypoint">(in module video_dataloading)</a>
 </li>
         </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample.estimated_overlap_efficiency">estimated_overlap_efficiency (OverlapSample property)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.estimated_overlap_efficiency">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.estimated_overlap_efficiency_ci_lower">estimated_overlap_efficiency_ci_lower (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.estimated_overlap_efficiency_ci_upper">estimated_overlap_efficiency_ci_upper (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.estimated_overlap_efficiency_median">estimated_overlap_efficiency_median (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future.exception">exception() (Future method)</a>
+</li>
         <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.exception_type">exception_type (FailureRecord attribute)</a>
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.BenchmarkResult.executor_type">executor_type (BenchmarkResult attribute)</a>
@@ -1169,6 +1299,8 @@
 </li>
         <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord">FailureRecord (class in spdl.autoresearch.core)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.fields">fields() (in module benchmark_transfer_overlap)</a>
+</li>
         <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.BenchmarkConfig.file_size">file_size (BenchmarkConfig attribute)</a>
 </li>
         <li><a href="generated/spdl.io.BSF.html#spdl.io.BSF.filter">filter() (BSF method)</a>
@@ -1201,6 +1333,8 @@
         </ul></li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.fold">fold (datetime attribute)</a>
+</li>
         <li><a href="generated/imagenet_classification.html#imagenet_classification.Classification.forward">forward() (Classification method)</a>
 
         <ul>
@@ -1227,9 +1361,19 @@
           <li><a href="generated/spdl.autoresearch.core.TaskSpec.html#spdl.autoresearch.core.TaskSpec.from_dict">(TaskSpec class method)</a>
 </li>
         </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.fromisoformat">fromisoformat() (datetime method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.fromtimestamp">fromtimestamp() (datetime method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.timezone.fromutc">fromutc() (timezone method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.partial.func">func (partial attribute)</a>
+</li>
         <li><a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig.function">function (BenchmarkConfig attribute)</a>
 </li>
         <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.BenchmarkConfig.function_name">function_name (BenchmarkConfig attribute)</a>, <a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig.function_name">[1]</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future">Future (class in benchmark_transfer_overlap)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -1343,6 +1487,16 @@
         </ul></li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.hidden_median_ms">hidden_median_ms (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample.hidden_ms">hidden_ms (OverlapSample property)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.hidden_ms">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.hour">hour (datetime attribute)</a>
+</li>
         <li>
     hydra_integration
 
@@ -1390,6 +1544,8 @@
 </li>
         <li><a href="generated/spdl.autoresearch.core.AnalysisResult.html#spdl.autoresearch.core.AnalysisResult.improved">improved (AnalysisResult attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Sequence.index">index() (Sequence method)</a>
+</li>
         <li><a href="generated/spdl.io.NvDecDecoder.html#spdl.io.NvDecDecoder.init_buffer">init_buffer (NvDecDecoder attribute)</a>
 </li>
         <li><a href="generated/spdl.io.NvDecDecoder.html#spdl.io.NvDecDecoder.init_decoder">init_decoder (NvDecDecoder attribute)</a>
@@ -1429,6 +1585,8 @@
         <li><a href="generated/spdl.pipeline.is_eof.html#spdl.pipeline.is_eof">is_eof() (in module spdl.pipeline)</a>
 </li>
         <li><a href="generated/spdl.pipeline.is_epoch_end.html#spdl.pipeline.is_epoch_end">is_epoch_end() (in module spdl.pipeline)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.isoformat">isoformat() (datetime method)</a>
 </li>
         <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.items_per_s">items_per_s (Row attribute)</a>
 </li>
@@ -1486,6 +1644,8 @@
   <h2>K</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.partial.keywords">keywords (partial attribute)</a>
+</li>
         <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.kind">kind (FailureRecord attribute)</a>
 
         <ul>
@@ -1588,6 +1748,8 @@
 </li>
           <li><a href="generated/benchmark_thread_output_queue.html#benchmark_thread_output_queue.main">(in module benchmark_thread_output_queue)</a>
 </li>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.main">(in module benchmark_transfer_overlap)</a>
+</li>
           <li><a href="generated/benchmark_video.html#benchmark_video.main">(in module benchmark_video)</a>
 </li>
           <li><a href="generated/benchmark_wav.html#benchmark_wav.main">(in module benchmark_wav)</a>
@@ -1613,6 +1775,18 @@
 </li>
         <li><a href="generated/spdl.autoresearch.core.WorkflowProtocol.html#spdl.autoresearch.core.WorkflowProtocol.make_coro">make_coro() (WorkflowProtocol method)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkConfig.matrix_size">matrix_size (BenchmarkConfig attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.matrix_size">(BenchmarkSummary attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.max">max (datetime attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.timezone.max">(timezone attribute)</a>
+</li>
+        </ul></li>
         <li><a href="generated/spdl.autoresearch.core.WorkflowSpec.html#spdl.autoresearch.core.WorkflowSpec.max_concurrency">max_concurrency (WorkflowSpec property)</a>
 </li>
         <li><a href="generated/spdl.pipeline.defs.ExecutorConfig.html#spdl.pipeline.defs.ExecutorConfig.max_workers">max_workers (ExecutorConfig attribute)</a>
@@ -1637,9 +1811,27 @@
 </li>
         <li><a href="generated/spdl.io.ImageFrames.html#spdl.io.ImageFrames.metadata">metadata (ImageFrames property)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.method">method (BenchmarkSummary attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.method">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
         <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.METRICS">METRICS (FailurePhase attribute)</a>
 </li>
         <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.METRICS_COLLECTION_FAILED">METRICS_COLLECTION_FAILED (FailureKind attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.microsecond">microsecond (datetime attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.min">min (datetime attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.timezone.min">(timezone attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.minute">minute (datetime attribute)</a>
 </li>
         <li><a href="generated/imagenet_classification.html#imagenet_classification.ModelBundle">ModelBundle (class in imagenet_classification)</a>
 </li>
@@ -1656,6 +1848,8 @@
           <li><a href="generated/benchmark_tarfile.html#module-benchmark_tarfile">benchmark_tarfile</a>
 </li>
           <li><a href="generated/benchmark_thread_output_queue.html#module-benchmark_thread_output_queue">benchmark_thread_output_queue</a>
+</li>
+          <li><a href="generated/benchmark_transfer_overlap.html#module-benchmark_transfer_overlap">benchmark_transfer_overlap</a>
 </li>
           <li><a href="generated/benchmark_utils.html#module-benchmark_utils">benchmark_utils</a>
 </li>
@@ -1712,8 +1906,6 @@
           <li><a href="generated/video_dataloading.html#module-video_dataloading">video_dataloading</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.pipeline.defs.ProcessPoolExecutorConfig.html#spdl.pipeline.defs.ProcessPoolExecutorConfig.mp_context">mp_context (ProcessPoolExecutorConfig attribute)</a>
 </li>
         <li>
@@ -1769,6 +1961,8 @@
 </li>
         <li><a href="generated/pipeline_definitions.html#pipeline_definitions.normalize_to_lists">normalize_to_lists() (in module pipeline_definitions)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.now">now() (datetime method)</a>
+</li>
         <li><a href="generated/spdl.io.NpzFile.html#spdl.io.NpzFile">NpzFile (class in spdl.io)</a>
 </li>
         <li><a href="generated/image_dataloading.html#image_dataloading.PerfResult.num_batches">num_batches (PerfResult attribute)</a>, <a href="generated/video_dataloading.html#video_dataloading.PerfResult.num_batches">[1]</a>
@@ -1783,10 +1977,10 @@
           <li><a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig.num_channels">(BenchmarkConfig attribute)</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.pipeline.TaskPerfStats.html#spdl.pipeline.TaskPerfStats.num_failures">num_failures (TaskPerfStats attribute)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.BenchmarkConfig.num_files">num_files (BenchmarkConfig attribute)</a>
 </li>
         <li><a href="generated/spdl.io.AudioFrames.html#spdl.io.AudioFrames.num_frames">num_frames (AudioFrames property)</a>
@@ -1809,14 +2003,32 @@
         </ul></li>
         <li><a href="generated/spdl.pipeline.ProcessGroupResourceUsage.html#spdl.pipeline.ProcessGroupResourceUsage.num_procs">num_procs (ProcessGroupResourceUsage attribute)</a>
 </li>
-        <li><a href="generated/benchmark_video.html#benchmark_video.BenchmarkConfig.num_runs">num_runs (BenchmarkConfig attribute)</a>, <a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig.num_runs">[1]</a>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkConfig.num_runs">num_runs (BenchmarkConfig attribute)</a>, <a href="generated/benchmark_video.html#benchmark_video.BenchmarkConfig.num_runs">[1]</a>, <a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig.num_runs">[2]</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.num_runs">(BenchmarkSummary attribute)</a>
 </li>
+        </ul></li>
         <li><a href="generated/benchmark_ipc_dataloader.html#benchmark_ipc_dataloader.Row.num_strings">num_strings (Row attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.TaskPerfStats.html#spdl.pipeline.TaskPerfStats.num_tasks">num_tasks (TaskPerfStats attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkConfig.num_tensors">num_tensors (BenchmarkConfig attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.num_tensors">(BenchmarkSummary attribute)</a>
+</li>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.num_tensors">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
         <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.BenchmarkConfig.num_threads">num_threads (BenchmarkConfig attribute)</a>, <a href="generated/benchmark_wav.html#benchmark_wav.BenchmarkConfig.num_threads">[1]</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkConfig.num_warmup">num_warmup (BenchmarkConfig attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.num_warmup">(BenchmarkSummary attribute)</a>
+</li>
+        </ul></li>
         <li><a href="generated/benchmark_numpy.html#benchmark_numpy.BenchmarkConfig.num_workers">num_workers (BenchmarkConfig attribute)</a>, <a href="generated/benchmark_video.html#benchmark_video.BenchmarkConfig.num_workers">[1]</a>
 
         <ul>
@@ -1871,6 +2083,8 @@
 </li>
         <li><a href="notes/pipeline_impl.html#spdl.pipeline._components._node._Node.output_queue">output_queue (_Node attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample">OverlapSample (class in benchmark_transfer_overlap)</a>
+</li>
     </ul></td>
   </tr></table>
 </section>
@@ -1914,6 +2128,8 @@
         <li><a href="generated/spdl.io.parse_wav.html#spdl.io.parse_wav">parse_wav() (in module spdl.io)</a>
 </li>
         <li><a href="generated/spdl.source.imagenet.parse_wnid.html#spdl.source.imagenet.parse_wnid">parse_wnid() (in module spdl.source.imagenet)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.partial">partial (class in benchmark_transfer_overlap)</a>
 </li>
         <li><a href="generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.path_variants">path_variants() (PipelineBuilder method)</a>
 </li>
@@ -1974,6 +2190,8 @@
 </li>
         <li><a href="generated/spdl.pipeline.ProfileHook.html#spdl.pipeline.ProfileHook.pipeline_profile_hook">pipeline_profile_hook() (ProfileHook method)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     pipeline_profiling
 
@@ -1981,8 +2199,6 @@
           <li><a href="generated/pipeline_profiling.html#module-pipeline_profiling">module</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder">PipelineBuilder (class in spdl.pipeline)</a>
 </li>
         <li><a href="generated/spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig">PipelineConfig (class in spdl.pipeline.defs)</a>
@@ -2095,6 +2311,8 @@
   <h2>R</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord">RawSampleRecord (class in benchmark_transfer_overlap)</a>
+</li>
         <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.read_csv">read_csv() (in module benchmark_arena_transport)</a>
 
         <ul>
@@ -2107,9 +2325,17 @@
 </li>
         <li><a href="generated/spdl.source.utils.repeat_source.html#spdl.source.utils.repeat_source">repeat_source() (in module spdl.source.utils)</a>
 </li>
-        <li><a href="generated/benchmark_video.html#benchmark_video.BenchmarkConfig.resolution">resolution (BenchmarkConfig attribute)</a>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.replace">replace() (datetime method)</a>
 </li>
+        <li><a href="generated/benchmark_video.html#benchmark_video.BenchmarkConfig.resolution">resolution (BenchmarkConfig attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.resolution">(datetime attribute)</a>
+</li>
+        </ul></li>
         <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.result">result (HypothesisNode attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future.result">result() (Future method)</a>
 </li>
         <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.retryable">retryable (FailureRecord attribute)</a>
 </li>
@@ -2121,10 +2347,10 @@
           <li><a href="generated/benchmark_ipc_dataloader.html#benchmark_ipc_dataloader.Row">(class in benchmark_ipc_dataloader)</a>
 </li>
         </ul></li>
-        <li><a href="generated/spdl.pipeline.ProcessGroupResourceUsage.html#spdl.pipeline.ProcessGroupResourceUsage.rss_bytes">rss_bytes (ProcessGroupResourceUsage attribute)</a>
-</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/spdl.pipeline.ProcessGroupResourceUsage.html#spdl.pipeline.ProcessGroupResourceUsage.rss_bytes">rss_bytes (ProcessGroupResourceUsage attribute)</a>
+</li>
         <li><a href="generated/spdl.pipeline.BackgroundTask.html#spdl.pipeline.BackgroundTask.run">run() (BackgroundTask method)</a>
 
         <ul>
@@ -2150,6 +2376,8 @@
         <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.run_transport">run_transport() (in module benchmark_arena_transport)</a>
 </li>
         <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.RUNNER">RUNNER (FailurePhase attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future.running">running() (Future method)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -2191,7 +2419,47 @@
 </li>
         <li><a href="generated/pipeline_profiling.html#pipeline_profiling.scalable_op2">scalable_op2() (in module pipeline_profiling)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample.schedule_order">schedule_order (OverlapSample attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.schedule_order">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.schedule_seed">schedule_seed (BenchmarkSummary attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.schedule_seed">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.schema_version">schema_version (BenchmarkSummary attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.schema_version">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.second">second (datetime attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkConfig.seed">seed (BenchmarkConfig attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.seed">(BenchmarkSummary attribute)</a>
+</li>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.seed">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
         <li><a href="generated/spdl.pipeline.SharedMemorySegmentPool.html#spdl.pipeline.SharedMemorySegmentPool.segment_size">segment_size (SharedMemorySegmentPool property)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Sequence">Sequence (class in benchmark_transfer_overlap)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.serialized_median_ms">serialized_median_ms (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample.serialized_ms">serialized_ms (OverlapSample attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.serialized_ms">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.serialized_p95_ms">serialized_p95_ms (BenchmarkSummary attribute)</a>
 </li>
         <li><a href="generated/spdl.io.VideoDecoder.html#spdl.io.VideoDecoder.set_buffer_size">set_buffer_size (VideoDecoder attribute)</a>
 </li>
@@ -2209,7 +2477,13 @@
 </li>
         <li><a href="generated/spdl.pipeline.config.set_default_queue_class.html#spdl.pipeline.config.set_default_queue_class">set_default_queue_class() (in module spdl.pipeline.config)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future.set_exception">set_exception() (Future method)</a>
+</li>
         <li><a href="generated/spdl.io.utils.set_ffmpeg_log_level.html#spdl.io.utils.set_ffmpeg_log_level">set_ffmpeg_log_level() (in module spdl.io.utils)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future.set_result">set_result() (Future method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.Future.set_running_or_notify_cancel">set_running_or_notify_cancel() (Future method)</a>
 </li>
         <li><a href="generated/spdl.autoresearch.core.FailurePhase.html#spdl.autoresearch.core.FailurePhase.SETUP">SETUP (FailurePhase attribute)</a>
 </li>
@@ -2241,6 +2515,8 @@
           <li><a href="generated/spdl.pipeline.PriorityThreadPoolExecutor.html#spdl.pipeline.PriorityThreadPoolExecutor.shutdown">(PriorityThreadPoolExecutor method)</a>
 </li>
           <li><a href="generated/performance_analysis.html#performance_analysis.SQLiteStatsWriter.shutdown">(SQLiteStatsWriter method)</a>
+</li>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.ThreadPoolExecutor.shutdown">(ThreadPoolExecutor method)</a>
 </li>
         </ul></li>
         <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.shutdown_arena">shutdown_arena() (SharedMemoryRingBuffer method)</a>
@@ -2543,13 +2819,15 @@
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4I_9MediaTypeEN4spdl4core7Demuxer12demux_windowE10PacketsPtrI5mediaERKNSt8optionalI10TimeWindowEERKNSt8optionalINSt6stringEEE">spdl::core::Demuxer::demux_window (C++ function)</a>
 </li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer7DemuxerE16DataInterfacePtr">spdl::core::Demuxer::Demuxer (C++ function)</a>
+        <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer7DemuxerE16DataInterfacePtr">spdl::core::Demuxer::Demuxer (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer7DemuxerERK7Demuxer">[1]</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer7DemuxerERR7Demuxer">[2]</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4I_9MediaTypeENK4spdl4core7Demuxer17get_default_codecE5CodecI5mediaEv">spdl::core::Demuxer::get_default_codec (C++ function)</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4I_9MediaTypeENK4spdl4core7Demuxer24get_default_stream_indexEiv">spdl::core::Demuxer::get_default_stream_index (C++ function)</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4NK4spdl4core7Demuxer9has_audioEv">spdl::core::Demuxer::has_audio (C++ function)</a>
+</li>
+        <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7DemuxeraSERK7Demuxer">spdl::core::Demuxer::operator= (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7DemuxeraSERR7Demuxer">[1]</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Demuxer.html#_CPPv4N4spdl4core7Demuxer15streaming_demuxERKNSt3setIiEEid">spdl::core::Demuxer::streaming_demux (C++ function)</a>
 </li>
@@ -2601,6 +2879,8 @@
 </li>
         <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE17compression_levelE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::compression_level (C++ member)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE10frame_rateE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::frame_rate (C++ member)</a>
 </li>
         <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE8gop_sizeE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::gop_size (C++ member)</a>
@@ -2615,13 +2895,11 @@
 </li>
         <li><a href="generated/libspdl/structspdl_1_1core_1_1EncodeConfigBase_3_01MediaType_1_1Video_01_4.html#_CPPv4N4spdl4core16EncodeConfigBaseIN9MediaType5VideoEE5widthE">spdl::core::EncodeConfigBase&lt;MediaType::Video&gt;::width (C++ member)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4I_9MediaTypeEN4spdl4core7EncoderE">spdl::core::Encoder (C++ class)</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder6encodeERRK9FramesPtrI5mediaE">spdl::core::Encoder::encode (C++ function)</a>
 </li>
-        <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderEPN6detail11EncoderImplI5mediaEE">spdl::core::Encoder::Encoder (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderERK7EncoderI5mediaE">[1]</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderERR7EncoderI5mediaE">[2]</a>
+        <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderENSt10unique_ptrIN6detail11EncoderImplI5mediaEEEE">spdl::core::Encoder::Encoder (C++ function)</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderERK7EncoderI5mediaE">[1]</a>, <a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder7EncoderERR7EncoderI5mediaE">[2]</a>
 </li>
         <li><a href="generated/libspdl/classspdl_1_1core_1_1Encoder.html#_CPPv4N4spdl4core7Encoder5flushEv">spdl::core::Encoder::flush (C++ function)</a>
 </li>
@@ -2939,7 +3217,19 @@
 </li>
         <li><a href="generated/spdl.autoresearch.core.HypothesisNode.html#spdl.autoresearch.core.HypothesisNode.spec">spec (HypothesisNode attribute)</a>
 </li>
-        <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.speedup">speedup (Row attribute)</a>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample.speedup">speedup (OverlapSample property)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.speedup">(RawSampleRecord attribute)</a>
+</li>
+          <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.speedup">(Row attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.speedup_ci_lower">speedup_ci_lower (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.speedup_ci_upper">speedup_ci_upper (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.speedup_median">speedup_median (BenchmarkSummary attribute)</a>
 </li>
         <li><a href="generated/performance_analysis.html#performance_analysis.SQLiteStatsWriter">SQLiteStatsWriter (class in performance_analysis)</a>
 </li>
@@ -3023,10 +3313,16 @@
         </ul></li>
         <li><a href="generated/benchmark_ipc_dataloader.html#benchmark_ipc_dataloader.Row.string_bytes">string_bytes (Row attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.strptime">strptime() (datetime method)</a>
+</li>
         <li><a href="generated/spdl.autoresearch.core.AnalysisResult.html#spdl.autoresearch.core.AnalysisResult.structured">structured (AnalysisResult attribute)</a>
 </li>
         <li><a href="generated/spdl.pipeline.PriorityExecutorEntrypoint.html#spdl.pipeline.PriorityExecutorEntrypoint.submit">submit() (PriorityExecutorEntrypoint method)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.ThreadPoolExecutor.submit">(ThreadPoolExecutor method)</a>
 </li>
+        </ul></li>
         <li><a href="generated/spdl.autoresearch.core.WorkflowProtocol.html#spdl.autoresearch.core.WorkflowProtocol.summarize">summarize() (WorkflowProtocol method)</a>
 </li>
         <li><a href="generated/benchmark_thread_output_queue.html#benchmark_thread_output_queue.BenchResult.summary">summary() (BenchResult method)</a>
@@ -3071,6 +3367,10 @@
 </li>
         <li><a href="generated/benchmark_utils.html#benchmark_utils.ExecutorType.THREAD">THREAD (ExecutorType attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.ThreadPoolExecutor">ThreadPoolExecutor (class in benchmark_transfer_overlap)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.time">time() (datetime method)</a>
+</li>
         <li><a href="generated/spdl.io.AudioCodec.html#spdl.io.AudioCodec.time_base">time_base (AudioCodec property)</a>
 
         <ul>
@@ -3087,8 +3387,14 @@
           <li><a href="generated/spdl.io.VideoPackets.html#spdl.io.VideoPackets.timestamp">(VideoPackets property)</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.timestamp">timestamp() (datetime method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.timetuple">timetuple() (datetime method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.timetz">timetz() (datetime method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.timezone">timezone (class in benchmark_transfer_overlap)</a>
+</li>
         <li><a href="generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.to">to() (PipelineBuilder method)</a>
 </li>
         <li><a href="generated/spdl.autoresearch.core.FailureRecord.html#spdl.autoresearch.core.FailureRecord.to_dict">to_dict() (FailureRecord method)</a>
@@ -3103,15 +3409,27 @@
 </li>
         <li><a href="generated/spdl.io.to_numba.html#spdl.io.to_numba">to_numba() (in module spdl.io)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.io.to_numpy.html#spdl.io.to_numpy">to_numpy() (in module spdl.io)</a>
 </li>
         <li><a href="generated/spdl.io.to_torch.html#spdl.io.to_torch">to_torch() (in module spdl.io)</a>
 </li>
         <li><a href="generated/streaming_nvdec_decoding.html#streaming_nvdec_decoding.torch_cuda_warmup">torch_cuda_warmup() (in module streaming_nvdec_decoding)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.torch_version">torch_version (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.total_bytes">total_bytes (BenchmarkSummary attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.total_bytes">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
         <li><a href="generated/benchmark_tarfile.html#benchmark_tarfile.BenchmarkConfig.total_files_processed">total_files_processed (BenchmarkConfig attribute)</a>
 </li>
         <li><a href="generated/benchmark_ipc_dataloader.html#benchmark_ipc_dataloader.Row.total_mb">total_mb (Row attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkConfig.total_mib">total_mib (BenchmarkConfig attribute)</a>
 </li>
         <li><a href="generated/spdl.io.utils.trace_counter.html#spdl.io.utils.trace_counter">trace_counter() (in module spdl.io.utils)</a>
 </li>
@@ -3127,10 +3445,44 @@
 </li>
         <li><a href="generated/spdl.io.transfer_buffer_cpu.html#spdl.io.transfer_buffer_cpu">transfer_buffer_cpu() (in module spdl.io)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.transfer_gb_per_s">transfer_gb_per_s (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.transfer_median_ms">transfer_median_ms (BenchmarkSummary attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample.transfer_only_ms">transfer_only_ms (OverlapSample attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.transfer_only_ms">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.BenchmarkSummary.transfer_p95_ms">transfer_p95_ms (BenchmarkSummary attribute)</a>
+</li>
         <li><a href="generated/spdl.io.transfer_tensor.html#spdl.io.transfer_tensor">transfer_tensor() (in module spdl.io)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.transfer_tensor_d2h">transfer_tensor_d2h() (in module benchmark_transfer_overlap)</a>
+
+        <ul>
+          <li><a href="generated/spdl.io.transfer_tensor_d2h.html#spdl.io.transfer_tensor_d2h">(in module spdl.io)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/spdl.io.transfer_tensor_h2d.html#spdl.io.transfer_tensor_h2d">transfer_tensor_h2d() (in module spdl.io)</a>
 </li>
         <li><a href="generated/benchmark_arena_transport.html#benchmark_arena_transport.Row.transport">transport (Row attribute)</a>
 </li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.OverlapSample.trial">trial (OverlapSample attribute)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.RawSampleRecord.trial">(RawSampleRecord attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.tzinfo">tzinfo (datetime attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.tzname">tzname() (datetime method)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.timezone.tzname">(timezone method)</a>
+</li>
+        </ul></li>
     </ul></td>
   </tr></table>
 </section>
@@ -3143,8 +3495,6 @@
 </li>
         <li><a href="generated/spdl.autoresearch.core.FailureKind.html#spdl.autoresearch.core.FailureKind.UNEXPECTED_EXCEPTION">UNEXPECTED_EXCEPTION (FailureKind attribute)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="generated/spdl.pipeline.SharedMemoryRingBuffer.html#spdl.pipeline.SharedMemoryRingBuffer.unlink">unlink() (SharedMemoryRingBuffer method)</a>
 
         <ul>
@@ -3152,6 +3502,22 @@
 </li>
         </ul></li>
         <li><a href="notes/pipeline_impl.html#spdl.pipeline._components._node._Node.upstream">upstream (_Node attribute)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.timezone.utc">utc (timezone attribute)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.utcfromtimestamp">utcfromtimestamp() (datetime method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.utcnow">utcnow() (datetime method)</a>
+</li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.utcoffset">utcoffset() (datetime method)</a>
+
+        <ul>
+          <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.timezone.utcoffset">(timezone method)</a>
+</li>
+        </ul></li>
+        <li><a href="generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.datetime.utctimetuple">utctimetuple() (datetime method)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -3273,7 +3639,7 @@
     </aside>
   </div>
 </div>
-    <script src="_static/js/custom.js"></script><script src="_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="_static/js/custom.js"></script><script src="_static/documentation_options.js?v=b9678aa1"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=5fa4622c"></script>

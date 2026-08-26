@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Execution Models: MT, MTP, and MP" href="execution_models.html" /><link rel="prev" title="Concurrency" href="concurrency.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Pipeline Parallelism - SPDL 0.6.0 documentation</title>
+        <title>Pipeline Parallelism - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
@@ -303,6 +304,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
 </li>
 </ul>
@@ -464,6 +466,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -539,7 +542,7 @@ combine these primitives into an efficient data loader (MT, MP and MTP), see
 <a class="reference internal" href="execution_models.html#execution-models"><span class="std std-ref">Execution Models: MT, MTP, and MP</span></a>.</p>
 <section id="specifying-an-executor">
 <h2>Specifying an executor<a class="headerlink" href="#specifying-an-executor" title="Link to this heading">¶</a></h2>
-<p>The core mechanism to deploy concurrency is <a class="reference external" href="https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.run_in_executor" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">asyncio.loop.run_in_executor()</span></code></a>
+<p>The core mechanism to deploy concurrency is <a class="reference external" href="https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.run_in_executor" title="(in Python v3.15)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">asyncio.loop.run_in_executor()</span></code></a>
 method. The synchronous function (or generator) provided to <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code>
 is executed asynchronously using the <code class="docutils literal notranslate"><span class="pre">run_in_executor</span></code> method.</p>
 <p>When you provide a synchronous function (or generator), the <code class="docutils literal notranslate"><span class="pre">PipelineBuilder</span></code>
@@ -577,7 +580,7 @@ is <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <p>If you build a pipeline without any customization, it defaults to
 multi-threading.</p>
 <p>The event loop dispatches the tasks to the default
-<a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code></a>
+<a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code></a>
 created with the maximum concurrency specified in <a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.build" title="spdl.pipeline.PipelineBuilder.build"><code class="xref py py-meth docutils literal notranslate"><span class="pre">PipelineBuilder.build()</span></code></a>
 method.</p>
 <div class="mermaid">
@@ -627,12 +630,18 @@ and what to do when a stage’s function does not.</p>
 (caching for faster execution or storing the application context)</p></li>
 <li><p>You want to specify a different number of concurrency.</p></li>
 </ol>
-<p>One notable example that meets these conditions is transferring data to the GPU.
-Due to the hardware constraints, only one data transfer can be performed
-at a time.
-To transfer data without interrupting the model training,
-you need to use a stream object dedicated for the transfer, and you want
-to keep using the same stream object across multiple function invocations.</p>
+<p>One notable example that meets these conditions is transferring data between
+the CPU and GPU. CUDA streams provide independent scheduling lanes, but they do
+not bypass the GPU’s copy-engine limits. On the hardware configuration
+discussed here, at most one host-to-device transfer and one device-to-host
+transfer can run at the same time. Transfers in opposite directions can overlap
+each other, while additional transfers in the same direction are serialized.
+Compute kernels use separate execution resources, so multiple kernels can
+overlap these transfers and one another when the GPU has sufficient resources.
+Creating more CUDA streams does not by itself increase the amount of concurrent
+work. To overlap a transfer with model computation, use a CUDA stream dedicated
+to that transfer direction and reuse the same stream across function
+invocations.</p>
 <p>To maintain a state, you can either encapsulate it in a callable class
 instance, or put it in a
 <a class="reference external" href="https://docs.python.org/3/library/threading.html#thread-local-data">thread-local storage</a>.
@@ -640,7 +649,8 @@ The following example shows how to initialize and store a CUDA stream
 in a thread-local storage.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The following code is now available as <a class="reference internal" href="../generated/spdl.io.transfer_tensor.html#spdl.io.transfer_tensor" title="spdl.io.transfer_tensor"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.transfer_tensor()</span></code></a>.</p>
+<p>The following code is now available as
+<a class="reference internal" href="../generated/spdl.io.transfer_tensor_h2d.html#spdl.io.transfer_tensor_h2d" title="spdl.io.transfer_tensor_h2d"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.transfer_tensor_h2d()</span></code></a>.</p>
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
 
@@ -684,11 +694,42 @@ the pipeline.</p>
 </div>
 <p>This way, the transfer function is always executed in a dedicated thread, so that
 it keeps using the same CUDA stream.</p>
-<p>When tracing this pipeline with
-<a class="reference external" href="https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html">PyTorch Profiler</a>,
-we can see that it is always the one background thread that issues data transfer,
-and the transfer overlaps with the stream executing the model training.</p>
-<img alt="../_static/data/parallelism_transfer.png" src="../_static/data/parallelism_transfer.png" />
+<p><a class="reference external" href="https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html">PyTorch Profiler</a>
+can verify that the background thread issues transfers on a dedicated CUDA
+stream while the foreground stream executes model work. The following trace
+shows host-to-device transfer using this pattern.</p>
+<img alt="Host-to-device transfer overlapping foreground CUDA work." src="../_static/data/parallelism_transfer.png" />
+<p>The same pattern applies when moving model outputs from the GPU back to the
+CPU. <a class="reference internal" href="../generated/spdl.io.transfer_tensor_d2h.html#spdl.io.transfer_tensor_d2h" title="spdl.io.transfer_tensor_d2h"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.transfer_tensor_d2h()</span></code></a> uses a dedicated CUDA stream and a
+cached page-locked staging buffer. Run it on a persistent single-worker
+executor so that consecutive calls reuse both resources while the foreground
+thread continues to submit independent work to its compute stream.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">d2h_executor</span> <span class="o">=</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">d2h_executor</span><span class="p">:</span>
+    <span class="n">future</span> <span class="o">=</span> <span class="n">d2h_executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
+        <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">transfer_tensor_d2h</span><span class="p">,</span>
+        <span class="n">model_output</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Independent work submitted to the foreground CUDA stream can overlap</span>
+    <span class="c1"># with the device-to-host transfer.</span>
+    <span class="n">next_output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">next_batch</span><span class="p">)</span>
+    <span class="n">cpu_output</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The inputs must be ready on the current CUDA stream when
+<a class="reference internal" href="../generated/spdl.io.transfer_tensor_d2h.html#spdl.io.transfer_tensor_d2h" title="spdl.io.transfer_tensor_d2h"><code class="xref py py-func docutils literal notranslate"><span class="pre">transfer_tensor_d2h()</span></code></a> is called. The function establishes the
+required ordering between that producer stream and its transfer stream before
+returning CPU tensors. See <a class="reference internal" href="../generated/benchmark_transfer_overlap.html#module-benchmark_transfer_overlap" title="benchmark_transfer_overlap"><code class="xref py py-mod docutils literal notranslate"><span class="pre">benchmark_transfer_overlap</span></code></a> for a
+reproducible benchmark of serialized and concurrent transfer-plus-compute
+makespans.</p>
+<p>The following Perfetto view shows the corresponding device-to-host pattern.
+Four <code class="docutils literal notranslate"><span class="pre">Memcpy</span> <span class="pre">DtoH</span></code> operations on stream 13 overlap the foreground SGEMM
+kernels on the default stream (stream 7). In this capture, 19.4 ms of the
+21.3 ms device-to-host transfer overlaps compute (91%).</p>
+<a class="reference internal image-reference" href="../_static/data/parallelism_transfer_d2h.png"><img alt="Device-to-host transfer on stream 13 overlapping SGEMM kernels on the default stream." src="../_static/data/parallelism_transfer_d2h.png" style="width: 100%;" />
+</a>
 </section>
 <section id="multi-processing-stage">
 <h2>Multi-processing (stage)<a class="headerlink" href="#multi-processing-stage" title="Link to this heading">¶</a></h2>
@@ -699,7 +740,7 @@ shared thread pool blocks the other stages. You can instead delegate that single
 stage to a subprocess.</p>
 <p><a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.pipe" title="spdl.pipeline.PipelineBuilder.pipe"><code class="xref py py-meth docutils literal notranslate"><span class="pre">PipelineBuilder.pipe()</span></code></a> takes an optional <code class="docutils literal notranslate"><span class="pre">executor</span></code> argument. The
 default behavior is to use the thread pool shared among all stages. If you pass
-an instance of <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ProcessPoolExecutor" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code></a>, that stage
+an instance of <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ProcessPoolExecutor" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code></a>, that stage
 executes the function in a subprocess, free of the GIL.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">executor</span> <span class="o">=</span> <span class="n">ProcessPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">num_processes</span><span class="p">)</span>
 
@@ -764,9 +805,9 @@ must all be
 <a class="reference external" href="https://docs.python.org/3/library/pickle.html#pickle-picklable">picklable</a>.
 Plain functions work; closures and class methods cannot be passed.</p>
 <p>If you want to bind extra arguments to a function, you can use
-<a class="reference external" href="https://docs.python.org/3/library/functools.html#functools.partial" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">functools.partial()</span></code></a>. If you want to pass around an object that’s not
+<a class="reference internal" href="../generated/benchmark_transfer_overlap.html#benchmark_transfer_overlap.partial" title="functools.partial"><code class="xref py py-func docutils literal notranslate"><span class="pre">functools.partial()</span></code></a>. If you want to pass around an object that’s not
 picklable by default, you can define the serialization protocol by providing
-<a class="reference external" href="https://docs.python.org/3/library/pickle.html#object.__getstate__" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">object.__getstate__()</span></code></a> and <a class="reference external" href="https://docs.python.org/3/library/pickle.html#object.__setstate__" title="(in Python v3.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">object.__setstate__()</span></code></a>.</p>
+<a class="reference external" href="https://docs.python.org/3/library/pickle.html#object.__getstate__" title="(in Python v3.15)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">object.__getstate__()</span></code></a> and <a class="reference external" href="https://docs.python.org/3/library/pickle.html#object.__setstate__" title="(in Python v3.15)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">object.__setstate__()</span></code></a>.</p>
 </div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
@@ -818,7 +859,7 @@ large payload is costly and is paid on both sides. PyTorch tensors (and NumPy
 arrays) are the exception: their buffers are moved through shared memory and only
 a handle is pickled, so transferring them is far cheaper than their size suggests
 — even though a fresh shared-memory segment is allocated on each pickling. Prefer
-passing a <a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code></a> across the boundary. To send a raw byte string
+passing a <a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code></a> across the boundary. To send a raw byte string
 cheaply, write it to shared memory yourself, or wrap it in a 1-D <code class="docutils literal notranslate"><span class="pre">uint8</span></code> tensor
 so it rides the same fast path.</p>
 <p>To squeeze the last bit of IPC performance,
@@ -890,6 +931,53 @@ worker sub-pipelines warm across epochs, and a region composes with
 <a class="reference internal" href="../generated/spdl.pipeline.run_pipeline_in_subprocess.html#spdl.pipeline.run_pipeline_in_subprocess" title="spdl.pipeline.run_pipeline_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">run_pipeline_in_subprocess()</span></code></a>. Every op must be picklable,
 since the region config is shipped to the worker. See the
 <a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.to" title="spdl.pipeline.PipelineBuilder.to"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to()</span></code></a> reference for the details.</p>
+<p>Crossing the region boundary costs a fixed amount <em>per transfer</em> — pickling, a
+queue handoff, and (for tensors) a shared-memory allocation — no matter how small
+the item is. When the items are small, that fixed cost dominates. Pass
+<code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> to <a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.to" title="spdl.pipeline.PipelineBuilder.to"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to()</span></code></a> to buffer several items into one
+transfer:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>                  <span class="c1"># small per-row items</span>
+    <span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">ProcessPoolExecutorConfig</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">),</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">decode</span><span class="p">)</span>                      <span class="c1"># still receives ONE row at a time</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>             <span class="c1"># independent of buffer_size</span>
+    <span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">MAIN_PROCESS</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>   <span class="c1"># 2 batches per transfer coming back</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=...</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Each marker sizes the handoff that happens where it sits, so a region’s two
+directions are configured independently: the <code class="docutils literal notranslate"><span class="pre">to()</span></code> that opens the region sizes
+the data flowing into its workers, and the one that closes it sizes the results
+flowing back. That separation matters because the two directions rarely carry
+comparable items — in the example above, single rows go in and whole batches come
+back, so one number could not be right for both. A marker sitting between two
+adjacent regions sizes that single handoff for both sides.</p>
+<p>The buffering is transparent: the boundary packs items on one side and unpacks them
+on the other, so stages on both sides — and every stage after the region — still see
+individual items. In particular <code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> is independent of any
+<a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.aggregate" title="spdl.pipeline.PipelineBuilder.aggregate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">aggregate()</span></code></a> you use, so the training batch
+size and the IPC transfer size can be tuned separately. The default, <code class="docutils literal notranslate"><span class="pre">1</span></code>,
+transfers one item at a time.</p>
+<p>It is an upper bound rather than a fixed grouping: a partial buffer is flushed at
+the end of a stream and at every epoch boundary, so the last transfer of each is
+usually short.</p>
+<p>Nothing assumes the region emits as many items as it received: a <code class="docutils literal notranslate"><span class="pre">None</span></code>-returning
+op, a generator op, and an <code class="docutils literal notranslate"><span class="pre">aggregate</span></code> inside the region all work unchanged.</p>
+<p>The cost is latency and memory. Up to <code class="docutils literal notranslate"><span class="pre">buffer_size</span> <span class="pre">-</span> <span class="pre">1</span></code> items are held while a
+transfer fills, so a value well above what the producing side can keep up with
+delays the first results; and because each queued transfer holds up to
+<code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> items, the in-flight item bound scales with it. Start at the batch
+size you would otherwise have aggregated before the region, then tune.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Placing <code class="docutils literal notranslate"><span class="pre">aggregate</span></code> <em>inside</em> a region means each worker aggregates only the
+items routed to it, so batches are formed per worker rather than globally. With
+<code class="docutils literal notranslate"><span class="pre">drop_last=True</span></code> that discards up to <code class="docutils literal notranslate"><span class="pre">max_workers</span> <span class="pre">×</span> <span class="pre">(batch_size</span> <span class="pre">-</span> <span class="pre">1)</span></code> items
+per epoch instead of <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">-</span> <span class="pre">1</span></code>.</p>
+</div>
 <p>To run a region in <strong>subinterpreters</strong> (Python 3.14+) instead of subprocesses,
 pass a <a class="reference internal" href="../generated/spdl.pipeline.defs.InterpreterPoolExecutorConfig.html#spdl.pipeline.defs.InterpreterPoolExecutorConfig" title="spdl.pipeline.defs.InterpreterPoolExecutorConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">InterpreterPoolExecutorConfig</span></code></a>; the region’s ops
 must avoid NumPy/PyTorch, which cannot be imported in a subinterpreter.</p>
@@ -1063,7 +1151,7 @@ the execution patterns that build on this primitive.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

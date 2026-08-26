@@ -54,7 +54,7 @@ Program Listing for File frames.h
     private:
      uintptr_t id_{0};
    
-     Rational time_base_;
+     Rational time_base_{};
    
     private:
      std::vector<AVFrame*> frames_{};

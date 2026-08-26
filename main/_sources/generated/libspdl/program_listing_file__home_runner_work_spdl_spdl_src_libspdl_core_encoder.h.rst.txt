@@ -37,10 +37,10 @@ Program Listing for File encoder.h
    
    template <MediaType media>
    class Encoder {
-     detail::EncoderImpl<media>* pImpl_;
+     std::unique_ptr<detail::EncoderImpl<media>> pImpl_;
    
     public:
-     explicit Encoder(detail::EncoderImpl<media>* pImpl);
+     explicit Encoder(std::unique_ptr<detail::EncoderImpl<media>> pImpl);
    
      Encoder(const Encoder<media>&) = delete;
    

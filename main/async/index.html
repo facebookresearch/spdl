@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Implementing an Orchestration Mechanism" href="problem.html" /><link rel="prev" title="Building High-Performance DataLoaders" href="../getting_started/pytorch.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Introduction to Async I/O - SPDL 0.6.0 documentation</title>
+        <title>Introduction to Async I/O - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
@@ -303,6 +304,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
 </li>
 </ul>
@@ -464,6 +466,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -527,7 +530,7 @@
           <section id="introduction-to-async-i-o">
 <span id="intro-async"></span><h1>Introduction to Async I/O<a class="headerlink" href="#introduction-to-async-i-o" title="Link to this heading">¶</a></h1>
 <p>Asynchronous operations are the foundation of SPDL,
-and SPDL uses <a class="reference external" href="https://docs.python.org/3/library/asyncio.html#module-asyncio" title="(in Python v3.14)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">asyncio</span></code></a> for orchestrating them.
+and SPDL uses <a class="reference external" href="https://docs.python.org/3/library/asyncio.html#module-asyncio" title="(in Python v3.15)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">asyncio</span></code></a> for orchestrating them.
 For advanced usage of SPDL, it is important to understand
 how Async I/O works, because improper usage of
 async I/O can slow down the whole system.
@@ -540,7 +543,7 @@ with traditional multi-threading.</p>
 <p>We look at how such issues are resolved by Async I/O’s event loop,
 then introduce the <code class="docutils literal notranslate"><span class="pre">async</span> <span class="pre">def</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords.
 Finally, we look at how synchronous functions can be
-converted to awaitable objects so that <a class="reference external" href="https://docs.python.org/3/library/asyncio.html#module-asyncio" title="(in Python v3.14)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">asyncio</span></code></a> can handle
+converted to awaitable objects so that <a class="reference external" href="https://docs.python.org/3/library/asyncio.html#module-asyncio" title="(in Python v3.15)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">asyncio</span></code></a> can handle
 sync/async functions in a unified manner.</p>
 <div class="toctree-wrapper compound">
 <ul>
@@ -568,7 +571,7 @@ sync/async functions in a unified manner.</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="../getting_started/parallelism.html#pipeline-parallelism"><span class="std std-ref">Pipeline Parallelism</span></a> - How SPDL uses async I/O for pipeline parallelism</p></li>
 <li><p><a class="reference internal" href="../notes/pipeline_impl.html"><span class="doc">Implementation detail of Pipeline</span></a> - Implementation details of Pipeline, including how async I/O enables the orchestration of pipeline stages</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/asyncio.html#module-asyncio" title="(in Python v3.14)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">asyncio</span></code></a> - Python’s official async I/O documentation</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/asyncio.html#module-asyncio" title="(in Python v3.15)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">asyncio</span></code></a> - Python’s official async I/O documentation</p></li>
 </ul>
 </div>
 </section>
@@ -623,7 +626,7 @@ sync/async functions in a unified manner.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

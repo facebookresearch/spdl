@@ -449,6 +449,26 @@ transfer\_tensor
    transfer_tensor
 
 
+transfer\_tensor\_d2h
+^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   transfer_tensor_d2h
+
+
+transfer\_tensor\_h2d
+^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   transfer_tensor_h2d
+
+
 demux\_config
 ^^^^^^^^^^^^^
 .. autosummary::
@@ -875,6 +895,8 @@ CUDAConfig
    ############################################################################
    Others
    ############################################################################
+
+
 
 
 

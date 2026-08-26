@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Case Studies" href="../case_studies/index.html" /><link rel="prev" title="The Straggler" href="straggler.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Resolving the Bottleneck - SPDL 0.6.0 documentation</title>
+        <title>Resolving the Bottleneck - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
@@ -303,6 +304,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
 </li>
 </ul>
@@ -464,6 +466,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -566,7 +569,7 @@ It allows you to see how much time is being spent on each operation.</p>
 <img alt="../_static/data/resolution_tracer.png" src="../_static/data/resolution_tracer.png" />
 <p>The underlying API is defined with <code class="docutils literal notranslate"><span class="pre">async</span></code> keyword.
 It is a common practice (although it’s an anti-pattern) to wrap async
-functions with <a class="reference external" href="https://docs.python.org/3/library/asyncio-runner.html#asyncio.run" title="(in Python v3.14)"><code class="xref py py-func docutils literal notranslate"><span class="pre">asyncio.run()</span></code></a> to provide pseudo synchronous API
+functions with <a class="reference external" href="https://docs.python.org/3/library/asyncio-runner.html#asyncio.run" title="(in Python v3.15)"><code class="xref py py-func docutils literal notranslate"><span class="pre">asyncio.run()</span></code></a> to provide pseudo synchronous API
 for the sake of ease of use.
 As a result, users are not aware that an event loop is created and
 destroyed for each invocation of API call, which is redundant and
@@ -577,12 +580,21 @@ but it is calling a pseudo-synchronous API,
 so an event loop is created and destroyed for each call.
 A lot of time is consumed in construction and destruction of
 redundant event loops.</p>
-<p>The PyTorch Profiler also annotates GPU and Tensor metadata, so it is
-useful to verify GPU-related activities.
-For example, to ensure that the data transfer is not interrupting the
-the main training, we can check that the data transfer is happening in
-a separate stream.</p>
-<img alt="../_static/data/parallelism_transfer.png" src="../_static/data/parallelism_transfer.png" />
+<p>The PyTorch Profiler also annotates GPU and Tensor metadata, so it is useful to
+verify GPU-related activities. For example, inspect the CUDA stream timeline to
+verify that host-to-device transfer with <a class="reference internal" href="../generated/spdl.io.transfer_tensor_h2d.html#spdl.io.transfer_tensor_h2d" title="spdl.io.transfer_tensor_h2d"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.transfer_tensor_h2d()</span></code></a>
+overlaps independent model computation instead of delaying it. The following
+trace illustrates host-to-device transfer on a dedicated stream.</p>
+<img alt="Host-to-device transfer overlapping foreground CUDA work." src="../_static/data/parallelism_transfer.png" />
+<p>Device-to-host transfer can use the same pattern with
+<a class="reference internal" href="../generated/spdl.io.transfer_tensor_d2h.html#spdl.io.transfer_tensor_d2h" title="spdl.io.transfer_tensor_d2h"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.transfer_tensor_d2h()</span></code></a>. The following Perfetto view shows its
+dedicated stream (stream 13) overlapping foreground SGEMM kernels on the
+default stream (stream 7). In this capture, 19.4 ms of the 21.3 ms transfer
+overlaps compute (91%).</p>
+<a class="reference internal image-reference" href="../_static/data/parallelism_transfer_d2h.png"><img alt="Device-to-host transfer on stream 13 overlapping SGEMM kernels on the default stream." src="../_static/data/parallelism_transfer_d2h.png" style="width: 100%;" />
+</a>
+<p>See <a class="reference internal" href="../generated/benchmark_transfer_overlap.html#module-benchmark_transfer_overlap" title="benchmark_transfer_overlap"><code class="xref py py-mod docutils literal notranslate"><span class="pre">benchmark_transfer_overlap</span></code></a> for a reproducible device-to-host
+overlap benchmark.</p>
 </section>
 <section id="sampler">
 <h3>Sampler<a class="headerlink" href="#sampler" title="Link to this heading">¶</a></h3>
@@ -694,7 +706,7 @@ reducing the GIL contention.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

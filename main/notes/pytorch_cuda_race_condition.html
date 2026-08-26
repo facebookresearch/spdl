@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Lifecycle Management of Packets and Frames" href="packets_and_frames_lifecycle.html" /><link rel="prev" title="Remote Iterable Protocol" href="remote_iterable_protocol.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>PyTorch CUDA Race Condition in Multi-threading - SPDL 0.6.0 documentation</title>
+        <title>PyTorch CUDA Race Condition in Multi-threading - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -279,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
@@ -303,6 +304,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
 </li>
 </ul>
@@ -464,6 +466,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -530,7 +533,7 @@
 a subtle race condition can occur that affects the reliability and correctness of tensor operations.</p>
 <section id="background">
 <h2>Background<a class="headerlink" href="#background" title="Link to this heading">¶</a></h2>
-<p>The <a class="reference internal" href="../generated/spdl.io.transfer_tensor.html#spdl.io.transfer_tensor" title="spdl.io.transfer_tensor"><code class="xref py py-func docutils literal notranslate"><span class="pre">transfer_tensor()</span></code></a> function is a handy function that encapsulates the steps required to
+<p>The <a class="reference internal" href="../generated/spdl.io.transfer_tensor_h2d.html#spdl.io.transfer_tensor_h2d" title="spdl.io.transfer_tensor_h2d"><code class="xref py py-func docutils literal notranslate"><span class="pre">transfer_tensor_h2d()</span></code></a> function is a handy function that encapsulates the steps required to
 transfer data to the GPU without interfering with the main thread and the default CUDA stream.</p>
 <p>It does the following:</p>
 <ol class="arabic simple">
@@ -548,7 +551,7 @@ allow continuous streaming of data to the GPU.</p>
    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">preprocess</span><span class="p">)</span>
    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span>  <span class="c1"># Background data transfer</span>
-       <span class="n">transfer_tensor</span><span class="p">,</span>
+       <span class="n">transfer_tensor_h2d</span><span class="p">,</span>
        <span class="n">executor</span><span class="o">=</span><span class="n">io_executor</span><span class="p">,</span>
    <span class="p">)</span>
    <span class="o">.</span><span class="n">add_sink</span><span class="p">()</span>
@@ -615,13 +618,13 @@ can create another CUDA tensor, and the CCA can assign the same memory region to
 <p>The result is data corruption. The following diagram illustrates this:</p>
 <img alt="../_static/data/pytorch_cuda_race_condition.png" src="../_static/data/pytorch_cuda_race_condition.png" />
 </section>
-<section id="the-solution-caching-the-reference-in-transfer-tensor">
-<h2>The Solution: Caching the reference in <code class="docutils literal notranslate"><span class="pre">transfer_tensor</span></code><a class="headerlink" href="#the-solution-caching-the-reference-in-transfer-tensor" title="Link to this heading">¶</a></h2>
+<section id="the-solution-caching-the-reference-in-transfer-tensor-h2d">
+<h2>The Solution: Caching the reference in <code class="docutils literal notranslate"><span class="pre">transfer_tensor_h2d</span></code><a class="headerlink" href="#the-solution-caching-the-reference-in-transfer-tensor-h2d" title="Link to this heading">¶</a></h2>
 <p>PyTorch provides a mitigation for multi-stream applications, such as
-<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.Tensor.record_stream.html#torch.Tensor.record_stream" title="(in PyTorch v2.13)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">record_stream()</span></code></a>.
+<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.Tensor.record_stream.html#torch.Tensor.record_stream" title="(in PyTorch v2.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">record_stream()</span></code></a>.
 However, we are not certain that this works for multi-threading situations,
 so we resort to a more primitive approach.</p>
-<p>The <a class="reference internal" href="../generated/spdl.io.transfer_tensor.html#spdl.io.transfer_tensor" title="spdl.io.transfer_tensor"><code class="xref py py-func docutils literal notranslate"><span class="pre">transfer_tensor()</span></code></a> function now holds a strong reference to the batches
+<p>The <a class="reference internal" href="../generated/spdl.io.transfer_tensor_h2d.html#spdl.io.transfer_tensor_h2d" title="spdl.io.transfer_tensor_h2d"><code class="xref py py-func docutils literal notranslate"><span class="pre">transfer_tensor_h2d()</span></code></a> function holds a strong reference to the batches
 transferred to the GPU.
 It holds references to the last 4 batches it transferred.
 4 is the number of batches that can exist in the current pipeline stage and
@@ -648,7 +651,7 @@ Queue e2&#64;--&gt; DownstreamBox
 e1&#64;{ animation: slow }
 e2&#64;{ animation: slow }
         </div><p>By holding the last 4 batches, even if the reference is lost in the model stage,
-the last reference is still held by the cache of <a class="reference internal" href="../generated/spdl.io.transfer_tensor.html#spdl.io.transfer_tensor" title="spdl.io.transfer_tensor"><code class="xref py py-func docutils literal notranslate"><span class="pre">transfer_tensor()</span></code></a>, so
+the last reference is still held by the cache of <a class="reference internal" href="../generated/spdl.io.transfer_tensor_h2d.html#spdl.io.transfer_tensor_h2d" title="spdl.io.transfer_tensor_h2d"><code class="xref py py-func docutils literal notranslate"><span class="pre">transfer_tensor_h2d()</span></code></a>, so
 the CCA will not immediately reuse the underlying memory.</p>
 </section>
 <section id="references">
@@ -720,7 +723,7 @@ the CCA will not immediately reuse the underlying memory.</p>
 <li><a class="reference internal" href="#">PyTorch CUDA Race Condition in Multi-threading</a><ul>
 <li><a class="reference internal" href="#background">Background</a></li>
 <li><a class="reference internal" href="#the-problem">The Problem</a></li>
-<li><a class="reference internal" href="#the-solution-caching-the-reference-in-transfer-tensor">The Solution: Caching the reference in <code class="docutils literal notranslate"><span class="pre">transfer_tensor</span></code></a></li>
+<li><a class="reference internal" href="#the-solution-caching-the-reference-in-transfer-tensor-h2d">The Solution: Caching the reference in <code class="docutils literal notranslate"><span class="pre">transfer_tensor_h2d</span></code></a></li>
 <li><a class="reference internal" href="#references">References</a></li>
 </ul>
 </li>
@@ -734,7 +737,7 @@ the CCA will not immediately reuse the underlying memory.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
