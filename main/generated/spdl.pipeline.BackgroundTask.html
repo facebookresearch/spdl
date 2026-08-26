@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.pipeline.BackgroundTask - SPDL 0.6.0 documentation</title>
+        <title>spdl.pipeline.BackgroundTask - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -464,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -528,7 +529,7 @@
 <h1>spdl.pipeline.BackgroundTask<a class="headerlink" href="#spdl-pipeline-backgroundtask" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="spdl.pipeline.BackgroundTask">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BackgroundTask</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_bg_task.py?#L23-L50"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.BackgroundTask" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BackgroundTask</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_bg_task.py?#L22-L49"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.BackgroundTask" title="Link to this definition">¶</a></dt>
 <dd><p>A background task that runs alongside pipeline stages.</p>
 <p>Subclass this and override <a class="reference internal" href="#spdl.pipeline.BackgroundTask.run" title="spdl.pipeline.BackgroundTask.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> to implement custom logic.
 The task is started when the pipeline starts and cancelled when the
@@ -557,7 +558,7 @@ to fail.</p>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.pipeline.BackgroundTask.run">
-<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_bg_task.py?#L43-L50"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.BackgroundTask.run" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_bg_task.py?#L42-L49"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.BackgroundTask.run" title="Link to this definition">¶</a></dt>
 <dd><p>Override this to implement the background task logic.</p>
 <p>This coroutine runs in the pipeline’s event loop. It will be
 cancelled when the pipeline completes, so use <code class="docutils literal notranslate"><span class="pre">try/except</span>
@@ -622,7 +623,7 @@ cancelled when the pipeline completes, so use <code class="docutils literal notr
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

@@ -9,5 +9,6 @@ spdl.pipeline.defs.PlacementConfig
    .. rubric:: Attributes
 
    .. autosummary::
+      ~PlacementConfig.buffer_size
       ~PlacementConfig.name
       ~PlacementConfig.target

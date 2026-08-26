@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Benchmark utils" href="benchmark_utils.html" /><link rel="prev" title="Pipeline definitions" href="pipeline_definitions.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Pipeline profiling - SPDL 0.6.0 documentation</title>
+        <title>Pipeline profiling - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -464,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -610,217 +611,216 @@ concurrency, and it degrades as more threads are added. (<code class="docutils l
 <span class="linenos"> 56</span>    <span class="s2">"run_profiling_example"</span><span class="p">,</span>
 <span class="linenos"> 57</span><span class="p">]</span>
 <span class="linenos"> 58</span>
-<span class="linenos"> 59</span><span class="c1"># pyre-strict</span>
-<span class="linenos"> 60</span>
-<span class="linenos"> 61</span><span class="n">_LG</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="linenos"> 59</span>
+<span class="linenos"> 60</span><span class="n">_LG</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="linenos"> 61</span>
 <span class="linenos"> 62</span>
-<span class="linenos"> 63</span>
-<span class="linenos"> 64</span><span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">:</span>
-<span class="linenos"> 65</span><span class="w">    </span><span class="sd">"""Parse command line arguments."""</span>
-<span class="linenos"> 66</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
-<span class="linenos"> 67</span>        <span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">,</span>
-<span class="linenos"> 68</span>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
-<span class="linenos"> 69</span>    <span class="p">)</span>
-<span class="linenos"> 70</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-<span class="linenos"> 71</span>        <span class="s2">"--num-inputs"</span><span class="p">,</span>
-<span class="linenos"> 72</span>        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
-<span class="linenos"> 73</span>        <span class="n">default</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
-<span class="linenos"> 74</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of inputs to use for profiling each stage"</span><span class="p">,</span>
-<span class="linenos"> 75</span>    <span class="p">)</span>
-<span class="linenos"> 76</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-<span class="linenos"> 77</span>        <span class="s2">"--plot-output"</span><span class="p">,</span>
-<span class="linenos"> 78</span>        <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">,</span>
-<span class="linenos"> 79</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Path to save the performance plot (e.g., profile_results.png)"</span><span class="p">,</span>
-<span class="linenos"> 80</span>    <span class="p">)</span>
-<span class="linenos"> 81</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="linenos"> 63</span><span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">:</span>
+<span class="linenos"> 64</span><span class="w">    </span><span class="sd">"""Parse command line arguments."""</span>
+<span class="linenos"> 65</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+<span class="linenos"> 66</span>        <span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">,</span>
+<span class="linenos"> 67</span>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
+<span class="linenos"> 68</span>    <span class="p">)</span>
+<span class="linenos"> 69</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+<span class="linenos"> 70</span>        <span class="s2">"--num-inputs"</span><span class="p">,</span>
+<span class="linenos"> 71</span>        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+<span class="linenos"> 72</span>        <span class="n">default</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+<span class="linenos"> 73</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of inputs to use for profiling each stage"</span><span class="p">,</span>
+<span class="linenos"> 74</span>    <span class="p">)</span>
+<span class="linenos"> 75</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+<span class="linenos"> 76</span>        <span class="s2">"--plot-output"</span><span class="p">,</span>
+<span class="linenos"> 77</span>        <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">,</span>
+<span class="linenos"> 78</span>        <span class="n">help</span><span class="o">=</span><span class="s2">"Path to save the performance plot (e.g., profile_results.png)"</span><span class="p">,</span>
+<span class="linenos"> 79</span>    <span class="p">)</span>
+<span class="linenos"> 80</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="linenos"> 81</span>
 <span class="linenos"> 82</span>
-<span class="linenos"> 83</span>
-<span class="linenos"> 84</span><span class="k">def</span><span class="w"> </span><span class="nf">scalable_op</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="linenos"> 85</span><span class="w">    </span><span class="sd">"""Simulate an operation which releases the GIL most of the time.</span>
-<span class="linenos"> 86</span>
-<span class="linenos"> 87</span><span class="sd">    Args:</span>
-<span class="linenos"> 88</span><span class="sd">        x: Input integer</span>
-<span class="linenos"> 89</span>
-<span class="linenos"> 90</span><span class="sd">    Returns:</span>
-<span class="linenos"> 91</span><span class="sd">        The input value multiplied by 2</span>
-<span class="linenos"> 92</span><span class="sd">    """</span>
-<span class="linenos"> 93</span>    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
-<span class="linenos"> 94</span>    <span class="k">return</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">2</span>
+<span class="linenos"> 83</span><span class="k">def</span><span class="w"> </span><span class="nf">scalable_op</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos"> 84</span><span class="w">    </span><span class="sd">"""Simulate an operation which releases the GIL most of the time.</span>
+<span class="linenos"> 85</span>
+<span class="linenos"> 86</span><span class="sd">    Args:</span>
+<span class="linenos"> 87</span><span class="sd">        x: Input integer</span>
+<span class="linenos"> 88</span>
+<span class="linenos"> 89</span><span class="sd">    Returns:</span>
+<span class="linenos"> 90</span><span class="sd">        The input value multiplied by 2</span>
+<span class="linenos"> 91</span><span class="sd">    """</span>
+<span class="linenos"> 92</span>    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
+<span class="linenos"> 93</span>    <span class="k">return</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">2</span>
+<span class="linenos"> 94</span>
 <span class="linenos"> 95</span>
-<span class="linenos"> 96</span>
-<span class="linenos"> 97</span><span class="k">def</span><span class="w"> </span><span class="nf">scalable_op2</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="linenos"> 98</span><span class="w">    </span><span class="sd">"""Simulate an operation which releases the GIL some time.</span>
-<span class="linenos"> 99</span>
-<span class="linenos">100</span><span class="sd">    Args:</span>
-<span class="linenos">101</span><span class="sd">        x: Input integer</span>
-<span class="linenos">102</span>
-<span class="linenos">103</span><span class="sd">    Returns:</span>
-<span class="linenos">104</span><span class="sd">        The input value plus 100</span>
-<span class="linenos">105</span><span class="sd">    """</span>
-<span class="linenos">106</span>    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.003</span><span class="p">)</span>
-<span class="linenos">107</span>    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">100</span>
+<span class="linenos"> 96</span><span class="k">def</span><span class="w"> </span><span class="nf">scalable_op2</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos"> 97</span><span class="w">    </span><span class="sd">"""Simulate an operation which releases the GIL some time.</span>
+<span class="linenos"> 98</span>
+<span class="linenos"> 99</span><span class="sd">    Args:</span>
+<span class="linenos">100</span><span class="sd">        x: Input integer</span>
+<span class="linenos">101</span>
+<span class="linenos">102</span><span class="sd">    Returns:</span>
+<span class="linenos">103</span><span class="sd">        The input value plus 100</span>
+<span class="linenos">104</span><span class="sd">    """</span>
+<span class="linenos">105</span>    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.003</span><span class="p">)</span>
+<span class="linenos">106</span>    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">100</span>
+<span class="linenos">107</span>
 <span class="linenos">108</span>
-<span class="linenos">109</span>
-<span class="linenos">110</span><span class="k">def</span><span class="w"> </span><span class="nf">op_with_contention</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="linenos">111</span><span class="w">    </span><span class="sd">"""Simulate an operation holds the GIL.</span>
-<span class="linenos">112</span>
-<span class="linenos">113</span><span class="sd">    Args:</span>
-<span class="linenos">114</span><span class="sd">        x: Input integer</span>
-<span class="linenos">115</span>
-<span class="linenos">116</span><span class="sd">    Returns:</span>
-<span class="linenos">117</span><span class="sd">        The input value squared</span>
-<span class="linenos">118</span><span class="sd">    """</span>
-<span class="linenos">119</span>    <span class="k">return</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span>
+<span class="linenos">109</span><span class="k">def</span><span class="w"> </span><span class="nf">op_with_contention</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="linenos">110</span><span class="w">    </span><span class="sd">"""Simulate an operation holds the GIL.</span>
+<span class="linenos">111</span>
+<span class="linenos">112</span><span class="sd">    Args:</span>
+<span class="linenos">113</span><span class="sd">        x: Input integer</span>
+<span class="linenos">114</span>
+<span class="linenos">115</span><span class="sd">    Returns:</span>
+<span class="linenos">116</span><span class="sd">        The input value squared</span>
+<span class="linenos">117</span><span class="sd">    """</span>
+<span class="linenos">118</span>    <span class="k">return</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span>
+<span class="linenos">119</span>
 <span class="linenos">120</span>
-<span class="linenos">121</span>
-<span class="linenos">122</span><span class="k">def</span><span class="w"> </span><span class="nf">create_pipeline</span><span class="p">(</span><span class="n">num_sources</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="linenos">123</span><span class="w">    </span><span class="sd">"""Create a pipeline configuration with multiple stages.</span>
-<span class="linenos">124</span>
-<span class="linenos">125</span><span class="sd">    Args:</span>
-<span class="linenos">126</span><span class="sd">        num_sources: Number of source items to generate</span>
-<span class="linenos">127</span>
-<span class="linenos">128</span><span class="sd">    Returns:</span>
-<span class="linenos">129</span><span class="sd">        Pipeline configuration with three processing stages</span>
-<span class="linenos">130</span><span class="sd">    """</span>
-<span class="linenos">131</span>    <span class="k">return</span> <span class="n">PipelineConfig</span><span class="p">(</span>
-<span class="linenos">132</span>        <span class="n">src</span><span class="o">=</span><span class="n">SourceConfig</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_sources</span><span class="p">)),</span>
-<span class="linenos">133</span>        <span class="n">pipes</span><span class="o">=</span><span class="p">[</span>
-<span class="linenos">134</span>            <span class="n">Pipe</span><span class="p">(</span><span class="n">scalable_op</span><span class="p">),</span>
-<span class="linenos">135</span>            <span class="n">Pipe</span><span class="p">(</span><span class="n">scalable_op2</span><span class="p">),</span>
-<span class="linenos">136</span>            <span class="n">Pipe</span><span class="p">(</span><span class="n">op_with_contention</span><span class="p">),</span>
-<span class="linenos">137</span>        <span class="p">],</span>
-<span class="linenos">138</span>        <span class="n">sink</span><span class="o">=</span><span class="n">SinkConfig</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
-<span class="linenos">139</span>    <span class="p">)</span>
+<span class="linenos">121</span><span class="k">def</span><span class="w"> </span><span class="nf">create_pipeline</span><span class="p">(</span><span class="n">num_sources</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineConfig</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="linenos">122</span><span class="w">    </span><span class="sd">"""Create a pipeline configuration with multiple stages.</span>
+<span class="linenos">123</span>
+<span class="linenos">124</span><span class="sd">    Args:</span>
+<span class="linenos">125</span><span class="sd">        num_sources: Number of source items to generate</span>
+<span class="linenos">126</span>
+<span class="linenos">127</span><span class="sd">    Returns:</span>
+<span class="linenos">128</span><span class="sd">        Pipeline configuration with three processing stages</span>
+<span class="linenos">129</span><span class="sd">    """</span>
+<span class="linenos">130</span>    <span class="k">return</span> <span class="n">PipelineConfig</span><span class="p">(</span>
+<span class="linenos">131</span>        <span class="n">src</span><span class="o">=</span><span class="n">SourceConfig</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_sources</span><span class="p">)),</span>
+<span class="linenos">132</span>        <span class="n">pipes</span><span class="o">=</span><span class="p">[</span>
+<span class="linenos">133</span>            <span class="n">Pipe</span><span class="p">(</span><span class="n">scalable_op</span><span class="p">),</span>
+<span class="linenos">134</span>            <span class="n">Pipe</span><span class="p">(</span><span class="n">scalable_op2</span><span class="p">),</span>
+<span class="linenos">135</span>            <span class="n">Pipe</span><span class="p">(</span><span class="n">op_with_contention</span><span class="p">),</span>
+<span class="linenos">136</span>        <span class="p">],</span>
+<span class="linenos">137</span>        <span class="n">sink</span><span class="o">=</span><span class="n">SinkConfig</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
+<span class="linenos">138</span>    <span class="p">)</span>
+<span class="linenos">139</span>
 <span class="linenos">140</span>
-<span class="linenos">141</span>
-<span class="linenos">142</span><span class="k">def</span><span class="w"> </span><span class="nf">print_profile_result</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">ProfileResult</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">143</span><span class="w">    </span><span class="sd">"""Print profiling result in a formatted way.</span>
-<span class="linenos">144</span>
-<span class="linenos">145</span><span class="sd">    This is a callback function that will be called after each stage is profiled.</span>
-<span class="linenos">146</span>
-<span class="linenos">147</span><span class="sd">    Args:</span>
-<span class="linenos">148</span><span class="sd">        result: Profiling result for a single stage</span>
-<span class="linenos">149</span><span class="sd">    """</span>
-<span class="linenos">150</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
-<span class="linenos">151</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Stage: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-<span class="linenos">152</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"-"</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
-<span class="linenos">153</span>
-<span class="linenos">154</span>    <span class="k">for</span> <span class="n">stat</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stats</span><span class="p">:</span>
-<span class="linenos">155</span>        <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-<span class="linenos">156</span>            <span class="s2">"Concurrency </span><span class="si">%2d</span><span class="s2">: QPS=</span><span class="si">%8.2f</span><span class="s2">, Occupancy=</span><span class="si">%5.1f%%</span><span class="s2">"</span><span class="p">,</span>
-<span class="linenos">157</span>            <span class="n">stat</span><span class="o">.</span><span class="n">concurrency</span><span class="p">,</span>
-<span class="linenos">158</span>            <span class="n">stat</span><span class="o">.</span><span class="n">qps</span><span class="p">,</span>
-<span class="linenos">159</span>            <span class="n">stat</span><span class="o">.</span><span class="n">occupancy_rate</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span>
-<span class="linenos">160</span>        <span class="p">)</span>
-<span class="linenos">161</span>
-<span class="linenos">162</span>    <span class="n">best_stat</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stats</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">qps</span><span class="p">)</span>
-<span class="linenos">163</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"-"</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
-<span class="linenos">164</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-<span class="linenos">165</span>        <span class="s2">"Best Performance: Concurrency=</span><span class="si">%d</span><span class="s2">, QPS=</span><span class="si">%.2f</span><span class="s2">"</span><span class="p">,</span>
-<span class="linenos">166</span>        <span class="n">best_stat</span><span class="o">.</span><span class="n">concurrency</span><span class="p">,</span>
-<span class="linenos">167</span>        <span class="n">best_stat</span><span class="o">.</span><span class="n">qps</span><span class="p">,</span>
-<span class="linenos">168</span>    <span class="p">)</span>
-<span class="linenos">169</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+<span class="linenos">141</span><span class="k">def</span><span class="w"> </span><span class="nf">print_profile_result</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">ProfileResult</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">142</span><span class="w">    </span><span class="sd">"""Print profiling result in a formatted way.</span>
+<span class="linenos">143</span>
+<span class="linenos">144</span><span class="sd">    This is a callback function that will be called after each stage is profiled.</span>
+<span class="linenos">145</span>
+<span class="linenos">146</span><span class="sd">    Args:</span>
+<span class="linenos">147</span><span class="sd">        result: Profiling result for a single stage</span>
+<span class="linenos">148</span><span class="sd">    """</span>
+<span class="linenos">149</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+<span class="linenos">150</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Stage: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="linenos">151</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"-"</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+<span class="linenos">152</span>
+<span class="linenos">153</span>    <span class="k">for</span> <span class="n">stat</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stats</span><span class="p">:</span>
+<span class="linenos">154</span>        <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+<span class="linenos">155</span>            <span class="s2">"Concurrency </span><span class="si">%2d</span><span class="s2">: QPS=</span><span class="si">%8.2f</span><span class="s2">, Occupancy=</span><span class="si">%5.1f%%</span><span class="s2">"</span><span class="p">,</span>
+<span class="linenos">156</span>            <span class="n">stat</span><span class="o">.</span><span class="n">concurrency</span><span class="p">,</span>
+<span class="linenos">157</span>            <span class="n">stat</span><span class="o">.</span><span class="n">qps</span><span class="p">,</span>
+<span class="linenos">158</span>            <span class="n">stat</span><span class="o">.</span><span class="n">occupancy_rate</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span>
+<span class="linenos">159</span>        <span class="p">)</span>
+<span class="linenos">160</span>
+<span class="linenos">161</span>    <span class="n">best_stat</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stats</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">qps</span><span class="p">)</span>
+<span class="linenos">162</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"-"</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+<span class="linenos">163</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+<span class="linenos">164</span>        <span class="s2">"Best Performance: Concurrency=</span><span class="si">%d</span><span class="s2">, QPS=</span><span class="si">%.2f</span><span class="s2">"</span><span class="p">,</span>
+<span class="linenos">165</span>        <span class="n">best_stat</span><span class="o">.</span><span class="n">concurrency</span><span class="p">,</span>
+<span class="linenos">166</span>        <span class="n">best_stat</span><span class="o">.</span><span class="n">qps</span><span class="p">,</span>
+<span class="linenos">167</span>    <span class="p">)</span>
+<span class="linenos">168</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+<span class="linenos">169</span>
 <span class="linenos">170</span>
-<span class="linenos">171</span>
-<span class="linenos">172</span><span class="k">def</span><span class="w"> </span><span class="nf">plot_profile_results</span><span class="p">(</span>
-<span class="linenos">173</span>    <span class="n">results</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ProfileResult</span><span class="p">],</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="linenos">174</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">175</span><span class="w">    </span><span class="sd">"""Plot profiling results showing QPS vs concurrency for each stage.</span>
-<span class="linenos">176</span>
-<span class="linenos">177</span><span class="sd">    Args:</span>
-<span class="linenos">178</span><span class="sd">        results: List of profiling results for each pipeline stage</span>
-<span class="linenos">179</span><span class="sd">        output_path: Optional path to save the plot. If None, displays the plot.</span>
-<span class="linenos">180</span><span class="sd">    """</span>
-<span class="linenos">181</span>    <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
-<span class="linenos">182</span>
-<span class="linenos">183</span>    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
-<span class="linenos">184</span>
-<span class="linenos">185</span>    <span class="n">all_concurrencies</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-<span class="linenos">186</span>    <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-<span class="linenos">187</span>        <span class="n">concurrencies</span> <span class="o">=</span> <span class="p">[</span><span class="n">stat</span><span class="o">.</span><span class="n">concurrency</span> <span class="k">for</span> <span class="n">stat</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stats</span><span class="p">]</span>
-<span class="linenos">188</span>        <span class="n">qps_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">stat</span><span class="o">.</span><span class="n">qps</span> <span class="k">for</span> <span class="n">stat</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stats</span><span class="p">]</span>
-<span class="linenos">189</span>        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">concurrencies</span><span class="p">,</span> <span class="n">qps_values</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">"o"</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-<span class="linenos">190</span>        <span class="n">all_concurrencies</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">concurrencies</span><span class="p">)</span>
-<span class="linenos">191</span>
-<span class="linenos">192</span>    <span class="n">sorted_concurrencies</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">all_concurrencies</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="linenos">193</span>    <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">sorted_concurrencies</span><span class="p">,</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">sorted_concurrencies</span><span class="p">])</span>
-<span class="linenos">194</span>
-<span class="linenos">195</span>    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">"Number of Threads (Concurrency)"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
-<span class="linenos">196</span>    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">"Throughput (QPS)"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
-<span class="linenos">197</span>    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span>
-<span class="linenos">198</span>        <span class="s2">"Pipeline Stage Performance vs Concurrency"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s2">"bold"</span>
-<span class="linenos">199</span>    <span class="p">)</span>
-<span class="linenos">200</span>    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">"best"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-<span class="linenos">201</span>    <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">"--"</span><span class="p">)</span>
-<span class="linenos">202</span>    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-<span class="linenos">203</span>
-<span class="linenos">204</span>    <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
-<span class="linenos">205</span>        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">"tight"</span><span class="p">)</span>
-<span class="linenos">206</span>        <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Plot saved to: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span>
-<span class="linenos">207</span>    <span class="k">else</span><span class="p">:</span>
-<span class="linenos">208</span>        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="linenos">171</span><span class="k">def</span><span class="w"> </span><span class="nf">plot_profile_results</span><span class="p">(</span>
+<span class="linenos">172</span>    <span class="n">results</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ProfileResult</span><span class="p">],</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="linenos">173</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">174</span><span class="w">    </span><span class="sd">"""Plot profiling results showing QPS vs concurrency for each stage.</span>
+<span class="linenos">175</span>
+<span class="linenos">176</span><span class="sd">    Args:</span>
+<span class="linenos">177</span><span class="sd">        results: List of profiling results for each pipeline stage</span>
+<span class="linenos">178</span><span class="sd">        output_path: Optional path to save the plot. If None, displays the plot.</span>
+<span class="linenos">179</span><span class="sd">    """</span>
+<span class="linenos">180</span>    <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="linenos">181</span>
+<span class="linenos">182</span>    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="linenos">183</span>
+<span class="linenos">184</span>    <span class="n">all_concurrencies</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+<span class="linenos">185</span>    <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+<span class="linenos">186</span>        <span class="n">concurrencies</span> <span class="o">=</span> <span class="p">[</span><span class="n">stat</span><span class="o">.</span><span class="n">concurrency</span> <span class="k">for</span> <span class="n">stat</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stats</span><span class="p">]</span>
+<span class="linenos">187</span>        <span class="n">qps_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">stat</span><span class="o">.</span><span class="n">qps</span> <span class="k">for</span> <span class="n">stat</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stats</span><span class="p">]</span>
+<span class="linenos">188</span>        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">concurrencies</span><span class="p">,</span> <span class="n">qps_values</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">"o"</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="linenos">189</span>        <span class="n">all_concurrencies</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">concurrencies</span><span class="p">)</span>
+<span class="linenos">190</span>
+<span class="linenos">191</span>    <span class="n">sorted_concurrencies</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">all_concurrencies</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos">192</span>    <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">sorted_concurrencies</span><span class="p">,</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">sorted_concurrencies</span><span class="p">])</span>
+<span class="linenos">193</span>
+<span class="linenos">194</span>    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">"Number of Threads (Concurrency)"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+<span class="linenos">195</span>    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">"Throughput (QPS)"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+<span class="linenos">196</span>    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span>
+<span class="linenos">197</span>        <span class="s2">"Pipeline Stage Performance vs Concurrency"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s2">"bold"</span>
+<span class="linenos">198</span>    <span class="p">)</span>
+<span class="linenos">199</span>    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">"best"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="linenos">200</span>    <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">"--"</span><span class="p">)</span>
+<span class="linenos">201</span>    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="linenos">202</span>
+<span class="linenos">203</span>    <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+<span class="linenos">204</span>        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">"tight"</span><span class="p">)</span>
+<span class="linenos">205</span>        <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Plot saved to: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span>
+<span class="linenos">206</span>    <span class="k">else</span><span class="p">:</span>
+<span class="linenos">207</span>        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="linenos">208</span>
 <span class="linenos">209</span>
-<span class="linenos">210</span>
-<span class="linenos">211</span><span class="k">def</span><span class="w"> </span><span class="nf">run_profiling_example</span><span class="p">(</span><span class="n">num_inputs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">500</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ProfileResult</span><span class="p">]:</span>
-<span class="linenos">212</span><span class="w">    </span><span class="sd">"""Run the profiling example.</span>
-<span class="linenos">213</span>
-<span class="linenos">214</span><span class="sd">    Args:</span>
-<span class="linenos">215</span><span class="sd">        num_inputs: Number of inputs to use for profiling</span>
-<span class="linenos">216</span>
-<span class="linenos">217</span><span class="sd">    Returns:</span>
-<span class="linenos">218</span><span class="sd">        List of profiling results for each stage</span>
-<span class="linenos">219</span><span class="sd">    """</span>
-<span class="linenos">220</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Creating pipeline configuration..."</span><span class="p">)</span>
-<span class="linenos">221</span>    <span class="n">pipeline_config</span> <span class="o">=</span> <span class="n">create_pipeline</span><span class="p">(</span><span class="n">num_sources</span><span class="o">=</span><span class="n">num_inputs</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
-<span class="linenos">222</span>
-<span class="linenos">223</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Starting pipeline profiling with </span><span class="si">%d</span><span class="s2"> inputs..."</span><span class="p">,</span> <span class="n">num_inputs</span><span class="p">)</span>
-<span class="linenos">224</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"This will benchmark each stage at different concurrency levels."</span><span class="p">)</span>
-<span class="linenos">225</span>
-<span class="linenos">226</span>    <span class="n">results</span> <span class="o">=</span> <span class="n">profile_pipeline</span><span class="p">(</span>
-<span class="linenos">227</span>        <span class="n">pipeline_config</span><span class="p">,</span>
-<span class="linenos">228</span>        <span class="n">num_inputs</span><span class="o">=</span><span class="n">num_inputs</span><span class="p">,</span>
-<span class="linenos">229</span>        <span class="n">callback</span><span class="o">=</span><span class="n">print_profile_result</span><span class="p">,</span>
-<span class="linenos">230</span>    <span class="p">)</span>
-<span class="linenos">231</span>
-<span class="linenos">232</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Profiling complete!"</span><span class="p">)</span>
-<span class="linenos">233</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Total stages profiled: </span><span class="si">%d</span><span class="s2">"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">))</span>
-<span class="linenos">234</span>
-<span class="linenos">235</span>    <span class="k">return</span> <span class="n">results</span>
+<span class="linenos">210</span><span class="k">def</span><span class="w"> </span><span class="nf">run_profiling_example</span><span class="p">(</span><span class="n">num_inputs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">500</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ProfileResult</span><span class="p">]:</span>
+<span class="linenos">211</span><span class="w">    </span><span class="sd">"""Run the profiling example.</span>
+<span class="linenos">212</span>
+<span class="linenos">213</span><span class="sd">    Args:</span>
+<span class="linenos">214</span><span class="sd">        num_inputs: Number of inputs to use for profiling</span>
+<span class="linenos">215</span>
+<span class="linenos">216</span><span class="sd">    Returns:</span>
+<span class="linenos">217</span><span class="sd">        List of profiling results for each stage</span>
+<span class="linenos">218</span><span class="sd">    """</span>
+<span class="linenos">219</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Creating pipeline configuration..."</span><span class="p">)</span>
+<span class="linenos">220</span>    <span class="n">pipeline_config</span> <span class="o">=</span> <span class="n">create_pipeline</span><span class="p">(</span><span class="n">num_sources</span><span class="o">=</span><span class="n">num_inputs</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+<span class="linenos">221</span>
+<span class="linenos">222</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Starting pipeline profiling with </span><span class="si">%d</span><span class="s2"> inputs..."</span><span class="p">,</span> <span class="n">num_inputs</span><span class="p">)</span>
+<span class="linenos">223</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"This will benchmark each stage at different concurrency levels."</span><span class="p">)</span>
+<span class="linenos">224</span>
+<span class="linenos">225</span>    <span class="n">results</span> <span class="o">=</span> <span class="n">profile_pipeline</span><span class="p">(</span>
+<span class="linenos">226</span>        <span class="n">pipeline_config</span><span class="p">,</span>
+<span class="linenos">227</span>        <span class="n">num_inputs</span><span class="o">=</span><span class="n">num_inputs</span><span class="p">,</span>
+<span class="linenos">228</span>        <span class="n">callback</span><span class="o">=</span><span class="n">print_profile_result</span><span class="p">,</span>
+<span class="linenos">229</span>    <span class="p">)</span>
+<span class="linenos">230</span>
+<span class="linenos">231</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Profiling complete!"</span><span class="p">)</span>
+<span class="linenos">232</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Total stages profiled: </span><span class="si">%d</span><span class="s2">"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">))</span>
+<span class="linenos">233</span>
+<span class="linenos">234</span>    <span class="k">return</span> <span class="n">results</span>
+<span class="linenos">235</span>
 <span class="linenos">236</span>
-<span class="linenos">237</span>
-<span class="linenos">238</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">239</span><span class="w">    </span><span class="sd">"""Main entry point demonstrating profile_pipeline usage."""</span>
-<span class="linenos">240</span>    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
-<span class="linenos">241</span>        <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
-<span class="linenos">242</span>        <span class="nb">format</span><span class="o">=</span><span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> [</span><span class="si">%(levelname)s</span><span class="s2">] </span><span class="si">%(message)s</span><span class="s2">"</span><span class="p">,</span>
-<span class="linenos">243</span>    <span class="p">)</span>
-<span class="linenos">244</span>
-<span class="linenos">245</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">parse_args</span><span class="p">()</span>
-<span class="linenos">246</span>
-<span class="linenos">247</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Profile Pipeline Example"</span><span class="p">)</span>
-<span class="linenos">248</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
-<span class="linenos">249</span>
-<span class="linenos">250</span>    <span class="n">results</span> <span class="o">=</span> <span class="n">run_profiling_example</span><span class="p">(</span><span class="n">num_inputs</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">num_inputs</span><span class="p">)</span>
-<span class="linenos">251</span>
-<span class="linenos">252</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Summary of Best Performance per Stage:"</span><span class="p">)</span>
-<span class="linenos">253</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
-<span class="linenos">254</span>    <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-<span class="linenos">255</span>        <span class="n">best_stat</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stats</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">qps</span><span class="p">)</span>
-<span class="linenos">256</span>        <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-<span class="linenos">257</span>            <span class="s2">"</span><span class="si">%-20s</span><span class="s2">: Best at concurrency=</span><span class="si">%2d</span><span class="s2"> (QPS=</span><span class="si">%.2f</span><span class="s2">)"</span><span class="p">,</span>
-<span class="linenos">258</span>            <span class="n">result</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-<span class="linenos">259</span>            <span class="n">best_stat</span><span class="o">.</span><span class="n">concurrency</span><span class="p">,</span>
-<span class="linenos">260</span>            <span class="n">best_stat</span><span class="o">.</span><span class="n">qps</span><span class="p">,</span>
-<span class="linenos">261</span>        <span class="p">)</span>
-<span class="linenos">262</span>
-<span class="linenos">263</span>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">plot_output</span> <span class="ow">or</span> <span class="kc">True</span><span class="p">:</span>
-<span class="linenos">264</span>        <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Generating performance plot..."</span><span class="p">)</span>
-<span class="linenos">265</span>        <span class="n">plot_profile_results</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">plot_output</span><span class="p">)</span>
+<span class="linenos">237</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">238</span><span class="w">    </span><span class="sd">"""Main entry point demonstrating profile_pipeline usage."""</span>
+<span class="linenos">239</span>    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
+<span class="linenos">240</span>        <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+<span class="linenos">241</span>        <span class="nb">format</span><span class="o">=</span><span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> [</span><span class="si">%(levelname)s</span><span class="s2">] </span><span class="si">%(message)s</span><span class="s2">"</span><span class="p">,</span>
+<span class="linenos">242</span>    <span class="p">)</span>
+<span class="linenos">243</span>
+<span class="linenos">244</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">parse_args</span><span class="p">()</span>
+<span class="linenos">245</span>
+<span class="linenos">246</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Profile Pipeline Example"</span><span class="p">)</span>
+<span class="linenos">247</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+<span class="linenos">248</span>
+<span class="linenos">249</span>    <span class="n">results</span> <span class="o">=</span> <span class="n">run_profiling_example</span><span class="p">(</span><span class="n">num_inputs</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">num_inputs</span><span class="p">)</span>
+<span class="linenos">250</span>
+<span class="linenos">251</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Summary of Best Performance per Stage:"</span><span class="p">)</span>
+<span class="linenos">252</span>    <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+<span class="linenos">253</span>    <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+<span class="linenos">254</span>        <span class="n">best_stat</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stats</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">qps</span><span class="p">)</span>
+<span class="linenos">255</span>        <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+<span class="linenos">256</span>            <span class="s2">"</span><span class="si">%-20s</span><span class="s2">: Best at concurrency=</span><span class="si">%2d</span><span class="s2"> (QPS=</span><span class="si">%.2f</span><span class="s2">)"</span><span class="p">,</span>
+<span class="linenos">257</span>            <span class="n">result</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+<span class="linenos">258</span>            <span class="n">best_stat</span><span class="o">.</span><span class="n">concurrency</span><span class="p">,</span>
+<span class="linenos">259</span>            <span class="n">best_stat</span><span class="o">.</span><span class="n">qps</span><span class="p">,</span>
+<span class="linenos">260</span>        <span class="p">)</span>
+<span class="linenos">261</span>
+<span class="linenos">262</span>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">plot_output</span> <span class="ow">or</span> <span class="kc">True</span><span class="p">:</span>
+<span class="linenos">263</span>        <span class="n">_LG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Generating performance plot..."</span><span class="p">)</span>
+<span class="linenos">264</span>        <span class="n">plot_profile_results</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">plot_output</span><span class="p">)</span>
+<span class="linenos">265</span>
 <span class="linenos">266</span>
-<span class="linenos">267</span>
-<span class="linenos">268</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-<span class="linenos">269</span>    <span class="n">main</span><span class="p">()</span>
+<span class="linenos">267</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+<span class="linenos">268</span>    <span class="n">main</span><span class="p">()</span>
 </pre></div>
 </div>
 </details></section>
@@ -829,19 +829,19 @@ concurrency, and it degrades as more threads are added. (<code class="docutils l
 <p class="rubric">Functions</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_profiling.parse_args">
-<span class="sig-name descname"><span class="pre">parse_args</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.14)"><span class="pre">Namespace</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L64-L81"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.parse_args" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">parse_args</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.14)"><span class="pre">Namespace</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L63-L80"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.parse_args" title="Link to this definition">¶</a></dt>
 <dd><p>Parse command line arguments.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_profiling.main">
-<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L238-L265"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.main" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L237-L264"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.main" title="Link to this definition">¶</a></dt>
 <dd><p>Main entry point demonstrating profile_pipeline usage.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_profiling.scalable_op">
-<span class="sig-name descname"><span class="pre">scalable_op</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L84-L94"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.scalable_op" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">scalable_op</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L83-L93"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.scalable_op" title="Link to this definition">¶</a></dt>
 <dd><p>Simulate an operation which releases the GIL most of the time.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -855,7 +855,7 @@ concurrency, and it degrades as more threads are added. (<code class="docutils l
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_profiling.scalable_op2">
-<span class="sig-name descname"><span class="pre">scalable_op2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L97-L107"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.scalable_op2" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">scalable_op2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L96-L106"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.scalable_op2" title="Link to this definition">¶</a></dt>
 <dd><p>Simulate an operation which releases the GIL some time.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -869,7 +869,7 @@ concurrency, and it degrades as more threads are added. (<code class="docutils l
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_profiling.op_with_contention">
-<span class="sig-name descname"><span class="pre">op_with_contention</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L110-L119"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.op_with_contention" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">op_with_contention</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L109-L118"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.op_with_contention" title="Link to this definition">¶</a></dt>
 <dd><p>Simulate an operation holds the GIL.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -883,7 +883,7 @@ concurrency, and it degrades as more threads are added. (<code class="docutils l
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_profiling.create_pipeline">
-<span class="sig-name descname"><span class="pre">create_pipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_sources</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1000</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L122-L139"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.create_pipeline" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_pipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_sources</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1000</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.defs.PipelineConfig.html#spdl.pipeline.defs.PipelineConfig" title="spdl.pipeline.defs._defs.PipelineConfig"><span class="pre">PipelineConfig</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L121-L138"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.create_pipeline" title="Link to this definition">¶</a></dt>
 <dd><p>Create a pipeline configuration with multiple stages.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -897,7 +897,7 @@ concurrency, and it degrades as more threads are added. (<code class="docutils l
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_profiling.print_profile_result">
-<span class="sig-name descname"><span class="pre">print_profile_result</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.pipeline.ProfileResult.html#spdl.pipeline.ProfileResult" title="spdl.pipeline._profile.ProfileResult"><span class="pre">ProfileResult</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L142-L169"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.print_profile_result" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">print_profile_result</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.pipeline.ProfileResult.html#spdl.pipeline.ProfileResult" title="spdl.pipeline._profile.ProfileResult"><span class="pre">ProfileResult</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L141-L168"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.print_profile_result" title="Link to this definition">¶</a></dt>
 <dd><p>Print profiling result in a formatted way.</p>
 <p>This is a callback function that will be called after each stage is profiled.</p>
 <dl class="field-list simple">
@@ -909,7 +909,7 @@ concurrency, and it degrades as more threads are added. (<code class="docutils l
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_profiling.plot_profile_results">
-<span class="sig-name descname"><span class="pre">plot_profile_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">results</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="spdl.pipeline.ProfileResult.html#spdl.pipeline.ProfileResult" title="spdl.pipeline._profile.ProfileResult"><span class="pre">ProfileResult</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L172-L208"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.plot_profile_results" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">plot_profile_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">results</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="spdl.pipeline.ProfileResult.html#spdl.pipeline.ProfileResult" title="spdl.pipeline._profile.ProfileResult"><span class="pre">ProfileResult</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L171-L207"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.plot_profile_results" title="Link to this definition">¶</a></dt>
 <dd><p>Plot profiling results showing QPS vs concurrency for each stage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -923,7 +923,7 @@ concurrency, and it degrades as more threads are added. (<code class="docutils l
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pipeline_profiling.run_profiling_example">
-<span class="sig-name descname"><span class="pre">run_profiling_example</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">500</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="spdl.pipeline.ProfileResult.html#spdl.pipeline.ProfileResult" title="spdl.pipeline._profile.ProfileResult"><span class="pre">ProfileResult</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L211-L235"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.run_profiling_example" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">run_profiling_example</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">500</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="spdl.pipeline.ProfileResult.html#spdl.pipeline.ProfileResult" title="spdl.pipeline._profile.ProfileResult"><span class="pre">ProfileResult</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/pipeline_profiling.py?#L210-L234"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pipeline_profiling.run_profiling_example" title="Link to this definition">¶</a></dt>
 <dd><p>Run the profiling example.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1019,7 +1019,7 @@ concurrency, and it degrades as more threads are added. (<code class="docutils l
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

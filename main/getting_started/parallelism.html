@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Execution Models: MT, MTP, and MP" href="execution_models.html" /><link rel="prev" title="Concurrency" href="concurrency.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Pipeline Parallelism - SPDL 0.6.0 documentation</title>
+        <title>Pipeline Parallelism - SPDL 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.6.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.7.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.6.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.7.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -464,6 +464,7 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.4.0">0.4.0</a></li>
@@ -818,7 +819,7 @@ large payload is costly and is paid on both sides. PyTorch tensors (and NumPy
 arrays) are the exception: their buffers are moved through shared memory and only
 a handle is pickled, so transferring them is far cheaper than their size suggests
 — even though a fresh shared-memory segment is allocated on each pickling. Prefer
-passing a <a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code></a> across the boundary. To send a raw byte string
+passing a <a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code></a> across the boundary. To send a raw byte string
 cheaply, write it to shared memory yourself, or wrap it in a 1-D <code class="docutils literal notranslate"><span class="pre">uint8</span></code> tensor
 so it rides the same fast path.</p>
 <p>To squeeze the last bit of IPC performance,
@@ -890,6 +891,53 @@ worker sub-pipelines warm across epochs, and a region composes with
 <a class="reference internal" href="../generated/spdl.pipeline.run_pipeline_in_subprocess.html#spdl.pipeline.run_pipeline_in_subprocess" title="spdl.pipeline.run_pipeline_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">run_pipeline_in_subprocess()</span></code></a>. Every op must be picklable,
 since the region config is shipped to the worker. See the
 <a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.to" title="spdl.pipeline.PipelineBuilder.to"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to()</span></code></a> reference for the details.</p>
+<p>Crossing the region boundary costs a fixed amount <em>per transfer</em> — pickling, a
+queue handoff, and (for tensors) a shared-memory allocation — no matter how small
+the item is. When the items are small, that fixed cost dominates. Pass
+<code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> to <a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.to" title="spdl.pipeline.PipelineBuilder.to"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to()</span></code></a> to buffer several items into one
+transfer:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>                  <span class="c1"># small per-row items</span>
+    <span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">ProcessPoolExecutorConfig</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">),</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">decode</span><span class="p">)</span>                      <span class="c1"># still receives ONE row at a time</span>
+    <span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>             <span class="c1"># independent of buffer_size</span>
+    <span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">MAIN_PROCESS</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>   <span class="c1"># 2 batches per transfer coming back</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=...</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Each marker sizes the handoff that happens where it sits, so a region’s two
+directions are configured independently: the <code class="docutils literal notranslate"><span class="pre">to()</span></code> that opens the region sizes
+the data flowing into its workers, and the one that closes it sizes the results
+flowing back. That separation matters because the two directions rarely carry
+comparable items — in the example above, single rows go in and whole batches come
+back, so one number could not be right for both. A marker sitting between two
+adjacent regions sizes that single handoff for both sides.</p>
+<p>The buffering is transparent: the boundary packs items on one side and unpacks them
+on the other, so stages on both sides — and every stage after the region — still see
+individual items. In particular <code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> is independent of any
+<a class="reference internal" href="../generated/spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.aggregate" title="spdl.pipeline.PipelineBuilder.aggregate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">aggregate()</span></code></a> you use, so the training batch
+size and the IPC transfer size can be tuned separately. The default, <code class="docutils literal notranslate"><span class="pre">1</span></code>,
+transfers one item at a time.</p>
+<p>It is an upper bound rather than a fixed grouping: a partial buffer is flushed at
+the end of a stream and at every epoch boundary, so the last transfer of each is
+usually short.</p>
+<p>Nothing assumes the region emits as many items as it received: a <code class="docutils literal notranslate"><span class="pre">None</span></code>-returning
+op, a generator op, and an <code class="docutils literal notranslate"><span class="pre">aggregate</span></code> inside the region all work unchanged.</p>
+<p>The cost is latency and memory. Up to <code class="docutils literal notranslate"><span class="pre">buffer_size</span> <span class="pre">-</span> <span class="pre">1</span></code> items are held while a
+transfer fills, so a value well above what the producing side can keep up with
+delays the first results; and because each queued transfer holds up to
+<code class="docutils literal notranslate"><span class="pre">buffer_size</span></code> items, the in-flight item bound scales with it. Start at the batch
+size you would otherwise have aggregated before the region, then tune.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Placing <code class="docutils literal notranslate"><span class="pre">aggregate</span></code> <em>inside</em> a region means each worker aggregates only the
+items routed to it, so batches are formed per worker rather than globally. With
+<code class="docutils literal notranslate"><span class="pre">drop_last=True</span></code> that discards up to <code class="docutils literal notranslate"><span class="pre">max_workers</span> <span class="pre">×</span> <span class="pre">(batch_size</span> <span class="pre">-</span> <span class="pre">1)</span></code> items
+per epoch instead of <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">-</span> <span class="pre">1</span></code>.</p>
+</div>
 <p>To run a region in <strong>subinterpreters</strong> (Python 3.14+) instead of subprocesses,
 pass a <a class="reference internal" href="../generated/spdl.pipeline.defs.InterpreterPoolExecutorConfig.html#spdl.pipeline.defs.InterpreterPoolExecutorConfig" title="spdl.pipeline.defs.InterpreterPoolExecutorConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">InterpreterPoolExecutorConfig</span></code></a>; the region’s ops
 must avoid NumPy/PyTorch, which cannot be imported in a subinterpreter.</p>
@@ -1063,7 +1111,7 @@ the execution patterns that build on this primitive.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=b9678aa1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
