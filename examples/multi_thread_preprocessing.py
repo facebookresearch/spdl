@@ -54,6 +54,8 @@ The following observations can be made.
 - The peak throughput is almost 2.7x in SPDL than in PyTorch.
 """
 
+from __future__ import annotations
+
 import logging
 import multiprocessing
 import time
@@ -291,7 +293,7 @@ def entrypoint(
     split: str,
     batch_size: int,
     max_items: int,
-):
+) -> None:
     """The main entrypoint for CLI.
 
     Args:
