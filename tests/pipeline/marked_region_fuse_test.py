@@ -13,8 +13,10 @@ import time
 import unittest
 from collections.abc import AsyncIterator, Iterator, Sequence
 from typing import Any
+from unittest.mock import patch
 
 from spdl.pipeline import (
+    _fuse as _fuse_mod,
     AsyncQueue,
     build_pipeline,
     Pipeline,
@@ -510,8 +512,72 @@ class RegionBehaviorTest(unittest.TestCase):
         self.assertEqual(sorted(src), ref)
 
 
+class FusedThreadCountTest(unittest.TestCase):
+    """The fused sub-pipeline must reserve a thread for its own source.
+
+    The source of a fused sub-pipeline is a *blocking* read of the worker's input queue, and it
+    is dispatched onto the same thread pool as the region's ops. Sizing that pool by op
+    concurrency alone lets the read hold every thread, so the ops cannot drain what the source
+    produced -- a wedge that is deterministic once ``sum(concurrency)`` is 1.
+    """
+
+    def _num_threads_for(self, stages: Sequence[Any]) -> int:
+        captured: dict[str, Any] = {}
+
+        def _fake_core(stages: Sequence[Any], **kwargs: Any) -> tuple[Any, Any]:
+            captured.update(kwargs)
+            return None, None
+
+        with patch.object(_fuse_mod, "_build_fused_stage_core", _fake_core):
+            _fuse_mod._build_fused_stage_from_spec(
+                stages,
+                ProcessPoolExecutorConfig(max_workers=1),
+                None,  # pyre-ignore[6] -- unused by the fake
+                -1.0,
+                True,
+            )
+        return captured["num_threads"]
+
+    def test_single_serial_stage_gets_two_threads(self) -> None:
+        """One concurrency=1 op still leaves a thread free for the source."""
+        self.assertEqual(self._num_threads_for([Pipe(add_one)]), 2)
+
+    def test_thread_count_is_concurrency_plus_source(self) -> None:
+        """The reserve is additive, not a floor."""
+        stages = [Pipe(add_one, concurrency=3), Pipe(times_two, concurrency=2)]
+        self.assertEqual(self._num_threads_for(stages), 6)
+
+    def test_non_pipe_stages_still_get_a_source_thread(self) -> None:
+        """A region of only aggregate-like stages adds no concurrency but still needs one."""
+        self.assertEqual(self._num_threads_for([Aggregate(2)]), 2)
+
+
 class ContinuousRegionTest(unittest.TestCase):
     """A ``.to()`` region under a continuous source stays warm and correct across epochs."""
+
+    def test_serial_region_many_items_no_deadlock(self) -> None:
+        """A serial (concurrency=1) region streams a long epoch without wedging.
+
+        Regression test for the source/op thread starvation described in
+        :py:class:`FusedThreadCountTest`: with one worker and one serial stage this deadlocked
+        reliably once the epoch was longer than the queues could hold. The timeout is what makes
+        a regression fail rather than hang forever.
+        """
+        n = 64
+        ref = sorted(x + 1 for x in range(n))
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(n), continuous=True)
+            .to(ProcessPoolExecutorConfig(max_workers=1))
+            .pipe(add_one)  # concurrency=1: the starvation case
+            .to(MAIN_PROCESS)
+            .add_sink(n)
+            .build(num_threads=4)
+        )
+        with pipeline.auto_stop():
+            for epoch in range(2):
+                with self.subTest(epoch=epoch):
+                    self.assertEqual(sorted(pipeline.get_iterator(timeout=60)), ref)
 
     def test_multi_epoch_correct(self) -> None:
         """A continuous region yields the correct set each epoch from the same warm pool."""

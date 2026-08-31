@@ -68,6 +68,11 @@ __all__ = [
 # result queue, so a deep buffer only adds latency.
 _FUSED_SINK_BUFFER: int = 3
 
+# Threads reserved in the fused sub-pipeline's pool for its source, on top of the region's op
+# concurrency. The source blocks on the worker's input queue, so it must never compete with the
+# ops for the last thread. See :py:func:`_build_fused_stage_from_spec`.
+_SOURCE_THREADS: int = 1
+
 
 def _has_continuous_source(config: PipelineConfig[Any]) -> bool:
     """Whether any source in the (possibly merged) config re-iterates continuously."""
@@ -197,11 +202,16 @@ def _build_fused_stage_from_spec(
 ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
     """Build the worker pool and replacement stage for one ``.to()`` region, reading the pool
     parameters from ``spec``. ``num_threads`` for the nested pipeline is the sum of the region
-    stages' concurrency, ``max_workers`` falls back to the CPU count, and
-    ``report_stats_interval`` is inherited from
+    stages' concurrency plus one for its source, ``max_workers`` falls back to the CPU count,
+    and ``report_stats_interval`` is inherited from
     :py:func:`~spdl.pipeline._build.build_pipeline`. ``backend`` (process or subinterpreter) is
     chosen by the caller from the spec type."""
-    num_threads = max(1, sum(_stage_concurrency(s) for s in stages))
+    # ``+ _SOURCE_THREADS``: the nested pipeline's source is a *blocking* read of the worker's
+    # input queue, dispatched onto the very same thread pool as the region's ops. Sizing that
+    # pool by op concurrency alone lets the read occupy every thread, so the ops cannot drain
+    # what the source produced and the worker wedges -- reliably so when the sum is 1, where
+    # the single thread is either reading input or running an op, never both.
+    num_threads = max(1, sum(_stage_concurrency(s) for s in stages)) + _SOURCE_THREADS
     max_workers = spec.max_workers or os.cpu_count() or 1
     return _build_fused_stage_core(
         stages,
