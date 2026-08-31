@@ -4,9 +4,12 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
+
 import gc
 import threading
 import unittest
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import spdl.io
@@ -16,16 +19,39 @@ from parameterized import parameterized
 
 from ..fixture import FFMPEG_CLI, get_sample
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import TypedDict, Unpack
+
+    from ..fixture import SrcInfo
+
+    # Keyword options forwarded verbatim to `spdl.io.decode_packets_nvdec`.
+    class _DecodeOptions(TypedDict, total=False):
+        pix_fmt: str
+        crop_left: int
+        crop_top: int
+        crop_right: int
+        crop_bottom: int
+        scale_width: int
+        scale_height: int
+
+
 if not spdl.io.utils.built_with_nvcodec():
     raise unittest.SkipTest(  # pyre-ignore: [29]
         "SPDL is not compiled with NVCODEC support"
     )
 
 
-DEFAULT_CUDA = 0
+DEFAULT_CUDA: int = 0
 
 
-def _decode_video(src, timestamp=None, allocator=None, **decode_options):
+def _decode_video(
+    src: str,
+    timestamp: tuple[int | float, int | float] | None = None,
+    allocator: tuple[Callable[[int, int, int], int], Callable[[int], None]]
+    | None = None,
+    **decode_options: Unpack[_DecodeOptions],
+) -> torch.Tensor:
     device_config = spdl.io.cuda_config(
         device_index=DEFAULT_CUDA,
         allocator=allocator,
@@ -37,7 +63,7 @@ def _decode_video(src, timestamp=None, allocator=None, **decode_options):
     return spdl.io.to_torch(buffer)
 
 
-def _get_dummy_sample():
+def _get_dummy_sample() -> SrcInfo:
     cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 2 sample.mp4"
     return get_sample(cmd)
 
@@ -48,7 +74,7 @@ def _get_dummy_sample():
 # MPEG4 and AV1 are intentionally absent: NVDEC's CodecID switch maps them
 # but `decode_packet` raises `SPDL_FAIL("NOT IMPLEMENTED.")` for both
 # (see fbcode/libspdl/cuda/nvdec/detail/decoder.cpp).
-_CODEC_SAMPLES = {
+_CODEC_SAMPLES: dict[str, str] = {
     "h264": (
         f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p "
         f"-c:v libx264 -t 2 sample.mp4"
@@ -81,10 +107,10 @@ _CODEC_SAMPLES = {
 # remains in `_CODEC_SAMPLES` so GPU-decode coverage of HEVC is preserved
 # via the no-seek matrix; the seek failure is documented as a skipped test
 # in fbcode/spdl/tests/io/demuxer_test.py::TestHevcSeekUpstreamBug.
-_SEEKABLE_CODECS = ["h264", "vp9", "vp8", "mpeg2", "mjpeg"]
+_SEEKABLE_CODECS: list[str] = ["h264", "vp9", "vp8", "mpeg2", "mjpeg"]
 
 
-def _get_codec_sample(codec_key):
+def _get_codec_sample(codec_key: str) -> SrcInfo:
     return get_sample(_CODEC_SAMPLES[codec_key])
 
 
@@ -139,14 +165,16 @@ class TestNvdecBasic(unittest.TestCase):
         self.assertEqual(tensor.shape[3], 320)
 
 
-def _save(array, prefix):
+def _save(array: torch.Tensor, prefix: str) -> None:
     from PIL import Image
 
     for i, arr in enumerate(array):
         Image.fromarray(arr[0]).save(f"{prefix}_{i}.png")
 
 
-def split_nv12(array):
+def split_nv12(
+    array: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     w = array.shape[-1]
     h0 = array.shape[-2]
     h1, h2 = h0 * 2 // 3, h0 // 3
@@ -156,7 +184,7 @@ def split_nv12(array):
     return y, u, v
 
 
-def _get_h264_sample():
+def _get_h264_sample() -> SrcInfo:
     cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc,format=yuv420p -frames:v 100 sample.mp4"
     return get_sample(cmd)
 
@@ -180,7 +208,7 @@ class TestNvdecCodecCoverage(unittest.TestCase):
     """
 
     @parameterized.expand(sorted(_CODEC_SAMPLES.keys()))
-    def test_nvdec_decode_no_seek(self, codec_key) -> None:
+    def test_nvdec_decode_no_seek(self, codec_key: str) -> None:
         """NVDEC decodes the given codec without any demuxer seek."""
         sample = _get_codec_sample(codec_key)
         array = _decode_video(sample.path)
@@ -191,7 +219,7 @@ class TestNvdecCodecCoverage(unittest.TestCase):
         self.assertGreater(array.shape[0], 0)
 
     @parameterized.expand(sorted(_SEEKABLE_CODECS))
-    def test_nvdec_decode_with_seek(self, codec_key) -> None:
+    def test_nvdec_decode_with_seek(self, codec_key: str) -> None:
         """NVDEC decodes packets obtained from a seeked demux."""
         sample = _get_codec_sample(codec_key)
         array = _decode_video(sample.path, timestamp=(0, 1.0))
@@ -207,20 +235,20 @@ class TestNvdecH264(unittest.TestCase):
         h264 = _get_h264_sample()
         allocator_called, deleter_called = False, False
 
-        def allocator(size, device, stream):
+        def allocator(size: int, device: int, stream: int) -> int:
             print("Calling allocator", flush=True)
             ptr = torch.cuda.caching_allocator_alloc(size, device, stream)
             nonlocal allocator_called
             allocator_called = True
             return ptr
 
-        def deleter(ptr):
+        def deleter(ptr: int) -> None:
             print("Calling deleter", flush=True)
             torch.cuda.caching_allocator_delete(ptr)
             nonlocal deleter_called
             deleter_called = True
 
-        def _test():
+        def _test() -> None:
             self.assertFalse(allocator_called)
             self.assertFalse(deleter_called)
             array = _decode_video(
@@ -305,7 +333,7 @@ class TestNvdecH264(unittest.TestCase):
         self.assertEqual(array.shape, (25, 3, h, w))
 
 
-def _is_ffmpeg4():
+def _is_ffmpeg4() -> bool:
     vers = spdl.io.utils.get_ffmpeg_versions()
     print(vers)
     return vers["libavutil"][0] < 57
@@ -429,7 +457,7 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
         creation_count = {"count": 0}
         creation_lock = threading.Lock()
 
-        def create_mock_decoder_with_count():
+        def create_mock_decoder_with_count() -> MagicMock:
             with creation_lock:
                 creation_count["count"] += 1
             return _create_mock_decoder()
@@ -437,9 +465,9 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
         mock_nvdec_decoder.side_effect = create_mock_decoder_with_count
         packets, cuda_config = _get_test_data()
 
-        decoder_refs = []
+        decoder_refs: list[int] = []
 
-        def get_decoder_in_thread():
+        def get_decoder_in_thread() -> None:
             decoder = spdl.io.nvdec_decoder(cuda_config, packets.codec, use_cache=True)
             decoder_refs.append(id(decoder))
 
@@ -534,8 +562,8 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
         mock_nvdec_decoder.side_effect = lambda: _create_mock_decoder()
         packets, cuda_config = _get_test_data()
 
-        results = []
-        errors = []
+        results: list[int] = []
+        errors: list[str] = []
 
         def get_decoder_in_thread() -> None:
             try:
