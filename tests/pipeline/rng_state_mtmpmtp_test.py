@@ -38,7 +38,7 @@ import random
 import sys
 import unittest
 import warnings
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
 from functools import partial
@@ -200,8 +200,9 @@ def _seed_main(seed: int) -> None:
     torch.manual_seed(seed)
 
 
-def _available_start_methods() -> list[str]:
-    return [m for m in ("fork", "spawn") if m in mp.get_all_start_methods()]
+_START_METHODS: Sequence[str] = [
+    m for m in ("fork", "spawn") if m in mp.get_all_start_methods()
+]
 
 
 # ---------------------------------------------------------------------------
@@ -278,8 +279,10 @@ class TestReproducibleAcrossRuns(unittest.TestCase):
         [
             (mode, start_method, continuous)
             for mode in (MT, MTP)
-            for start_method in _available_start_methods()
+            for start_method in _START_METHODS
             for continuous in (False, True)
+            # MT runs in-process; the subprocess start method is irrelevant.
+            if not (mode == MT and start_method != _START_METHODS[0])
         ]
     )
     def test_same_seed_same_draws(self, mode, start_method, continuous) -> None:
@@ -288,9 +291,6 @@ class TestReproducibleAcrossRuns(unittest.TestCase):
         Pre-fix, MTP with ``spawn`` seeds from OS entropy, so the two runs differ;
         with ``fork`` it continues the parent stream, so the value depends on
         whatever the main process drew beforehand."""
-        if mode == MT and start_method != _available_start_methods()[0]:
-            # MT runs in-process; the subprocess start method is irrelevant.
-            self.skipTest("MT is start-method independent")
 
         first = self._collect(mode, start_method=start_method, continuous=continuous)
         second = self._collect(mode, start_method=start_method, continuous=continuous)
@@ -322,7 +322,7 @@ def _draw_global_triples(n: int) -> list[tuple[float, float, float]]:
 class TestGlobalRngStateCopiedToSubprocess(unittest.TestCase):
     N = 8
 
-    @parameterized.expand([(m,) for m in _available_start_methods()])
+    @parameterized.expand([(m,) for m in _START_METHODS])
     def test_subprocess_continues_advanced_main_stream(self, start_method: str) -> None:
         """The subprocess resumes the main process' global RNG stream from its
         current (already-advanced) position, identically for ``fork`` and
@@ -371,43 +371,44 @@ class TestGlobalRngStateCopiedToSubprocess(unittest.TestCase):
 # as importantly, that wiring it through ``run_pipeline_in_subinterpreter`` does
 # not raise ``NotShareableError``.
 # ---------------------------------------------------------------------------
-@unittest.skipUnless(
-    sys.version_info >= (3, 14), "subinterpreters require Python 3.14+"
-)
-class TestStdlibRandomStateCopiedToSubinterpreter(unittest.TestCase):
-    N = 8
+if sys.version_info >= (3, 14):
 
-    def test_subinterpreter_continues_advanced_random_stream(self) -> None:
-        """The subinterpreter resumes the main interpreter's stdlib ``random``
-        stream from its current (already-advanced) position -- proving the live
-        state is copied across the interpreter boundary, not re-seeded.
+    class TestStdlibRandomStateCopiedToSubinterpreter(unittest.TestCase):
+        N = 8
 
-        The op lives in a stdlib-only helper module: a subinterpreter imports the
-        op's defining module to resolve it, and this test module's top-level
-        ``import numpy`` / ``import torch`` cannot be imported there."""
-        from spdl.pipeline import run_pipeline_in_subinterpreter
+        def test_subinterpreter_continues_advanced_random_stream(self) -> None:
+            """The subinterpreter resumes the main interpreter's stdlib ``random``
+            stream from its current (already-advanced) position -- proving the live
+            state is copied across the interpreter boundary, not re-seeded.
 
-        from ._subinterp_rng_ops import draw_random
+            The op lives in a stdlib-only helper module: a subinterpreter imports the
+            op's defining module to resolve it, and this test module's top-level
+            ``import numpy`` / ``import torch`` cannot be imported there."""
+            from spdl.pipeline import run_pipeline_in_subinterpreter
 
-        random.seed(20240101)
-        # Advance the stream so the captured state differs from the seed start.
-        [random.random() for _ in range(5)]
+            from ._subinterp_rng_ops import draw_random
 
-        # In-process reference: snapshot the advanced state, then draw N values.
-        snapshot = random.getstate()
-        reference = [random.random() for _ in range(self.N)]
+            random.seed(20240101)
+            # Advance the stream so the captured state differs from the seed start.
+            [random.random() for _ in range(5)]
 
-        # The subinterpreter restores the same snapshot (shipped as a shareable
-        # initializer) and must produce the identical sequence.
-        random.setstate(snapshot)
-        config = _config(range(self.N), draw_random, concurrency=1)
-        src = run_pipeline_in_subinterpreter(config, num_threads=1, timeout=_TIMEOUT)
-        try:
-            got = list(src)
-        finally:
-            finalizer = getattr(src, "_finalizer", None)
-            if finalizer is not None:
-                finalizer()
+            # In-process reference: snapshot the advanced state, then draw N values.
+            snapshot = random.getstate()
+            reference = [random.random() for _ in range(self.N)]
 
-        self.assertEqual(len(got), self.N)
-        self.assertEqual(got, reference)
+            # The subinterpreter restores the same snapshot (shipped as a shareable
+            # initializer) and must produce the identical sequence.
+            random.setstate(snapshot)
+            config = _config(range(self.N), draw_random, concurrency=1)
+            src = run_pipeline_in_subinterpreter(
+                config, num_threads=1, timeout=_TIMEOUT
+            )
+            try:
+                got = list(src)
+            finally:
+                finalizer = getattr(src, "_finalizer", None)
+                if finalizer is not None:
+                    finalizer()
+
+            self.assertEqual(len(got), self.N)
+            self.assertEqual(got, reference)
