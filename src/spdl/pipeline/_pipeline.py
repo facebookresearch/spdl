@@ -366,6 +366,69 @@ class _PipelineImpl(Generic[T]):
 
         raise TimeoutError(f"The next item is not available after {elapsed:.1f} sec.")
 
+    def get_item_nowait(self) -> T:
+        """Get the next item if one is already buffered in the sink, without blocking.
+
+        Raises:
+            RuntimeError: The pipeline is not started.
+
+            queue.Empty: No item is currently available. The pipeline is still running, so an
+                item may become available later.
+
+            EOFError: The pipeline is exhausted (or reached an epoch boundary) and the sink is
+                drained.
+        """
+        item = self._get_item_nowait()
+        if is_epoch_end(item):
+            raise EOFError(_EOF_MSG)
+        return item
+
+    async def _get_nowait_on_loop(self) -> T:
+        # Runs on the event loop thread. Deliberately has no ``await``: it completes within a
+        # single loop tick, so the future returned by ``run_coroutine_threadsafe`` is never left
+        # pending. That is what makes this safe where ``get_item(timeout=0)`` is not -- the
+        # latter submits ``queue.get()`` and abandons the future on timeout, stranding whatever
+        # item that ``get()`` eventually receives.
+        return self._output_queue.get_nowait()
+
+    def _get_item_nowait(self) -> T:
+        """Non-blocking counterpart of :py:meth:`_get_item`.
+
+        Normalizes the two queue backends onto one exception contract: ``queue.Empty`` for "not
+        yet", ``EOFError`` for "never". Callers can therefore drain opportunistically without
+        caring which backend the sink uses.
+        """
+        if not self._event_loop.is_started():
+            raise RuntimeError("Pipeline is not started.")
+
+        if isinstance(self._output_queue, _ThreadBasedAsyncQueue):
+            q = self._output_queue._queue  # pyre-ignore[16]
+            try:
+                return q.get_nowait()
+            except queue.Empty:
+                # Empty *and* the producing task is done means no item is ever coming.
+                if self._event_loop.is_task_completed() and q.empty():
+                    self._event_loop.stop()
+                    raise EOFError(_EOF_MSG) from None
+                raise
+
+        if self._event_loop.is_task_completed():
+            # The background loop no longer touches the sink, so direct access is thread-safe.
+            if not self._output_queue.empty():
+                return self._output_queue.get_nowait()
+            self._event_loop.stop()
+            raise EOFError(_EOF_MSG)
+
+        try:
+            return self._event_loop.run_coroutine_threadsafe(
+                self._get_nowait_on_loop()
+            ).result()
+        except asyncio.QueueEmpty:
+            if self._event_loop.is_task_completed() and self._output_queue.empty():
+                self._event_loop.stop()
+                raise EOFError(_EOF_MSG) from None
+            raise queue.Empty from None
+
     def _get_item_thread_queue(self, *, timeout: float | None) -> T:
         q = self._output_queue._queue  # pyre-ignore[16]
 
@@ -682,6 +745,24 @@ class Pipeline(Generic[T]):
         if self._impl._event_loop_state == _EventLoopState.NOT_STARTED:
             self.start()
         return self._impl.get_item(timeout=timeout)
+
+    def _get_item_nowait(self) -> T:
+        """Get the next item if one is already buffered, without blocking.
+
+        Internal: used to drain a burst of already-produced results in one go (see the
+        fused-region worker in :py:mod:`spdl.pipeline._subprocess_pipeline_pool`). Unlike
+        ``get_item(timeout=0)``, this cannot strand an item.
+
+        Raises:
+            RuntimeError: The pipeline is not started.
+
+            queue.Empty: No item is currently available.
+
+            EOFError: The pipeline is exhausted (or reached an epoch boundary) and drained.
+        """
+        # Unlike `get_item`, do not auto-start: a caller polling a not-yet-started pipeline
+        # wants "nothing available", and silently starting it here would hide a usage error.
+        return self._impl.get_item_nowait()
 
     def get_iterator(self, *, timeout: float | None = None) -> Iterator[T]:
         """Get an iterator, which iterates over the pipeline outputs.
