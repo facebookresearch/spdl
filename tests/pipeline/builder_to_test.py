@@ -163,9 +163,6 @@ class ToValidationTest(unittest.TestCase):
             [type(m.target) for m in markers], [ProcessPoolExecutorConfig, _MainProcess]
         )
 
-    @unittest.skipIf(
-        sys.version_info >= (3, 14), "subinterpreters are supported on 3.14+"
-    )
     def test_subinterpreter_region_rejected_before_314(self) -> None:
         """On Python < 3.14, a subinterpreter region is rejected at get_config()."""
         b = (
