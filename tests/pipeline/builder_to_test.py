@@ -163,21 +163,20 @@ class ToValidationTest(unittest.TestCase):
             [type(m.target) for m in markers], [ProcessPoolExecutorConfig, _MainProcess]
         )
 
-    @unittest.skipIf(
-        sys.version_info >= (3, 14), "subinterpreters are supported on 3.14+"
-    )
-    def test_subinterpreter_region_rejected_before_314(self) -> None:
-        """On Python < 3.14, a subinterpreter region is rejected at get_config()."""
-        b = (
-            PipelineBuilder()
-            .add_source(range(4))
-            .to(InterpreterPoolExecutorConfig())
-            .pipe(add_one)
-            .to(MAIN_PROCESS)
-            .add_sink()
-        )
-        with self.assertRaisesRegex(RuntimeError, "requires Python 3.14"):
-            b.get_config()
+    if sys.version_info < (3, 14):
+
+        def test_subinterpreter_region_rejected_before_314(self) -> None:
+            """On Python < 3.14, a subinterpreter region is rejected at get_config()."""
+            b = (
+                PipelineBuilder()
+                .add_source(range(4))
+                .to(InterpreterPoolExecutorConfig())
+                .pipe(add_one)
+                .to(MAIN_PROCESS)
+                .add_sink()
+            )
+            with self.assertRaisesRegex(RuntimeError, "requires Python 3.14"):
+                b.get_config()
 
 
 class ToEndToEndTest(unittest.TestCase):
