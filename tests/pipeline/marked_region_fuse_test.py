@@ -30,6 +30,7 @@ from spdl.pipeline.defs import (
     Aggregate,
     InterpreterPoolExecutorConfig,
     MAIN_PROCESS,
+    PathVariants,
     Pipe,
     PipelineConfig,
     PlacementConfig,
@@ -46,6 +47,14 @@ def add_one(x: int) -> int:
 
 def times_two(x: int) -> int:
     return x * 2
+
+
+def route_even_odd(x: int) -> int:
+    return x % 2
+
+
+async def aroute_even_odd(x: int) -> int:
+    return x % 2
 
 
 class _Unpicklable:
@@ -116,7 +125,14 @@ def _cfg(src: Any, pipes: Sequence[Any], buffer: int = 16) -> PipelineConfig[Any
     )
 
 
-def _run(pipeline: Pipeline[Any], timeout: float = 60.0) -> list[Any]:
+# Every region test spawns its own worker pool, so a full parallel run of this file has many
+# pools contending for the host at once. The timeout is a hang detector, not a latency
+# assertion -- a genuine deadlock still fails, just later -- so it is set well clear of what a
+# loaded machine needs. At 60s, healthy runs were being failed under stress.
+_TIMEOUT: float = 300.0
+
+
+def _run(pipeline: Pipeline[Any], timeout: float = _TIMEOUT) -> list[Any]:
     with pipeline.auto_stop():
         return list(pipeline.get_iterator(timeout=timeout))
 
@@ -551,6 +567,38 @@ class FusedThreadCountTest(unittest.TestCase):
         """A region of only aggregate-like stages adds no concurrency but still needs one."""
         self.assertEqual(self._num_threads_for([Aggregate(2)]), 2)
 
+    def test_sync_path_variants_router_gets_its_own_thread(self) -> None:
+        """A sync router runs via ``run_in_executor``, so it needs a thread of its own.
+
+        Counting only the branches under-provisions the worker: the router holds a thread for
+        the whole call while the branches it feeds are trying to run on the same pool.
+        """
+        stages = [
+            PathVariants(route_even_odd, [[Pipe(add_one)], [Pipe(times_two)]]),
+        ]
+        # two branches + the router + the source
+        self.assertEqual(self._num_threads_for(stages), 4)
+
+    def test_async_path_variants_router_needs_no_thread(self) -> None:
+        """An async router is awaited on the event loop, so it costs no worker thread."""
+        stages = [
+            PathVariants(aroute_even_odd, [[Pipe(add_one)], [Pipe(times_two)]]),
+        ]
+        # two branches + the source
+        self.assertEqual(self._num_threads_for(stages), 3)
+
+    def test_path_variants_router_counted_alongside_later_stages(self) -> None:
+        """The router's thread is additive with the rest of the region, not absorbed by it.
+
+        This is the shape of ``test_path_variants_process_locality_in_region``: router, two
+        branches, a post-merge pipe and the source all want a thread at once.
+        """
+        stages = [
+            PathVariants(route_even_odd, [[Pipe(add_one)], [Pipe(add_one)]]),
+            Pipe(times_two),
+        ]
+        self.assertEqual(self._num_threads_for(stages), 5)
+
 
 class ContinuousRegionTest(unittest.TestCase):
     """A ``.to()`` region under a continuous source stays warm and correct across epochs."""
@@ -577,7 +625,9 @@ class ContinuousRegionTest(unittest.TestCase):
         with pipeline.auto_stop():
             for epoch in range(2):
                 with self.subTest(epoch=epoch):
-                    self.assertEqual(sorted(pipeline.get_iterator(timeout=60)), ref)
+                    self.assertEqual(
+                        sorted(pipeline.get_iterator(timeout=_TIMEOUT)), ref
+                    )
 
     def test_multi_epoch_correct(self) -> None:
         """A continuous region yields the correct set each epoch from the same warm pool."""
@@ -595,7 +645,7 @@ class ContinuousRegionTest(unittest.TestCase):
         )
         with pipeline.auto_stop():
             for _ in range(3):  # three epochs from the same warm worker pool
-                self.assertEqual(sorted(pipeline.get_iterator(timeout=60)), ref)
+                self.assertEqual(sorted(pipeline.get_iterator(timeout=_TIMEOUT)), ref)
 
     def test_fewer_items_than_workers(self) -> None:
         """An epoch with fewer items than workers still completes (some workers run empty)."""
@@ -613,7 +663,7 @@ class ContinuousRegionTest(unittest.TestCase):
         )
         with pipeline.auto_stop():
             for _ in range(2):
-                self.assertEqual(sorted(pipeline.get_iterator(timeout=60)), ref)
+                self.assertEqual(sorted(pipeline.get_iterator(timeout=_TIMEOUT)), ref)
 
     def test_op_failure_does_not_deadlock(self) -> None:
         """Op failures (dropped per SPDL default) still let each epoch's barrier complete.
@@ -635,7 +685,7 @@ class ContinuousRegionTest(unittest.TestCase):
         )
         with pipeline.auto_stop():
             for _ in range(2):
-                self.assertEqual(list(pipeline.get_iterator(timeout=60)), [])
+                self.assertEqual(list(pipeline.get_iterator(timeout=_TIMEOUT)), [])
 
     def test_teardown_mid_stream_does_not_hang(self) -> None:
         """Tearing a continuous region subprocess pipeline down mid-stream must not hang.
