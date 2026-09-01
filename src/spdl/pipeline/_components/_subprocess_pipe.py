@@ -32,6 +32,15 @@ The wire protocol uses small integer message kinds (not sentinel objects): a sen
 onto a multiprocessing queue is a different object on the other side, so identity comparison
 would not survive the trip. ``_EPOCH_END`` itself never crosses — it is translated to the
 ``_EPOCH`` tag on the way in and re-emitted locally on the way out.
+
+``_ITEM`` and ``_RESULT`` payloads are **lists** of items, not single items, so a region whose
+marker sets ``buffer_size=N`` amortizes the fixed per-transfer cost (the pickle and unpickle
+calls, the queue feeder-thread handoff, the pipe write) over up to N items. Per-item costs such
+as a tensor's shared-memory segment are unaffected. An unbuffered region simply sends
+one-element lists. The packing and unpacking live entirely at this boundary — the feeder here
+and the worker source/sink in :py:mod:`spdl.pipeline._subprocess_pipeline_pool` — so the
+region's stages, and every stage outside it, still see individual items. Nothing assumes the two
+directions use the same chunk size, or that the region's output cardinality matches its input's.
 """
 
 from __future__ import annotations
@@ -61,13 +70,13 @@ __all__ = [
 ]
 
 # Input-queue message kinds (this stage -> worker).
-_ITEM = 0  # (_ITEM, value): one item for the sub-pipeline source
+_ITEM = 0  # (_ITEM, [value, ...]): one transfer of items for the sub-pipeline source
 _SESSION_END = 1  # (_SESSION_END, None): end of one input stream; finish the session
 _POOL_SHUTDOWN = 2  # (_POOL_SHUTDOWN, None): tear the worker down entirely
 _EPOCH = 3  # (_EPOCH, None): end of the current epoch (continuous mode); keep the worker alive
 
 # Output-queue message kinds (worker -> this stage).
-_RESULT = 0  # (_RESULT, value): one produced item
+_RESULT = 0  # (_RESULT, [value, ...]): one transfer of produced items
 _ERROR = 1  # (_ERROR, exc): the sub-pipeline failed
 _DONE = 2  # (_DONE, None): a worker finished (session end, or exiting)
 _EPOCH_DONE = (
@@ -138,8 +147,18 @@ async def _feed(
     abort: asyncio.Event,
     feeder_idle: asyncio.Event,
     put_stop: threading.Event,
+    buffer_size: int = 1,
 ) -> None:
-    """Round-robin items across the per-worker queues, then end every worker's session.
+    """Round-robin transfers across the per-worker queues, then end every worker's session.
+
+    Items are accumulated into a chunk of up to ``buffer_size`` and sent as one
+    ``_ITEM`` message; whole chunks, not individual items, are what round-robin across the
+    workers. The tail chunk is flushed before the end markers, so no item is left behind.
+
+    Accumulation blocks: filling a chunk means waiting for ``buffer_size`` items.
+    Flushing early on a momentarily empty upstream is pointless here, because the inter-stage
+    queues are only two deep — a non-blocking drain could never gather more than two or three
+    items and ``buffer_size`` would have no effect.
 
     Sends exactly one ``_SESSION_END`` onto each worker's own queue, so every worker ends
     its session exactly once. Per-worker queues (rather than one shared queue the workers
@@ -151,7 +170,8 @@ async def _feed(
 
     ``abort`` is set by :py:func:`_collect` on a worker error; once set, forwarding stops early
     and only the per-worker ``_SESSION_END`` markers are sent, so the workers wind down their
-    current sessions instead of churning through the rest of the stream.
+    current sessions instead of churning through the rest of the stream. A partly-filled chunk
+    is dropped on that path along with everything else still in flight.
 
     The next-item ``get`` is raced against ``abort`` rather than awaited directly: on the error
     path the feeder is often parked here waiting on a slow/idle upstream, and ``abort`` must still
@@ -164,6 +184,19 @@ async def _feed(
     abort_wait = create_task(abort.wait())
     i = 0
     n = len(in_qs)
+    buf: list[Any] = []
+    reached_eof = False
+
+    async def _flush() -> None:
+        nonlocal buf, i
+        if not buf:
+            return
+        chunk, buf = buf, []
+        await loop.run_in_executor(
+            executor, _put, in_qs[i % n], (_ITEM, chunk), put_stop
+        )
+        i += 1
+
     try:
         while not abort.is_set():
             get_task = create_task(input_queue.get())
@@ -179,13 +212,17 @@ async def _feed(
                 get_task.cancel()
                 feeder_idle.clear()
             if is_eof(item):
+                reached_eof = True
                 break
-            await loop.run_in_executor(
-                executor, _put, in_qs[i % n], (_ITEM, item), put_stop
-            )
-            i += 1
+            buf.append(item)
+            if len(buf) >= buffer_size:
+                await _flush()
     finally:
         abort_wait.cancel()
+    # Only the clean end-of-stream flushes its tail. Keyed on ``reached_eof`` rather than on
+    # ``abort`` so an abort racing the EOF break cannot discard a legitimate tail chunk.
+    if reached_eof:
+        await _flush()
     # Concurrent so a full/slow worker queue does not block the markers to the others.
     await asyncio.gather(
         *(
@@ -213,6 +250,9 @@ async def _collect(
     pipeline is already failing, and forwarding them could block on a no-longer-drained output
     queue.
 
+    Each ``_RESULT`` carries a list of items, which is unpacked onto the output queue one item
+    at a time so the region's buffering stays invisible downstream.
+
     The stall guard is suppressed while ``feeder_idle`` is set: an idle feeder means nothing is
     dispatched and no worker message is due, so a quiet ``out_q`` is input starvation, not a
     dead worker.
@@ -238,7 +278,8 @@ async def _collect(
                 error = payload
                 abort.set()
         elif kind == _RESULT and error is None:
-            await output_queue.put(payload)
+            for item in payload:
+                await output_queue.put(item)
     if error is not None:
         raise error
 
@@ -255,13 +296,23 @@ async def _feed_continuous(
     epoch_barrier: asyncio.Event,
     feeder_idle: asyncio.Event,
     put_stop: threading.Event,
+    buffer_size: int = 1,
 ) -> None:
-    """Round-robin items to per-worker queues; broadcast and barrier each epoch boundary.
+    """Round-robin transfers to per-worker queues; broadcast and barrier each epoch boundary.
+
+    Items are accumulated into chunks of up to ``buffer_size`` and sent as one
+    ``_ITEM`` message each, exactly as in :py:func:`_feed`.
 
     On an epoch boundary the next epoch's items must not be fed until every worker has drained
     the current epoch (otherwise results from two epochs would interleave). The feeder therefore
     broadcasts ``_EPOCH`` to all workers and waits on ``epoch_barrier``, which the collector sets
     once it has emitted the epoch's single ``_EPOCH_END`` downstream.
+
+    A partly-filled chunk **must** be flushed before that broadcast: an ``_ITEM`` put after the
+    ``_EPOCH`` marker would be drained by the worker as part of the *next* epoch, so the tail of
+    one epoch would silently reappear in the following one. Flushing first keeps the chunk ahead
+    of the marker on each worker's FIFO queue. The same applies to the ``_POOL_SHUTDOWN``
+    broadcast at end of stream.
 
     A single shared ``epoch_barrier`` is sufficient (rather than one per epoch) only because the
     feeder cannot advance past a boundary until the collector releases it: the feeder and
@@ -277,22 +328,35 @@ async def _feed_continuous(
 
     i = 0
     n = len(in_qs)
+    buf: list[Any] = []
+
+    async def _flush() -> None:
+        nonlocal buf, i
+        if not buf:
+            return
+        chunk, buf = buf, []
+        await loop.run_in_executor(
+            executor, _put, in_qs[i % n], (_ITEM, chunk), put_stop
+        )
+        i += 1
+
     while True:
         feeder_idle.set()
         item = await input_queue.get()
         feeder_idle.clear()
         if is_eof(item):
+            await _flush()
             await _broadcast((_POOL_SHUTDOWN, None))
             break
         if is_epoch_end(item):
+            await _flush()
             epoch_barrier.clear()
             await _broadcast((_EPOCH, None))
             await epoch_barrier.wait()
             continue
-        await loop.run_in_executor(
-            executor, _put, in_qs[i % n], (_ITEM, item), put_stop
-        )
-        i += 1
+        buf.append(item)
+        if len(buf) >= buffer_size:
+            await _flush()
 
 
 async def _collect_continuous(
@@ -330,7 +394,8 @@ async def _collect_continuous(
         last_progress = time.monotonic()
         kind, payload = res
         if kind == _RESULT:
-            await output_queue.put(payload)
+            for item in payload:
+                await output_queue.put(item)
         elif kind == _EPOCH_DONE:
             workers_at_boundary += 1
             if workers_at_boundary >= num_workers:
@@ -365,6 +430,8 @@ async def _subprocess_pipeline(
     """
     in_qs, out_q = handle.in_qs, handle.out_q
     num_workers = handle.max_workers
+    # Only the inbound size matters here; the worker owns the outbound one.
+    buffer_size = handle.input_buffer_size
     # One thread parked per concurrent blocking op: a put per input queue (the feeder broadcasts
     # epoch/session-end markers across all of them at once) plus the collector get.
     max_threads = len(in_qs) + 1
@@ -384,7 +451,13 @@ async def _subprocess_pipeline(
             epoch_barrier = asyncio.Event()
             feeder = create_task(
                 _feed_continuous(
-                    input_queue, in_qs, executor, epoch_barrier, feeder_idle, put_stop
+                    input_queue,
+                    in_qs,
+                    executor,
+                    epoch_barrier,
+                    feeder_idle,
+                    put_stop,
+                    buffer_size,
                 )
             )
             collector = create_task(
@@ -401,7 +474,15 @@ async def _subprocess_pipeline(
             # Set by the collector on a worker error so the feeder stops forwarding new items.
             abort = asyncio.Event()
             feeder = create_task(
-                _feed(input_queue, in_qs, executor, abort, feeder_idle, put_stop)
+                _feed(
+                    input_queue,
+                    in_qs,
+                    executor,
+                    abort,
+                    feeder_idle,
+                    put_stop,
+                    buffer_size,
+                )
             )
             collector = create_task(
                 _collect(out_q, num_workers, output_queue, executor, abort, feeder_idle)
