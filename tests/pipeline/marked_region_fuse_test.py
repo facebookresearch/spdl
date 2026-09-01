@@ -535,6 +535,8 @@ class FusedThreadCountTest(unittest.TestCase):
                 None,  # pyre-ignore[6] -- unused by the fake
                 -1.0,
                 True,
+                1,  # input buffer size; irrelevant to the thread count
+                1,  # output buffer size; likewise
             )
         return captured["num_threads"]
 
@@ -753,6 +755,133 @@ class MarkedRegionSegmentationTest(unittest.TestCase):
                 p for p in new_config.pipes if isinstance(p, _SubprocessPipelineConfig)
             ]
             self.assertEqual(len(fused), 2)
+        finally:
+            for pool in pools:
+                pool.shutdown()
+
+    def test_buffer_size_reaches_the_handle(self) -> None:
+        """The spec's buffer_size lands on the pool handle the bridge stage reads."""
+        config = _cfg(
+            range(4),
+            [
+                PlacementConfig(
+                    target=ProcessPoolExecutorConfig(max_workers=1), buffer_size=8
+                ),
+                Pipe(add_one),
+                PlacementConfig(target=MAIN_PROCESS),
+            ],
+        )
+        new_config, pools = _fuse_marked_regions(config)
+        try:
+            (fused,) = [
+                p for p in new_config.pipes if isinstance(p, _SubprocessPipelineConfig)
+            ]
+            self.assertEqual(fused.handle.input_buffer_size, 8)
+        finally:
+            for pool in pools:
+                pool.shutdown()
+
+    def test_buffer_size_defaults_to_one(self) -> None:
+        """A region whose spec does not set it transfers one item at a time."""
+        config = _cfg(
+            range(4),
+            [
+                PlacementConfig(target=ProcessPoolExecutorConfig(max_workers=1)),
+                Pipe(add_one),
+                PlacementConfig(target=MAIN_PROCESS),
+            ],
+        )
+        new_config, pools = _fuse_marked_regions(config)
+        try:
+            (fused,) = [
+                p for p in new_config.pipes if isinstance(p, _SubprocessPipelineConfig)
+            ]
+            self.assertEqual(fused.handle.input_buffer_size, 1)
+        finally:
+            for pool in pools:
+                pool.shutdown()
+
+    def test_closing_marker_sizes_the_output(self) -> None:
+        """The marker that closes a region sizes the results coming back out of it.
+
+        The two directions are independent, which is the point: a region ending in
+        ``aggregate`` takes single items in and returns whole batches.
+        """
+        config = _cfg(
+            range(4),
+            [
+                PlacementConfig(
+                    target=ProcessPoolExecutorConfig(max_workers=1), buffer_size=32
+                ),
+                Pipe(add_one),
+                PlacementConfig(target=MAIN_PROCESS, buffer_size=2),
+            ],
+        )
+        new_config, pools = _fuse_marked_regions(config)
+        try:
+            (fused,) = [
+                p for p in new_config.pipes if isinstance(p, _SubprocessPipelineConfig)
+            ]
+            self.assertEqual(fused.handle.input_buffer_size, 32)
+            self.assertEqual(fused.handle.output_buffer_size, 2)
+        finally:
+            for pool in pools:
+                pool.shutdown()
+
+    def test_marker_between_adjacent_regions_sizes_both_sides(self) -> None:
+        """One marker closing region A and opening region B sizes that single handoff."""
+        config = _cfg(
+            range(4),
+            [
+                PlacementConfig(
+                    target=ProcessPoolExecutorConfig(max_workers=1), buffer_size=4
+                ),
+                Pipe(add_one),
+                PlacementConfig(
+                    target=ProcessPoolExecutorConfig(max_workers=1), buffer_size=8
+                ),
+                Pipe(times_two),
+                PlacementConfig(target=MAIN_PROCESS, buffer_size=16),
+            ],
+        )
+        new_config, pools = _fuse_marked_regions(config)
+        try:
+            first, second = [
+                p for p in new_config.pipes if isinstance(p, _SubprocessPipelineConfig)
+            ]
+            # The middle marker is region A's exit and region B's entry alike.
+            self.assertEqual(first.handle.input_buffer_size, 4)
+            self.assertEqual(first.handle.output_buffer_size, 8)
+            self.assertEqual(second.handle.input_buffer_size, 8)
+            self.assertEqual(second.handle.output_buffer_size, 16)
+        finally:
+            for pool in pools:
+                pool.shutdown()
+
+    def test_each_region_keeps_its_own_buffer_size(self) -> None:
+        """Two regions are fused with the buffer_size of their own spec."""
+        config = _cfg(
+            range(4),
+            [
+                PlacementConfig(
+                    target=ProcessPoolExecutorConfig(max_workers=1), buffer_size=4
+                ),
+                Pipe(add_one),
+                PlacementConfig(target=MAIN_PROCESS),
+                Pipe(times_two),
+                PlacementConfig(
+                    target=ProcessPoolExecutorConfig(max_workers=1), buffer_size=16
+                ),
+                Pipe(add_one),
+                PlacementConfig(target=MAIN_PROCESS),
+            ],
+        )
+        new_config, pools = _fuse_marked_regions(config)
+        try:
+            fused = [
+                p for p in new_config.pipes if isinstance(p, _SubprocessPipelineConfig)
+            ]
+            self.assertEqual([f.handle.input_buffer_size for f in fused], [4, 16])
         finally:
             for pool in pools:
                 pool.shutdown()

@@ -161,6 +161,8 @@ def _build_fused_stage_core(
     user_initargs: tuple[Any, ...],
     report_stats_interval: float,
     continuous: bool,
+    input_buffer_size: int,
+    output_buffer_size: int,
 ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
     """Spawn a worker pool that runs ``stages`` as a nested pipeline; return the pool and its
     replacement stage. Called by :py:func:`_build_fused_stage_from_spec` once the pool
@@ -188,8 +190,20 @@ def _build_fused_stage_core(
         initializer,
         (),
         continuous=continuous,
+        input_buffer_size=input_buffer_size,
+        output_buffer_size=output_buffer_size,
     )
     name = "subprocess_pipeline(" + "+".join(_stage_name(s) for s in stages) + ")"
+    # Surface the transfer granularity in stats output; a buffered boundary changes how this
+    # stage's queue occupancy should be read. Each direction appears only when it is not the
+    # default, since the two are configured separately.
+    sizes = [
+        f"{label}={size}"
+        for label, size in (("in", input_buffer_size), ("out", output_buffer_size))
+        if size != 1
+    ]
+    if sizes:
+        name += "[buffer_size " + " ".join(sizes) + "]"
     return _SubprocessPipelineConfig(name=name, handle=pool.make_handle()), pool
 
 
@@ -199,13 +213,17 @@ def _build_fused_stage_from_spec(
     backend: _PoolBackend,
     report_stats_interval: float,
     continuous: bool,
+    input_buffer_size: int,
+    output_buffer_size: int,
 ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
     """Build the worker pool and replacement stage for one ``.to()`` region, reading the pool
     parameters from ``spec``. ``num_threads`` for the nested pipeline is the sum of the region
     stages' concurrency plus one for its source, ``max_workers`` falls back to the CPU count,
     and ``report_stats_interval`` is inherited from
     :py:func:`~spdl.pipeline._build.build_pipeline`. ``backend`` (process or subinterpreter) is
-    chosen by the caller from the spec type."""
+    chosen by the caller from the spec type. The two buffer sizes come from the region's
+    :py:class:`~spdl.pipeline.defs.PlacementConfig` markers, not from ``spec``: they describe
+    the boundary crossings rather than the pool."""
     # ``+ _SOURCE_THREADS``: the nested pipeline's source is a *blocking* read of the worker's
     # input queue, dispatched onto the very same thread pool as the region's ops. Sizing that
     # pool by op concurrency alone lets the read occupy every thread, so the ops cannot drain
@@ -222,6 +240,8 @@ def _build_fused_stage_from_spec(
         user_initargs=spec.initargs,
         report_stats_interval=report_stats_interval,
         continuous=continuous,
+        input_buffer_size=input_buffer_size,
+        output_buffer_size=output_buffer_size,
     )
 
 
@@ -269,9 +289,13 @@ def _fuse_marked_regions(
     target: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig | _MainProcess = (
         _MainProcess()
     )
+    # Tracked alongside ``target``: the marker that opens a region sizes the transfers into
+    # it, and the marker that closes it sizes the results coming back. Adjacent regions each
+    # get their own, and the marker between them sizes that single handoff for both sides.
+    input_buffer_size: int = 1
     region: list[object] = []
 
-    def _flush() -> None:
+    def _flush(output_buffer_size: int) -> None:
         if not region:
             return
         backend: _PoolBackend
@@ -292,7 +316,13 @@ def _fuse_marked_regions(
         else:  # pragma: no cover -- a main-process target never accumulates a region
             raise AssertionError(f"Unexpected region target: {target!r}")
         fused, pool = _build_fused_stage_from_spec(
-            region, target, backend, report_stats_interval, continuous
+            region,
+            target,
+            backend,
+            report_stats_interval,
+            continuous,
+            input_buffer_size,
+            output_buffer_size,
         )
         pools.append(pool)
         new_pipes.append(fused)
@@ -301,13 +331,18 @@ def _fuse_marked_regions(
     try:
         for p in pipes:
             if isinstance(p, PlacementConfig):
-                _flush()  # close the span running under the previous target
+                # ``p`` both closes the span under the previous target (so it sizes that
+                # region's way out) and opens the next one (sizing its way in).
+                _flush(p.buffer_size)
                 target = p.target
+                input_buffer_size = p.buffer_size
             elif isinstance(target, _MainProcess):
                 new_pipes.append(p)
             else:
                 region.append(p)
-        _flush()  # close a region left open at the end of the pipes
+        # A region left open at the end has no closing marker to size its output; the
+        # builder rejects that shape, so this only guards hand-built configs.
+        _flush(1)
     except BaseException:
         # Reap any pools spawned before the failure; the caller never receives them to reap.
         for pool in pools:

@@ -103,8 +103,9 @@ class _DrainSource:
 
     Used as a *continuous* source: :py:func:`spdl.pipeline._components._source._source_continuous`
     calls ``iter()`` once per epoch, so ``__iter__`` must return a fresh generator each time
-    (a one-shot generator object would only ever run one epoch). Each pass yields ``_ITEM``
-    payloads until an ``_EPOCH`` (epoch boundary) or ``_POOL_SHUTDOWN`` (teardown) message.
+    (a one-shot generator object would only ever run one epoch). Each pass yields the items
+    inside each ``_ITEM`` payload until an ``_EPOCH`` (epoch boundary) or ``_POOL_SHUTDOWN``
+    (teardown) message.
 
     ``exiting`` latches once ``_POOL_SHUTDOWN`` is seen; the worker loop reads it to stop after
     the current epoch. The blocking read uses a timeout so the drain thread wakes periodically
@@ -124,7 +125,10 @@ class _DrainSource:
                     return
                 continue
             if kind == _ITEM:
-                yield payload
+                # An ``_ITEM`` payload is always a list (one item when the region is
+                # unbuffered), so unpacking it here is what keeps the region's buffering
+                # invisible to the sub-pipeline's stages.
+                yield from payload
             elif kind == _EPOCH:
                 return
             else:  # _POOL_SHUTDOWN
@@ -149,7 +153,7 @@ def _run_sessions(
         while True:
             kind, payload = in_q.get()
             if kind == _ITEM:
-                yield payload
+                yield from payload
             elif kind == _SESSION_END:
                 session_ended = True
                 return
@@ -164,7 +168,7 @@ def _run_sessions(
             pipeline = build_pipeline(cfg, **build_kwargs)
             with pipeline.auto_stop():
                 for out in pipeline:
-                    out_q.put((_RESULT, out))
+                    out_q.put((_RESULT, [out]))
         except Exception as err:  # relayed to the submitter below
             out_q.put((_ERROR, _to_picklable_error(err, traceback.format_exc())))
             # A pipeline failure abandons the source generator mid-session, so this session's
@@ -210,7 +214,7 @@ def _run_continuous(
         with pipeline.auto_stop():
             while not source.exiting:
                 for out in pipeline:
-                    out_q.put((_RESULT, out))
+                    out_q.put((_RESULT, [out]))
                 if source.exiting:
                     break
                 out_q.put((_EPOCH_DONE, None))
@@ -253,7 +257,7 @@ def _pipeline_worker_loop(
 class _SubprocessPipelineHandle:
     """Picklable submit side of a :py:class:`_SubprocessPipelinePool`.
 
-    Holds only the queues, worker count, and mode, so it is cheap to carry inside a
+    Holds only the queues, worker count, mode, and transfer sizes, so it is cheap to carry in a
     :py:class:`~spdl.pipeline.defs.PipelineConfig` — including across the pickle boundary into a
     pipeline subprocess (the queues travel as ``Process`` spawn arguments, the only context in
     which an ``mp.Queue`` may be pickled). ``in_qs`` holds one input queue per worker in both
@@ -262,12 +266,22 @@ class _SubprocessPipelineHandle:
     """
 
     def __init__(
-        self, in_qs: list[Any], out_q: Any, max_workers: int, continuous: bool
+        self,
+        in_qs: list[Any],
+        out_q: Any,
+        max_workers: int,
+        continuous: bool,
+        input_buffer_size: int = 1,
+        output_buffer_size: int = 1,
     ) -> None:
         self.in_qs = in_qs
         self.out_q = out_q
         self.max_workers = max_workers
         self.continuous = continuous
+        # Sized separately: the two directions rarely carry comparable items (a region ending
+        # in ``aggregate`` takes rows in and returns whole batches).
+        self.input_buffer_size = input_buffer_size
+        self.output_buffer_size = output_buffer_size
 
 
 class _Worker:
@@ -441,12 +455,19 @@ class _SubprocessPipelinePool:
         initializer: Callable[..., object] | None,
         initargs: tuple[Any, ...],
         continuous: bool = False,
+        input_buffer_size: int = 1,
+        output_buffer_size: int = 1,
     ) -> None:
         # Bound the queues so a slow consumer/producer applies backpressure rather than
         # buffering without limit. Sized to keep every worker fed, plus in-flight slack.
+        # The bound counts *messages*, so with a buffer size above 1 the in-flight item
+        # bound is this times that. Left as-is deliberately: the depth is what keeps workers
+        # pipelined, and shrinking it in proportion would stall the pool at large sizes.
         size = max(4, max_workers * 2)
         self._backend = backend
         self._continuous = continuous
+        self._input_buffer_size = input_buffer_size
+        self._output_buffer_size = output_buffer_size
         self._out_q: Any = backend.make_queue(size)
         # One input queue per worker in both modes. Continuous mode needs it to broadcast epoch
         # boundaries cleanly; non-continuous mode needs it so each worker receives exactly one
@@ -507,7 +528,12 @@ class _SubprocessPipelinePool:
     def make_handle(self) -> _SubprocessPipelineHandle:
         """Create the picklable submit-side handle that rides in the pipeline config."""
         return _SubprocessPipelineHandle(
-            self._in_qs, self._out_q, self._max_workers, self._continuous
+            self._in_qs,
+            self._out_q,
+            self._max_workers,
+            self._continuous,
+            self._input_buffer_size,
+            self._output_buffer_size,
         )
 
     def _broadcast_shutdown(self) -> None:
