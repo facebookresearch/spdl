@@ -222,7 +222,3 @@ class _PlatformTest(unittest.TestCase):
 
             text = (engine / "checkpoint.json").read_text()
             self.assertIn('"priority": -5.0', text)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -228,7 +228,3 @@ class RegionHookTest(unittest.TestCase):
 
         # The region sub-pipeline's queues carried the data inside the worker(s).
         self.assertGreaterEqual(sum(r["n_get"] for r in queue_records), n)
-
-
-if __name__ == "__main__":
-    unittest.main()

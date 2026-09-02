@@ -467,7 +467,3 @@ class MergeConfigTest(unittest.TestCase):
             results = list(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, [1, 4, 2, 5, 3, 6])
-
-
-if __name__ == "__main__":
-    unittest.main()

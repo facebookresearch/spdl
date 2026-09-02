@@ -57,7 +57,3 @@ class TestPlacementConfig(unittest.TestCase):
         self.assertEqual(
             repr(PlacementConfig(target=MAIN_PROCESS)), "placement(MAIN_PROCESS)"
         )
-
-
-if __name__ == "__main__":
-    unittest.main()
