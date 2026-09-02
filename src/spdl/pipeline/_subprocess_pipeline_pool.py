@@ -136,11 +136,64 @@ class _DrainSource:
                 return
 
 
+def _drain_chunk(pipeline: Any, out: list[Any], output_buffer_size: int) -> bool:
+    """Append up to ``output_buffer_size`` results to ``out``, blocking only for the first.
+
+    Returns whether the current stream ended — an epoch in continuous mode, the session
+    otherwise. ``out`` can be non-empty when that happens, so the caller must flush before
+    acting on the end.
+
+    ``out`` is owned by the caller rather than returned so that results already collected are
+    still reachable (and flushable) if a read raises something other than ``EOFError``.
+
+    Only the first read blocks; the rest are non-blocking, so the chunk is flushed the moment
+    the sub-pipeline's sink runs dry. That is deliberate asymmetry with the input side (which
+    blocks to fill a chunk): a region's output cardinality need not match its input's — a region
+    ending in ``aggregate`` emits one large batch per many inputs — so blocking to fill an
+    output chunk could hold whole batches and multiply latency by that size. Draining only what
+    is already there adds no latency at all, at the cost of smaller chunks whenever the worker
+    is not saturated. The chunk therefore tracks how far the sub-pipeline is running ahead of
+    this drain: a fast region fills toward the bound (the producer keeps refilling the sink
+    mid-drain, so ``_FUSED_SINK_BUFFER`` does not cap it), while a slow one degenerates to one
+    item -- which is exactly when batching the return trip would not have helped anyway.
+    """
+    try:
+        out.append(pipeline.get_item())
+    except EOFError:
+        return True
+    while len(out) < output_buffer_size:
+        try:
+            out.append(pipeline._get_item_nowait())
+        except _queue.Empty:
+            return False
+        except EOFError:
+            return True
+    return False
+
+
+def _stream_results(pipeline: Any, out_q: Any, output_buffer_size: int) -> None:
+    """Forward one stream's (epoch's / session's) results to ``out_q`` in chunks.
+
+    Returns when the stream ends. Any results already collected are flushed even if a read
+    fails, so a mid-chunk failure relays the same results an unbuffered region would have.
+    """
+    while True:
+        chunk: list[Any] = []
+        try:
+            ended = _drain_chunk(pipeline, chunk, output_buffer_size)
+        finally:
+            if chunk:
+                out_q.put((_RESULT, chunk))
+        if ended:
+            return
+
+
 def _run_sessions(
     in_q: Any,
     out_q: Any,
     sub_config: PipelineConfig[Any],
     build_kwargs: dict[str, Any],
+    output_buffer_size: int,
 ) -> None:
     """Non-continuous worker body: one rebuilt sub-pipeline per input stream."""
     from spdl.pipeline._build import build_pipeline
@@ -167,8 +220,7 @@ def _run_sessions(
         try:
             pipeline = build_pipeline(cfg, **build_kwargs)
             with pipeline.auto_stop():
-                for out in pipeline:
-                    out_q.put((_RESULT, [out]))
+                _stream_results(pipeline, out_q, output_buffer_size)
         except Exception as err:  # relayed to the submitter below
             out_q.put((_ERROR, _to_picklable_error(err, traceback.format_exc())))
             # A pipeline failure abandons the source generator mid-session, so this session's
@@ -191,12 +243,13 @@ def _run_continuous(
     out_q: Any,
     sub_config: PipelineConfig[Any],
     build_kwargs: dict[str, Any],
+    output_buffer_size: int,
 ) -> None:
     """Continuous worker body: one warm sub-pipeline, one ``_EPOCH_DONE`` per epoch.
 
     The sub-pipeline is built once with a continuous source draining ``in_q``; each
-    ``for out in pipeline`` pass yields exactly one epoch's results (the continuous pipeline
-    turns each ``_EPOCH_END`` into an iterator stop), after which the worker reports
+    :py:func:`_stream_results` pass forwards exactly one epoch's results (the continuous
+    pipeline turns each ``_EPOCH_END`` into an end-of-stream), after which the worker reports
     ``_EPOCH_DONE`` and loops for the next epoch — keeping the pipeline's prefetch buffers warm.
 
     Unlike :py:func:`_run_sessions`, a fatal sub-pipeline error is terminal here: the worker
@@ -213,8 +266,7 @@ def _run_continuous(
         pipeline = build_pipeline(cfg, **build_kwargs)
         with pipeline.auto_stop():
             while not source.exiting:
-                for out in pipeline:
-                    out_q.put((_RESULT, [out]))
+                _stream_results(pipeline, out_q, output_buffer_size)
                 if source.exiting:
                     break
                 out_q.put((_EPOCH_DONE, None))
@@ -234,6 +286,7 @@ def _pipeline_worker_loop(
     continuous: bool,
     initializer: Callable[..., object] | None,
     initargs: tuple[Any, ...],
+    output_buffer_size: int,
 ) -> None:
     """Worker entry point: run the initializer, then dispatch to the matching body."""
     if initializer is not None:
@@ -249,15 +302,15 @@ def _pipeline_worker_loop(
             out_q.put((_DONE, None))
             return
     if continuous:
-        _run_continuous(in_q, out_q, sub_config, build_kwargs)
+        _run_continuous(in_q, out_q, sub_config, build_kwargs, output_buffer_size)
     else:
-        _run_sessions(in_q, out_q, sub_config, build_kwargs)
+        _run_sessions(in_q, out_q, sub_config, build_kwargs, output_buffer_size)
 
 
 class _SubprocessPipelineHandle:
     """Picklable submit side of a :py:class:`_SubprocessPipelinePool`.
 
-    Holds only the queues, worker count, mode, and transfer size, so it is cheap to carry in a
+    Holds only the queues, worker count, mode, and transfer sizes, so it is cheap to carry in a
     :py:class:`~spdl.pipeline.defs.PipelineConfig` — including across the pickle boundary into a
     pipeline subprocess (the queues travel as ``Process`` spawn arguments, the only context in
     which an ``mp.Queue`` may be pickled). ``in_qs`` holds one input queue per worker in both
@@ -272,12 +325,16 @@ class _SubprocessPipelineHandle:
         max_workers: int,
         continuous: bool,
         input_buffer_size: int = 1,
+        output_buffer_size: int = 1,
     ) -> None:
         self.in_qs = in_qs
         self.out_q = out_q
         self.max_workers = max_workers
         self.continuous = continuous
+        # Sized separately: the two directions rarely carry comparable items (a region ending
+        # in ``aggregate`` takes rows in and returns whole batches).
         self.input_buffer_size = input_buffer_size
+        self.output_buffer_size = output_buffer_size
 
 
 class _Worker:
@@ -452,6 +509,7 @@ class _SubprocessPipelinePool:
         initargs: tuple[Any, ...],
         continuous: bool = False,
         input_buffer_size: int = 1,
+        output_buffer_size: int = 1,
     ) -> None:
         # Bound the queues so a slow consumer/producer applies backpressure rather than
         # buffering without limit. Sized to keep every worker fed, plus in-flight slack.
@@ -462,6 +520,7 @@ class _SubprocessPipelinePool:
         self._backend = backend
         self._continuous = continuous
         self._input_buffer_size = input_buffer_size
+        self._output_buffer_size = output_buffer_size
         self._out_q: Any = backend.make_queue(size)
         # One input queue per worker in both modes. Continuous mode needs it to broadcast epoch
         # boundaries cleanly; non-continuous mode needs it so each worker receives exactly one
@@ -487,6 +546,7 @@ class _SubprocessPipelinePool:
                             continuous,
                             initializer,
                             initargs,
+                            output_buffer_size,
                         ),
                     )
                 )
@@ -527,6 +587,7 @@ class _SubprocessPipelinePool:
             self._max_workers,
             self._continuous,
             self._input_buffer_size,
+            self._output_buffer_size,
         )
 
     def _broadcast_shutdown(self) -> None:
