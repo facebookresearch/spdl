@@ -846,7 +846,3 @@ class PathVariantsBatchedTest(unittest.TestCase):
         )
         with self.assertRaises(PipelineFailure):
             _run_pipeline(config)
-
-
-if __name__ == "__main__":
-    unittest.main()

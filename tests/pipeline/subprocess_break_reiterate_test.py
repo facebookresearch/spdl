@@ -102,7 +102,3 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
         # Subsequent full iteration must work
         result = list(src)
         self.assertEqual(result, list(range(100)))
-
-
-if __name__ == "__main__":
-    unittest.main()

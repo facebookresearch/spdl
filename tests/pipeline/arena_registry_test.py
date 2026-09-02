@@ -228,7 +228,3 @@ class PacketsHandlerTest(unittest.TestCase):
         self.assertIs(type(restored), type(packets))
         self.assertEqual(cast(Any, restored).__getstate__(), packets.__getstate__())
         self.assertIsNone(anchor)
-
-
-if __name__ == "__main__":
-    unittest.main()

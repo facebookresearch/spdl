@@ -126,7 +126,3 @@ class StallGuardTest(unittest.TestCase):
             asyncio.run(_scenario())
         finally:
             _subprocess_pipe._WORKER_STALL_TIMEOUT = orig
-
-
-if __name__ == "__main__":
-    unittest.main()
