@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from ._offload import _offload, _restore
+from ._offload import _discard, _offload, _restore
 from ._protocol import ArenaProtocol, ArenaReaderProtocol, ArenaWriterProtocol
 from ._registry import _default_registry, _OffloadRegistry
 
@@ -86,3 +86,14 @@ class _Arena:
             copied out, per the backend).
         """
         return _restore(blob, self.reader, self.registry)
+
+    def discard(self, blob: bytes) -> None:
+        """Account for an unread envelope without restoring its payload.
+
+        Args:
+            blob: The envelope produced by :py:meth:`offload`.
+
+        Returns:
+            None.
+        """
+        _discard(blob, self.reader)
