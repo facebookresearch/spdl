@@ -275,8 +275,7 @@ def _execute_iterable(
             match cmd:
                 case _Cmd.START_ITERATION:
                     if helper is not None:
-                        # Iteration boundary: reclaim leaked arena space. The
-                        # parent is quiescent (waiting for ITERATION_STARTED).
+                        # Let the backend prepare for the next iteration.
                         helper.writer.reset()
                     data_q.put(_Msg(_Status.ITERATION_STARTED))
                 case _Cmd.STOP_ITERATION:
@@ -373,6 +372,7 @@ def _enter_iteration_mode(
     data_q: _Queue[_Msg[Any]],
     timeout: float,
     worker_type: str,
+    discard: Callable[[Any], None] | None = None,
 ) -> None:
     """Instruct the worker to enter iteration mode and wait for the acknowledgement.
 
@@ -384,6 +384,8 @@ def _enter_iteration_mode(
         data_q: Queue to receive status messages from the worker
         timeout: Maximum time to wait for acknowledgement
         worker_type: Type of worker (for error messages)
+        discard: Optional callback that accounts for unread results from the
+            previous iteration.
     """
     wtype = f"worker {worker_type}"
     cmd_q.put(_Cmd.STOP_ITERATION)
@@ -406,9 +408,15 @@ def _enter_iteration_mode(
                 case _Status.ITERATION_STARTED:
                     # the worker is properly transitioning to the iteration mode
                     return
-                case _Status.ITERATION_FINISHED | _Status.ITERATOR_SUCCESS:
-                    # residual from previous iteration. Could be iteration was abandoned, or
-                    # the iteration had been completed when parent commanded STOP_ITERATION.
+                case _Status.ITERATION_FINISHED:
+                    # Residual from the previous iteration.
+                    continue
+                case _Status.ITERATOR_SUCCESS:
+                    # Residual from an abandoned previous iteration. Arena
+                    # backends must account for the committed unit even though
+                    # its payload will not be restored.
+                    if discard is not None:
+                        discard(item.message)
                     continue
                 case _Status.UNEXPECTED_CMD_RECEIVED:
                     # the worker was in the invalid state (iteration mode)
