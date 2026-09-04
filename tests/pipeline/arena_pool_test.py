@@ -10,15 +10,30 @@ import struct
 import threading
 import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, cast
 
-from spdl.pipeline import iterate_in_subprocess, SharedMemorySegmentPool
+from spdl.pipeline import (
+    iterate_in_subprocess,
+    PipelineBuilder,
+    run_pipeline_in_subprocess,
+    SharedMemorySegmentPool,
+)
 from spdl.pipeline._arena._offload import _offload, _restore
 from spdl.pipeline._arena._registry import _default_registry
 
 
 def _make_items() -> list[dict[str, bytes | int]]:
     return [{"i": i, "blob": bytes([i % 256]) * 40_000} for i in range(8)]
+
+
+def _make_tagged_item(unit: int) -> dict[str, bytes | int]:
+    return {"unit": unit, "payload": bytes([unit]) * (1 << 20)}
+
+
+def _delay_item(item: dict[str, object]) -> dict[str, object]:
+    time.sleep(0.005)
+    return item
 
 
 class SharedMemorySegmentPoolTest(unittest.TestCase):
@@ -230,6 +245,64 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
         # Once the view is gone, the segment returns to the pool.
         self.assertEqual(pool.reclaimed, 1)
 
+    def test_live_view_survives_iteration_reset(self) -> None:
+        """An iteration reset must not recycle a segment with a live view."""
+        pool = self._pool(1 << 16, 2)
+        writer, reader = pool.open_writer(), pool.open_reader()
+        registry = _default_registry()
+        first = cast(
+            dict[str, Any],
+            _restore(
+                _offload({"blob": b"a" * 40_000}, writer, registry),
+                reader,
+                registry,
+            ),
+        )
+        first_view = cast(memoryview, first["blob"])
+
+        writer.reset()
+        reader.reset()
+        second = _restore(
+            _offload({"blob": b"b" * 40_000}, writer, registry),
+            reader,
+            registry,
+        )
+
+        self.assertEqual(bytes(first_view), b"a" * 40_000)
+        del first, first_view, second
+        gc.collect()
+
+    def test_reclaim_watermark_spans_iteration_reset(self) -> None:
+        """A pre-reset lease must unblock later reclaimed segments when released."""
+        pool = self._pool(1 << 16, 2)
+        writer, reader = pool.open_writer(), pool.open_reader()
+        registry = _default_registry()
+        first = cast(
+            dict[str, Any],
+            _restore(
+                _offload({"blob": b"a" * 40_000}, writer, registry),
+                reader,
+                registry,
+            ),
+        )
+        first_view = cast(memoryview, first["blob"])
+        del first
+
+        writer.reset()
+        reader.reset()
+        second = _restore(
+            _offload({"blob": b"b" * 40_000}, writer, registry),
+            reader,
+            registry,
+        )
+        del second
+        gc.collect()
+        self.assertEqual(pool.reclaimed, 0)
+
+        del first_view
+        gc.collect()
+        self.assertEqual(pool.reclaimed, 2)
+
     def test_torch_restore_is_a_zero_copy_view(self) -> None:
         """A restored Torch tensor aliases the segment (no copy)."""
         try:
@@ -345,4 +418,81 @@ class IterateInSubprocessSegmentPoolTest(unittest.TestCase):
                 }
             )
             del item  # release the zero-copy view so its segment can be reclaimed
+        self.assertEqual(got, _make_items())
+
+    def test_views_remain_valid_across_continuous_reiteration(self) -> None:
+        """An outer pipeline must not observe pool views overwritten at epoch end."""
+        config = (
+            PipelineBuilder()
+            .add_source(list(range(13)), continuous=True)
+            .pipe(_make_tagged_item)
+            .add_sink(4)
+            .get_config()
+        )
+        source = run_pipeline_in_subprocess(
+            config,
+            num_threads=2,
+            mp_context="fork",
+            buffer_size=3,
+            arena=SharedMemorySegmentPool(segment_size=2 << 20, count=12),
+        )
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pipeline = (
+                PipelineBuilder()
+                .add_source(source, continuous=True)
+                .pipe(_delay_item, concurrency=1, executor=executor)
+                .add_sink(4)
+                .build(num_threads=1)
+            )
+            bad: list[tuple[int, int]] = []
+            with pipeline.auto_stop():
+                for epoch in range(6):
+                    for position, item in enumerate(
+                        pipeline.get_iterator(timeout=30), start=1
+                    ):
+                        record = cast(dict[str, object], item)
+                        unit = cast(int, record["unit"])
+                        payload = cast(memoryview, record["payload"])
+                        if payload[0] != unit or payload[-1] != unit:
+                            bad.append((epoch, position))
+                        del item, record, payload
+
+            self.assertEqual(bad, [])
+
+    def test_abandoned_iteration_reclaims_unread_units(self) -> None:
+        """Re-iteration must reclaim unread pool units without hanging."""
+        pool = SharedMemorySegmentPool(
+            segment_size=1 << 18,
+            count=3,
+            acquire_timeout=2,
+        )
+        source = iterate_in_subprocess(
+            _make_items,
+            arena=pool,
+            buffer_size=2,
+            mp_context="fork",
+            timeout=10,
+        )
+        iterator = iter(source)
+        first = next(iterator)
+        self.assertEqual(first["i"], 0)
+
+        deadline = time.monotonic() + 5
+        while pool.published < pool.count and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertEqual(pool.published, pool.count)
+
+        del first, iterator
+        gc.collect()
+
+        got = []
+        for item in source:
+            got.append(
+                {
+                    k: bytes(v) if isinstance(v, memoryview) else v
+                    for k, v in item.items()
+                }
+            )
+            del item
         self.assertEqual(got, _make_items())

@@ -29,11 +29,18 @@ from ._marker import _ShmMarker
 from ._protocol import ArenaReaderProtocol, ArenaWriterProtocol
 from ._registry import _OffloadRegistry
 
-__all__ = ["_DEFAULT_OFFLOAD_THRESHOLD", "_offload", "_restore"]
+__all__ = ["_DEFAULT_OFFLOAD_THRESHOLD", "_discard", "_offload", "_restore"]
 
 _DEFAULT_OFFLOAD_THRESHOLD: int = 4096
 
 _SPAN: struct.Struct = struct.Struct("<Q")
+
+
+def _discard(blob: bytes, reader: ArenaReaderProtocol) -> None:
+    """Account for an unread arena envelope without restoring its payload."""
+    if reader.zero_copy:
+        span = int(_SPAN.unpack_from(blob, 0)[0])
+        reader.end_unit(span, [])
 
 
 def _offload(
