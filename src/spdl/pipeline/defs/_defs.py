@@ -543,8 +543,33 @@ class PlacementConfig:
     name: str = "placement"
     """Name of the marker (used only for display)."""
 
+    buffer_size: int = 1
+    """At most this many items are buffered into one transfer *at this marker*.
+
+    Crossing a process boundary costs a fixed amount per transfer — the pickle and unpickle
+    calls, the queue feeder-thread handoff and the pipe write — no matter how small the item is.
+    ``1`` (the default) passes one item at a time; a larger value amortizes that over several
+    items. Per-item costs are unaffected: a tensor still needs its own shared-memory segment
+    whether or not it shares a transfer.
+
+    Each marker sizes the handoff that happens where it sits, so a region's entry and exit are
+    configured independently: the marker that *opens* a region sizes data flowing into its
+    workers, and the marker that *closes* it sizes results flowing back. That separation
+    matters because the two directions rarely carry comparable items — a region ending in
+    :py:func:`Aggregate` takes single rows in and returns whole batches.
+
+    It is an upper bound rather than a fixed grouping: a partial buffer is flushed at the end of
+    a stream and at every epoch boundary, so the last transfer is usually short.
+
+    The buffering is transparent — stages on both sides still see individual items, so this is
+    independent of any :py:func:`Aggregate` inside or outside the region.
+
+    .. versionadded:: 0.7.0
+    """
+
     def __repr__(self) -> str:
-        return f"{self.name}({self.target!r})"
+        buf = f", buffer_size={self.buffer_size}" if self.buffer_size != 1 else ""
+        return f"{self.name}({self.target!r}{buf})"
 
 
 ################################################################################

@@ -64,6 +64,14 @@ def _has_ordered_pipe(cfg: object) -> bool:
     return False
 
 
+def _validate_buffer_size(buffer_size: int) -> None:
+    """Reject a ``buffer_size`` that cannot form a transfer."""
+    if buffer_size < 1:
+        raise ValueError(
+            f"`buffer_size` must be a positive integer. Got: {buffer_size}."
+        )
+
+
 def _validate_executor_regions(
     pipes: Sequence[
         PipeConfig
@@ -78,8 +86,8 @@ def _validate_executor_regions(
     Stateless scan (a pipeline starts on the main process). Rejects: a subinterpreter region on
     Python < 3.14; a stage using ``output_order="input"`` inside a region (including one nested
     in a ``path_variants`` branch, since order cannot be preserved across independent workers); an
-    empty region (a ``.to(...)`` marker with no stages before the next marker/sink); and a region
-    left open at the sink.
+    empty region (a ``.to(...)`` marker with no stages before the next marker/sink); a region
+    left open at the sink; and an invalid ``buffer_size``.
     """
     in_region = False
     region_has_stage = False
@@ -96,6 +104,7 @@ def _validate_executor_regions(
             target = p.target
             in_region = not isinstance(target, _MainProcess)
             region_has_stage = False
+            _validate_buffer_size(p.buffer_size)
             if isinstance(
                 target, InterpreterPoolExecutorConfig
             ) and sys.version_info < (3, 14):
@@ -318,10 +327,15 @@ class PipelineBuilder(Generic[T, U]):
         self,
         target: "ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig | _MainProcess",
         /,
+        *,
+        buffer_size: int = 1,
     ) -> "PipelineBuilder[T, U]":
         """**[Experimental]** Designate where the subsequent stages execute.
 
         .. versionadded:: 0.6.0
+
+        .. versionadded:: 0.7.0
+           The ``buffer_size`` argument.
 
         Opens (or closes) an *execution region*: every stage added after this call runs on
         ``target`` until the next :py:meth:`to`. A pipeline starts on the main process, so a
@@ -356,6 +370,49 @@ class PipelineBuilder(Generic[T, U]):
                 so the pipeline stays expressible as static config. To run a single stage on a
                 custom executor, use ``pipe(executor=...)`` instead.
 
+            buffer_size: At most this many items are buffered into a single transfer *at
+                this marker*. Default ``1`` (one item per transfer).
+
+                Crossing a process boundary costs a fixed amount per transfer — the pickle
+                and unpickle calls, the queue feeder-thread handoff and the pipe write —
+                regardless of how small the item is. Buffering amortizes that over several
+                items. Costs that are inherently *per item* are not amortized: a tensor still
+                needs its own shared-memory segment whether or not it shares a transfer.
+
+                Each marker sizes the handoff that happens where it sits, so a region's two
+                directions are configured independently::
+
+                    .to(pool, buffer_size=32)      # 32 rows per transfer into the workers
+                    .aggregate(batch_size)
+                    .to(MAIN_PROCESS, buffer_size=2)   # 2 batches per transfer coming back
+
+                Keeping them separate matters because the two directions rarely carry
+                comparable items: with an :py:meth:`aggregate` inside the region, single rows
+                go in and whole batches come back, so one number cannot be right for both.
+
+                It is an upper bound, not a fixed grouping: a partial buffer is flushed at the
+                end of a stream and at every epoch boundary, so the last transfer of each is
+                usually short.
+
+                The buffering is **transparent**: stages on both sides still receive individual
+                items, so ``buffer_size`` is independent of any :py:meth:`aggregate` you place
+                inside or outside the region.
+
+                The trade-off is latency: up to ``buffer_size - 1`` items are held while a
+                transfer fills, so a value well above what the producing side can keep up with
+                delays the first results. It also raises the in-flight item bound, since each
+                queued transfer now holds up to ``buffer_size`` items.
+
+                .. warning::
+
+                   Whole transfers, not individual items, are distributed across the pool's
+                   workers. Keep ``buffer_size × max_workers`` well below the number of items
+                   in a stream (or in one epoch, for a
+                   :py:meth:`continuous source <add_source>`), or some workers get no work at
+                   all: 50 items per epoch with ``max_workers=8`` and ``buffer_size=64`` puts
+                   every item in one transfer on a single worker and leaves the other seven
+                   idle.
+
         .. note::
 
            The region must be closed with ``to(MAIN_PROCESS)`` before :py:meth:`add_sink`, a
@@ -377,7 +434,13 @@ class PipelineBuilder(Generic[T, U]):
                 "`to()` target must be a ProcessPoolExecutorConfig, InterpreterPoolExecutorConfig, or "
                 f"MAIN_PROCESS. Got: {type(target).__name__}."
             )
-        self._process_args.append(PlacementConfig(target=target))
+        # Raised here so it points at the offending `to()` call. `get_config()` re-checks the
+        # assembled markers, but a `PipelineConfig` hand-built without the builder and passed
+        # straight to `build_pipeline()` bypasses both.
+        _validate_buffer_size(buffer_size)
+        self._process_args.append(
+            PlacementConfig(target=target, buffer_size=buffer_size)
+        )
         return self
 
     def path_variants(

@@ -78,6 +78,99 @@ class ToMethodTest(unittest.TestCase):
             b.to("subprocess")  # type: ignore[arg-type]
 
 
+class ToBufferSizeTest(unittest.TestCase):
+    """``to(..., buffer_size=N)``, which sets the region's transfer granularity."""
+
+    def test_defaults_to_one(self) -> None:
+        """Omitting buffer_size means one item per transfer."""
+        config = (
+            PipelineBuilder()
+            .add_source(range(4))
+            .to(ProcessPoolExecutorConfig(max_workers=1))
+            .pipe(add_one)
+            .to(MAIN_PROCESS)
+            .add_sink()
+            .get_config()
+        )
+        markers = [p for p in config.pipes if isinstance(p, PlacementConfig)]
+        self.assertEqual([m.buffer_size for m in markers], [1, 1])
+
+    def test_recorded_on_marker(self) -> None:
+        """buffer_size is carried on the PlacementConfig that opens the region."""
+        config = (
+            PipelineBuilder()
+            .add_source(range(4))
+            .to(ProcessPoolExecutorConfig(max_workers=1), buffer_size=8)
+            .pipe(add_one)
+            .to(MAIN_PROCESS)
+            .add_sink()
+            .get_config()
+        )
+        markers = [p for p in config.pipes if isinstance(p, PlacementConfig)]
+        self.assertEqual([m.buffer_size for m in markers], [8, 1])
+
+    def test_per_region(self) -> None:
+        """Adjacent regions each keep their own buffer_size."""
+        config = (
+            PipelineBuilder()
+            .add_source(range(4))
+            .to(ProcessPoolExecutorConfig(max_workers=1), buffer_size=4)
+            .pipe(add_one)
+            .to(ProcessPoolExecutorConfig(max_workers=1), buffer_size=16)
+            .pipe(times_two)
+            .to(MAIN_PROCESS)
+            .add_sink()
+            .get_config()
+        )
+        markers = [p for p in config.pipes if isinstance(p, PlacementConfig)]
+        self.assertEqual([m.buffer_size for m in markers], [4, 16, 1])
+
+    def test_not_carried_on_the_pool_spec(self) -> None:
+        """The knob belongs to the boundary, not to the worker pool behind it."""
+        self.assertFalse(hasattr(ProcessPoolExecutorConfig(), "buffer_size"))
+        self.assertFalse(hasattr(InterpreterPoolExecutorConfig(), "buffer_size"))
+
+    def test_accepted_on_main_process(self) -> None:
+        """Closing a region is a boundary too -- results cross back there, so it takes a size.
+
+        Each marker sizes the handoff at its own position, so a region's entry and exit are set
+        independently.
+        """
+        config = (
+            PipelineBuilder()
+            .add_source(range(4))
+            .to(ProcessPoolExecutorConfig(max_workers=1), buffer_size=32)
+            .pipe(add_one)
+            .to(MAIN_PROCESS, buffer_size=2)
+            .add_sink()
+            .get_config()
+        )
+        markers = [p for p in config.pipes if isinstance(p, PlacementConfig)]
+        self.assertEqual([m.buffer_size for m in markers], [32, 2])
+
+    def test_rejects_non_positive(self) -> None:
+        """A buffer_size below 1 cannot form a transfer and is rejected at the call site."""
+        b = PipelineBuilder().add_source(range(4))
+        for bad in (0, -1):
+            with self.subTest(buffer_size=bad):
+                with self.assertRaisesRegex(ValueError, "must be a positive integer"):
+                    b.to(ProcessPoolExecutorConfig(max_workers=1), buffer_size=bad)
+
+    def test_validated_at_build_for_hand_built_config(self) -> None:
+        """A PlacementConfig assembled without the builder is still validated."""
+        b = PipelineBuilder().add_source(range(4))
+        # Bypass `to()` so only the build-time scan can catch it.
+        b._process_args.append(
+            PlacementConfig(
+                target=ProcessPoolExecutorConfig(max_workers=1), buffer_size=0
+            )
+        )
+        b._process_args.append(Pipe(add_one))
+        b.to(MAIN_PROCESS).add_sink()
+        with self.assertRaisesRegex(ValueError, "must be a positive integer"):
+            b.get_config()
+
+
 class ToValidationTest(unittest.TestCase):
     """Validation performed on to() regions at get_config()/build()."""
 
