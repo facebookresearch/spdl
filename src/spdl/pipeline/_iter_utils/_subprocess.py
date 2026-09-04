@@ -112,13 +112,20 @@ class _SubprocessIterable(Iterable[T]):
             raise RuntimeError("The worker process is shutdown. Cannot iterate again.")
 
         try:
+            arena = self._arena
             # pyre-ignore[6]
-            _enter_iteration_mode(if_.cmd_q, if_.data_q, if_.timeout, "subprocess")
-            if (arena := self._arena) is None:
+            _enter_iteration_mode(
+                if_.cmd_q,
+                if_.data_q,
+                if_.timeout,
+                "subprocess",
+                None if arena is None else arena.discard,
+            )
+            if arena is None:
                 yield from _iterate_results(if_.data_q, if_.timeout, "subprocess")
             else:
-                # Reset the reader's per-iteration cursors (the worker has reset
-                # its side and is quiescent until we start consuming).
+                # Let the backend prepare for the next iteration after the
+                # worker has prepared its side.
                 arena.reader.reset()
                 for blob in _iterate_results(if_.data_q, if_.timeout, "subprocess"):
                     yield cast(T, arena.restore(cast(bytes, blob)))

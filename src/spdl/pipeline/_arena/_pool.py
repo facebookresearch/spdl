@@ -29,11 +29,9 @@ Backpressure is Mode B (blocking): ``begin_unit`` waits on a process-shared
 rate. Set ``acquire_timeout=0`` for non-blocking behavior (raise immediately when
 full). Elastic growth remains future work.
 
-.. note::
-
-   Do not retain zero-copy views across a re-iteration of the same worker: the
-   iteration boundary resets the cursors and the writer may overwrite a segment
-   a stale view still points at.
+Outstanding views remain valid across re-iterations of the same worker. Pool
+accounting is monotonic for the lifetime of the worker, so an iteration boundary
+does not make a segment reusable while an earlier view still aliases it.
 """
 
 from __future__ import annotations
@@ -97,6 +95,10 @@ class SharedMemorySegmentPool:
        Backpressure now uses a process-shared
        :py:class:`multiprocessing.Condition` instead of busy-polling the shared
        reclaim counter; idle producers no longer consume CPU while waiting.
+
+    .. versionchanged:: 0.7.0
+       Restored zero-copy views remain valid across worker re-iterations.
+       Making ``SharedMemorySegmentPool`` safe to use with continuous source.
 
     .. note::
 
@@ -355,9 +357,7 @@ class _PoolWriter:
         self._cursor: int = 0
 
     def reset(self) -> None:
-        """Reset both cursors at an iteration boundary (the pool is quiescent)."""
-        self._p.published = 0
-        self._p.reclaimed = 0
+        """Clear in-progress state while preserving outstanding unit leases."""
         self._cursor = 0
 
     def begin_unit(self) -> None:
@@ -443,13 +443,10 @@ class _SegmentLease:
     firing decrements the count, and the unit is reclaimed when it reaches zero.
     """
 
-    def __init__(
-        self, reader: _PoolReader, unit: int, count: int, generation: int
-    ) -> None:
+    def __init__(self, reader: _PoolReader, unit: int, count: int) -> None:
         self._reader = reader
         self._unit = unit
         self._remaining = count
-        self._generation = generation
         self._lock = threading.Lock()
 
     def release_one(self) -> None:
@@ -457,7 +454,7 @@ class _SegmentLease:
             self._remaining -= 1
             done = self._remaining == 0
         if done:
-            self._reader._unit_released(self._unit, self._generation)
+            self._reader._unit_released(self._unit)
 
 
 class _PoolReader:
@@ -476,16 +473,10 @@ class _PoolReader:
         self._next: int = 0  # next unit index to restore
         self._reclaimed: int = 0  # contiguous reclaim watermark (mirrors shm)
         self._released: set[int] = set()  # released units above the watermark
-        self._generation: int = 0  # invalidates leases from prior iterations
         self._lock = threading.Lock()
 
     def reset(self) -> None:
-        """Reset cursors at an iteration boundary and orphan stale leases."""
-        with self._lock:
-            self._next = 0
-            self._reclaimed = 0
-            self._released.clear()
-            self._generation += 1
+        """Preserve monotonic accounting and outstanding leases."""
 
     def read_binary(self, offset: int, nbytes: int) -> "memoryview[bytes]":
         """Return a live view into the current unit's segment (zero copy)."""
@@ -504,16 +495,14 @@ class _PoolReader:
         if not pinned:
             # Nothing aliases the segment (e.g. all fields copied out) — reclaim
             # immediately.
-            self._unit_released(unit, self._generation)
+            self._unit_released(unit)
             return
-        lease = _SegmentLease(self, unit, len(pinned), self._generation)
+        lease = _SegmentLease(self, unit, len(pinned))
         for anchor in pinned:
             weakref.finalize(anchor, lease.release_one)
 
-    def _unit_released(self, unit: int, generation: int) -> None:
+    def _unit_released(self, unit: int) -> None:
         with self._lock:
-            if generation != self._generation:
-                return  # stale lease from a previous iteration; ignore
             self._released.add(unit)
             advanced = False
             while self._reclaimed in self._released:
