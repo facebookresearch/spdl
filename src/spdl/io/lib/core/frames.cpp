@@ -11,6 +11,7 @@
 #include <libspdl/core/frames.h>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/map.h>

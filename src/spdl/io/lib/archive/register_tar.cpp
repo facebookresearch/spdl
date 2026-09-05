@@ -8,6 +8,7 @@
 
 #include "register_tar.h"
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include "tar_iterator.h"
 
 #include <nanobind/make_iterator.h>
