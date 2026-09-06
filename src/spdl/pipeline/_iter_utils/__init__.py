@@ -16,9 +16,9 @@ from ._subinterpreter import iterate_in_subinterpreter
 from ._subprocess import iterate_in_subprocess
 
 __all__ = [
-    "iterate_in_subprocess",
-    "iterate_in_subinterpreter",
     "cache_iterator",
+    "iterate_in_subinterpreter",
+    "iterate_in_subprocess",
 ]
 
 

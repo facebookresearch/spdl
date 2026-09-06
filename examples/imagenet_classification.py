@@ -43,14 +43,14 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 
 __all__ = [
-    "entrypoint",
-    "benchmark",
-    "get_decode_func",
-    "get_dataloader",
-    "get_model",
-    "ModelBundle",
     "Classification",
+    "ModelBundle",
     "Preprocessing",
+    "benchmark",
+    "entrypoint",
+    "get_dataloader",
+    "get_decode_func",
+    "get_model",
 ]
 
 

@@ -54,16 +54,16 @@ from typing import Any, TypedDict
 from spdl.pipeline import QueuePerfStats, TaskPerfStats
 
 __all__ = [
-    "TaskStatsLogEntry",
-    "QueueStatsLogEntry",
     "EventLogEntry",
-    "TaskStatsQueryResult",
+    "QueueStatsLogEntry",
     "QueueStatsQueryResult",
     "SQLiteStatsWriter",
-    "query_task_stats",
-    "query_queue_stats",
-    "query_event_stats",
+    "TaskStatsLogEntry",
+    "TaskStatsQueryResult",
     "log_stats_summary",
+    "query_event_stats",
+    "query_queue_stats",
+    "query_task_stats",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)

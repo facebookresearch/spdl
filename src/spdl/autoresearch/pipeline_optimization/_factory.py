@@ -318,7 +318,7 @@ def _init_workdir(
             scm_type = platform.workspace.detect(source_dir)
             anchor_commit_hash = platform.workspace.current(scm_type, source_dir)
             _LG.info("SCM: %s, anchor commit: %s", scm_type, anchor_commit_hash[:12])
-        except Exception as error:  # noqa: BLE001 — record and continue
+        except Exception as error:
             failure = _make_failure(
                 FailureKind.SETUP_SOURCE_FAILED,
                 FailurePhase.SETUP,
@@ -540,7 +540,7 @@ def _run_instrument_agent(
 ) -> str | None:
     try:
         return platform.agent.run(prompt, workdir, label)
-    except Exception as error:  # noqa: BLE001 — record and continue
+    except Exception as error:
         _record_setup_failure(
             workdir,
             read_state(workdir),

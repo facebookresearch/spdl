@@ -7,13 +7,13 @@
 
 __all__ = [
     "load_audio",
-    "load_video",
     "load_image",
-    "save_image",
     "load_image_batch",
     "load_image_batch_nvjpeg",
-    "streaming_load_video_nvdec",
+    "load_video",
     "sample_decode_video",
+    "save_image",
+    "streaming_load_video_nvdec",
 ]
 
 import builtins

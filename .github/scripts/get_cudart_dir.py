@@ -7,8 +7,8 @@
 
 import re
 import sysconfig
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 
 def get_dir() -> Path:

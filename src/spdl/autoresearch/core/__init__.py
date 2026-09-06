@@ -79,6 +79,7 @@ from ._types import (
 from ._workflow import WorkflowFactory, WorkflowSpec
 
 __all__ = [
+    "TERMINAL_STATUSES",
     "AnalysisResult",
     "AutoresearchError",
     "FailureKind",
@@ -88,7 +89,6 @@ __all__ = [
     "Orchestrator",
     "TaskResult",
     "TaskSpec",
-    "TERMINAL_STATUSES",
     "WorkflowFactory",
     "WorkflowProtocol",
     "WorkflowSpec",

@@ -5,8 +5,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import sys
 import importlib.metadata
+import sys
 
 
 def check_package_meta():
@@ -37,15 +37,13 @@ def check_imported_modules():
     base_mods = _get_imported_3rd_party_modules()
     if violation := base_mods & set(("torch", "numpy", "jax", "spdl")):
         raise RuntimeError(
-            "The following modules must not be imported before testing: " f"{violation}"
+            f"The following modules must not be imported before testing: {violation}"
         )
 
     # --------------------------------------------------------------------------
     # Import must success without third party packages installed
     # --------------------------------------------------------------------------
     print("Testing the spdl_core module import")
-
-    import spdl.pipeline
 
     mods = _get_imported_3rd_party_modules()
     assert "spdl.pipeline" in mods
@@ -61,8 +59,6 @@ def check_imported_modules():
     # Import (Same as above but NumPy is allowed
     # --------------------------------------------------------------------------
     print("Testing the spdl_io module import")
-
-    import spdl.io
 
     mods = _get_imported_3rd_party_modules()
     assert "spdl.io" in mods

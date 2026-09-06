@@ -143,7 +143,7 @@ def _write_final_report(workdir: Path, workflow: object) -> None:
     try:
         report = summarize(workdir)
         (workdir / "report.md").write_text(report)
-    except Exception:  # noqa: BLE001 — final-report failures must not crash exit
+    except Exception:
         _LG.warning(
             "Failed to write final report",
             exc_info=True,

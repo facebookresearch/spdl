@@ -53,11 +53,11 @@ except ImportError:
     )
 
 __all__ = [
-    "parse_args",
-    "main",
-    "plot_task_stats",
-    "plot_queue_stats",
     "add_gc_events_to_plot",
+    "main",
+    "parse_args",
+    "plot_queue_stats",
+    "plot_task_stats",
 ]
 
 

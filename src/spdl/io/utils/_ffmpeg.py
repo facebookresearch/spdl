@@ -8,10 +8,10 @@
 from spdl.io.lib import _libspdl
 
 __all__ = [
-    "get_ffmpeg_log_level",
-    "set_ffmpeg_log_level",
     "get_ffmpeg_filters",
+    "get_ffmpeg_log_level",
     "get_ffmpeg_versions",
+    "set_ffmpeg_log_level",
 ]
 
 
