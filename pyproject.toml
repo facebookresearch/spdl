@@ -30,6 +30,26 @@ version = { file = "VERSION" }
 [tool.setuptools.package-data]
 spdl = ["py.typed"]
 
+# Import sorting ("I") is NOT enabled by ruff's defaults, so the ruff hook was
+# not sorting imports. Also pin the rule set explicitly: ruff's built-in
+# defaults are not stable across releases (0.16 widened them from 59 to 413
+# rules and dropped E401/E402/E7xx), so an implicit set makes the lint gate a
+# property of the installed ruff rather than of this repo.
+#
+# target-version is deliberately omitted so it keeps tracking
+# requires-python = ">=3.10" as the single source of truth.
+# line-length is omitted because ruff-format owns it and E501 is not selected.
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.isort]
+# Set explicitly rather than relying on src/ auto-detection: ruff anchors
+# first-party detection at the project root, which resolves differently
+# depending on whether --config is passed, so the same tree can lint clean
+# from one cwd and report I001 from another. A literal name list bypasses
+# path resolution entirely.
+known-first-party = ["spdl"]
+
 [tool.uv.sources]
 spdl_core = { workspace = true }
 spdl_io = { workspace = true }
