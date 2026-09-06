@@ -109,11 +109,11 @@ class ReadNetworkTest(unittest.TestCase):
     @patch(f"{_MODULE}._read_file")
     def test_network_bytes(self, mock_read: MagicMock) -> None:
         mock_read.return_value = (
-            "Inter-|   Receive                                                |  Transmit\n"  # noqa: B950
-            " face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed\n"  # noqa: B950
-            "    lo: 1000       10    0    0    0     0          0         0     2000      20    0    0    0     0       0          0\n"  # noqa: B950
-            "  eth0: 5000       50    0    0    0     0          0         0     3000      30    0    0    0     0       0          0\n"  # noqa: B950
-            "  eth1: 7000       70    0    0    0     0          0         0     4000      40    0    0    0     0       0          0"  # noqa: B950
+            "Inter-|   Receive                                                |  Transmit\n"
+            " face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed\n"
+            "    lo: 1000       10    0    0    0     0          0         0     2000      20    0    0    0     0       0          0\n"
+            "  eth0: 5000       50    0    0    0     0          0         0     3000      30    0    0    0     0       0          0\n"
+            "  eth1: 7000       70    0    0    0     0          0         0     4000      40    0    0    0     0       0          0"
         )
         result = _read_network_bytes()
         # lo is excluded; eth0 + eth1
@@ -150,7 +150,7 @@ class ParseProcStatTest(unittest.TestCase):
         self.assertEqual(stat.rss, 4096)
 
     def test_comm_with_spaces_and_parens(self) -> None:
-        content = "12345 (my (weird) app) S 100 200 200 0 -1 0 0 0 0 0 500 300 0 0 20 0 1 0 0 0 4096"  # noqa: B950
+        content = "12345 (my (weird) app) S 100 200 200 0 -1 0 0 0 0 0 500 300 0 0 20 0 1 0 0 0 4096"
         stat = _parse_proc_stat(content)
         self.assertEqual(stat.pgrp, 200)
 
@@ -164,7 +164,7 @@ class ParseProcStatTest(unittest.TestCase):
 
     def test_non_numeric_field_raises(self) -> None:
         content = (
-            "12345 (python3) S 100 abc 200 0 -1 0 0 0 0 0 500 300 0 0 20 0 1 0 0 0 4096"  # noqa: B950
+            "12345 (python3) S 100 abc 200 0 -1 0 0 0 0 0 500 300 0 0 20 0 1 0 0 0 4096"
         )
         with self.assertRaises(RuntimeError, msg="Failed to parse"):
             _parse_proc_stat(content)
@@ -253,20 +253,20 @@ class ReadPgrpStatsTest(unittest.TestCase):
 
         def read_side_effect(path: str) -> str | None:
             if path == "/proc/101/stat":
-                return "101 (python3) S 1 1000 1000 0 -1 0 0 0 0 0 100 50 0 0 20 0 1 0 0 0 2000"  # noqa: B950
+                return "101 (python3) S 1 1000 1000 0 -1 0 0 0 0 0 100 50 0 0 20 0 1 0 0 0 2000"
             if path == "/proc/101/smaps_rollup":
-                return "00400000-ffffffff ---p 00000000 00:00 0          [rollup]\nRss: 8000 kB\nPss: 6000 kB\nPrivate_Clean: 3000 kB\nPrivate_Dirty: 2000 kB\n"  # noqa: B950
+                return "00400000-ffffffff ---p 00000000 00:00 0          [rollup]\nRss: 8000 kB\nPss: 6000 kB\nPrivate_Clean: 3000 kB\nPrivate_Dirty: 2000 kB\n"
             if path == "/proc/101/io":
-                return "rchar: 1000\nwchar: 2000\nsyscr: 10\nsyscw: 20\nread_bytes: 4096\nwrite_bytes: 8192\ncancelled_write_bytes: 0"  # noqa: B950
+                return "rchar: 1000\nwchar: 2000\nsyscr: 10\nsyscw: 20\nread_bytes: 4096\nwrite_bytes: 8192\ncancelled_write_bytes: 0"
             if path == "/proc/102/stat":
-                return "102 (worker) S 1 1000 1000 0 -1 0 0 0 0 0 200 75 0 0 20 0 1 0 0 0 3000"  # noqa: B950
+                return "102 (worker) S 1 1000 1000 0 -1 0 0 0 0 0 200 75 0 0 20 0 1 0 0 0 3000"
             if path == "/proc/102/smaps_rollup":
-                return "00400000-ffffffff ---p 00000000 00:00 0          [rollup]\nRss: 12000 kB\nPss: 9000 kB\nPrivate_Clean: 5000 kB\nPrivate_Dirty: 3000 kB\n"  # noqa: B950
+                return "00400000-ffffffff ---p 00000000 00:00 0          [rollup]\nRss: 12000 kB\nPss: 9000 kB\nPrivate_Clean: 5000 kB\nPrivate_Dirty: 3000 kB\n"
             if path == "/proc/102/io":
-                return "rchar: 3000\nwchar: 4000\nsyscr: 30\nsyscw: 40\nread_bytes: 1024\nwrite_bytes: 2048\ncancelled_write_bytes: 0"  # noqa: B950
+                return "rchar: 3000\nwchar: 4000\nsyscr: 30\nsyscw: 40\nread_bytes: 1024\nwrite_bytes: 2048\ncancelled_write_bytes: 0"
             if path == "/proc/103/stat":
                 # Different pgrp
-                return "103 (other) S 1 9999 9999 0 -1 0 0 0 0 0 999 999 0 0 20 0 1 0 0 0 9999"  # noqa: B950
+                return "103 (other) S 1 9999 9999 0 -1 0 0 0 0 0 999 999 0 0 20 0 1 0 0 0 9999"
             return None
 
         mock_read.side_effect = read_side_effect
@@ -328,7 +328,7 @@ class ReadPgrpStatsTest(unittest.TestCase):
 
         def read_side_effect(path: str) -> str | None:
             if path == "/proc/101/stat":
-                return "101 (python3) S 1 1000 1000 0 -1 0 0 0 0 0 100 50 0 0 20 0 1 0 0 0 2000"  # noqa: B950
+                return "101 (python3) S 1 1000 1000 0 -1 0 0 0 0 0 100 50 0 0 20 0 1 0 0 0 2000"
             # /proc/101/io and /proc/101/smaps_rollup return None
             return None
 
@@ -364,7 +364,7 @@ class ReadPgrpStatsTest(unittest.TestCase):
             if path == "/proc/101/stat":
                 return "malformed content"  # no parens
             if path == "/proc/102/stat":
-                return "102 (python3) S 1 1000 1000 0 -1 0 0 0 0 0 200 75 0 0 20 0 1 0 0 0 3000"  # noqa: B950
+                return "102 (python3) S 1 1000 1000 0 -1 0 0 0 0 0 200 75 0 0 20 0 1 0 0 0 3000"
             return None
 
         mock_read.side_effect = read_side_effect

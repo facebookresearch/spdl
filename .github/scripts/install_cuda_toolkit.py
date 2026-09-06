@@ -18,14 +18,12 @@ import json
 import logging
 import platform
 import shutil
-import sys
 import tarfile
 import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
 from typing import Any, Final
-
 
 logger = logging.getLogger(__name__)
 

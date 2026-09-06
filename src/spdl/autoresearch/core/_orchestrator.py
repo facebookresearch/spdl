@@ -51,9 +51,9 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
     "Orchestrator",
-    "WorkflowProtocol",
     "TaskResult",
     "TaskSpec",
+    "WorkflowProtocol",
 ]
 
 

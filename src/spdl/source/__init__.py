@@ -13,11 +13,11 @@ from ._sampler import (
 from ._type import IterableWithShuffle, SizedIterable, SizedIterableWithShuffle
 
 __all__ = [
+    "DistributedDeterministicSampler",
+    "DistributedRandomSampler",
     "IterableWithShuffle",
     "SizedIterable",
     "SizedIterableWithShuffle",
-    "DistributedRandomSampler",
-    "DistributedDeterministicSampler",
 ]
 
 

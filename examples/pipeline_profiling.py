@@ -45,15 +45,15 @@ from spdl.pipeline import profile_pipeline, ProfileResult
 from spdl.pipeline.defs import Pipe, PipelineConfig, SinkConfig, SourceConfig
 
 __all__ = [
-    "parse_args",
+    "create_pipeline",
     "main",
+    "op_with_contention",
+    "parse_args",
+    "plot_profile_results",
+    "print_profile_result",
+    "run_profiling_example",
     "scalable_op",
     "scalable_op2",
-    "op_with_contention",
-    "create_pipeline",
-    "print_profile_result",
-    "plot_profile_results",
-    "run_profiling_example",
 ]
 
 
