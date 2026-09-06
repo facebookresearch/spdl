@@ -22,9 +22,9 @@ from types import ModuleType
 _LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
+    "_archive",
     "_libspdl",
     "_libspdl_cuda",
-    "_archive",
     "_wav",
 ]
 

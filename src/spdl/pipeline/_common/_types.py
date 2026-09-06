@@ -13,10 +13,10 @@ from dataclasses import dataclass
 from typing import TypeAlias, TypeVar
 
 __all__ = [
+    "StageInfo",
     "_TAsyncCallables",
     "_TCallables",
     "_TMergeOp",
-    "StageInfo",
 ]
 
 

@@ -15,13 +15,13 @@ from enum import Enum
 TERMINAL_STATUSES = frozenset({"completed", "failed"})
 
 __all__ = [
+    "TERMINAL_STATUSES",
+    "AnalysisResult",
+    "AutoresearchError",
     "FailureKind",
     "FailurePhase",
     "FailureRecord",
-    "AnalysisResult",
-    "AutoresearchError",
     "HypothesisNode",
-    "TERMINAL_STATUSES",
 ]
 
 

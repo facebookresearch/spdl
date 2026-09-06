@@ -5,11 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
-    "_pipe",
-    "_ordered_pipe",
     "_disaggregate",
-    "_merge",
     "_get_fail_counter",
+    "_merge",
+    "_ordered_pipe",
+    "_pipe",
 ]
 
 import asyncio

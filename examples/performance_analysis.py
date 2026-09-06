@@ -156,13 +156,13 @@ except ImportError:
 
 
 __all__ = [
-    "parse_args",
-    "main",
+    "SQLiteStatsWriter",
+    "StatsQueueWithLogging",
+    "TaskStatsHookWithLogging",
     "build_pipeline",
     "decode",
-    "TaskStatsHookWithLogging",
-    "StatsQueueWithLogging",
-    "SQLiteStatsWriter",
+    "main",
+    "parse_args",
 ]
 
 

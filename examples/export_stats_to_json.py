@@ -32,7 +32,7 @@ except ImportError:
     )
 
 
-__all__ = ["export_to_json", "parse_args", "main"]
+__all__ = ["export_to_json", "main", "parse_args"]
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

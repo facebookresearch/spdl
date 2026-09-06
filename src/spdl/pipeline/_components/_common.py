@@ -5,18 +5,18 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
-    "_drive_to_completion",
     "_EOF",
     "_EPOCH_END",
-    "_periodic_dispatch",
+    "_SKIP",
+    "StageInfo",
     "_P2Percentile",
     "_ShieldedHook",
-    "_SKIP",
     "_StatsCounter",
+    "_drive_to_completion",
+    "_periodic_dispatch",
     "_time_str",
     "is_eof",
     "is_epoch_end",
-    "StageInfo",
 ]
 
 import asyncio
@@ -27,7 +27,7 @@ from contextlib import contextmanager
 from typing import Any, AsyncContextManager, TypeVar
 
 from spdl.pipeline._common._misc import create_task
-from spdl.pipeline._common._types import StageInfo as StageInfo  # noqa: F811
+from spdl.pipeline._common._types import StageInfo as StageInfo
 
 T = TypeVar("T")
 U = TypeVar("U")

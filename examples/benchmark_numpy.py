@@ -22,14 +22,14 @@ the performance of the training pipeline.
 """
 
 __all__ = [
-    "main",
+    "BenchmarkConfig",
     "get_mock_data",
     "load_npy",
     "load_npy_spdl",
     "load_npz",
     "load_npz_spdl",
     "load_torch",
-    "BenchmarkConfig",
+    "main",
 ]
 
 
