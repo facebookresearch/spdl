@@ -37,12 +37,11 @@ class ArenaWriterProtocol(Protocol):
     """
 
     def reset(self) -> None:
-        """Reset per-iteration state at an iteration boundary.
+        """Prepare the writer for a new iteration.
 
-        Called by the worker once per ``START_ITERATION``, while the parent
-        is quiescent. Backends should reclaim any space that leaked across
-        the boundary (e.g. units the parent never read) and return the
-        writer to a clean starting state.
+        Called by the worker once per ``START_ITERATION``. Copy-out backends
+        may reclaim their storage here. Zero-copy backends must preserve any
+        units whose restored views are still alive across the boundary.
 
         Returns:
             None.
@@ -129,12 +128,12 @@ class ArenaReaderProtocol(Protocol):
     owning / copied-out restore."""
 
     def reset(self) -> None:
-        """Reset per-iteration state at an iteration boundary.
+        """Prepare the reader for a new iteration.
 
         Called by the parent once per iteration, after the worker has
-        signaled ``ITERATION_STARTED`` and before the first item is
-        consumed. Backends should clear any per-iteration cursors so the
-        reader matches the writer's freshly-reset state.
+        signaled ``ITERATION_STARTED`` and before the first item is consumed.
+        Zero-copy backends must preserve the accounting for views that remain
+        alive from previous iterations.
 
         Returns:
             None.
@@ -171,7 +170,9 @@ class ArenaReaderProtocol(Protocol):
                 from this unit (e.g. ``np.frombuffer`` arrays). The
                 backend must keep the underlying region alive until every
                 anchor in this list is released; with copy-out backends
-                the list is typically empty and ignored.
+                the list is typically empty and ignored. This method is also
+                called with an empty list to reclaim an unread unit discarded
+                between iterations on zero-copy backends.
 
         Returns:
             None. Called from a ``finally`` block in
