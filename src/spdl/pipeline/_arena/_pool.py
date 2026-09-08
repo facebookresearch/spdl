@@ -268,7 +268,7 @@ class SharedMemorySegmentPool:
         """
         try:
             self._shutdown = True
-        except Exception:  # noqa: BLE001 — control buf may already be released
+        except Exception:
             return
         with self._space_cv:
             self._space_cv.notify_all()

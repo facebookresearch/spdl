@@ -58,15 +58,15 @@ from ._common import _EPOCH_END, is_eof, is_epoch_end
 from ._queue import _queue_stage_hook, AsyncQueue
 
 __all__ = [
-    "_subprocess_pipeline",
-    "_ITEM",
-    "_SESSION_END",
-    "_POOL_SHUTDOWN",
-    "_EPOCH",
-    "_RESULT",
-    "_ERROR",
     "_DONE",
+    "_EPOCH",
     "_EPOCH_DONE",
+    "_ERROR",
+    "_ITEM",
+    "_POOL_SHUTDOWN",
+    "_RESULT",
+    "_SESSION_END",
+    "_subprocess_pipeline",
 ]
 
 # Input-queue message kinds (this stage -> worker).

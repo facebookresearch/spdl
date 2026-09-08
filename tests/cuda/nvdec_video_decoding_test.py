@@ -485,7 +485,7 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
 
         # Execute: Create a decoder without crop, then with crop (use_cache is True but should be ignored)
         decoder1 = spdl.io.nvdec_decoder(cuda_config, packets.codec, use_cache=True)
-        decoder2 = spdl.io.nvdec_decoder(  # noqa: F841
+        decoder2 = spdl.io.nvdec_decoder(
             cuda_config,
             packets.codec,
             use_cache=True,

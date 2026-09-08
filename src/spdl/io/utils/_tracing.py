@@ -14,8 +14,8 @@ from spdl.io.lib import _libspdl
 __all__ = [
     "trace_counter",
     "trace_event",
-    "tracing",
     "trace_gc",
+    "tracing",
 ]
 
 

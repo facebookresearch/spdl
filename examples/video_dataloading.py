@@ -71,14 +71,14 @@ from torch import Tensor
 _LG: logging.Logger = logging.getLogger(__name__)
 
 __all__ = [
-    "entrypoint",
-    "worker_entrypoint",
+    "PerfResult",
     "benchmark",
-    "source",
     "decode_video",
     "decode_video_nvdec",
+    "entrypoint",
     "get_pipeline",
-    "PerfResult",
+    "source",
+    "worker_entrypoint",
 ]
 
 

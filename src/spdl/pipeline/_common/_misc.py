@@ -18,8 +18,8 @@ from collections.abc import Coroutine
 from typing import Any, TypeVar
 
 __all__ = [
-    "create_task",
     "_get_env_bool",
+    "create_task",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)

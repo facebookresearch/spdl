@@ -28,8 +28,8 @@ This module provides a standardized framework for running benchmarks with:
 """
 
 __all__ = [
-    "BenchmarkRunner",
     "BenchmarkResult",
+    "BenchmarkRunner",
     "ExecutorType",
     "get_default_result_path",
     "load_results_from_csv",
