@@ -14,6 +14,7 @@
 #include "libspdl/cuda/nvdec/detail/decoder.h"
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 // Macro for hiding argument names if not using this module.
 // So as to workaround -Werror=unused-variable
