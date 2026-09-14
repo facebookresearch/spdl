@@ -15,9 +15,10 @@ import time
 import warnings
 from collections.abc import Callable, Iterable, Iterator
 from concurrent.futures import ProcessPoolExecutor
+from contextlib import nullcontext
 from multiprocessing.shared_memory import SharedMemory
 from types import ModuleType
-from typing import cast, Sized, TYPE_CHECKING, TypeVar
+from typing import Any, cast, Sized, TYPE_CHECKING, TypeVar
 
 from spdl._internal import import_utils, log_api_usage_once
 from spdl.pipeline import Pipeline, PipelineBuilder
@@ -58,12 +59,18 @@ def _get_items(indices: list[K]) -> ...:
     return _COLLATE_FN([_DATASET[index] for index in indices])
 
 
-def _init_dataset(name: str, collate_fn: Callable) -> None:
+def _init_dataset(
+    name: str,
+    collate_fn: Callable,
+    worker_init_semaphore: Any | None,
+) -> None:
     _LG.info("[%s] Initializing dataset.", os.getpid())
     shmem = SharedMemory(name=name)
     global _DATASET, _COLLATE_FN
-    # pyrefly: ignore [bad-argument-type]
-    _DATASET = pickle.loads(shmem.buf)
+    ctx = nullcontext() if worker_init_semaphore is None else worker_init_semaphore
+    with ctx:
+        # pyrefly: ignore [bad-argument-type]
+        _DATASET = pickle.loads(shmem.buf)
     _COLLATE_FN = collate_fn
 
 
@@ -72,12 +79,18 @@ def _get_executor(
     collate_fn: Callable[[list[T]], U],
     num_workers: int,
     mp_ctx: mp.context.BaseContext,
+    worker_init_concurrency: int | None,
 ) -> ProcessPoolExecutor:
+    worker_init_semaphore = (
+        mp_ctx.BoundedSemaphore(worker_init_concurrency)
+        if worker_init_concurrency is not None
+        else None
+    )
     executor = ProcessPoolExecutor(
         max_workers=num_workers,
         mp_context=mp_ctx,
         initializer=_init_dataset,
-        initargs=(name, collate_fn),
+        initargs=(name, collate_fn, worker_init_semaphore),
     )
     return executor
 
@@ -122,6 +135,21 @@ class PyTorchDataLoader(Iterable[V]):
     this implementation faster than PyTorch DataLoader.
 
     :ivar: dataset: The source dataset.
+
+    Args:
+        dataset: Map-style dataset copied into each worker process.
+        shmem: Shared-memory buffer containing the serialized dataset.
+        sampler: Sampler executed in the main process.
+        fetch_fn: Function that resolves sampled indices in worker processes.
+        collate_fn: Function that collates samples in worker processes.
+        transfer_fn: Optional function that transfers a batch after collation.
+        mp_ctx: Multiprocessing context used to launch workers.
+        num_workers: Number of worker processes.
+        timeout: Maximum time to wait for a batch, or ``None`` for no timeout.
+        buffer_size: Number of batches buffered by the pipeline.
+        output_order: Whether results are emitted in input or completion order.
+        worker_init_concurrency: Maximum number of workers that may deserialize
+            the dataset concurrently. ``None`` preserves unbounded initialization.
     """
 
     def __init__(
@@ -138,6 +166,7 @@ class PyTorchDataLoader(Iterable[V]):
         timeout: float | None,
         buffer_size: int,
         output_order: str = "completion",
+        worker_init_concurrency: int | None = None,
     ) -> None:
         log_api_usage_once("spdl.dataloader.PyTorchDataLoader")
 
@@ -156,6 +185,7 @@ class PyTorchDataLoader(Iterable[V]):
         self._buffer_size = buffer_size
         self._timeout = timeout
         self._output_order = output_order
+        self._worker_init_concurrency = worker_init_concurrency
 
     def __len__(self) -> int:
         """Returns the number of samples/batches this data loader returns."""
@@ -163,7 +193,11 @@ class PyTorchDataLoader(Iterable[V]):
 
     def _get_pipeline(self) -> tuple[ProcessPoolExecutor, Pipeline]:
         executor = _get_executor(
-            self._shmem.name, self._collate_fn, self._num_workers, self._mp_ctx
+            self._shmem.name,
+            self._collate_fn,
+            self._num_workers,
+            self._mp_ctx,
+            self._worker_init_concurrency,
         )
         builder = (
             PipelineBuilder()
@@ -279,6 +313,7 @@ def _validate_options(
     persistent_workers: bool,
     timeout: float | None,
     num_workers: int,
+    worker_init_concurrency: int | None,
 ) -> None:
     if worker_init_fn is not None:
         raise ValueError("`worker_init_fn` is not supported.")
@@ -290,6 +325,11 @@ def _validate_options(
         raise ValueError(f"`timeout` must be positive. Found: {timeout}.")
     if num_workers < 0:
         raise ValueError(f"`num_workers` must be greater than 0. Found: {num_workers}")
+    if worker_init_concurrency is not None and worker_init_concurrency < 1:
+        raise ValueError(
+            "`worker_init_concurrency` must be greater than 0. "
+            f"Found: {worker_init_concurrency}."
+        )
 
 
 def get_pytorch_dataloader(
@@ -311,7 +351,58 @@ def get_pytorch_dataloader(
     persistent_workers: bool = False,
     pin_memory_device: str | None = None,
     in_order: bool = False,
+    worker_init_concurrency: int | None = None,
 ) -> PyTorchDataLoader[U]:
+    """Build a process-backed data loader for a map-style dataset.
+
+    Args:
+        dataset: Dataset from which samples are loaded.
+        batch_size: Number of samples per batch, or ``None`` to disable batching.
+        shuffle: Whether to sample indices randomly.
+        sampler: Optional sampler. Mutually exclusive with ``batch_sampler`` and
+            ``shuffle=True``.
+        batch_sampler: Optional sampler that yields batches of indices.
+        num_workers: Number of worker processes.
+        collate_fn: Optional function that combines samples into a batch.
+        pin_memory: Whether to move output tensors into pinned memory.
+        drop_last: Whether to discard the final incomplete batch.
+        timeout: Maximum time to wait for a batch, or ``None`` for no timeout.
+        worker_init_fn: Unsupported PyTorch compatibility argument; must be
+            ``None``.
+        multiprocessing_context: Start method or multiprocessing context used to
+            launch workers.
+        generator: Optional random generator used by the default sampler.
+        prefetch_factor: Number of batches buffered per worker.
+        persistent_workers: Unsupported PyTorch compatibility argument; must be
+            ``False``.
+        pin_memory_device: Unsupported PyTorch compatibility argument; must be
+            ``None``.
+        in_order: Whether to emit results in input order rather than completion
+            order.
+        worker_init_concurrency: Maximum number of workers that may deserialize
+            the shared dataset concurrently. Useful when dataset construction
+            contends for a shared resource such as filesystem bandwidth or
+            database connections. This does not limit steady-state fetching.
+
+            .. versionadded:: 0.7.0
+               The ``worker_init_concurrency`` argument.
+
+    Returns:
+        A reusable :class:`PyTorchDataLoader`.
+
+    Raises:
+        ValueError: If arguments are incompatible, unsupported, or out of range.
+
+    Example:
+        Limit dataset deserialization to two workers while retaining eight
+        workers for steady-state loading::
+
+            loader = get_pytorch_dataloader(
+                dataset,
+                num_workers=8,
+                worker_init_concurrency=2,
+            )
+    """
     from torch.utils.data.dataloader import IterableDataset
 
     if isinstance(dataset, IterableDataset):
@@ -322,6 +413,7 @@ def get_pytorch_dataloader(
         persistent_workers=persistent_workers,
         timeout=timeout,
         num_workers=num_workers,
+        worker_init_concurrency=worker_init_concurrency,
     )
     if num_workers == 0:
         warnings.warn(
@@ -377,4 +469,5 @@ def get_pytorch_dataloader(
         timeout=timeout,
         buffer_size=buffer_size,
         output_order="input" if in_order else "completion",
+        worker_init_concurrency=worker_init_concurrency,
     )
