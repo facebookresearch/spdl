@@ -272,6 +272,26 @@ def _resolve_sampler(
 ################################################################################
 
 
+def _validate_options(
+    *,
+    worker_init_fn: None,
+    pin_memory_device: str | None,
+    persistent_workers: bool,
+    timeout: float | None,
+    num_workers: int,
+) -> None:
+    if worker_init_fn is not None:
+        raise ValueError("`worker_init_fn` is not supported.")
+    if pin_memory_device is not None:
+        raise ValueError("`pin_memory_device` is not supported.")
+    if persistent_workers:
+        raise ValueError("`persistent_workers` is not supported.")
+    if timeout is not None and timeout < 0:
+        raise ValueError(f"`timeout` must be positive. Found: {timeout}.")
+    if num_workers < 0:
+        raise ValueError(f"`num_workers` must be greater than 0. Found: {num_workers}")
+
+
 def get_pytorch_dataloader(
     dataset: "torch.utils.data.dataset.Dataset[T]",
     batch_size: int | None = 1,
@@ -296,22 +316,14 @@ def get_pytorch_dataloader(
 
     if isinstance(dataset, IterableDataset):
         raise ValueError("IterableDataset is not supported.")
-
-    if worker_init_fn is not None:
-        raise ValueError("`worker_init_fn` is not supported.")
-
-    if pin_memory_device is not None:
-        raise ValueError("`pin_memory_device` is not supported.")
-
-    if persistent_workers:
-        raise ValueError("`persistent_workers` is not supported.")
-
-    if timeout is not None and timeout < 0:
-        raise ValueError(f"`timeout` must be positive. Found: {timeout}.")
-
-    if num_workers < 0:
-        raise ValueError(f"`num_workers` must be greater than 0. Found: {num_workers}")
-    elif num_workers == 0:
+    _validate_options(
+        worker_init_fn=worker_init_fn,
+        pin_memory_device=pin_memory_device,
+        persistent_workers=persistent_workers,
+        timeout=timeout,
+        num_workers=num_workers,
+    )
+    if num_workers == 0:
         warnings.warn(
             "`num_workers` is 0. Setting `num_workers` to 1 for single process dataloading.",
             stacklevel=2,
