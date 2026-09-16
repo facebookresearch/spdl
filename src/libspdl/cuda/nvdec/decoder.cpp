@@ -66,20 +66,12 @@ void validate_nvdec_params(
 
 NvDecDecoder::NvDecDecoder()
 #ifdef SPDL_USE_NVCODEC
-    : core_(new detail::NvDecDecoderCore())
+    : core_(std::make_unique<detail::NvDecDecoderCore>())
 #endif
 {
 }
 
-NvDecDecoder::~NvDecDecoder() {
-#ifndef SPDL_USE_NVCODEC
-  NOT_SUPPORTED_NVCODEC;
-#else
-  if (core_) {
-    delete core_;
-  }
-#endif
-}
+NvDecDecoder::~NvDecDecoder() = default;
 
 void NvDecDecoder::reset() {
 #ifndef SPDL_USE_NVCODEC

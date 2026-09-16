@@ -15,6 +15,8 @@
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
 
+#include <memory>
+
 #ifdef SPDL_USE_NVCODEC
 #define _RET_ATTR
 #else
@@ -69,7 +71,7 @@ using CUDABufferGenerator = spdl::core::Generator<CUDABuffer>;
 /// @endcode
 class NvDecDecoder {
 #ifdef SPDL_USE_NVCODEC
-  detail::NvDecDecoderCore* core_;
+  std::unique_ptr<detail::NvDecDecoderCore> core_;
 #endif
 
  public:
