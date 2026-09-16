@@ -11,6 +11,8 @@
 #include <libspdl/core/codec.h>
 #include <libspdl/core/packets.h>
 
+#include <memory>
+
 namespace spdl::core {
 namespace detail {
 class BSFImpl;
@@ -27,7 +29,7 @@ class BSFImpl;
 /// @tparam media The media type (Audio, Video, or Image).
 template <MediaType media>
 class BSF {
-  detail::BSFImpl* pImpl_;
+  std::unique_ptr<detail::BSFImpl> pImpl_;
 
   Rational time_base_;
   Rational frame_rate_;

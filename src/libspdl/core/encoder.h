@@ -31,13 +31,13 @@ class EncoderImpl;
 /// @tparam media The media type (Audio or Video).
 template <MediaType media>
 class Encoder {
-  detail::EncoderImpl<media>* pImpl_;
+  std::unique_ptr<detail::EncoderImpl<media>> pImpl_;
 
  public:
   /// Construct an encoder from implementation.
   ///
-  /// @param pImpl Pointer to encoder implementation.
-  explicit Encoder(detail::EncoderImpl<media>* pImpl);
+  /// @param pImpl Encoder implementation to take ownership of.
+  explicit Encoder(std::unique_ptr<detail::EncoderImpl<media>> pImpl);
 
   /// Deleted copy constructor.
   Encoder(const Encoder<media>&) = delete;

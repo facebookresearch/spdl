@@ -16,11 +16,9 @@
 namespace spdl::core {
 
 Muxer::Muxer(const std::string& uri, const std::optional<std::string>& muxer)
-    : pImpl_(new detail::MuxerImpl(uri, muxer)) {}
+    : pImpl_(std::make_unique<detail::MuxerImpl>(uri, muxer)) {}
 
-Muxer::~Muxer() {
-  delete pImpl_;
-}
+Muxer::~Muxer() = default;
 
 template <MediaType media>
 EncoderPtr<media> Muxer::add_encode_stream(
@@ -29,7 +27,7 @@ EncoderPtr<media> Muxer::add_encode_stream(
     const std::optional<OptionDict>& encoder_config) {
   auto p = pImpl_->add_encode_stream(codec_config, encoder, encoder_config);
   types_.push_back(media);
-  return std::make_unique<Encoder<media>>(p.release());
+  return std::make_unique<Encoder<media>>(std::move(p));
 }
 
 template AudioEncoderPtr Muxer::add_encode_stream(

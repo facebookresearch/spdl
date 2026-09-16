@@ -14,6 +14,7 @@
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
 
+#include <memory>
 #include <optional>
 
 namespace spdl::core {
@@ -34,7 +35,7 @@ class DecoderImpl;
 /// @tparam media The media type (Audio, Video, or Image).
 template <MediaType media>
 class Decoder {
-  detail::DecoderImpl<media>* pImpl_;
+  std::unique_ptr<detail::DecoderImpl<media>> pImpl_;
 
  public:
   /// Construct a decoder.

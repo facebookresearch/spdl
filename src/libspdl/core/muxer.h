@@ -12,6 +12,7 @@
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
 
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -25,7 +26,7 @@ class MuxerImpl;
 /// Muxer writes compressed packets to output files or streams, combining
 /// multiple streams (audio, video, etc.) into a single container format.
 class Muxer {
-  detail::MuxerImpl* pImpl_;
+  std::unique_ptr<detail::MuxerImpl> pImpl_;
   std::vector<MediaType> types_;
 
  public:
