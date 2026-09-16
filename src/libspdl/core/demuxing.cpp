@@ -42,13 +42,9 @@ DataInterfacePtr get_in_memory_interface(
 ////////////////////////////////////////////////////////////////////////////////
 
 Demuxer::Demuxer(DataInterfacePtr di)
-    : pImpl_(new detail::DemuxerImpl(std::move(di))) {}
+    : pImpl_(std::make_unique<detail::DemuxerImpl>(std::move(di))) {}
 
-Demuxer::~Demuxer() {
-  if (pImpl_) {
-    delete pImpl_;
-  }
-}
+Demuxer::~Demuxer() = default;
 
 bool Demuxer::has_audio() const {
   return pImpl_->has_audio();

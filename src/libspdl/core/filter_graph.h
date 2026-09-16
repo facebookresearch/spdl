@@ -24,7 +24,7 @@ class FilterGraphImpl;
 /// using FFmpeg's libavfilter. Filters can be chained and configured using
 /// FFmpeg filter syntax.
 class FilterGraph {
-  detail::FilterGraphImpl* pImpl_;
+  std::unique_ptr<detail::FilterGraphImpl> pImpl_;
 
  public:
   /// Construct a filter graph from a filter description.

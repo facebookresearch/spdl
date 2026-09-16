@@ -16,14 +16,12 @@ namespace spdl::core {
 
 template <MediaType media>
 BSF<media>::BSF(const Codec<media>& codec, const std::string& bsf)
-    : pImpl_(new detail::BSFImpl(bsf, codec.get_parameters())),
+    : pImpl_(std::make_unique<detail::BSFImpl>(bsf, codec.get_parameters())),
       time_base_(codec.get_time_base()),
       frame_rate_(codec.get_frame_rate()) {}
 
 template <MediaType media>
-BSF<media>::~BSF() {
-  delete pImpl_;
-}
+BSF<media>::~BSF() = default;
 
 template <MediaType media>
 Codec<media> BSF<media>::get_codec() const {

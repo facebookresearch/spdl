@@ -13,12 +13,11 @@
 namespace spdl::core {
 
 template <MediaType media>
-Encoder<media>::Encoder(detail::EncoderImpl<media>* p) : pImpl_(p) {}
+Encoder<media>::Encoder(std::unique_ptr<detail::EncoderImpl<media>> p)
+    : pImpl_(std::move(p)) {}
 
 template <MediaType media>
-Encoder<media>::~Encoder() {
-  delete pImpl_;
-}
+Encoder<media>::~Encoder() = default;
 
 template <MediaType media>
 std::optional<PacketsPtr<media>> Encoder<media>::encode(

@@ -72,15 +72,13 @@ single image is handled through the Video path).
 
 ## Design decisions
 
-### pImpl with raw pointers
+### Pimpl ownership
 
-Public headers (`decoder.h`, `encoder.h`, `demuxing.h`) use raw `pImpl_`
-pointers with manual `new`/`delete` in the `.cpp` files. This is intentional:
-`std::unique_ptr` requires the pointed-to type to be complete at the point where
-the destructor is instantiated, which would force FFmpeg headers (via the
-`detail::*Impl` classes) into the public API. The raw pointer pattern keeps
-FFmpeg as a pure implementation detail, so downstream consumers never need
-FFmpeg headers on their include path.
+Public headers own forward-declared implementation types with
+`std::unique_ptr`. Constructors and destructors are defined out of line in the
+`.cpp` files where the implementation types are complete. This provides
+automatic cleanup while keeping FFmpeg headers out of the public API and
+downstream include paths.
 
 ### Optional parameters in public APIs
 

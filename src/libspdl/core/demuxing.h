@@ -14,6 +14,7 @@
 #include <libspdl/core/packets.h>
 #include <libspdl/core/types.h>
 
+#include <memory>
 #include <optional>
 #include <set>
 #include <string_view>
@@ -37,13 +38,18 @@ using AnyPacketsGenerator = Generator<std::map<int, AnyPackets>>;
 /// for individual streams (audio, video, etc.). It supports both one-shot
 /// demuxing (demux_window) and streaming demuxing for large files.
 class Demuxer {
-  detail::DemuxerImpl* pImpl_;
+  std::unique_ptr<detail::DemuxerImpl> pImpl_;
 
  public:
   /// Construct a demuxer from a data interface.
   ///
   /// @param di Data interface providing access to media data.
   explicit Demuxer(DataInterfacePtr di);
+
+  Demuxer(const Demuxer&) = delete;
+  Demuxer& operator=(const Demuxer&) = delete;
+  Demuxer(Demuxer&&) = delete;
+  Demuxer& operator=(Demuxer&&) = delete;
 
   /// Destructor.
   ~Demuxer();

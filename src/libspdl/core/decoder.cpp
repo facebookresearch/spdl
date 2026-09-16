@@ -19,12 +19,14 @@ Decoder<media>::Decoder(
     const Codec<media>& codec,
     const std::optional<DecodeConfig>& cfg,
     const std::optional<std::string>& filter_desc)
-    : pImpl_(new detail::DecoderImpl<media>(codec, cfg, filter_desc)) {}
+    : pImpl_(
+          std::make_unique<detail::DecoderImpl<media>>(
+              codec,
+              cfg,
+              filter_desc)) {}
 
 template <MediaType media>
-Decoder<media>::~Decoder() {
-  delete pImpl_;
-}
+Decoder<media>::~Decoder() = default;
 
 template <MediaType media>
 void Decoder<media>::set_buffer_size(size_t size)

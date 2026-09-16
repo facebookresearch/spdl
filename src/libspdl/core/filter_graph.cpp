@@ -12,7 +12,7 @@
 
 namespace spdl::core {
 FilterGraph::FilterGraph(const std::string& filter_desc)
-    : pImpl_(new detail::FilterGraphImpl(filter_desc)) {}
+    : pImpl_(std::make_unique<detail::FilterGraphImpl>(filter_desc)) {}
 
 void FilterGraph::add_frames(
     const AnyFrames& frames,
@@ -46,9 +46,7 @@ std::string FilterGraph::dump() const {
   return pImpl_->dump();
 }
 
-FilterGraph::~FilterGraph() {
-  delete pImpl_;
-}
+FilterGraph::~FilterGraph() = default;
 
 FilterGraphPtr make_filter_graph(const std::string& filter_desc) {
   return std::make_unique<FilterGraph>(filter_desc);
