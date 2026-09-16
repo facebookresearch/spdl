@@ -5,14 +5,17 @@
 # LICENSE file in the root directory of this source tree.
 
 
-"""Regression test for D101554675: breaking out of a subprocess iterable
-must not kill the worker, so subsequent iterations still work."""
+"""Regression tests for reusable subprocess iterable lifecycle."""
 
 import functools
+import multiprocessing as mp
+import os
+import signal
 import unittest
 import warnings
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from functools import partial
+from multiprocessing.connection import Connection
 
 from spdl.pipeline import iterate_in_subprocess
 
@@ -49,8 +52,55 @@ class SourceIterable:
         yield from range(self.n)
 
 
+_HELD_SUBPROCESS_ITERABLE: Iterable[int] | None = None
+
+
+def _retain_subprocess_iterable_until_process_exit(ready: Connection) -> None:
+    global _HELD_SUBPROCESS_ITERABLE
+    os.setsid()
+    _HELD_SUBPROCESS_ITERABLE = iterate_in_subprocess(
+        partial(SourceIterable, 1), timeout=10
+    )
+    ready.send(None)
+    ready.close()
+
+
 @_ignore_fork_warning_in_class
 class TestSubprocessBreakAndReiterate(unittest.TestCase):
+    def test_retained_iterable_does_not_block_process_exit(self) -> None:
+        """A retained subprocess iterable must not block interpreter shutdown."""
+        ctx = mp.get_context("spawn")
+        ready, sender = ctx.Pipe(duplex=False)
+        process = ctx.Process(
+            target=_retain_subprocess_iterable_until_process_exit,
+            args=(sender,),
+        )
+        process.start()
+        sender.close()
+        process_id = process.pid
+        if process_id is None:
+            self.fail("The spawned process has no process ID after start().")
+        blocked_exit = False
+        try:
+            self.assertTrue(
+                ready.poll(timeout=30),
+                "The spawned process did not initialize its subprocess iterable.",
+            )
+            ready.recv()
+            process.join(timeout=10)
+            blocked_exit = process.is_alive()
+        finally:
+            ready.close()
+            if process.is_alive():
+                os.killpg(process_id, signal.SIGKILL)
+                process.join(timeout=10)
+
+        self.assertFalse(
+            blocked_exit,
+            "The process remained alive while retaining a subprocess iterable.",
+        )
+        self.assertEqual(process.exitcode, 0)
+
     def test_break_then_reiterate(self) -> None:
         """Breaking out of a subprocess iterable must not prevent re-iteration.
 

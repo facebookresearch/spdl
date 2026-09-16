@@ -14,9 +14,9 @@ using Python's multiprocessing module.
 import logging
 import multiprocessing as mp
 import queue
-import weakref
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
+from multiprocessing.util import Finalize
 from typing import cast, Generic, TypeVar
 
 from spdl.pipeline._arena import _Arena, ArenaProtocol
@@ -99,7 +99,7 @@ class _SubprocessIterable(Iterable[T]):
 
     def __init__(self, interface: _ipc[T]) -> None:
         self._interface: _ipc[T] | None = interface
-        self._finalizer = weakref.finalize(self, interface.terminate)
+        self._finalizer = Finalize(self, interface.terminate, exitpriority=10)
         # First step in the parent: restore arena-offloaded fields, if an arena
         # is in use.
         self._arena: _Arena | None = (
@@ -136,9 +136,8 @@ class _SubprocessIterable(Iterable[T]):
             raise
 
     def _shutdown(self) -> None:
-        if (interface := self._interface) is not None:
-            interface.terminate()
-            self._finalizer.detach()
+        if self._interface is not None:
+            self._finalizer()
             self._interface = None
 
 
