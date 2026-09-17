@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from __future__ import annotations
+
 import unittest
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -120,9 +122,9 @@ class TestGpuTransfer(unittest.TestCase):
     @patch("torch.cuda.device_count")
     def test_gpu_transfer(
         self,
-        mock_device_count,
-        mock_Stream,
-        mock_stream_func,
+        mock_device_count: MagicMock,
+        mock_Stream: MagicMock,
+        mock_stream_func: MagicMock,
     ) -> None:
         """The data is transferred to CUDA asynchronously.
 
@@ -135,7 +137,7 @@ class TestGpuTransfer(unittest.TestCase):
         5. The stream is synchronized.
         """
 
-        def _test():
+        def _test() -> None:
             self.assertFalse(hasattr(spdl.io._transfer._THREAD_LOCAL, "transfer"))
 
             mock_stream_obj = MagicMock()
