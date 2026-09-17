@@ -202,7 +202,7 @@ class SharedMemoryRingBuffer:
         """
         try:
             self._shutdown = True
-        except Exception:  # noqa: BLE001 — buf may already be released
+        except Exception:
             return
         with self._space_cv:
             self._space_cv.notify_all()

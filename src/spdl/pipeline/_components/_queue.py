@@ -26,13 +26,13 @@ from ._common import (
 )
 
 __all__ = [
-    "_queue_stage_hook",
     "AsyncQueue",
-    "_ThreadBasedAsyncQueue",
-    "StatsQueue",
     "QueuePerfStats",
-    "set_default_queue_class",
+    "StatsQueue",
+    "_ThreadBasedAsyncQueue",
+    "_queue_stage_hook",
     "get_default_queue_class",
+    "set_default_queue_class",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)

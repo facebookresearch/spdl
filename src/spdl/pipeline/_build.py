@@ -8,9 +8,9 @@
 __all__ = [
     "_build_pipeline",
     "build_pipeline",
+    "get_default_build_callback",
     "run_pipeline_in_subinterpreter",
     "run_pipeline_in_subprocess",
-    "get_default_build_callback",
     "set_default_build_callback",
 ]
 

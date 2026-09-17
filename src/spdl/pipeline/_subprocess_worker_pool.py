@@ -49,8 +49,8 @@ from spdl.pipeline._executor_proxy import (
 from spdl.pipeline.defs import PipelineConfig
 
 __all__ = [
-    "_hoist_process_pools",
     "_IterableWithPoolShutdown",
+    "_hoist_process_pools",
     "_shutdown_pools",
 ]
 
@@ -81,7 +81,7 @@ def _worker_loop(
     if initializer is not None:
         try:
             initializer(*initargs)
-        except BaseException as e:  # noqa: B036 - relayed to every submitter below
+        except BaseException as e:
             init_error = e
     while True:
         task = in_q.get()
@@ -104,7 +104,7 @@ def _worker_loop(
             continue
         try:
             out_q.put((task_id, True, fn(*args, **kwargs)))
-        except BaseException as e:  # noqa: B036 - relay any failure to the submitter
+        except BaseException as e:
             out_q.put((task_id, False, e))
 
 
@@ -166,7 +166,7 @@ class _RemoteExecutor(Executor):
                     "Worker pool output queue closed before the result was received."
                 )
                 return
-            except BaseException as e:  # noqa: B036 - relayed to every pending future below
+            except BaseException as e:
                 # Any other failure reading a result (e.g. ``get`` raising while unpickling a
                 # malformed payload) would otherwise kill this sole, non-restarting router
                 # thread silently and hang every pending future. Fail them fast with the cause.

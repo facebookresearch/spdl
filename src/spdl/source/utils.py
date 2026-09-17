@@ -6,7 +6,7 @@
 
 """Implements meta-transformations on iterables/iterators."""
 
-__all__ = ["MergeIterator", "repeat_source", "embed_shuffle"]
+__all__ = ["MergeIterator", "embed_shuffle", "repeat_source"]
 
 
 import logging

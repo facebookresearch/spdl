@@ -25,12 +25,12 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "ArrayInterface",
+    "CUDAArrayInterface",
+    "to_jax",
     "to_numba",
     "to_numpy",
     "to_torch",
-    "to_jax",
-    "ArrayInterface",
-    "CUDAArrayInterface",
 ]
 
 

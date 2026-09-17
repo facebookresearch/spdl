@@ -110,7 +110,7 @@ class NumpyHandlerTest(unittest.TestCase):
         """A foreign type (even one named 'ndarray') is not claimed."""
         handler = _NumpyHandler()
 
-        class ndarray:  # noqa: N801 — deliberately mimics numpy.ndarray
+        class ndarray:
             nbytes: int = 1 << 30
 
         self.assertFalse(handler.matches(ndarray(), 0))
@@ -187,7 +187,7 @@ class PacketsHandlerTest(unittest.TestCase):
         """A non-Packets class that merely reuses the name is not matched, and its
         __getstate__ (which may not return bytes) is never called."""
 
-        class AudioPackets:  # noqa: B903 — deliberately mimics the Packets name
+        class AudioPackets:
             def __getstate__(self) -> dict[str, str]:
                 raise AssertionError(
                     "__getstate__ must not be called on a foreign type"

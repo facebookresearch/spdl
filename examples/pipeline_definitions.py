@@ -79,18 +79,18 @@ The data flow:
 """
 
 __all__ = [
-    "main",
+    "add_100",
+    "cache_router",
+    "create_main_pipeline",
     "create_sub_pipeline_1",
     "create_sub_pipeline_2",
-    "create_main_pipeline",
-    "square",
-    "add_100",
-    "multiply_by_10",
-    "store_in_cache",
-    "normalize_to_lists",
-    "cache_router",
     "load_from_cache",
+    "main",
+    "multiply_by_10",
+    "normalize_to_lists",
     "run_pipeline_example",
+    "square",
+    "store_in_cache",
 ]
 
 import logging

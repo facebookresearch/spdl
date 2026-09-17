@@ -7,10 +7,10 @@
 """This example shows how to decode a video with GPU in streaming fashion."""
 
 __all__ = [
+    "decode",
     "main",
     "parse_args",
     "run",
-    "decode",
     "torch_cuda_warmup",
 ]
 

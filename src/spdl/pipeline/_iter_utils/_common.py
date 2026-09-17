@@ -23,13 +23,13 @@ from spdl.pipeline._arena import _Arena, ArenaProtocol
 
 __all__ = [
     "_Cmd",
-    "_Status",
     "_Msg",
+    "_Status",
     "_drain",
-    "_wait_for_init",
     "_enter_iteration_mode",
-    "_iterate_results",
     "_execute_iterable",
+    "_iterate_results",
+    "_wait_for_init",
 ]
 
 T = TypeVar("T")
