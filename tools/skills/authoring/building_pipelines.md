@@ -21,6 +21,12 @@ The core idea for efficiency: **classify every operation by its nature and give 
 | Batching | collation / stacking | `.aggregate(batch_size)` then `.pipe(collate_fn)` |
 | GPU transfer | move batch to device | `spdl.io.transfer_tensor` in a dedicated 1-worker executor |
 
+## Build From Primitives
+
+Build each pipeline explicitly with `PipelineBuilder` or as a complete `PipelineConfig`. Avoid boxed, preassembled, or domain-specific loader abstractions: they hide the stage graph and scheduling decisions that need to remain visible for correctness, tuning, and production deployment.
+
+An existing wrapper can be useful as a structural reference. Inspect it to understand its stages and operational constraints, then express the required pipeline directly with SPDL primitives instead of using the wrapper in the final implementation.
+
 ## Minimal End-to-End Example
 
 ```python
@@ -190,5 +196,6 @@ When variants genuinely differ in topology (not just an argument), inline each o
 - [ ] Total concurrency respects the CPU budget (≤ 40% utilization)
 - [ ] Production build uses MTP with picklable stage functions
 - [ ] Iterated via `get_iterator(timeout=...)`
+- [ ] Pipeline assembled explicitly with `PipelineBuilder` or a complete `PipelineConfig`, not a boxed loader
 - [ ] Each pipeline shape is a single readable builder chain (no partial-construction helpers)
 - [ ] Long-lived holders (e.g. TorchTNT `State`) release the `Pipeline` reference promptly to free resources (optional hygiene; cleanup at exit is automatic)
