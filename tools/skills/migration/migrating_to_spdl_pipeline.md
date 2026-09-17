@@ -6,6 +6,8 @@ Instructions for converting existing data loading code (PyTorch DataLoader, Stat
 
 Produce the final-form SPDL pipeline directly. Do not preserve intermediate compatibility layers or Dataset abstractions.
 
+Build the replacement explicitly with `PipelineBuilder` or as a complete `PipelineConfig`. Do not carry a boxed, preassembled, or domain-specific loader abstraction into the final design. Existing wrappers may be inspected as structural references, but recreate their required stages and configuration directly with SPDL primitives.
+
 ## Analysis: Decompose the Existing Data Loading Logic
 
 Before writing any SPDL code, analyze the existing `__getitem__`, `__iter__`, or collate logic and classify each operation by its nature:
@@ -203,3 +205,4 @@ Prefer `for batch in pipeline.get_iterator():` over manually calling `next(itera
 - [ ] Production deployment uses MTP (subprocess for CPU, main process for GPU transfer)
 - [ ] Stage functions are picklable (module-level or callable classes)
 - [ ] Total concurrency respects CPU budget (≤ 40% utilization)
+- [ ] Replacement assembled explicitly with `PipelineBuilder` or a complete `PipelineConfig`, not a boxed loader
