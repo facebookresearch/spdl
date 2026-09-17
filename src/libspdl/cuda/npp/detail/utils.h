@@ -11,6 +11,7 @@
 #include <nppdefs.h>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <glog/logging.h>
 
 namespace spdl::cuda::detail {

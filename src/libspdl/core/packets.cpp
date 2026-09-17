@@ -16,6 +16,7 @@
 #include "libspdl/core/detail/tracing.h"
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <algorithm>
 #include <cassert>
