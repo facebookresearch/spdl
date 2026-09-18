@@ -85,10 +85,10 @@ except ImportError:
 
 
 __all__ = [
-    "parse_args",
-    "main",
-    "build_pipeline",
     "SimulatedStage",
+    "build_pipeline",
+    "main",
+    "parse_args",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)

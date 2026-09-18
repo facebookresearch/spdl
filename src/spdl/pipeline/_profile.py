@@ -34,16 +34,16 @@ from . import _build
 from ._pipeline import Pipeline
 
 __all__ = [
-    "profile_pipeline",
     "ProfileHook",
     "ProfileResult",
     "_build_pipeline_diagnostic_mode",
-    "is_diagnostic_mode_enabled",
     "diagnostic_mode_num_sources",
-    "set_default_profile_hook",
-    "get_default_profile_hook",
-    "set_default_profile_callback",
     "get_default_profile_callback",
+    "get_default_profile_hook",
+    "is_diagnostic_mode_enabled",
+    "profile_pipeline",
+    "set_default_profile_callback",
+    "set_default_profile_hook",
 ]
 
 

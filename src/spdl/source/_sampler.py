@@ -6,8 +6,8 @@
 
 
 __all__ = [
-    "DistributedRandomSampler",
     "DistributedDeterministicSampler",
+    "DistributedRandomSampler",
 ]
 
 import logging

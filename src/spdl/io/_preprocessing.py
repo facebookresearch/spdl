@@ -24,11 +24,11 @@ if TYPE_CHECKING:
     VideoPackets = _libspdl.VideoPackets
 
 __all__ = [
-    "get_audio_filter_desc",
-    "get_video_filter_desc",
-    "get_filter_desc",
     "get_abuffer_desc",
+    "get_audio_filter_desc",
     "get_buffer_desc",
+    "get_filter_desc",
+    "get_video_filter_desc",
 ]
 
 

@@ -56,6 +56,7 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 
 __all__ = [
+    "PipelineFailure",
     "_FanInNode",
     "_FanOutNode",
     "_Node",
@@ -63,7 +64,6 @@ __all__ = [
     "_build_pipeline_coro",
     "_get_global_id",
     "_set_global_id",
-    "PipelineFailure",
 ]
 
 
