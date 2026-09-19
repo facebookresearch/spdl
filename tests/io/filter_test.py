@@ -4,19 +4,28 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
 
 import os
 import unittest
+from typing import cast
 
 import numpy as np
 import spdl.io
-from spdl.io import get_abuffer_desc, get_buffer_desc
+from spdl.io import (
+    AudioFrames,
+    AudioPackets,
+    get_abuffer_desc,
+    get_buffer_desc,
+    VideoFrames,
+    VideoPackets,
+)
 
 from ..fixture import FFMPEG_CLI, get_sample, load_ref_audio, load_ref_video
 
 
 class FilterTest(unittest.TestCase):
-    def test_filter_graph_abuffer_basic(self):
+    def test_filter_graph_abuffer_basic(self) -> None:
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
 
         sample = get_sample(cmd)
@@ -32,9 +41,10 @@ class FilterTest(unittest.TestCase):
         print(filter_graph)
         buffers = []
         for packets in demuxer.streaming_demux(duration=1):
+            packets = cast(AudioPackets, packets)
             for frames in decoder.streaming_decode_packets(packets):
                 filter_graph.add_frames(frames)
-                frames = filter_graph.get_frames()
+                frames = cast(AudioFrames, filter_graph.get_frames())
                 buffer = spdl.io.convert_frames(frames)
                 buffers.append(spdl.io.to_numpy(buffer))
 
@@ -49,7 +59,7 @@ class FilterTest(unittest.TestCase):
 
         ref = load_ref_audio(
             sample.path,
-            shape=[-1, 1],
+            shape=(-1, 1),
             filter_desc=None,
             format="s16le",
             dtype=np.int16,
@@ -58,7 +68,7 @@ class FilterTest(unittest.TestCase):
 
         np.testing.assert_array_equal(hyp, ref)
 
-    def test_filter_graph_buffer_basic(self):
+    def test_filter_graph_buffer_basic(self) -> None:
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
 
         sample = get_sample(cmd)
@@ -74,9 +84,10 @@ class FilterTest(unittest.TestCase):
         print(filter_graph)
         buffers = []
         for packets in demuxer.streaming_demux(duration=1):
+            packets = cast(VideoPackets, packets)
             for frames in decoder.streaming_decode_packets(packets):
                 filter_graph.add_frames(frames)
-                frames = filter_graph.get_frames()
+                frames = cast(VideoFrames, filter_graph.get_frames())
 
                 buffer = spdl.io.convert_frames(frames)
                 buffers.append(spdl.io.to_numpy(buffer))
@@ -92,14 +103,14 @@ class FilterTest(unittest.TestCase):
 
         ref = load_ref_video(
             sample.path,
-            shape=[-1, 1, 360, 320],
+            shape=(-1, 1, 360, 320),
             filter_desc=None,
         )
         hyp = np.concatenate(buffers)
 
         np.testing.assert_array_equal(hyp, ref)
 
-    def test_filter_graph_multiple_inputs(self):
+    def test_filter_graph_multiple_inputs(self) -> None:
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
 
         sample = get_sample(cmd)
@@ -119,11 +130,12 @@ class FilterTest(unittest.TestCase):
         buffers = []
         num_packets = 0
         for packets in demuxer.streaming_demux(duration=1):
+            packets = cast(VideoPackets, packets)
             num_packets += len(packets)
             for frames in decoder.streaming_decode_packets(packets):
                 filter_graph.add_frames(frames.clone(), key="buffer@in0")
                 filter_graph.add_frames(frames, key="buffer@in1")
-                frames = filter_graph.get_frames()
+                frames = cast(VideoFrames, filter_graph.get_frames())
 
                 buffer = spdl.io.convert_frames(frames)
                 buffers.append(spdl.io.to_numpy(buffer))
@@ -141,7 +153,7 @@ class FilterTest(unittest.TestCase):
         print(f"{num_packets=}")
         ref = load_ref_video(
             sample.path,
-            shape=[-1, 1, 720, 320],
+            shape=(-1, 1, 720, 320),
             filter_desc=None,
             filter_complex="split [o0][o1];[o0] [o1] vstack",
         )
@@ -149,7 +161,7 @@ class FilterTest(unittest.TestCase):
 
         np.testing.assert_array_equal(hyp, ref)
 
-    def test_filter_graph_multiple_outputs(self):
+    def test_filter_graph_multiple_outputs(self) -> None:
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2 -t 5 sample.mp4"
 
         sample = get_sample(cmd)
@@ -172,14 +184,21 @@ class FilterTest(unittest.TestCase):
         print(filter_graph)
         buffers0, buffers1 = [], []
         for packets in demuxer.streaming_demux(duration=1):
+            packets = cast(VideoPackets, packets)
             for frames in decoder.streaming_decode_packets(packets):
                 filter_graph.add_frames(frames)
 
-                frames = filter_graph.get_frames(key="buffersink@out0")
+                frames = cast(
+                    VideoFrames,
+                    filter_graph.get_frames(key="buffersink@out0"),
+                )
                 buffer = spdl.io.convert_frames(frames)
                 buffers0.append(spdl.io.to_numpy(buffer))
 
-                frames = filter_graph.get_frames(key="buffersink@out1")
+                frames = cast(
+                    VideoFrames,
+                    filter_graph.get_frames(key="buffersink@out1"),
+                )
                 buffer = spdl.io.convert_frames(frames)
                 buffers1.append(spdl.io.to_numpy(buffer))
 
@@ -198,7 +217,7 @@ class FilterTest(unittest.TestCase):
 
         ref = load_ref_video(
             sample.path,
-            shape=[-1, 1, 360, 320],
+            shape=(-1, 1, 360, 320),
             filter_desc=None,
         )
         hyp0 = np.concatenate(buffers0)
@@ -207,7 +226,7 @@ class FilterTest(unittest.TestCase):
         np.testing.assert_array_equal(hyp0, ref)
         np.testing.assert_array_equal(hyp1, ref)
 
-    def test_filter_graph_audio_in_video_out(self):
+    def test_filter_graph_audio_in_video_out(self) -> None:
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
 
         sample = get_sample(cmd)
@@ -224,10 +243,11 @@ class FilterTest(unittest.TestCase):
         buffers = []
         for packets in demuxer.streaming_demux(duration=1):
             print(packets)
+            packets = cast(AudioPackets, packets)
             for frames in decoder.streaming_decode_packets(packets):
                 print(frames)
                 filter_graph.add_frames(frames)
-                frames = filter_graph.get_frames()
+                frames = cast(VideoFrames, filter_graph.get_frames())
                 print(frames)
                 buffer = spdl.io.convert_frames(frames)
                 buffers.append(spdl.io.to_numpy(buffer))
@@ -252,7 +272,7 @@ class FilterTest(unittest.TestCase):
         ref = load_ref_video(
             sample.path,
             filter_desc=None,
-            shape=[-1, 240, 600, 4],
+            shape=(-1, 240, 600, 4),
             filter_complex="showwaves",
         )
         hyp = np.concatenate(buffers)
