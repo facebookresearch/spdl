@@ -17,6 +17,23 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
+    - uses: actions/checkout@v4
+      with:
+        # Required so --from-ref/--to-ref can resolve; the default shallow
+        # clone does not contain the base commit.
+        fetch-depth: 0
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
     - uses: pre-commit/action@v3.0.1
+      with:
+        # This action defaults to `--all-files`, which fails on every file that
+        # predates the ruff import-sort config. On PRs, check only the files the
+        # PR touches — matching fbcode's per-diff model. Manual dispatch still
+        # scans the whole tree, so you can watch the backlog shrink.
+        extra_args: >-
+          ${{ github.event_name == 'pull_request'
+              && format('--from-ref {0} --to-ref {1}',
+                        github.event.pull_request.base.sha,
+                        github.event.pull_request.head.sha)
+              || '--all-files' }}

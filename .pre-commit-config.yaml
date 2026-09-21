@@ -18,15 +18,18 @@ repos:
         exclude: docs
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
-    rev: v0.6.3
+    # Ruff version. Pinned to the ruff bundled in fbsource's ruff-api==0.2.1
+    # (tools/lint/pyfmt/reqs/requirements-fmt.txt) so OSS pre-commit and
+    # internal `arc lint` agree. Verify with:
+    #   python -c "import ruff_api; print(ruff_api.ruff_version)"
+    rev: v0.14.3
     hooks:
       # Run the linter.
       - id: ruff
         files: "src/|tests/|examples/|.github/"
         exclude: "src/spdl/io/lib/.+.pyi"
         types_or: [ python, pyi ]
-        args: [ "--fix", "--show-files" ]
+        args: [ "--fix" ]
       # Run the formatter.
       - id: ruff-format
         files: "src/|tests/|examples/|.github/"
