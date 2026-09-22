@@ -26,15 +26,15 @@ from ._common import (
 )
 
 __all__ = [
+    "TaskHook",
+    "TaskPerfStats",
+    "TaskStatsHook",
+    "_StatsCounter",
     "_stage_hooks",
     "_task_hooks",
     "_time_str",
-    "_StatsCounter",
-    "TaskHook",
-    "TaskStatsHook",
-    "TaskPerfStats",
-    "set_default_hook_class",
     "get_default_hook_class",
+    "set_default_hook_class",
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)

@@ -70,8 +70,8 @@ from torchvision.transforms import Compose, Normalize, PILToTensor, Resize
 
 __all__ = [
     "entrypoint",
-    "exp_torch",
     "exp_spdl",
+    "exp_torch",
     "run_dataloader",
 ]
 

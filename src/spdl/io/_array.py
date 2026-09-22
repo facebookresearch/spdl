@@ -5,9 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
+    "NpzFile",
     "load_npy",
     "load_npz",
-    "NpzFile",
 ]
 from collections.abc import Iterator, Mapping
 from typing import Any, TypeAlias

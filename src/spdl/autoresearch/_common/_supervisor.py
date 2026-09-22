@@ -41,8 +41,8 @@ from typing import Protocol
 __all__ = [
     "_ClaudeSupervisor",
     "_CodexSupervisor",
-    "_SupervisorAvailability",
     "_SupervisorAgent",
+    "_SupervisorAvailability",
     "_create_supervisor_agent",
     "_resolve_supervisor_agent",
 ]

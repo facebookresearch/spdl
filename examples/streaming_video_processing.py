@@ -58,12 +58,12 @@ Finally, the encoded data is written to the multiplexer. (9)
 """
 
 __all__ = [
+    "build_components",
+    "get_filter_desc",
+    "main",
     "main",
     "parse_args",
-    "get_filter_desc",
     "process",
-    "build_components",
-    "main",
 ]
 
 import argparse
