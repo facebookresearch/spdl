@@ -399,7 +399,7 @@ class _RingReader:
         # frombuffer does not warn about a read-only buffer).
         return memoryview(bytearray(data))
 
-    def end_unit(self, span: int, pinned: list[object]) -> None:
+    def end_unit(self, span: int, pinned: list[object]) -> None:  # noqa: ARG002
         """Return the unit's region in bulk (advance tail).
 
         ``pinned`` is ignored: read_binary already copied the data out, so

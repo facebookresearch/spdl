@@ -6,11 +6,15 @@
 
 
 __all__ = [
-    "convert_to_async",
-    "_is_process_pool",
+    "_is_async_callable",
+    "_is_asyncgen_callable",
+    "_is_callable",
+    "_is_coroutine_callable",
     "_is_interpreter_pool",
     "_is_isolating_pool",
+    "_is_process_pool",
     "_to_async_gen",
+    "convert_to_async",
 ]
 
 import asyncio
@@ -19,12 +23,38 @@ import sys
 import traceback
 from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Iterator
 from concurrent.futures import Executor, ProcessPoolExecutor
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from ._types import _TAsyncCallables, _TCallables
 
 T = TypeVar("T")
 U = TypeVar("U")
+
+
+def _get_call(obj: object) -> Any:
+    return getattr(obj, "__call__", None)  # noqa: B004
+
+
+def _is_callable(obj: object) -> bool:
+    """Check whether an object can be called, including async ``__call__`` methods."""
+    return callable(obj) or _get_call(obj) is not None
+
+
+def _is_coroutine_callable(obj: object) -> bool:
+    """Check whether an object is a coroutine function or wraps one in ``__call__``."""
+    return inspect.iscoroutinefunction(obj) or inspect.iscoroutinefunction(
+        _get_call(obj)
+    )
+
+
+def _is_asyncgen_callable(obj: object) -> bool:
+    """Check whether an object is an async generator or wraps one in ``__call__``."""
+    return inspect.isasyncgenfunction(obj) or inspect.isasyncgenfunction(_get_call(obj))
+
+
+def _is_async_callable(obj: object) -> bool:
+    """Check whether an object is an async callable of either supported kind."""
+    return _is_coroutine_callable(obj) or _is_asyncgen_callable(obj)
 
 
 def _is_process_pool(executor: Executor | type[Executor] | None) -> bool:
@@ -197,10 +227,10 @@ def convert_to_async(
     op: _TCallables[T, U],
     executor: Executor | None,
 ) -> _TAsyncCallables[T, U]:
-    if inspect.ismethod(op.__call__):
-        op = op.__call__
+    if inspect.ismethod(call := _get_call(op)):
+        op = call
 
-    if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
+    if _is_async_callable(op):
         # op is async function. No need to convert.
         assert executor is None  # This has been checked in `PipelineBuilder.pipe()`
         return op  # pyre-ignore: [7]

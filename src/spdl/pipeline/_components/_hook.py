@@ -333,7 +333,10 @@ class TaskStatsHook(TaskHook):
             )
 
     @asynccontextmanager
-    async def task_hook(self, input_item: Any = None) -> AsyncIterator[None]:
+    async def task_hook(
+        self,
+        input_item: Any = None,  # noqa: ARG002
+    ) -> AsyncIterator[None]:
         """Track task runtime and success rate."""
         t0 = time.monotonic()
         try:

@@ -372,7 +372,7 @@ class ProcessGroupResourceUsage:
       excludes shared memory entirely, but isolates per-process
       allocations (model weights, activations, buffers).
 
-    The difference ``RSS − Private`` approximates each process's shared
+    The difference ``RSS - Private`` approximates each process's shared
     memory contribution.  Reading ``smaps_rollup`` is more expensive than
     ``stat`` (the kernel walks page tables), but it is a single-file read
     per process so the overhead is modest.
@@ -386,7 +386,7 @@ class ProcessGroupResourceUsage:
       activations, buffers) from shared overhead.
     * Use **RSS** as an upper-bound sanity check.  When ``num_procs == 1``,
       RSS equals PSS.
-    * ``PSS − Private`` can be derived in queries to see how much shared
+    * ``PSS - Private`` can be derived in queries to see how much shared
       memory is attributed to this group.
     """
 
@@ -466,7 +466,7 @@ def _collect_pgrp_stats(
     Args:
         prev_cpu_usec: Cumulative CPU µs from the previous snapshot
             (used to compute ``cpu_percent``).  ``None`` on the first call.
-        prev_time_usec: Wall-clock µs (``time.monotonic()`` × 1e6) of the
+        prev_time_usec: Wall-clock µs (``time.monotonic()`` x 1e6) of the
             previous snapshot.
         prev_net_rx_bytes: Cumulative network RX bytes from the previous
             snapshot.  ``None`` on the first call.
@@ -543,7 +543,7 @@ def _pgrp_monitor_subprocess(
     """
     running: bool = True
 
-    def _handle_term(signum: int, frame: object) -> None:
+    def _handle_term(signum: int, frame: object) -> None:  # noqa: ARG001
         nonlocal running
         running = False
 

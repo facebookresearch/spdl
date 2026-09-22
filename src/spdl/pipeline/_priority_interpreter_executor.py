@@ -52,14 +52,16 @@ if sys.version_info < (3, 14):
     class PriorityInterpreterPoolExecutor(Executor):
         """Stub for Python < 3.14. Raises ``RuntimeError`` on instantiation."""
 
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: ARG002
             raise RuntimeError(
                 f"PriorityInterpreterPoolExecutor requires Python 3.14 or later. "
                 f"Current version: {sys.version_info.major}.{sys.version_info.minor}"
             )
 
         def get_executor(
-            self, *, priority: int | None = None
+            self,
+            *,
+            priority: int | None = None,  # noqa: ARG002
         ) -> PriorityExecutorEntrypoint:
             raise RuntimeError(
                 "PriorityInterpreterPoolExecutor requires Python 3.14 or later."

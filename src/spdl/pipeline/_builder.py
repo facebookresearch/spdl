@@ -351,7 +351,7 @@ class PipelineBuilder(Generic[T, U]):
         the worker, and gives the worker-pool configuration a single home.
 
         Each stage's ``concurrency`` applies *within each worker*, so a stage's
-        effective concurrency across the pool is ``concurrency × max_workers``. For
+        effective concurrency across the pool is ``concurrency x max_workers``. For
         example, ``pipe(op, concurrency=2)`` in a pool with ``max_workers=4`` runs
         up to 8 invocations of ``op`` at once. Size each stage's ``concurrency``
         together with ``max_workers`` to stay within your CPU budget.
@@ -406,7 +406,7 @@ class PipelineBuilder(Generic[T, U]):
                 .. warning::
 
                    Whole transfers, not individual items, are distributed across the pool's
-                   workers. Keep ``buffer_size × max_workers`` well below the number of items
+                   workers. Keep ``buffer_size x max_workers`` well below the number of items
                    in a stream (or in one epoch, for a
                    :py:meth:`continuous source <add_source>`), or some workers get no work at
                    all: 50 items per epoch with ``max_workers=8`` and ``buffer_size=64`` puts

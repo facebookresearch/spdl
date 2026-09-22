@@ -130,7 +130,10 @@ class _FailCounter(TaskHook):
         return self._exceeded
 
     @asynccontextmanager
-    async def task_hook(self, input_item: Any = None) -> AsyncIterator[None]:
+    async def task_hook(
+        self,
+        input_item: Any = None,  # noqa: ARG002
+    ) -> AsyncIterator[None]:
         _failed = False
         try:
             yield
