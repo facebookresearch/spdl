@@ -372,9 +372,9 @@ TEST(SmokeTest, UtilityFunctions) {
   auto versions = get_ffmpeg_versions();
   EXPECT_GT(versions.size(), 0);
   // Should contain at least libavcodec, libavformat, libavutil
-  EXPECT_TRUE(versions.find("libavcodec") != versions.end());
-  EXPECT_TRUE(versions.find("libavformat") != versions.end());
-  EXPECT_TRUE(versions.find("libavutil") != versions.end());
+  EXPECT_TRUE(versions.contains("libavcodec"));
+  EXPECT_TRUE(versions.contains("libavformat"));
+  EXPECT_TRUE(versions.contains("libavutil"));
 
   // Verify version tuples have valid values
   for (const auto& [lib_name, version] : versions) {
