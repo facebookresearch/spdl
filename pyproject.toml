@@ -30,6 +30,9 @@ version = { file = "VERSION" }
 [tool.setuptools.package-data]
 spdl = ["py.typed"]
 
+[tool.ruff]
+target-version = "py314"
+
 # Import sorting ("I") is NOT enabled by ruff's defaults, so the ruff hook was
 # not sorting imports. Also pin the rule set explicitly: ruff's built-in
 # defaults are not stable across releases (0.16 widened them from 59 to 413
