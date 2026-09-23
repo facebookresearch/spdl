@@ -6,3 +6,4 @@ Migration Guide
    why
    paradigm_shift
    pytorch
+   grain
