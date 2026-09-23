@@ -12,13 +12,12 @@ __all__ = [
 ]
 
 import asyncio
-import inspect
 import logging
 from collections.abc import AsyncGenerator, Awaitable, Callable, Coroutine, Sequence
 from contextlib import asynccontextmanager, AsyncExitStack
 from typing import Any
 
-from spdl.pipeline._common._convert import _to_async
+from spdl.pipeline._common._convert import _is_coroutine_callable, _to_async
 
 from ._common import _EOF, _EPOCH_END, _ShieldedHook, is_eof, is_epoch_end, StageInfo
 from ._hook import _stage_hooks, TaskHook
@@ -34,10 +33,7 @@ def _make_async_router(
 
     The router returns an ``int`` (per-item mode) or a ``Sequence[int]`` (batched
     mode); this wrapper is agnostic to which."""
-    if inspect.iscoroutinefunction(router):
-        return router
-    call = getattr(router, "__call__", None)
-    if call is not None and inspect.iscoroutinefunction(call):
+    if _is_coroutine_callable(router):
         return router  # pyre-ignore[7]
     return _to_async(router, executor=None)  # pyre-ignore[7]
 
@@ -152,7 +148,7 @@ def _path_variants_router(
                 f"{len(batch)} items; it must return exactly one index per item."
             )
         parts: list[list[Any]] = [[] for _ in range(num_paths)]
-        for item, idx in zip(batch, indices):
+        for item, idx in zip(batch, indices, strict=True):
             if idx < 0 or idx >= num_paths:
                 raise IndexError(
                     f"Router returned index {idx}, but there are only "
@@ -161,7 +157,7 @@ def _path_variants_router(
             parts[idx].append(item)
         # Emit to every path (empty lists included) so each input batch contributes
         # exactly one list per path, keeping the fan-in merge in lockstep.
-        for q, part in zip(path_queues, parts):
+        for q, part in zip(path_queues, parts, strict=True):
             await q.put(part)
 
     _route: Callable[[Any], Awaitable[None]] = _route_batch if batched else _route_item
@@ -186,7 +182,7 @@ def _path_variants_router(
 
 
 async def _batched_path_variants_merge(
-    info: StageInfo,
+    info: StageInfo,  # noqa: ARG001
     input_queues: Sequence[asyncio.Queue],
     output_queue: asyncio.Queue,
 ) -> None:

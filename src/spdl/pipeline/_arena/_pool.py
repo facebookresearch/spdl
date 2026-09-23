@@ -482,7 +482,7 @@ class _PoolReader:
         """Return a live view into the current unit's segment (zero copy)."""
         return self._p._segment(self._next)[offset : offset + nbytes]
 
-    def end_unit(self, span: int, pinned: list[object]) -> None:
+    def end_unit(self, span: int, pinned: list[object]) -> None:  # noqa: ARG002
         """Finish the current unit; reclaim now or once its anchors are released.
 
         ``pinned`` holds the lifetime anchors of the unit's zero-copy views. The
