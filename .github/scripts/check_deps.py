@@ -37,7 +37,7 @@ def check_imported_modules():
     base_mods = _get_imported_3rd_party_modules()
     if violation := base_mods & set(("torch", "numpy", "jax", "spdl")):
         raise RuntimeError(
-            "The following modules must not be imported before testing: " f"{violation}"
+            f"The following modules must not be imported before testing: {violation}"
         )
 
     # --------------------------------------------------------------------------
