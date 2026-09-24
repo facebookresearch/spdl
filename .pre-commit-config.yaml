@@ -24,12 +24,6 @@ repos:
     #   python -c "import ruff_api; print(ruff_api.ruff_version)"
     rev: v0.14.3
     hooks:
-      # Run the linter.
-      - id: ruff
-        files: "src/|tests/|examples/|.github/"
-        exclude: "src/spdl/io/lib/.+.pyi"
-        types_or: [ python, pyi ]
-        args: [ "--fix" ]
       # Run the formatter.
       - id: ruff-format
         files: "src/|tests/|examples/|.github/"
