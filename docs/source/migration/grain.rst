@@ -39,6 +39,16 @@ and transformations, but packaging heterogeneous work behind one dataset
 iterator makes independent concurrency, buffering, and backpressure harder to
 observe and tune.
 
+This structure also makes the main performance knobs direct and local. For
+example, ``pipe(fetch, concurrency=32)`` controls network concurrency while
+``pipe(decode, concurrency=8)`` independently controls CPU decode concurrency;
+the worker-pool size and sink buffer are separate settings. Grain exposes
+effective iterator-level controls through ``ReadOptions`` and
+``MultiprocessingOptions``, but those controls govern the worker layer around a
+sequence of transforms rather than one named operation. The SPDL stage model
+therefore makes it more intuitive to change one resource constraint at a time
+and attribute the measured result to that change.
+
 SPDL also records per-stage task time, throughput, queue wait time, and queue
 occupancy. These measurements expose the current bottleneck and the effect of a
 configuration change. Besides supporting manual tuning, the structured feedback
@@ -419,6 +429,638 @@ Migration workflow
    step time, not loader microbenchmark throughput alone.
 9. **Roll out with measured gates.** Compare output fingerprints, recovery
    behavior, and training metrics while moving traffic to the SPDL path.
+
+Benchmark the replacement
+-------------------------
+
+We benchmarked an end-to-end video-loading task that reads encoded videos from
+remote storage, demuxes and decodes two-second clips on CPU, collates batches,
+and copies tensors to a GPU on a dedicated CUDA stream. The task was implemented
+with Grain and SPDL and run with threading and multiprocessing configurations
+across Python 3.12, 3.14, and free-threaded 3.14. The following plot shows the
+relationship between CPU utilization and video throughput.
+
+The libraries expose different scaling controls. Grain configures worker threads
+and prefetch for the composed dataset, while SPDL configures concurrency for
+individual pipeline stages. Worker counts are therefore not directly
+comparable, so the plots use measured CPU utilization as the common resource
+axis. Grain preserves input order. SPDL threading was measured with both input
+and completion order; process-region measurements remain in the table for
+reference.
+
+.. figure:: ../_static/data/grain_spdl_cpu_throughput.png
+   :width: 100%
+
+   CPU utilization versus video throughput. Squares are Grain with input order,
+   circles are SPDL with input order, and dashed triangles are SPDL with
+   completion order. Process measurements remain in the table below.
+
+The two solid input-order series are the direct migration comparison. At
+roughly matched CPU utilization, Grain with 16 threads and prefetch 16 processed
+22.7 videos/s using 7.21 CPU cores on Python 3.12, while SPDL with twelve decode
+workers processed 23.4 videos/s using 6.99 cores. The corresponding results were
+22.9 videos/s at 7.29 cores for Grain versus 24.4 at 7.10 for SPDL on Python
+3.14, and 23.2 at 7.42 versus 23.9 at 6.92 on Python 3.14t. Across the sweep,
+SPDL generally delivered more throughput for the same measured CPU budget. In
+this workload, the result indicates that SPDL's stage-wise orchestration uses
+CPU more efficiently. As the memory plot below shows, that gain came with a
+small host-memory premium: 0.02--0.16 GiB at the matched points.
+
+Input order holds a completed item until every preceding item is ready.
+Completion order emits each item as soon as it finishes, avoiding that
+head-of-line wait but changing observable ordering. At the same 16-worker decode
+setting, completion order reached 40.7--43.3 videos/s using 12.47--13.49 cores,
+compared with 28.3--28.8 videos/s using 8.28--8.65 cores for input order. The
+completion-order series demonstrates the additional throughput available when
+the application does not require Grain-equivalent ordering; it is not the
+apples-to-apples migration result.
+
+The SPDL sweep illustrates stage-local tuning: after identifying decode as the
+CPU-bound stage, only decode concurrency changes. Increasing decode concurrency
+to 24 reached 37.1 videos/s using 11.24 CPU cores on Python 3.12 and 38.3 using
+11.77 cores on Python 3.14. Python 3.14t reached 43.3 videos/s using 13.21 cores
+with 32 workers. These results demonstrate the tuning mechanism for this
+workload rather than a universal concurrency setting.
+
+Benchmark setup
+~~~~~~~~~~~~~~~
+
+The measured workload reads 128 videos in four-record bulks, decodes eight
+224-by-224 RGB frames per video, batches eight videos, discards one warmup, and
+performs three measured runs. The reported Grain results use Grain 0.2.16.
+That release does not provide free-threaded ``cp314t`` builds of its native
+ArrayRecord and index-shuffle modules. The 3.14t experiment packages Grain's
+Python sources and replaces imports of those two unused modules with stubs; the
+measured pipeline does not call either feature.
+
+Stripped of storage-specific types and names, the Grain implementation has this
+shape. ``BulkVideoSource`` performs the remote read, and ``ExpandBulk`` turns
+each returned bulk into individual encoded-video records:
+
+.. code-block:: python
+
+   grain_dataset = (
+       grain.MapDataset.source(BulkVideoSource(...))
+       .apply(ExpandBulk(max_fan_out=bulk_size))
+       .map(demux_video)
+       .map(decode_video)
+       .to_iter_dataset(
+           grain.ReadOptions(
+               num_threads=grain_workers,
+               prefetch_buffer_size=grain_prefetch,
+           )
+       )
+       .batch(batch_size, drop_remainder=False)
+   )
+
+   for batch in grain_dataset:
+       consume(transfer_to_gpu(collate(batch)))
+
+The equivalent SPDL implementation exposes each operation as a separately
+tunable stage. ``gpu_transfer_executor`` is a dedicated one-thread executor so
+the copy uses its own CUDA stream:
+
+.. code-block:: python
+
+   pipeline = (
+       PipelineBuilder()
+       .add_source(range(len(bulk_video_source)))
+       .pipe(
+           bulk_video_source,
+           concurrency=fetch_workers,
+           output_order=output_order,
+       )
+       .disaggregate()
+       .pipe(demux_video, concurrency=demux_workers, output_order=output_order)
+       .pipe(decode_video, concurrency=decode_workers, output_order=output_order)
+       .aggregate(batch_size, drop_last=False)
+       .pipe(collate)
+       .pipe(
+           transfer_to_gpu,
+           concurrency=1,
+           executor=gpu_transfer_executor,
+       )
+       .add_sink(prefetch)
+       .build(num_threads=spdl_threads)
+   )
+
+   for batch in pipeline:
+       consume(batch)
+
+The baseline Grain threading configuration sets
+``ReadOptions(num_threads=16, prefetch_buffer_size=4)``. Its multiprocessing
+configuration disables those two controls and instead sets
+``MultiprocessingOptions(num_workers=8, per_worker_buffer_size=4)``. The SPDL
+threading configuration sets fetch, demux, decode, and H2D concurrency to four,
+three, eight, and one respectively, uses a 40-thread shared pool, and holds four
+batches at the sink. Its process configuration puts fetch through decode in an
+eight-worker process region while keeping H2D transfer in the main process.
+That region sends decoded frame arrays back to the main process for collation;
+the resulting inter-process communication makes this pipeline unsuited to
+multiprocessing.
+
+CPU usage and throughput cover the same end-to-end interval, including pipeline
+setup and shutdown, aggregated over the measured runs. The RSS baseline is
+captured in the spawned benchmark interpreter after module imports and before
+pipeline construction or warmup. Peak RSS is the sampled aggregate process-tree
+resident memory during warmup and measured runs; the reported delta subtracts
+that baseline. Process-mode deltas therefore include the additional worker
+interpreters. The benchmark host exposed 48 CPU cores and about 1.5 TiB of host
+memory.
+
+These configurations are starting points for the two libraries, not a claim
+that their worker counts or CPU consumption are equivalent. In particular,
+Grain's ``prefetch_buffer_size`` limits how many read threads can make progress.
+Raising ``num_threads`` while leaving the prefetch depth at four did not raise
+CPU utilization in this workload, so the Grain sweep changes both
+``num_threads`` and ``prefetch_buffer_size`` together.
+
+A preliminary Python 3.14 fetch-stage sweep found that raising SPDL fetch
+concurrency from four to 32 left throughput at 23.3 videos/s while increasing
+incremental peak RSS from 1.34 to 1.80 GiB; one fetch worker reduced throughput
+to 18.0 videos/s. The main matrix therefore uses four fetch workers. The SPDL
+decode sweep keeps fetch, demux, H2D transfer, pool size, and sink size fixed and
+changes only the decode stage's ``concurrency``. This illustrates how the stage
+model exposes a direct tuning knob once a bottleneck is identified.
+
+.. list-table:: Video-to-GPU results
+   :header-rows: 1
+
+   * - Python
+     - Library
+     - Execution
+     - Order
+     - Concurrency
+     - Videos/s
+     - CPU cores (host %)
+     - RSS baseline → peak; Δ GiB (host %)
+     - CUDA MiB
+   * - 3.12
+     - Grain
+     - Threads
+     - Input
+     - threads=16; prefetch=4
+     - 9.6
+     - 2.79 (5.8%)
+     - 1.40 → 2.93; Δ 1.53 (0.10%)
+     - 40
+   * - 3.12
+     - Grain
+     - Processes
+     - Input
+     - processes=8; read threads=0; buffer/worker=4
+     - 5.2
+     - 7.22 (15.0%)
+     - 1.41 → 22.80; Δ 21.39 (1.42%)
+     - 40
+   * - 3.12
+     - SPDL
+     - Threads
+     - Input
+     - fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4
+     - 18.9
+     - 5.61 (11.7%)
+     - 1.41 → 3.35; Δ 1.95 (0.13%)
+     - 160
+   * - 3.12
+     - SPDL
+     - Threads
+     - Completion
+     - fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4
+     - 23.4
+     - 7.66 (16.0%)
+     - 1.40 → 3.36; Δ 1.95 (0.13%)
+     - 160
+   * - 3.12
+     - SPDL
+     - Processes
+     - Completion
+     - region=8; H2D=1; main pool=2; sink=4
+     - 5.7
+     - 7.75 (16.2%)
+     - 1.41 → 23.20; Δ 21.79 (1.44%)
+     - 160
+   * - 3.14
+     - Grain
+     - Threads
+     - Input
+     - threads=16; prefetch=4
+     - 9.7
+     - 2.78 (5.8%)
+     - 1.46 → 3.05; Δ 1.60 (0.11%)
+     - 40
+   * - 3.14
+     - Grain
+     - Processes
+     - Input
+     - processes=8; read threads=0; buffer/worker=4
+     - 5.3
+     - 7.21 (15.0%)
+     - 1.46 → 23.39; Δ 21.93 (1.45%)
+     - 40
+   * - 3.14
+     - SPDL
+     - Threads
+     - Input
+     - fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4
+     - 19.5
+     - 5.57 (11.6%)
+     - 1.46 → 3.39; Δ 1.93 (0.13%)
+     - 160
+   * - 3.14
+     - SPDL
+     - Threads
+     - Completion
+     - fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4
+     - 23.8
+     - 7.65 (15.9%)
+     - 1.46 → 3.27; Δ 1.81 (0.12%)
+     - 160
+   * - 3.14
+     - SPDL
+     - Processes
+     - Completion
+     - region=8; H2D=1; main pool=2; sink=4
+     - 5.8
+     - 7.67 (16.0%)
+     - 1.46 → 23.51; Δ 22.06 (1.46%)
+     - 160
+   * - 3.14t
+     - Grain
+     - Threads
+     - Input
+     - threads=16; prefetch=4
+     - 10.1
+     - 2.97 (6.2%)
+     - 1.55 → 3.13; Δ 1.58 (0.10%)
+     - 40
+   * - 3.14t
+     - Grain
+     - Processes
+     - Input
+     - processes=8; read threads=0; buffer/worker=4
+     - 14.8
+     - 4.83 (10.1%)
+     - 1.55 → 3.35; Δ 1.80 (0.12%)
+     - 40
+   * - 3.14t
+     - SPDL
+     - Threads
+     - Input
+     - fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4
+     - 18.2
+     - 5.42 (11.3%)
+     - 1.55 → 3.45; Δ 1.89 (0.13%)
+     - 160
+   * - 3.14t
+     - SPDL
+     - Threads
+     - Completion
+     - fetch/demux/decode/H2D=4/3/8/1; pool=40; sink=4
+     - 23.6
+     - 7.61 (15.8%)
+     - 1.55 → 3.51; Δ 1.96 (0.13%)
+     - 160
+   * - 3.14t
+     - SPDL
+     - Processes
+     - Completion
+     - region=8; H2D=1; main pool=2; sink=4
+     - 5.8
+     - 7.73 (16.1%)
+     - 1.56 → 24.91; Δ 23.35 (1.55%)
+     - 160
+
+The Grain thread sweep produced the following results. The 16-thread rows are
+different from the first table because this sweep raises prefetch from four to
+16, allowing all configured threads to make progress.
+
+.. list-table:: Grain thread and prefetch sweep
+   :header-rows: 1
+
+   * - Python
+     - Threads
+     - Prefetch
+     - Videos/s
+     - CPU cores (host %)
+     - RSS baseline → peak; Δ GiB (host %)
+     - CUDA MiB
+   * - 3.12
+     - 8
+     - 8
+     - 13.4
+     - 4.19 (8.7%)
+     - 1.40 → 3.16; Δ 1.76 (0.12%)
+     - 40
+   * - 3.12
+     - 12
+     - 12
+     - 19.3
+     - 6.11 (12.7%)
+     - 1.41 → 3.30; Δ 1.89 (0.13%)
+     - 40
+   * - 3.12
+     - 16
+     - 16
+     - 22.7
+     - 7.21 (15.0%)
+     - 1.42 → 3.35; Δ 1.94 (0.13%)
+     - 40
+   * - 3.12
+     - 18
+     - 18
+     - 25.7
+     - 8.18 (17.0%)
+     - 1.40 → 3.52; Δ 2.11 (0.14%)
+     - 40
+   * - 3.12
+     - 20
+     - 20
+     - 26.1
+     - 8.26 (17.2%)
+     - 1.41 → 3.27; Δ 1.86 (0.12%)
+     - 40
+   * - 3.12
+     - 24
+     - 24
+     - 30.9
+     - 9.87 (20.6%)
+     - 1.40 → 3.65; Δ 2.25 (0.15%)
+     - 40
+   * - 3.12
+     - 32
+     - 32
+     - 36.8
+     - 11.83 (24.6%)
+     - 1.41 → 3.86; Δ 2.46 (0.16%)
+     - 40
+   * - 3.14
+     - 8
+     - 8
+     - 14.2
+     - 4.37 (9.1%)
+     - 1.46 → 3.18; Δ 1.72 (0.11%)
+     - 40
+   * - 3.14
+     - 12
+     - 12
+     - 19.1
+     - 6.00 (12.5%)
+     - 1.47 → 3.38; Δ 1.91 (0.13%)
+     - 40
+   * - 3.14
+     - 16
+     - 16
+     - 22.9
+     - 7.29 (15.2%)
+     - 1.45 → 3.48; Δ 2.03 (0.13%)
+     - 40
+   * - 3.14
+     - 18
+     - 18
+     - 25.6
+     - 8.09 (16.8%)
+     - 1.46 → 3.49; Δ 2.03 (0.13%)
+     - 40
+   * - 3.14
+     - 20
+     - 20
+     - 26.2
+     - 8.13 (16.9%)
+     - 1.47 → 3.55; Δ 2.08 (0.14%)
+     - 40
+   * - 3.14
+     - 24
+     - 24
+     - 33.6
+     - 10.36 (21.6%)
+     - 1.46 → 3.66; Δ 2.20 (0.15%)
+     - 40
+   * - 3.14
+     - 32
+     - 32
+     - 39.8
+     - 12.76 (26.6%)
+     - 1.46 → 4.03; Δ 2.57 (0.17%)
+     - 40
+   * - 3.14t
+     - 8
+     - 8
+     - 14.2
+     - 4.47 (9.3%)
+     - 1.55 → 3.42; Δ 1.86 (0.12%)
+     - 40
+   * - 3.14t
+     - 12
+     - 12
+     - 19.7
+     - 6.23 (13.0%)
+     - 1.55 → 3.61; Δ 2.06 (0.14%)
+     - 40
+   * - 3.14t
+     - 16
+     - 16
+     - 23.2
+     - 7.42 (15.5%)
+     - 1.55 → 3.78; Δ 2.23 (0.15%)
+     - 40
+   * - 3.14t
+     - 18
+     - 18
+     - 25.4
+     - 8.06 (16.8%)
+     - 1.56 → 3.96; Δ 2.40 (0.16%)
+     - 40
+   * - 3.14t
+     - 20
+     - 20
+     - 25.5
+     - 8.02 (16.7%)
+     - 1.55 → 3.90; Δ 2.35 (0.16%)
+     - 40
+   * - 3.14t
+     - 24
+     - 24
+     - 32.2
+     - 10.14 (21.1%)
+     - 1.56 → 4.16; Δ 2.60 (0.17%)
+     - 40
+   * - 3.14t
+     - 32
+     - 32
+     - 41.6
+     - 13.60 (28.3%)
+     - 1.56 → 4.37; Δ 2.81 (0.19%)
+     - 40
+
+The SPDL sweep changes only decode-stage concurrency. Fetch remains at four,
+demux at three, H2D transfer at one, the shared pool at 40 threads, and the sink
+at four batches. The eight-worker entry is a new isolated repeat of the same
+configuration in the original matrix, so normal run-to-run variation is
+visible.
+
+.. list-table:: SPDL input-order decode-stage concurrency sweep
+   :header-rows: 1
+
+   * - Python
+     - Decode workers
+     - Videos/s
+     - CPU cores (host %)
+     - RSS baseline → peak; Δ GiB (host %)
+     - CUDA MiB
+   * - 3.12
+     - 4
+     - 13.3
+     - 3.78 (7.9%)
+     - 1.40 → 3.36; Δ 1.95 (0.13%)
+     - 160
+   * - 3.12
+     - 6
+     - 16.6
+     - 4.86 (10.1%)
+     - 1.41 → 3.22; Δ 1.81 (0.12%)
+     - 160
+   * - 3.12
+     - 8
+     - 18.9
+     - 5.58 (11.6%)
+     - 1.41 → 3.37; Δ 1.96 (0.13%)
+     - 160
+   * - 3.12
+     - 10
+     - 21.5
+     - 6.50 (13.5%)
+     - 1.41 → 3.49; Δ 2.08 (0.14%)
+     - 160
+   * - 3.12
+     - 12
+     - 23.4
+     - 6.99 (14.6%)
+     - 1.41 → 3.51; Δ 2.10 (0.14%)
+     - 160
+   * - 3.12
+     - 16
+     - 28.8
+     - 8.65 (18.0%)
+     - 1.41 → 3.69; Δ 2.28 (0.15%)
+     - 160
+   * - 3.12
+     - 24
+     - 37.1
+     - 11.24 (23.4%)
+     - 1.41 → 3.22; Δ 1.81 (0.12%)
+     - 160
+   * - 3.14
+     - 4
+     - 13.2
+     - 3.68 (7.7%)
+     - 1.46 → 3.16; Δ 1.70 (0.11%)
+     - 160
+   * - 3.14
+     - 6
+     - 16.7
+     - 4.79 (10.0%)
+     - 1.46 → 3.38; Δ 1.92 (0.13%)
+     - 160
+   * - 3.14
+     - 8
+     - 18.9
+     - 5.47 (11.4%)
+     - 1.47 → 3.47; Δ 2.00 (0.13%)
+     - 160
+   * - 3.14
+     - 10
+     - 22.3
+     - 6.55 (13.7%)
+     - 1.47 → 3.48; Δ 2.01 (0.13%)
+     - 160
+   * - 3.14
+     - 12
+     - 24.4
+     - 7.10 (14.8%)
+     - 1.46 → 3.61; Δ 2.15 (0.14%)
+     - 160
+   * - 3.14
+     - 16
+     - 28.8
+     - 8.49 (17.7%)
+     - 1.46 → 3.60; Δ 2.15 (0.14%)
+     - 160
+   * - 3.14
+     - 24
+     - 38.3
+     - 11.77 (24.5%)
+     - 1.46 → 3.75; Δ 2.29 (0.15%)
+     - 160
+   * - 3.14t
+     - 4
+     - 12.9
+     - 3.72 (7.8%)
+     - 1.56 → 3.46; Δ 1.90 (0.13%)
+     - 160
+   * - 3.14t
+     - 6
+     - 16.4
+     - 4.72 (9.8%)
+     - 1.55 → 3.63; Δ 2.07 (0.14%)
+     - 160
+   * - 3.14t
+     - 8
+     - 19.0
+     - 5.48 (11.4%)
+     - 1.55 → 3.61; Δ 2.05 (0.14%)
+     - 160
+   * - 3.14t
+     - 10
+     - 22.4
+     - 6.53 (13.6%)
+     - 1.56 → 3.65; Δ 2.10 (0.14%)
+     - 160
+   * - 3.14t
+     - 12
+     - 23.9
+     - 6.92 (14.4%)
+     - 1.55 → 3.80; Δ 2.25 (0.15%)
+     - 160
+   * - 3.14t
+     - 16
+     - 28.3
+     - 8.28 (17.2%)
+     - 1.55 → 3.82; Δ 2.26 (0.15%)
+     - 160
+   * - 3.14t
+     - 32
+     - 43.3
+     - 13.21 (27.5%)
+     - 1.55 → 3.70; Δ 2.14 (0.14%)
+     - 160
+
+.. figure:: ../_static/data/grain_spdl_peak_rss.png
+   :width: 100%
+
+   Peak aggregate process-tree RSS above each interpreter's post-import
+   baseline for threaded configurations. Process configurations remain in the
+   results table because their different memory scale obscures the threaded
+   comparison. Point labels show the configured Grain threads/prefetch or SPDL
+   decode concurrency; ``S-i`` and ``S-c`` denote SPDL input and completion
+   order. The horizontal axis shows measured CPU utilization.
+
+The post-import interpreter baseline was 1.40--1.56 GiB. Thread configurations
+added 1.29--2.81 GiB above that baseline. At the near-matched 16-thread Grain
+and twelve-worker SPDL input-order points, SPDL used 0.02--0.16 GiB more
+incremental host memory. Input ordering can retain completed intermediate items
+while waiting for earlier records; at twelve workers, allowing completion order
+reduced SPDL's incremental RSS by 0.06--0.46 GiB. The input-order comparison
+therefore shows a modest memory cost alongside SPDL's higher throughput at a
+similar CPU budget.
+
+Process cases other than patched Grain on Python 3.14t added 21.39--23.35 GiB
+because their worker interpreters are included; patched Grain on Python 3.14t
+added 1.80 GiB. SPDL reserved more CUDA cache memory than Grain in these runs.
+Choose a configuration using end-to-end training throughput, ordering
+requirements, and resource limits rather than loader throughput alone. Results
+can vary with storage locality and host load; rerun this harness for the target
+dataset and placement.
 
 .. seealso::
 
