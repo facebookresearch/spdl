@@ -28,7 +28,6 @@ which keeps the fusion policy easy to reason about and to test in isolation.
 
 from __future__ import annotations
 
-import inspect
 import multiprocessing as mp
 import os
 import sys
@@ -39,6 +38,10 @@ from dataclasses import replace
 from functools import partial
 from typing import Any
 
+from spdl.pipeline._common._convert import (
+    _is_async_callable,
+    _is_coroutine_callable,
+)
 from spdl.pipeline._components import _get_global_id, _set_global_id
 from spdl.pipeline._subprocess_pipeline_pool import (
     _InterpreterBackend,
@@ -103,24 +106,12 @@ def _strip_executor(cfg: object) -> object:
 
 def _is_async_op(op: object) -> bool:
     """Whether ``op`` runs on the event loop rather than the worker's thread pool."""
-    return inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op)
+    return _is_async_callable(op)
 
 
 def _is_async_router(router: object) -> bool:
-    """Whether a path-variants router runs on the event loop rather than a worker thread.
-
-    Mirrors the dispatch test in
-    :py:func:`~spdl.pipeline._components._variants._make_async_router`, including its callable-
-    instance case: ``inspect.iscoroutinefunction`` is ``False`` for an object whose ``__call__``
-    is a coroutine function, and such a router is passed through rather than wrapped.
-    """
-    if inspect.iscoroutinefunction(router):
-        return True
-    if not callable(router):
-        return False
-    # A callable *instance* whose ``__call__`` is async: ``iscoroutinefunction`` on the
-    # instance itself is False, so the bound method has to be inspected directly.
-    return inspect.iscoroutinefunction(router.__call__)
+    """Whether a router, including an async callable instance, uses the event loop."""
+    return _is_coroutine_callable(router)
 
 
 def _stage_concurrency(cfg: object) -> int:

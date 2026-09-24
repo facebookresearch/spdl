@@ -236,8 +236,8 @@ def _rewrite_pipe(pipe: Any, convert: Callable[[Any], Any]) -> Any:
         # cannot mask an actual rewrite.
         changed = any(
             np is not op
-            for new_path, old_path in zip(new_paths, pipe.paths)
-            for np, op in zip(new_path, old_path)
+            for new_path, old_path in zip(new_paths, pipe.paths, strict=True)
+            for np, op in zip(new_path, old_path, strict=True)
         )
         if not changed:
             return pipe
@@ -264,14 +264,19 @@ def _rewrite_config_executors(
         )
         # Identity check (mirroring the pipes branch) rather than ``!=`` so a future
         # value-based ``__eq__`` on a nested element cannot mask an actual rewrite.
-        if any(nc is not oc for nc, oc in zip(new_configs, new_src.pipeline_configs)):
+        if any(
+            nc is not oc
+            for nc, oc in zip(new_configs, new_src.pipeline_configs, strict=True)
+        ):
             # pyre-ignore[6]: MergeConfig annotates a 1-tuple but holds N configs.
             new_src = replace(new_src, pipeline_configs=new_configs)
 
     new_pipes = [_rewrite_pipe(p, convert) for p in config.pipes]
 
     src_changed = new_src is not config.src
-    pipes_changed = any(np is not op for np, op in zip(new_pipes, config.pipes))
+    pipes_changed = any(
+        np is not op for np, op in zip(new_pipes, config.pipes, strict=True)
+    )
     if not src_changed and not pipes_changed:
         return config
 
