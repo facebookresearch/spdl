@@ -14,6 +14,7 @@
 #include <cuda.h>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace spdl::cuda::detail {
 
