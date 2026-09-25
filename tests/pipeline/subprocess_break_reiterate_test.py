@@ -145,8 +145,8 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
         src = iterate_in_subprocess(partial(SourceIterable, 100), timeout=10)
 
         # zip stops when the shorter iterable is exhausted, causing
-        # GeneratorExit on the longer one
-        partial_result = list(zip(range(3), src))
+        # GeneratorExit on the longer one.
+        partial_result = list(zip(range(3), src, strict=False))
         self.assertEqual(partial_result, [(0, 0), (1, 1), (2, 2)])
 
         # Subsequent full iteration must work

@@ -148,7 +148,7 @@ def _path_variants_router(
                 f"{len(batch)} items; it must return exactly one index per item."
             )
         parts: list[list[Any]] = [[] for _ in range(num_paths)]
-        for item, idx in zip(batch, indices):
+        for item, idx in zip(batch, indices, strict=True):
             if idx < 0 or idx >= num_paths:
                 raise IndexError(
                     f"Router returned index {idx}, but there are only "
@@ -157,7 +157,7 @@ def _path_variants_router(
             parts[idx].append(item)
         # Emit to every path (empty lists included) so each input batch contributes
         # exactly one list per path, keeping the fan-in merge in lockstep.
-        for q, part in zip(path_queues, parts):
+        for q, part in zip(path_queues, parts, strict=True):
             await q.put(part)
 
     _route: Callable[[Any], Awaitable[None]] = _route_batch if batched else _route_item

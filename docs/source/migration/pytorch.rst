@@ -304,7 +304,7 @@ can be converted to PyTorch Tensor without copying data.
 .. code-block::
 
    def convert(items):
-       frames, clsses = list(zip(*items))
+       frames, clsses = list(zip(*items, strict=True))
        buffer = spdl.io.convert_frames(frames)
        tensor = spdl.io.to_torch(buffer).permute(0, 3, 1, 2)
        return tensor, clsses

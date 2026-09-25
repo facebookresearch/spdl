@@ -98,7 +98,7 @@ def decode_image(path: str):
     return spdl.io.decode_packets(packets, filter_desc=filter_desc)
 
 def collate_frames(items):
-    frames, labels = list(zip(*items))
+    frames, labels = list(zip(*items, strict=True))
     buffer = spdl.io.convert_frames(frames)
     tensor = spdl.io.to_torch(buffer).permute(0, 3, 1, 2)
     return tensor, labels

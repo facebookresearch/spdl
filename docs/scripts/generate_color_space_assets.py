@@ -100,7 +100,7 @@ def _save_figure(
     axes[0].imshow(rgb_reference)
     axes[0].set_title("RGB reference", fontsize=10)
     axes[0].axis("off")
-    for ax, (name, plane) in zip(axes[1:], planes):
+    for ax, (name, plane) in zip(axes[1:], planes, strict=True):
         ax.imshow(plane, cmap="gray", vmin=0, vmax=255)
         ax.set_title(f"{name}  {plane.shape}", fontsize=10)
         ax.axis("off")

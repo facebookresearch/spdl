@@ -151,7 +151,7 @@ class IterateInSubprocessPacketsTest(unittest.TestCase):
         # ``expected`` must demux the *same* files for the bytes to match.
         media = ("audio", "video", "image")
         samples = [get_sample(CMDS[mt]) for mt in media]
-        paths = [(mt, s.path) for mt, s in zip(media, samples)]
+        paths = [(mt, s.path) for mt, s in zip(media, samples, strict=True)]
         fn = functools.partial(_demux_from_paths, paths)
 
         pool = SharedMemorySegmentPool(segment_size=1 << 20, count=4)
@@ -161,6 +161,6 @@ class IterateInSubprocessPacketsTest(unittest.TestCase):
 
         expected = _demux_from_paths(paths)
         self.assertEqual(len(got), len(expected))
-        for g, e in zip(got, expected):
+        for g, e in zip(got, expected, strict=True):
             self.assertIs(type(g), type(e))
             self.assertEqual(g.__getstate__(), e.__getstate__())
