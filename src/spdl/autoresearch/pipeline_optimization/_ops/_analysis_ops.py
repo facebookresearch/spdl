@@ -74,7 +74,7 @@ MASTER_TABLE_HEADERS: list[str] = [
     "notes",
 ]
 
-_STRUCTURAL_PRACTICES: set[str] = {"mtp"}
+_STRUCTURAL_PRACTICES: set[str] = {"mtp", "mp_region"}
 _STRUCTURAL_ATTEMPT_THRESHOLD: int = 3
 
 

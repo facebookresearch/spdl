@@ -91,8 +91,9 @@ def load_knowledge() -> str:
 
     Assembles a single knowledge string from two prompt directories:
 
-    - ``knowledge/`` — SPDL optimization techniques (MTP, concurrency tuning,
-      headspace analysis, etc.) and autoresearch-specific guidance.
+    - ``knowledge/`` — SPDL optimization techniques (MTP, multiprocessing
+      regions, concurrency tuning, headspace analysis, etc.) and
+      autoresearch-specific guidance.
     - ``platform/`` — execution environment guidance (e.g. MAST job launch
       patterns under ``platform/fb/``).
 

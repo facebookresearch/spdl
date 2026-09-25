@@ -155,7 +155,6 @@ backend = (
 source2 = spdl.pipeline.run_pipeline_in_subprocess(
     backend.get_config(),
     num_threads=num_threads,
-    mp_context="forkserver",
 )
 
 # GPU transfer only — runs in main process, dedicated thread + CUDA stream
@@ -167,6 +166,14 @@ frontend = (
 )
 pipeline = frontend.build(num_threads=1)
 ```
+
+Always benchmark a multiprocessing execution region regardless of data
+modality; it is especially promising for small text or image records. Use
+`.to(ProcessPoolExecutorConfig(...))` ... `.to(MAIN_PROCESS)` around adjacent
+I/O and CPU stages instead of assigning process executors stage by stage. Each
+worker runs the region as a nested Pipeline with its own async event loop, so
+large intermediates remain in-worker. For GPU training, compose the region with
+`run_pipeline_in_subprocess()` and keep GPU transfer in the frontend.
 
 ## Constraints
 
@@ -202,7 +209,7 @@ Prefer `for batch in pipeline.get_iterator():` over manually calling `next(itera
 - [ ] Thread-unsafe libraries wrapped in TLS
 - [ ] Media decoding uses `spdl.io` (not Pillow/TorchVision) where applicable
 - [ ] Batching uses `.aggregate()` + explicit collate stage
-- [ ] Production deployment uses MTP (subprocess for CPU, main process for GPU transfer)
+- [ ] Production benchmarks compare MTP and an MP region for every data modality
 - [ ] Stage functions are picklable (module-level or callable classes)
 - [ ] Total concurrency respects CPU budget (≤ 40% utilization)
 - [ ] Replacement assembled explicitly with `PipelineBuilder` or a complete `PipelineConfig`, not a boxed loader

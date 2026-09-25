@@ -64,9 +64,24 @@ SPDL runs stages on its own event loop, so it awaits async stage functions nativ
 
 If a stage is already synchronous, just pass it as a normal function — no event loop is involved either way.
 
-## Recommended Architecture: Multi-Threading in Subprocess (MTP)
+## Recommended Architectures: Benchmark MTP and MP Regions
 
-The production pattern runs the CPU-heavy pipeline in a **subprocess** and only does GPU transfer in the main process.
+There is no universal winner. Benchmark both of these process-isolated shapes:
+
+- **MTP** runs one multi-threaded pipeline in a subprocess. Start here for
+  large payloads such as video, where minimizing process-boundary traffic is
+  especially important.
+- **MP region** uses several worker processes. Always benchmark it regardless of
+  modality. It is particularly promising for small text and image records,
+  where boundary transfers are relatively cheap and true process parallelism
+  can beat conventional data loaders.
+
+For GPU training, keep GPU transfer in the main process in either shape.
+
+## Multi-Threading in Subprocess (MTP)
+
+MTP runs the CPU-heavy pipeline in one **subprocess** and only does GPU transfer
+in the main process.
 
 ### MTP Structure
 
@@ -80,7 +95,7 @@ from spdl.source import DistributedRandomSampler
 
 def build_spdl_pipeline(
     samples, tokenizer, max_seq_len, batch_size,
-    rank, world_size, num_threads, mp_context="forkserver",
+    rank, world_size, num_threads,
 ):
     # embed_shuffle ensures correct sampling across iterations
     source = spdl.source.utils.embed_shuffle(
@@ -103,7 +118,6 @@ def build_spdl_pipeline(
     source2 = spdl.pipeline.run_pipeline_in_subprocess(
         backend.get_config(),
         num_threads=num_threads,
-        mp_context=mp_context,
     )
 
     # Outer pipeline (main process) — GPU transfer only
@@ -128,7 +142,7 @@ Build the dataloader **once** before the epoch loop. The Pipeline object support
 dl = build_spdl_pipeline(
     samples=samples, tokenizer=tokenizer, max_seq_len=max_seq_len,
     batch_size=batch_size, rank=rank, world_size=world_size,
-    num_threads=num_workers, mp_context=mp_context,
+    num_threads=num_workers,
 )
 
 for epoch in range(num_epochs):
@@ -144,10 +158,92 @@ for epoch in range(num_epochs):
 2. **`spdl.source.utils.embed_shuffle()`** — wrap `DistributedRandomSampler` with this for correct sampling behavior across iterations.
 3. **`spdl.io.transfer_tensor`** — use for GPU transfer in the frontend pipeline. Use a dedicated thread (ThreadPoolExecutor with 1 worker) so that it uses own CUDA stream which allows overlapping data transfer and compute.
 4. **`aggregate(batch_size, drop_last=True)`** — `drop_last=True` avoids partial batches that cause shape mismatches in DDP.
-5. **`mp_context="forkserver"`** (the default). Try `"spawn"` and `"fork"` only if multiprocessing with "forkserver" fails.
+5. **Do not force an `mp_context`.** Omit it to use SPDL's default, or preserve
+   the baseline's explicit choice when one already exists. Change the context
+   only when the workload has a demonstrated compatibility requirement.
 6. **Do NOT use `output_order="completion"`** — only needed when output ordering matters (e.g., evaluation). For performance optimization pipelines, do not use it.
 
 Benefits: isolates CPU work from GPU kernel launches, avoids the noisy-neighbour effect. Dedicated thread and CUDA stream for transferring the batch to GPU.
+
+## Multi-Processing with Execution Regions (MP)
+
+Use `PipelineBuilder.to` to keep a sequence of stages in each process
+worker. Every worker launches a nested SPDL `Pipeline` with its own async event
+loop, so async I/O and CPU transforms overlap inside that worker. Intermediate
+values stay in the worker; only the values entering and leaving the region cross
+a process boundary. This is fundamentally cheaper than assigning a
+`ProcessPoolExecutor` to each stage, which round-trips every intermediate value.
+
+```python
+from spdl.pipeline import PipelineBuilder, run_pipeline_in_subprocess
+from spdl.pipeline.defs import MAIN_PROCESS, ProcessPoolExecutorConfig
+
+# Prefer batching small keys/metadata before the boundary when the stage APIs
+# can consume batches. Large downloaded/decoded values are then created and
+# consumed entirely inside the worker.
+backend = (
+    PipelineBuilder()
+    .add_source(source, continuous=True)
+    .aggregate(region_input_batch_size, drop_last=True)
+    .to(
+        ProcessPoolExecutorConfig(
+            max_workers=num_processes,
+        ),
+        buffer_size=2,
+    )
+    .pipe(fetch_batch)       # async functions run on the worker's event loop
+    .pipe(transform_batch)
+    .pipe(collate_batch)
+    .to(MAIN_PROCESS, buffer_size=2)
+    .add_sink(buffer_size=3)
+)
+
+# For GPU training, keep the region's orchestration out of the GPU-driving
+# process too. For CPU-only consumers, backend.build(...) can be used directly.
+source2 = run_pipeline_in_subprocess(
+    backend.get_config(),
+    num_threads=num_threads,
+)
+pipeline = (
+    PipelineBuilder()
+    .add_source(source2, continuous=True)
+    .pipe(transfer_tensor)
+    .add_sink(buffer_size=3)
+    .build(num_threads=1)
+)
+```
+
+Region design rules:
+
+1. Put adjacent I/O, decode/parse, transform, and collate stages in one region
+   when doing so keeps large intermediate values in-worker.
+2. Close the region with `.to(MAIN_PROCESS)` before `.add_sink()`.
+3. Region callables plus the boundary inputs and outputs must be picklable;
+   intermediate values between region stages do not need to be picklable.
+4. Pass async stage functions directly. Each worker's nested pipeline owns an
+   event loop; do not wrap async work with `asyncio.run()`.
+5. Stage `concurrency` applies per worker, so total concurrency is roughly
+   `max_workers * concurrency`. Tune both within the CPU budget.
+6. Use `.to(..., buffer_size=N)` to amortize fixed IPC cost for small items.
+   This transport buffer is independent of training batch size.
+7. Do not emulate a region by attaching the same `ProcessPoolExecutor` to
+   individual stages. That pays IPC at every stage boundary and prevents the
+   worker-local software pipeline.
+8. Do not introduce an `mp_context` setting solely for the region experiment.
+   Omit it to use the default, or retain the baseline's existing choice.
+
+### Choosing MTP or an MP Region
+
+- For **large data such as video**, start with MTP, but always benchmark an MP
+  region too. When practical, make the region receive small references or
+  metadata, create the large payload inside the worker, and return only a
+  compact or shared-memory-backed batch.
+- For **small text or image records**, the MP-region comparison is especially
+  important. The extra process crossings are often cheap enough for multi-process
+  parallelism to win, and this comparison is important when trying to beat
+  conventional data loader implementations.
+- Measure end-to-end sample throughput and training-step time. Do not choose
+  from isolated loader latency or payload type alone.
 
 ### Cut IPC CPU with a Shared-Memory Arena
 
@@ -173,13 +269,16 @@ Measured effect (recv-only, 32 MiB payloads): plain IPC spent several CPU-second
 
 **Why it matters for the CPU budget:** lower IPC CPU means more host-CPU headroom for timely GPU kernel launches — directly easing the noisy-neighbour effect (keep total CPU ≤ 40%). Reach for the arena whenever MTP moves large payloads; for tiny payloads the benefit is negligible, so skip it. See `examples/benchmark_arena_transport.py` for the benchmark this guidance is based on.
 
-### When MTP Adds Overhead Instead of Helping
+### When Process Isolation Adds Overhead Instead of Helping
 
 MTP introduces subprocess serialization and IPC overhead on every batch. This cost is fixed regardless of how much work the pipeline does per item. When per-item pipeline work is heavy (large decode, expensive preprocessing), MTP's isolation benefit far outweighs this overhead. But when per-item work becomes cheap — due to optimizations like subclipping (reducing decode work 10×), low-resolution inputs, lightweight preprocessing, or aggressive caching — the IPC overhead can become a significant fraction of the total per-batch time, and **running the pipeline in the main process with low concurrency can outperform MTP**.
 
 **Rule of thumb:** if the pipeline's per-batch production time (source-to-sink) drops below ~50ms after optimization, benchmark with and without MTP. The noisy-neighbour effect that MTP prevents is only relevant when CPU utilization is high; if optimized stages use little CPU, MTP's isolation is unnecessary and its overhead hurts.
 
-**Recommendation:** always test MTP as a best practice, but also test the best configuration *without* MTP. Report both results and let the data decide. Do not assume MTP is universally beneficial.
+**Recommendation:** always test MTP, an MP region, and the best configuration
+without process isolation. Report all results and let end-to-end throughput
+decide. Do not assume MTP is universally beneficial, and do not dismiss MP
+solely because it crosses a process boundary.
 
 ## The Noisy-Neighbour Effect
 

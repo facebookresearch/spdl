@@ -172,6 +172,8 @@ _STARTUP_PATTERNS = (
     "initialize",
     "startup",
     "mtp",
+    "mp_region",
+    "processpoolexecutorconfig",
 )
 
 _RUNTIME_PATTERNS = (

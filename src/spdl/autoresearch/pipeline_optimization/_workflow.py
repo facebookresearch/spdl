@@ -547,9 +547,8 @@ class PipelineOptimizationWorkflow:
         not whichever node triggered the planning round.  When ``goto`` points
         to a specific commit, find the node that produced it.
 
-        This prevents mutually-exclusive experiments (e.g. NVDEC GPU decode)
-        from being incorrectly parented under incompatible experiments
-        (e.g. MTP subprocess).
+        This prevents independent experiments from being incorrectly parented
+        under an unrelated structural experiment.
         """
         goto = child_spec.get("goto")
         if goto is None:
