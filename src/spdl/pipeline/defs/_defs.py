@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import abc
-import inspect
 from collections.abc import (
     AsyncIterable,
     Awaitable,
@@ -30,6 +29,11 @@ from typing import (
     TypeVar,
 )
 
+from spdl.pipeline._common._convert import (
+    _is_async_callable,
+    _is_asyncgen_callable,
+    _is_callable,
+)
 from spdl.pipeline._common._source_locator import locate_source
 from spdl.pipeline._common._types import _TCallables, _TMergeOp
 
@@ -224,10 +228,10 @@ class PipeConfig(Generic[T, U]):
 
     def __post_init__(self) -> None:
         op = self._args.op
-        if inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op):
+        if _is_async_callable(op):
             if self._args.executor is not None:
                 raise ValueError("`executor` cannot be specified when op is async.")
-        if inspect.isasyncgenfunction(op):
+        if _is_asyncgen_callable(op):
             if self._type == _PipeType.OrderedPipe:
                 raise ValueError(
                     "pipe does not support async generator function "
@@ -683,7 +687,7 @@ class PathVariantsConfig(Generic[T]):
     Aggregate the source into batches upstream of this stage when using it."""
 
     def __post_init__(self) -> None:
-        if not callable(self.router) and not hasattr(self.router, "__call__"):
+        if not _is_callable(self.router):
             raise ValueError("router must be callable.")
         if len(self.paths) < 1:
             raise ValueError("PathVariantsConfig must have at least 1 path.")
