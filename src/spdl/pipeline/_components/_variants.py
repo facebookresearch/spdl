@@ -12,13 +12,12 @@ __all__ = [
 ]
 
 import asyncio
-import inspect
 import logging
 from collections.abc import AsyncGenerator, Awaitable, Callable, Coroutine, Sequence
 from contextlib import asynccontextmanager, AsyncExitStack
 from typing import Any
 
-from spdl.pipeline._common._convert import _to_async
+from spdl.pipeline._common._convert import _is_coroutine_callable, _to_async
 
 from ._common import _EOF, _EPOCH_END, _ShieldedHook, is_eof, is_epoch_end, StageInfo
 from ._hook import _stage_hooks, TaskHook
@@ -34,10 +33,7 @@ def _make_async_router(
 
     The router returns an ``int`` (per-item mode) or a ``Sequence[int]`` (batched
     mode); this wrapper is agnostic to which."""
-    if inspect.iscoroutinefunction(router):
-        return router
-    call = getattr(router, "__call__", None)
-    if call is not None and inspect.iscoroutinefunction(call):
+    if _is_coroutine_callable(router):
         return router  # pyre-ignore[7]
     return _to_async(router, executor=None)  # pyre-ignore[7]
 

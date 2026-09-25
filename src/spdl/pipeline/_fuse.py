@@ -28,7 +28,6 @@ which keeps the fusion policy easy to reason about and to test in isolation.
 
 from __future__ import annotations
 
-import inspect
 import multiprocessing as mp
 import os
 import sys
@@ -39,6 +38,10 @@ from dataclasses import replace
 from functools import partial
 from typing import Any
 
+from spdl.pipeline._common._convert import (
+    _is_async_callable,
+    _is_coroutine_callable,
+)
 from spdl.pipeline._components import _get_global_id, _set_global_id
 from spdl.pipeline._subprocess_pipeline_pool import (
     _InterpreterBackend,
@@ -101,28 +104,6 @@ def _strip_executor(cfg: object) -> object:
     return cfg
 
 
-def _is_async_op(op: object) -> bool:
-    """Whether ``op`` runs on the event loop rather than the worker's thread pool."""
-    return inspect.iscoroutinefunction(op) or inspect.isasyncgenfunction(op)
-
-
-def _is_async_router(router: object) -> bool:
-    """Whether a path-variants router runs on the event loop rather than a worker thread.
-
-    Mirrors the dispatch test in
-    :py:func:`~spdl.pipeline._components._variants._make_async_router`, including its callable-
-    instance case: ``inspect.iscoroutinefunction`` is ``False`` for an object whose ``__call__``
-    is a coroutine function, and such a router is passed through rather than wrapped.
-    """
-    if inspect.iscoroutinefunction(router):
-        return True
-    if not callable(router):
-        return False
-    # A callable *instance* whose ``__call__`` is async: ``iscoroutinefunction`` on the
-    # instance itself is False, so the bound method has to be inspected directly.
-    return inspect.iscoroutinefunction(router.__call__)
-
-
 def _stage_concurrency(cfg: object) -> int:
     """Total worker-thread demand of a fused stage: a pipe's ``concurrency``, the sum across
     every branch pipe of a path-variants stage (recursively) plus its router. Other stages
@@ -132,12 +113,12 @@ def _stage_concurrency(cfg: object) -> int:
     worker's event loop, which do not consume worker threads.
     """
     if isinstance(cfg, PipeConfig):
-        return 0 if _is_async_op(cfg._args.op) else cfg._args.concurrency
+        return 0 if _is_async_callable(cfg._args.op) else cfg._args.concurrency
     if isinstance(cfg, PathVariantsConfig):
         # A sync router is dispatched with ``run_in_executor``, so it occupies a worker thread
         # for the whole call and must be budgeted alongside the branches it feeds. The fan-in
         # merge needs nothing: it is pure async.
-        router = 0 if _is_async_router(cfg.router) else 1
+        router = 0 if _is_coroutine_callable(cfg.router) else 1
         return router + sum(_stage_concurrency(s) for path in cfg.paths for s in path)
     return 0
 
