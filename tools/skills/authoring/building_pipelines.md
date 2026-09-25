@@ -73,11 +73,13 @@ for epoch in range(num_epochs):
 6. **Batching is two steps.** `.aggregate(batch_size, drop_last=True)` then a `.pipe(collate)` stage. `drop_last=True` avoids partial-batch shape mismatches under DDP.
 7. **Iterate with a timeout.** Prefer `pipeline.get_iterator(timeout=<seconds>)` over `for batch in pipeline` / manual `next()` — it prevents jobs from hanging forever on a stall.
 
-## Going to Production: Multi-Threading in Subprocess (MTP)
+## Going to Production: Benchmark MTP and MP Regions
 
-For production training, isolate the CPU-heavy stages in a subprocess and keep only GPU transfer in the main process — this removes GIL contention between data loading and the training loop. Build the CPU stages with `PipelineBuilder`, obtain a `PipelineConfig` via `.get_config()`, hand it to `run_pipeline_in_subprocess()`, then build a small frontend pipeline that only does `transfer_tensor`. Stage functions must then be **picklable** (module-level functions with `functools.partial`, or callable classes — never lambdas or nested functions).
+For production training, always benchmark both MTP and an MP execution region, regardless of data modality. MTP isolates the CPU-heavy stages in one subprocess and keeps only GPU transfer in the main process; it is a strong starting point for large payloads such as video. Use `PipelineBuilder.to(ProcessPoolExecutorConfig(...))` to run adjacent I/O and CPU stages in multiple worker processes, then close the region with `.to(MAIN_PROCESS)`. MP regions are especially promising for small text or image records, but must also be tried for video, audio, and other workloads. Each worker runs a nested Pipeline and async event loop, so intermediate values stay in-worker instead of crossing IPC after every stage. Avoid assigning a process executor stage by stage.
 
-See `migrating_to_spdl_pipeline.md` for the full MTP construction pattern, pickling/thread-safety constraints, and media (`spdl.io`) recipes — they apply identically to a from-scratch build. See `optimization_strategies.md` for deep tuning: concurrency search, subprocess IPC / shared-memory arena, GPU (NVDEC) video decode, decoder-thread tuning, GC-stall mitigation, and headspace analysis.
+For GPU training, compose the MP region with `run_pipeline_in_subprocess()` so orchestration also stays outside the GPU-driving process. Stage functions and region-boundary values must be **picklable** (module-level functions with `functools.partial`, or callable classes — never lambdas or nested functions). See `optimization_strategies.md` for complete MTP and MP-region patterns and selection guidance.
+
+See `migrating_to_spdl_pipeline.md` for the full MTP construction pattern, pickling/thread-safety constraints, and media (`spdl.io`) recipes — they apply identically to a from-scratch build. The optimization guide also covers concurrency search, subprocess IPC / shared-memory arena, GPU (NVDEC) video decode, decoder-thread tuning, GC-stall mitigation, and headspace analysis.
 
 ## Pipeline Lifecycle and Cleanup
 
@@ -194,7 +196,7 @@ When variants genuinely differ in topology (not just an argument), inline each o
 - [ ] Async functions passed to `.pipe()` as-is (no `asyncio.run()` wrapping)
 - [ ] Batching uses `.aggregate()` + an explicit collate stage
 - [ ] Total concurrency respects the CPU budget (≤ 40% utilization)
-- [ ] Production build uses MTP with picklable stage functions
+- [ ] Production benchmarks compare MTP and an MP region for every data modality
 - [ ] Iterated via `get_iterator(timeout=...)`
 - [ ] Pipeline assembled explicitly with `PipelineBuilder` or a complete `PipelineConfig`, not a boxed loader
 - [ ] Each pipeline shape is a single readable builder chain (no partial-construction helpers)

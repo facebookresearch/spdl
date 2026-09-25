@@ -27,8 +27,8 @@ __PIPELINE_CODE__
 ## Instructions
 
 1. Preserve the experiment intent. Do not switch to a different optimization idea.
-2. Focus on startup/init failures: pickling, importability, configuration, function/class placement, subprocess boundaries, and MTP initialization.
-3. If repairing MTP/subprocess mode, make objects passed across process boundaries picklable. Move nested functions/classes to module scope when needed and avoid capturing unpicklable state in closures.
+2. Focus on startup/init failures: pickling, importability, configuration, function/class placement, subprocess boundaries, MTP initialization, and MP region worker initialization.
+3. If repairing MTP/subprocess mode or an `mp_region`, make callables and objects passed across process boundaries picklable. Move nested functions/classes to module scope when needed and avoid capturing unpicklable state in closures. For a region, preserve the `.to(ProcessPoolExecutorConfig(...))` ... `.to(MAIN_PROCESS)` topology and keep the sink outside the region.
 4. Keep existing instrumentation and logging intact.
 5. Output the complete modified file inside exactly one fenced `python` code block. Do NOT output a diff or partial snippets.
 

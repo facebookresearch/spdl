@@ -43,6 +43,7 @@ from spdl.autoresearch.pipeline_optimization._ops._policy import (
     _extract_default_executor_concurrency,
     _extract_param_changes,
     _extract_total_threads,
+    _initial_experiments_finished,
     _is_duplicate_spec,
     _node_from_spec,
     _retry_policy_for_failure,
@@ -103,10 +104,12 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             specs = adapter.load()
 
             self.assertEqual(
-                ["000_baseline", "000_headspace", "001_mtp"],
+                ["000_baseline", "000_headspace", "001_mtp", "002_mp_region"],
                 [spec.id for spec in specs],
             )
-            self.assertEqual([-1000, -999, -998], [spec.priority for spec in specs])
+            self.assertEqual(
+                [-1000, -999, -998, -997], [spec.priority for spec in specs]
+            )
 
     def test_checkpoint_writes_compatibility_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -126,10 +129,11 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             ).read_text()
 
             self.assertEqual("running", engine_state["status"])
-            self.assertEqual(2, engine_state["queued"])
+            self.assertEqual(3, engine_state["queued"])
             self.assertEqual(1, engine_state["running"])
             self.assertEqual(
-                ["000_headspace", "001_mtp"], [q["node_id"] for q in queue]
+                ["000_headspace", "001_mtp", "002_mp_region"],
+                [q["node_id"] for q in queue],
             )
             self.assertEqual([], active)
             self.assertEqual("queued\n", baseline_status)
@@ -144,7 +148,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             loaded = self._adapter(workdir).load()
 
             self.assertEqual(
-                ["000_headspace", "001_mtp", "000_baseline"],
+                ["000_headspace", "001_mtp", "002_mp_region", "000_baseline"],
                 [spec.id for spec in loaded],
             )
 
@@ -164,6 +168,11 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             name="mtp",
             status="completed",
         )
+        mp_region = HypothesisNode(
+            node_id="002_mp_region",
+            name="mp_region",
+            status="queued",
+        )
 
         selected = _select_planning_node(
             baseline,
@@ -171,10 +180,30 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                 baseline.node_id: baseline,
                 headspace.node_id: headspace,
                 mtp.node_id: mtp,
+                mp_region.node_id: mp_region,
             },
         )
 
         self.assertIsNone(selected)
+
+    def test_legacy_tree_without_mp_region_can_finish_seeds(self) -> None:
+        """Checkpoints created before the MP-region seed remain resumable."""
+        tree = {
+            node.node_id: node
+            for node in [
+                HypothesisNode(
+                    node_id="000_baseline", name="baseline", status="completed"
+                ),
+                HypothesisNode(
+                    node_id="000_headspace",
+                    name="headspace_cache",
+                    status="completed",
+                ),
+                HypothesisNode(node_id="001_mtp", name="mtp", status="completed"),
+            ]
+        }
+
+        self.assertTrue(_initial_experiments_finished(tree))
 
     def _load_node(self, spec: TaskSpec) -> HypothesisNode:
         """Extract node from a TaskSpec with a safe dict cast for Pyre."""
@@ -265,7 +294,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             child_node = self._load_node(child_spec)
             self.assertEqual("000_baseline", child_node.parent_id)
 
-    def test_headspace_completion_selects_mtp_after_must_run_finish(self) -> None:
+    def test_headspace_completion_selects_last_seed_after_must_run_finish(self) -> None:
         baseline = HypothesisNode(
             node_id="000_baseline",
             name="baseline",
@@ -282,6 +311,11 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             name="mtp",
             status="completed",
         )
+        mp_region = HypothesisNode(
+            node_id="002_mp_region",
+            name="mp_region",
+            status="completed",
+        )
 
         selected = _select_planning_node(
             headspace,
@@ -289,10 +323,11 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                 baseline.node_id: baseline,
                 headspace.node_id: headspace,
                 mtp.node_id: mtp,
+                mp_region.node_id: mp_region,
             },
         )
 
-        self.assertEqual(mtp, selected)
+        self.assertEqual(mp_region, selected)
 
     def test_policy_helpers_cover_metric_and_thread_decisions(self) -> None:
         self.assertEqual(
@@ -868,6 +903,10 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
         assert policy is not None
         self.assertEqual(2, policy["max_attempts"])
 
+        node.name = "mp_region"
+        node.spec = {"best_practices_tags": ["mp_region"]}
+        self.assertIsNotNone(_retry_policy_for_failure(node, _config()))
+
         node.failure = _make_failure(
             FailureKind.BUILD_FAILED,
             FailurePhase.BUILD,
@@ -897,8 +936,13 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
                 "startup",
             ),
         )
+        mp_region = HypothesisNode(
+            node_id="002_mp_region",
+            name="mp_region",
+            status="completed",
+        )
         retry = HypothesisNode(
-            node_id="002_mtp_startup_retry_1",
+            node_id="003_mtp_startup_retry_1",
             name="mtp_startup_retry_1",
             status="failed",
             spec={"_startup_retry_of": "001_mtp"},
@@ -909,7 +953,7 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             ),
         )
         better_candidate = HypothesisNode(
-            node_id="003_threads",
+            node_id="004_threads",
             name="threads",
             status="completed",
         )
@@ -918,7 +962,14 @@ class _AutoresearchWorkflowTest(unittest.TestCase):
             retry,
             {
                 node.node_id: node
-                for node in [baseline, headspace, mtp, retry, better_candidate]
+                for node in [
+                    baseline,
+                    headspace,
+                    mtp,
+                    mp_region,
+                    retry,
+                    better_candidate,
+                ]
             },
         )
 

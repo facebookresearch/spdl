@@ -33,10 +33,11 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 _BEST_PRACTICES = [
     "mtp",
+    "mp_region",
     "batch_size_tuning",
     "concurrency_tuning",
 ]
-_STRUCTURAL_PRACTICES = {"mtp"}
+_STRUCTURAL_PRACTICES = {"mtp", "mp_region"}
 _MAX_THREADS_PER_RANK_DEFAULT = 16
 _MAX_THREADS_PER_RANK_EXTENDED = 32
 _HISTORY_JSON_MAX_CHARS = 12000
@@ -309,7 +310,7 @@ def _plan_followups(
 
 
 def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
-    """Create initial HypothesisNode objects for baseline, headspace, and MTP."""
+    """Create initial nodes for baseline, headspace, MTP, and an MP region."""
     nodes: list[HypothesisNode] = []
     history_names = {entry.get("name") for entry in state.get("history", [])}
     tried_practices = set(state.get("best_practices_tried", []))
@@ -384,6 +385,42 @@ def _build_initial_nodes(workdir: Path, config: dict, state: dict) -> list:
                     "best_practices_tags": ["mtp"],
                 },
                 priority=-998,
+            )
+        )
+
+    if "mp_region" not in tried_practices:
+        nodes.append(
+            HypothesisNode(
+                node_id="002_mp_region",
+                name="mp_region",
+                spec={
+                    "name": "mp_region",
+                    "changes": ["mp_region"],
+                    "description": (
+                        "Always benchmark region-based multiprocessing, "
+                        "regardless of data modality, with "
+                        "PipelineBuilder.to(ProcessPoolExecutorConfig(...)). "
+                        "Keep adjacent I/O and CPU stages in one worker region "
+                        "so each worker runs its own nested Pipeline and async "
+                        "event loop, aggregate small source records before the "
+                        "region when practical, and close the region with "
+                        "to(MAIN_PROCESS) before the sink. Avoid stage-wise "
+                        "ProcessPoolExecutor delegation. Tune boundary "
+                        "buffer_size for small records. For GPU training, "
+                        "compose the region config with "
+                        "run_pipeline_in_subprocess() and keep GPU stages in "
+                        "a thin main-process frontend."
+                    ),
+                    "change_summary": "multiprocessing region",
+                    "hypothesis": (
+                        "Parallel worker processes may outperform MTP for this "
+                        "workload, while a fused region avoids inter-stage IPC "
+                        "and keeps intermediate values inside each worker"
+                    ),
+                    "launch_command": base_launch,
+                    "best_practices_tags": ["mp_region"],
+                },
+                priority=-997,
             )
         )
 

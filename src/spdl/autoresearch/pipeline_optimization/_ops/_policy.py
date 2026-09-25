@@ -84,12 +84,15 @@ __all__ = [
 ]
 
 _KIND_EXPERIMENT = "experiment"
-_REQUIRED_INITIAL_EXPERIMENTS = frozenset({"baseline", "headspace_cache", "mtp"})
+_REQUIRED_INITIAL_EXPERIMENTS = frozenset(
+    {"baseline", "headspace_cache", "mtp", "mp_region"}
+)
+_STRUCTURAL_PRACTICES = frozenset({"mtp", "mp_region"})
 _STRUCTURAL_ATTEMPT_THRESHOLD = 3
 _MAX_THREADS_PER_RANK_DEFAULT = 16
 _MAX_THREADS_PER_RANK_EXTENDED = 32
 _STARTUP_FAILURE_RETRIES_DEFAULT = 2
-_STARTUP_RETRYABLE_EXPERIMENTS_DEFAULT = ("mtp",)
+_STARTUP_RETRYABLE_EXPERIMENTS_DEFAULT = ("mtp", "mp_region")
 _NON_RETRYABLE_FAILURES = frozenset(
     {
         FailureKind.JOB_RUNTIME_FAILED,
@@ -118,6 +121,11 @@ def _initial_experiments_finished(
     required_names: frozenset[str] = _REQUIRED_INITIAL_EXPERIMENTS,
 ) -> bool:
     by_name = {node.name: node for node in tree.values()}
+    # Workdirs created before the MP-region seed was introduced do not contain
+    # that root node. Let those checkpoints resume; the planner will still see
+    # mp_region as an untried best practice and schedule it as a follow-up.
+    if "mp_region" not in by_name:
+        required_names = required_names - {"mp_region"}
     return all(
         (node := by_name.get(name)) is not None and node.status in TERMINAL_STATUSES
         for name in required_names
@@ -429,7 +437,7 @@ def _record_failed_best_practice_attempt(state: dict, node: HypothesisNode) -> N
     tried = set(state.get("best_practices_tried", []))
     attempts: dict[str, int] = state.get("_structural_attempts", {})
     for tag in tags:
-        if tag == "mtp":
+        if tag in _STRUCTURAL_PRACTICES:
             attempts[tag] = attempts.get(tag, 0) + 1
             if attempts[tag] >= _STRUCTURAL_ATTEMPT_THRESHOLD:
                 tried.add(tag)
@@ -561,7 +569,7 @@ def _normalize_config(config: dict) -> dict:
     normalized.setdefault("agent", "claude")
     normalized.setdefault("local_execution_mode", "full")
     normalized.setdefault("startup_failure_retries", 2)
-    normalized.setdefault("startup_retryable_experiments", ["mtp"])
+    normalized.setdefault("startup_retryable_experiments", ["mtp", "mp_region"])
     return normalized
 
 

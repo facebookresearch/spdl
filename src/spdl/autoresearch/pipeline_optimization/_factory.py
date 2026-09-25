@@ -347,7 +347,7 @@ def _init_workdir(
         "job_timeout_s": ns.job_timeout,
         "poll_interval": ns.poll_interval,
         "startup_failure_retries": 2,
-        "startup_retryable_experiments": ["mtp"],
+        "startup_retryable_experiments": ["mtp", "mp_region"],
         "platform": ns.platform,
         "agent": ns.agent,
         "local_execution_mode": ns.local_execution_mode,

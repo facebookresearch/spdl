@@ -26,6 +26,23 @@ The SPDL pipeline API has three distinct types:
 
 When implementing MTP, always try Tier 1 (module-level functions with `functools.partial`) first. If the job fails with subprocess-related issues (crashes on startup, silent 0-batch output), retry with Tier 2 (picklable callable classes). The autoresearch loop should attempt both automatically.
 
+### MP Regions — `PipelineBuilder.to`
+
+An MP region is a distinct benchmark from MTP. Open it with
+`PipelineBuilder.to(ProcessPoolExecutorConfig(...))` and close it with
+`.to(MAIN_PROCESS)` before the sink. Each process worker launches one nested
+Pipeline and async event loop for all stages in the region. Consequently,
+intermediate values stay in-worker instead of crossing IPC after every stage.
+
+Always benchmark this topology, regardless of data modality. It is especially
+promising for small text and image records, where boundary cost is low enough
+for process parallelism to outperform threading and conventional data loaders,
+but video and other workloads must try it too. For large video payloads, design
+the region to take small metadata, create the large value internally, and return
+only a compact or shared-memory-backed result when practical. For GPU training,
+compose the region with `run_pipeline_in_subprocess()` so the training process
+remains free of data-loading orchestration.
+
 ### GPU Video Decoding (NVDEC)
 
 When the pipeline bottleneck is CPU video decoding (FFmpeg), GPU video decoding via NVDEC can eliminate the bottleneck entirely by offloading decode to dedicated GPU hardware decoders.
@@ -106,7 +123,6 @@ backend = (
 source2 = spdl.pipeline.run_pipeline_in_subprocess(
     backend.get_config(),
     num_threads=8,
-    mp_context="forkserver",
 )
 
 # Frontend (main process) — GPU decode + to_torch
