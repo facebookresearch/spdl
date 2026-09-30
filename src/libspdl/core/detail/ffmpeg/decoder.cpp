@@ -15,6 +15,7 @@
 #include "libspdl/core/detail/ffmpeg/logging.h"
 #include "libspdl/core/detail/tracing.h"
 
+#include <fmt/format.h>
 #include <glog/logging.h>
 
 namespace spdl::core::detail {

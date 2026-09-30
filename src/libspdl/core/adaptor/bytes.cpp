@@ -11,6 +11,7 @@
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <glog/logging.h>
 
 extern "C" {

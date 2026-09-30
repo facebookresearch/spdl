@@ -15,6 +15,7 @@
 #include "libspdl/cuda/detail/utils.h"
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <fmt/ranges.h>
 
 #include <vector>
