@@ -6,6 +6,7 @@
 
 
 import functools
+import itertools
 import pickle
 import random
 import unittest
@@ -166,6 +167,65 @@ class TestMergeIterator(unittest.TestCase):
         result = list(MergeIterator(iterables, weights=weights))
         self.assertEqual(set(result), {0, 1, 2, 10, 11, 12, 20, 21, 22})
 
+    def test_mergeiterator_stochastic_removes_exhausted_choices(self) -> None:
+        """Weighted merging stops selecting an iterator after it is exhausted."""
+
+        class _CountingIterator(Iterator[int]):
+            def __init__(self, value: int) -> None:
+                self._values = iter([value])
+                self.num_next_calls = 0
+
+            def __next__(self) -> int:
+                self.num_next_calls += 1
+                return next(self._values)
+
+        first = _CountingIterator(0)
+        second = _CountingIterator(10)
+
+        result = list(MergeIterator([first, second], weights=[10, 1], seed=0))
+
+        self.assertCountEqual(result, [0, 10])
+        self.assertEqual(first.num_next_calls, 2)
+        self.assertEqual(second.num_next_calls, 2)
+
+    def test_mergeiterator_stochastic_rejects_invalid_weight_sum(self) -> None:
+        """Weighted merging requires a positive finite total weight."""
+        for weights in ([0.0, 0.0], [1e308, 1e308]):
+            with self.subTest(weights=weights):
+                with self.assertRaisesRegex(ValueError, "positive and finite"):
+                    MergeIterator([[1], [2]], weights=weights)
+
+    def test_mergeiterator_stochastic_normalizes_subnormal_weights(self) -> None:
+        """Equal subnormal weights produce an approximately even distribution."""
+        result = list(
+            MergeIterator(
+                [itertools.repeat(0), itertools.repeat(1)],
+                weights=[5e-324, 5e-324],
+                stop_after=10_000,
+                seed=0,
+            )
+        )
+
+        count = result.count(0)
+        self.assertGreater(count, 4_500)
+        self.assertLess(count, 5_500)
+
+    def test_mergeiterator_stochastic_renormalizes_after_exhaustion(self) -> None:
+        """Surviving tiny weights are rescaled after a dominant source ends."""
+        result = list(
+            MergeIterator(
+                [[0], itertools.repeat(1), itertools.repeat(2)],
+                weights=[1e308, 5e-324, 5e-324],
+                stop_after=10_001,
+                seed=0,
+            )
+        )
+
+        self.assertEqual(result.count(0), 1)
+        count = result.count(1)
+        self.assertGreater(count, 4_500)
+        self.assertLess(count, 5_500)
+
     def test_mergeiterator_stochastic_rejects_zero(self) -> None:
         """weight=0 is rejected."""
         weights = [1, 0]
@@ -233,7 +293,7 @@ class TestMergeIterator(unittest.TestCase):
 
 class TestRepeatSource(unittest.TestCase):
     def test_repeat_source_iterable_with_shuffle(self) -> None:
-        """repeat_source repeats source while calling shuffle"""
+        """repeat_source forwards its starting epoch when shuffling."""
 
         class _IteWithShuffle:
             def __init__(self) -> None:
@@ -251,27 +311,27 @@ class TestRepeatSource(unittest.TestCase):
 
         with patch.object(src, "shuffle", side_effect=src.shuffle) as mock_method:
             self.assertEqual(next(gen), 1)
-            mock_method.assert_called_with(seed=0)
-            self.assertEqual(next(gen), 2)
-            self.assertEqual(next(gen), 0)
-
-            self.assertEqual(next(gen), 2)
-            mock_method.assert_called_with(seed=1)
-            self.assertEqual(next(gen), 0)
-            self.assertEqual(next(gen), 1)
-
-            self.assertEqual(next(gen), 0)
             mock_method.assert_called_with(seed=2)
-            self.assertEqual(next(gen), 1)
-            self.assertEqual(next(gen), 2)
-
-            self.assertEqual(next(gen), 1)
-            mock_method.assert_called_with(seed=3)
             self.assertEqual(next(gen), 2)
             self.assertEqual(next(gen), 0)
 
             self.assertEqual(next(gen), 2)
+            mock_method.assert_called_with(seed=3)
+            self.assertEqual(next(gen), 0)
+            self.assertEqual(next(gen), 1)
+
+            self.assertEqual(next(gen), 0)
             mock_method.assert_called_with(seed=4)
+            self.assertEqual(next(gen), 1)
+            self.assertEqual(next(gen), 2)
+
+            self.assertEqual(next(gen), 1)
+            mock_method.assert_called_with(seed=5)
+            self.assertEqual(next(gen), 2)
+            self.assertEqual(next(gen), 0)
+
+            self.assertEqual(next(gen), 2)
+            mock_method.assert_called_with(seed=6)
             self.assertEqual(next(gen), 0)
             self.assertEqual(next(gen), 1)
 
