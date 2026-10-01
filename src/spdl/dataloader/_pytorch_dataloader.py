@@ -281,8 +281,16 @@ def _resolve_sampler(
         _fetch_fn = _get_items
         _collate_fn = collate_fn or default_collate
     elif batch_size is not None:
+        # PyTorch's BatchSampler stub hard-codes integer indices even though a
+        # custom Sampler can yield the generic dataset key type K.
+        batch_sampler_input = cast(
+            Any,
+            sampler
+            if sampler is not None
+            else _get_sampler(dataset, shuffle, generator),
+        )
         _sampler = BatchSampler(
-            sampler or _get_sampler(dataset, shuffle, generator),  # pyre-ignore: [6]
+            batch_sampler_input,
             batch_size,
             drop_last,
         )
@@ -402,6 +410,10 @@ def get_pytorch_dataloader(
                 num_workers=8,
                 worker_init_concurrency=2,
             )
+
+    .. versionchanged:: 0.7.0
+       Empty custom samplers are now preserved instead of being replaced by the
+       default sampler.
     """
     from torch.utils.data.dataloader import IterableDataset
 
