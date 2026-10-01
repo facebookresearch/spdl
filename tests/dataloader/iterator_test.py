@@ -293,7 +293,7 @@ class TestMergeIterator(unittest.TestCase):
 
 class TestRepeatSource(unittest.TestCase):
     def test_repeat_source_iterable_with_shuffle(self) -> None:
-        """repeat_source repeats source while calling shuffle"""
+        """repeat_source forwards its starting epoch when shuffling."""
 
         class _IteWithShuffle:
             def __init__(self) -> None:
@@ -311,27 +311,27 @@ class TestRepeatSource(unittest.TestCase):
 
         with patch.object(src, "shuffle", side_effect=src.shuffle) as mock_method:
             self.assertEqual(next(gen), 1)
-            mock_method.assert_called_with(seed=0)
-            self.assertEqual(next(gen), 2)
-            self.assertEqual(next(gen), 0)
-
-            self.assertEqual(next(gen), 2)
-            mock_method.assert_called_with(seed=1)
-            self.assertEqual(next(gen), 0)
-            self.assertEqual(next(gen), 1)
-
-            self.assertEqual(next(gen), 0)
             mock_method.assert_called_with(seed=2)
-            self.assertEqual(next(gen), 1)
-            self.assertEqual(next(gen), 2)
-
-            self.assertEqual(next(gen), 1)
-            mock_method.assert_called_with(seed=3)
             self.assertEqual(next(gen), 2)
             self.assertEqual(next(gen), 0)
 
             self.assertEqual(next(gen), 2)
+            mock_method.assert_called_with(seed=3)
+            self.assertEqual(next(gen), 0)
+            self.assertEqual(next(gen), 1)
+
+            self.assertEqual(next(gen), 0)
             mock_method.assert_called_with(seed=4)
+            self.assertEqual(next(gen), 1)
+            self.assertEqual(next(gen), 2)
+
+            self.assertEqual(next(gen), 1)
+            mock_method.assert_called_with(seed=5)
+            self.assertEqual(next(gen), 2)
+            self.assertEqual(next(gen), 0)
+
+            self.assertEqual(next(gen), 2)
+            mock_method.assert_called_with(seed=6)
             self.assertEqual(next(gen), 0)
             self.assertEqual(next(gen), 1)
 
