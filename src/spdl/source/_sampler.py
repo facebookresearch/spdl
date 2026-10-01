@@ -41,8 +41,11 @@ def _validate_args_det(
     if n <= 0:
         raise ValueError(f"The size of dataset must be larger than 0. Found: {n}")
 
-    if rank >= world_size:
-        raise ValueError(f"rank ({rank}) must be with the range of [0, {world_size=}).")
+    if world_size <= 0:
+        raise ValueError(f"`world_size` must be greater than zero. Found: {world_size}")
+
+    if not 0 <= rank < world_size:
+        raise ValueError(f"`rank` ({rank}) must be within the range [0, {world_size}).")
 
     if ddp_drop_last_distributed_round and n < world_size:
         raise ValueError(
@@ -111,6 +114,9 @@ class DistributedDeterministicSampler:
 
     .. versionadded:: 0.5.0
        The ``ddp_drop_last_distributed_round`` argument.
+
+    .. versionchanged:: 0.7.0
+       Invalid ``rank`` and ``world_size`` values now raise :class:`ValueError`.
     """
 
     def __init__(
@@ -186,14 +192,11 @@ def _validate_args_random(
     if n <= 0:
         raise ValueError(f"The size of dataset must be larger than 0. Found: {n}")
 
-    if rank >= world_size:
-        raise ValueError(f"rank ({rank}) must be with the range of [0, {world_size=}).")
+    if world_size <= 0:
+        raise ValueError(f"`world_size` must be greater than zero. Found: {world_size}")
 
-    if ddp_drop_last_distributed_round and n < world_size:
-        raise ValueError(
-            f"The size of dataset ({n}) must be larger than or equal to "
-            f"the world size ({world_size}) when ddp_drop_last_distributed_round=True"
-        )
+    if not 0 <= rank < world_size:
+        raise ValueError(f"`rank` ({rank}) must be within the range [0, {world_size}).")
 
     if num_draws is not None:
         if num_draws <= 0:
@@ -201,13 +204,23 @@ def _validate_args_random(
                 f"`num_draws` must be greater than zero. Found: {num_draws}"
             )
 
-        if ddp_drop_last_distributed_round and num_draws < world_size:
-            raise ValueError(
-                "`num_draws` must be greater than or equal to `world_size` "
-                f"when ddp_drop_last_distributed_round=True. Found: {num_draws=}, {world_size=}"
-            )
+    # Weighted sampling uses replacement, so a dataset smaller than the world
+    # can still fill a distributed round when num_draws is large enough.
+    total_draws = n if num_draws is None else num_draws
+    if ddp_drop_last_distributed_round and total_draws < world_size:
+        raise ValueError(
+            "The number of draws must be greater than or equal to `world_size` "
+            "when ddp_drop_last_distributed_round=True. "
+            f"Found: num_draws={total_draws}, {world_size=}"
+        )
 
     if weights is None:
+        if total_draws > n:
+            raise ValueError(
+                "`num_draws` cannot exceed the dataset size when sampling "
+                "without replacement. "
+                f"Found: num_draws={total_draws}, dataset size={n}"
+            )
         return None
     else:
         if (s := len(weights)) != n:
@@ -224,7 +237,13 @@ def _validate_args_random(
                 "Some elements are negative or not finite."
             )
 
-        w /= np.sum(w)
+        with np.errstate(over="ignore", invalid="ignore"):
+            total_weight = np.sum(w)
+
+        if not np.isfinite(total_weight) or total_weight <= 0:
+            raise ValueError("The sum of `weights` must be positive and finite.")
+
+        w /= total_weight
 
         return w
 
@@ -392,6 +411,10 @@ class DistributedRandomSampler:
 
     .. versionadded:: 0.5.0
        The ``ddp_drop_last_distributed_round`` argument.
+
+    .. versionchanged:: 0.7.0
+       Invalid ``rank`` and ``world_size`` values and invalid weight totals now
+       raise :class:`ValueError`.
     """
 
     def __init__(
