@@ -59,6 +59,57 @@ class TestDistributedSamplerInterface(unittest.TestCase):
         )
 
 
+class TestDistributedSamplerValidation(unittest.TestCase):
+    def test_rejects_nonpositive_world_size(self) -> None:
+        """Both distributed samplers require a positive world size."""
+        for sampler_type in (
+            DistributedDeterministicSampler,
+            DistributedRandomSampler,
+        ):
+            for world_size in (0, -1):
+                with self.subTest(sampler_type=sampler_type, world_size=world_size):
+                    with self.assertRaisesRegex(ValueError, "`world_size`"):
+                        sampler_type(4, rank=0, world_size=world_size)
+
+    def test_rejects_rank_outside_world(self) -> None:
+        """Both distributed samplers require rank to identify an existing worker."""
+        for sampler_type in (
+            DistributedDeterministicSampler,
+            DistributedRandomSampler,
+        ):
+            for rank in (-1, 2):
+                with self.subTest(sampler_type=sampler_type, rank=rank):
+                    with self.assertRaisesRegex(ValueError, "`rank`"):
+                        sampler_type(4, rank=rank, world_size=2)
+
+    def test_rejects_nonpositive_or_nonfinite_weight_sum(self) -> None:
+        """Weighted sampling requires a positive finite normalization factor."""
+        for weights in ([0.0, 0.0], [1e308, 1e308]):
+            with self.subTest(weights=weights):
+                with self.assertRaisesRegex(ValueError, "positive and finite"):
+                    DistributedRandomSampler(2, rank=0, world_size=1, weights=weights)
+
+    def test_weighted_draw_count_can_exceed_dataset_size(self) -> None:
+        """Replacement draws, not population size, determine distributed rounds."""
+        samplers = [
+            DistributedRandomSampler(
+                1,
+                rank=rank,
+                world_size=2,
+                num_draws=2,
+                weights=[1.0],
+            )
+            for rank in range(2)
+        ]
+
+        self.assertEqual([list(sampler) for sampler in samplers], [[0], [0]])
+
+    def test_rejects_unweighted_draw_count_above_dataset_size(self) -> None:
+        """Sampling without replacement cannot draw more than the population."""
+        with self.assertRaisesRegex(ValueError, "without replacement"):
+            DistributedRandomSampler(1, rank=0, world_size=2, num_draws=2)
+
+
 class TestDistributedSamplerDeterministic(unittest.TestCase):
     def test_deterministic_iter(self) -> None:
         """without distributed, deterministic iteration behaves same as `range(N)`"""

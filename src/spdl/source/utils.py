@@ -10,8 +10,8 @@ __all__ = ["MergeIterator", "repeat_source", "embed_shuffle"]
 
 
 import logging
+import math
 import random
-import sys
 import time
 from collections.abc import Iterable, Iterator, Sequence, Sized
 from typing import overload, TypeVar
@@ -64,22 +64,28 @@ def _stochastic_iter(
 ) -> Iterable[T]:
     # These are all checked in MergeIterator constructor
     assert len(iterators) == len(weights)
-    assert all(w >= sys.float_info.epsilon for w in weights)
+    assert all(math.isfinite(w) and w > 0 for w in weights)
 
-    population = list(range(len(iterators)))
+    active_weights = list(weights)
     rng = random.Random(seed)
     num_items = 0
 
-    not_exhausted = [True for _ in range(len(iterators))]
-    while any(not_exhausted):
-        for i in rng.choices(population, weights, k=100):
+    while iterators:
+        # ``random.choices`` accumulates weights in float precision. Scale the
+        # original weights after each removal so weights that underflowed while
+        # a much larger source was active regain their relative magnitudes.
+        scale = max(active_weights)
+        normalized_weights = [weight / scale for weight in active_weights]
+        population = range(len(iterators))
+        for i in rng.choices(population, normalized_weights, k=100):
             try:
                 yield next(iterators[i])
             except StopIteration:
-                not_exhausted[i] = False
                 if stop_after == _FIRST_EXHAUSTION:
                     return
-                continue
+                iterators.pop(i)
+                active_weights.pop(i)
+                break
 
             num_items += 1
             if stop_after > 0 and num_items >= stop_after:
@@ -137,8 +143,12 @@ class MergeIterator(Iterable[T]):
         [0, 10, 20, 1, 11, 21, 2, 22]
         >>>
         >>> # Providing weights will pick up the iterable stocastically.
-        >>> print(list(MergeIterator(iterables, stop_after=9, weights=[1, 1, 1])))
-        [0, 1, 10, 11, 20, 2, 21, 22]
+        >>> print(sorted(MergeIterator(iterables, stop_after=9, weights=[1, 1, 1])))
+        [0, 1, 2, 10, 11, 20, 21, 22]
+
+    .. versionchanged:: 0.7.0
+       Exhausted weighted sources are removed from future draws, and invalid
+       weight totals now raise :class:`ValueError`.
     """
 
     def __init__(
@@ -168,8 +178,12 @@ class MergeIterator(Iterable[T]):
                     f"The number of probabilities ({len(self.weights)}) and "
                     f"iterables ({len(iterables)}) must match."
                 )
-            if any(w < 0 for w in self.weights):
-                raise ValueError("Weights cannot be negative.")
+            if any(not math.isfinite(w) or w < 0 for w in self.weights):
+                raise ValueError("Weights must be finite and non-negative.")
+
+            total_weight = sum(self.weights)
+            if not math.isfinite(total_weight) or total_weight <= 0:
+                raise ValueError("The sum of weights must be positive and finite.")
 
             nnz_indices = [i for i, w in enumerate(self.weights) if w != 0]
             self.iterables = [self.iterables[i] for i in nnz_indices]
