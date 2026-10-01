@@ -78,8 +78,9 @@ def load_audio(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
     name: str | None = None,
-    **kwargs: object,
 ) -> "CPUBuffer": ...
+
+
 @overload
 def load_audio(
     src: str | bytes,
@@ -90,7 +91,6 @@ def load_audio(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
     name: str | None = None,
-    **kwargs: object,
 ) -> "CUDABuffer": ...
 
 
@@ -103,7 +103,6 @@ def load_audio(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
     name: str | None = None,
-    **kwargs: object,
 ) -> "CPUBuffer | CUDABuffer":
     """Load audio from source into buffer.
 
@@ -111,6 +110,9 @@ def load_audio(
     :py:func:`~spdl.io.decode_packets`, :py:func:`~spdl.io.convert_frames`,
     and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
     buffer object from source in one step.
+
+    .. versionchanged:: 0.7.0
+       Removed unused arbitrary keyword arguments.
 
     Args:
         src, timestamp, demux_config: See :py:func:`~spdl.io.demux_audio`.
@@ -151,8 +153,9 @@ def load_video(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
     name: str | None = None,
-    **kwargs: object,
 ) -> "CPUBuffer": ...
+
+
 @overload
 def load_video(
     src: str | bytes,
@@ -163,7 +166,6 @@ def load_video(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
     name: str | None = None,
-    **kwargs: object,
 ) -> "CUDABuffer": ...
 
 
@@ -176,7 +178,6 @@ def load_video(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
     name: str | None = None,
-    **kwargs: object,
 ) -> "CPUBuffer | CUDABuffer":
     """Load video from source into buffer.
 
@@ -184,6 +185,9 @@ def load_video(
     :py:func:`~spdl.io.decode_packets`, :py:func:`~spdl.io.convert_frames`,
     and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
     buffer object from source in one step.
+
+    .. versionchanged:: 0.7.0
+       Removed unused arbitrary keyword arguments.
 
     Args:
         src, timestamp, demux_config: See :py:func:`~spdl.io.demux_video`.
@@ -235,8 +239,9 @@ def load_image(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
     name: str | None = None,
-    **kwargs: object,
 ) -> "CPUBuffer": ...
+
+
 @overload
 def load_image(
     src: str | bytes,
@@ -246,7 +251,6 @@ def load_image(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
     name: str | None = None,
-    **kwargs: object,
 ) -> "CUDABuffer": ...
 
 
@@ -258,7 +262,6 @@ def load_image(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
     name: str | None = None,
-    **kwargs: object,
 ) -> "CPUBuffer | CUDABuffer":
     """Load image from source into buffer.
 
@@ -266,6 +269,9 @@ def load_image(
     :py:func:`~spdl.io.decode_packets`, :py:func:`~spdl.io.convert_frames`,
     and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
     buffer object from source in one step.
+
+    .. versionchanged:: 0.7.0
+       Removed unused arbitrary keyword arguments.
 
     Args:
         src, demux_config: See :py:func:`~spdl.io.demux_video`.
@@ -333,7 +339,6 @@ def load_image_batch(
     device_config: None = None,
     storage: "CPUStorage | None" = None,
     strict: bool = True,
-    **kwargs: object,
 ) -> "CPUBuffer": ...
 
 
@@ -350,7 +355,6 @@ def load_image_batch(
     device_config: "CUDAConfig",
     storage: "CPUStorage | None" = None,
     strict: bool = True,
-    **kwargs: object,
 ) -> "CUDABuffer": ...
 
 
@@ -366,7 +370,6 @@ def load_image_batch(
     device_config: "CUDAConfig | None" = None,
     storage: "CPUStorage | None" = None,
     strict: bool = True,
-    **kwargs: object,
 ) -> "CPUBuffer | CUDABuffer":
     """Batch load images.
 
@@ -374,6 +377,9 @@ def load_image_batch(
     :py:func:`~spdl.io.decode_packets`, :py:func:`~spdl.io.convert_frames`,
     and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
     buffer object from source in one step.
+
+    .. versionchanged:: 0.7.0
+       Removed unused arbitrary keyword arguments.
 
     Args:
         srcs: List of source identifiers.
@@ -421,8 +427,8 @@ def load_image_batch(
         ... ]
         >>> buffer = load_image_batch(
         ...     srcs,
-        ...     scale_width=124,
-        ...     scale_height=96,
+        ...     width=124,
+        ...     height=96,
         ...     pix_fmt="rgb24",
         ... )
         >>> array = spdl.io.to_numpy(buffer)
