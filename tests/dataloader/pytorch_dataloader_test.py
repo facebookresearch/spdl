@@ -8,9 +8,10 @@ import multiprocessing as mp
 import os
 import time
 import unittest
+from collections.abc import Iterator
 
 from spdl.dataloader import get_pytorch_dataloader
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Sampler
 
 
 class _SlowUnpickleDataset(Dataset[int]):
@@ -43,6 +44,28 @@ class _SlowUnpickleDataset(Dataset[int]):
 
 
 class PyTorchDataLoaderTest(unittest.TestCase):
+    def test_zero_length_custom_sampler_is_preserved(self) -> None:
+        """A falsy custom sampler must not be replaced by the default sampler."""
+
+        class _EmptySampler(Sampler[int]):
+            def __iter__(self) -> Iterator[int]:
+                return iter(())
+
+            def __len__(self) -> int:
+                return 0
+
+        dataset = _SlowUnpickleDataset(None, None, None, size=3)
+        sampler = _EmptySampler()
+
+        loader = get_pytorch_dataloader(
+            dataset,
+            batch_size=1,
+            sampler=sampler,
+            num_workers=0,
+        )
+
+        self.assertEqual(list(loader), [])
+
     def test_rejects_nonpositive_worker_init_concurrency(self) -> None:
         """Worker initialization concurrency must be positive when set."""
         with self.assertRaisesRegex(
