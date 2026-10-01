@@ -12,6 +12,17 @@ from spdl.pipeline import cache_iterator
 
 
 class TestCacheIterator(unittest.TestCase):
+    def test_rejects_nonpositive_cache_count(self) -> None:
+        """cache_iterator requires at least one cached item."""
+        for num_caches in (0, -1):
+            with self.subTest(num_caches=num_caches):
+                with self.assertRaisesRegex(ValueError, "`num_caches`"):
+                    next(cache_iterator(range(1), num_caches))
+
+    def test_empty_source_stops_without_entering_cache_replay(self) -> None:
+        """An empty source terminates instead of spinning over an empty cache."""
+        self.assertEqual(list(cache_iterator([], 1)), [])
+
     def test_cache_iterator(self) -> None:
         """cache_iterator returns the cached values"""
 
