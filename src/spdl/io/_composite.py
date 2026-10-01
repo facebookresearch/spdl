@@ -20,7 +20,7 @@ import builtins
 import logging
 from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import overload, TYPE_CHECKING
+from typing import Any, overload, TYPE_CHECKING
 
 from . import _config, _core, _preprocessing
 from ._core import _FILTER_DESC_DEFAULT, TimeWindow
@@ -78,7 +78,7 @@ def load_audio(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
     name: str | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CPUBuffer": ...
 @overload
 def load_audio(
@@ -90,7 +90,7 @@ def load_audio(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
     name: str | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CUDABuffer": ...
 
 
@@ -103,7 +103,7 @@ def load_audio(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
     name: str | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CPUBuffer | CUDABuffer":
     """Load audio from source into buffer.
 
@@ -119,9 +119,14 @@ def load_audio(
             Providing this argument will move the buffer to CUDA device.
         name: Optional custom name for the source. Used in error messages to
             provide better context when demuxing fails.
+        **kwargs: Additional arguments forwarded to :class:`~spdl.io.Demuxer`.
 
     Returns:
         Buffer object.
+
+    .. versionchanged:: 0.7.0
+       Additional demuxer keyword arguments are now forwarded to
+       :class:`~spdl.io.Demuxer`.
 
     See Also:
         - :doc:`../io/basic` - High-level loading functions documentation
@@ -131,7 +136,11 @@ def load_audio(
     _core.log_api_usage_once("spdl.io.load_audio")
 
     packets = _core.demux_audio(
-        src, timestamp=timestamp, demux_config=demux_config, name=name
+        src,
+        timestamp=timestamp,
+        demux_config=demux_config,
+        name=name,
+        **kwargs,
     )
     return _load_packets(
         packets,
@@ -151,7 +160,7 @@ def load_video(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
     name: str | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CPUBuffer": ...
 @overload
 def load_video(
@@ -163,7 +172,7 @@ def load_video(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
     name: str | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CUDABuffer": ...
 
 
@@ -176,7 +185,7 @@ def load_video(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
     name: str | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CPUBuffer | CUDABuffer":
     """Load video from source into buffer.
 
@@ -192,9 +201,14 @@ def load_video(
             Providing this argument will move the buffer to CUDA device.
         name: Optional custom name for the source. Used in error messages to
             provide better context when demuxing fails.
+        **kwargs: Additional arguments forwarded to :class:`~spdl.io.Demuxer`.
 
     Returns:
         Buffer object.
+
+    .. versionchanged:: 0.7.0
+       Additional demuxer keyword arguments are now forwarded to
+       :class:`~spdl.io.Demuxer`.
 
     Note:
         The decoder thread configuration can significantly affect video decoding
@@ -216,7 +230,11 @@ def load_video(
     _core.log_api_usage_once("spdl.io.load_video")
 
     packets = _core.demux_video(
-        src, timestamp=timestamp, demux_config=demux_config, name=name
+        src,
+        timestamp=timestamp,
+        demux_config=demux_config,
+        name=name,
+        **kwargs,
     )
     return _load_packets(
         packets,
@@ -235,7 +253,7 @@ def load_image(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: None = None,
     name: str | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CPUBuffer": ...
 @overload
 def load_image(
@@ -246,7 +264,7 @@ def load_image(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig",
     name: str | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CUDABuffer": ...
 
 
@@ -258,7 +276,7 @@ def load_image(
     filter_desc: str | None = _FILTER_DESC_DEFAULT,
     device_config: "CUDAConfig | None" = None,
     name: str | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CPUBuffer | CUDABuffer":
     """Load image from source into buffer.
 
@@ -274,9 +292,14 @@ def load_image(
             Providing this argument will move the buffer to CUDA device.
         name: Optional custom name for the source. Used in error messages to
             provide better context when demuxing fails.
+        **kwargs: Additional arguments forwarded to :class:`~spdl.io.Demuxer`.
 
     Returns:
         Buffer object.
+
+    .. versionchanged:: 0.7.0
+       Additional demuxer keyword arguments are now forwarded to
+       :class:`~spdl.io.Demuxer`.
 
     See Also:
         - :doc:`../io/basic` - High-level loading functions documentation
@@ -285,7 +308,7 @@ def load_image(
     """
     _core.log_api_usage_once("spdl.io.load_image")
 
-    packets = _core.demux_image(src, demux_config=demux_config, name=name)
+    packets = _core.demux_image(src, demux_config=demux_config, name=name, **kwargs)
     return _load_packets(
         packets,
         decode_config=decode_config,
@@ -313,8 +336,9 @@ def _decode(
     demux_config: "DemuxConfig | None",
     decode_config: "DecodeConfig | None",
     filter_desc: str | None,
+    **kwargs: Any,
 ) -> "_libspdl.ImageFrames":
-    pkts = _core.demux_image(src, demux_config=demux_config)
+    pkts = _core.demux_image(src, demux_config=demux_config, **kwargs)
     return _core.decode_packets(
         pkts, decode_config=decode_config, filter_desc=filter_desc
     )
@@ -333,7 +357,7 @@ def load_image_batch(
     device_config: None = None,
     storage: "CPUStorage | None" = None,
     strict: bool = True,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CPUBuffer": ...
 
 
@@ -350,7 +374,7 @@ def load_image_batch(
     device_config: "CUDAConfig",
     storage: "CPUStorage | None" = None,
     strict: bool = True,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CUDABuffer": ...
 
 
@@ -366,7 +390,7 @@ def load_image_batch(
     device_config: "CUDAConfig | None" = None,
     storage: "CPUStorage | None" = None,
     strict: bool = True,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> "CPUBuffer | CUDABuffer":
     """Batch load images.
 
@@ -410,8 +434,14 @@ def load_image_batch(
         strict:
             *Optional:* If True, raise an error if any of the images failed to load.
 
+        **kwargs: Additional arguments forwarded to :class:`~spdl.io.Demuxer`.
+
     Returns:
         A buffer object.
+
+    .. versionchanged:: 0.7.0
+       Additional demuxer keyword arguments are now forwarded to
+       :class:`~spdl.io.Demuxer` for every image.
 
     .. admonition: Example
 
@@ -444,7 +474,13 @@ def load_image_batch(
     frames = []
     for src in srcs:
         try:
-            frame = _decode(src, demux_config, decode_config, filter_desc)
+            frame = _decode(
+                src,
+                demux_config,
+                decode_config,
+                filter_desc,
+                **kwargs,
+            )
         except Exception as err:
             _LG.error(_get_err_msg(src, err))
         else:
