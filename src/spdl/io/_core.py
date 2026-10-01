@@ -94,9 +94,7 @@ if TYPE_CHECKING:
     CUDAConfig = _libspdl_cuda.CUDAConfig
     NvDecDecoder = _libspdl_cuda.NvDecDecoder
 
-    SourceType: TypeAlias = (
-        "str | Path | bytes | memoryview[bytes] | UintArray | Tensor"
-    )
+    SourceType: TypeAlias = "str | Path | bytes | memoryview | UintArray | Tensor"
 
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -855,7 +853,7 @@ def decode_packets_nvdec(
     raise AssertionError(f"[SPDL Internal Error] Unexpected {pix_fmt=}")
 
 
-def _resolve_src2(obj: object) -> "memoryview[bytes]":
+def _resolve_src2(obj: object) -> memoryview:
     src = _resolve_src(obj)
     if isinstance(src, str):
         with open(src, "rb") as f:
@@ -899,7 +897,7 @@ def decode_image_nvjpeg(
     if device_config is None:
         raise ValueError("device_config must be provided.")
 
-    data: "memoryview[bytes] | Sequence[memoryview[bytes]]"
+    data: "memoryview | Sequence[memoryview]"
     if isinstance(src, Sequence) and not isinstance(src, (str, bytes)):
         data = [_resolve_src2(s) for s in src]
     else:
