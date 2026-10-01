@@ -57,12 +57,19 @@ def cache_iterator(
 
     Returns:
         The wrapper iterator.
+
+    .. versionchanged:: 0.7.0
+       ``num_caches`` must be positive, and empty sources now terminate without
+       entering cache replay.
     """
 
     # Note - Design choice
     # When these optional values are provided, we could choose to not validate.
     # But the purpose of this function is to make sure you are using cache,
     # so we raise an error if these parameters do not make logical sense.
+    if num_caches <= 0:
+        raise ValueError(f"`num_caches` must be greater than zero. Found: {num_caches}")
+
     if return_caches_after is not None:
         if return_caches_after < num_caches:
             raise ValueError(
@@ -102,6 +109,9 @@ def cache_iterator(
 
     if delete_src:
         del src
+
+    if not cache:
+        return
 
     while True:
         for v in cache:
