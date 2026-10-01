@@ -307,6 +307,8 @@ def _repeat(src: Iterable[T] | IterableWithShuffle[T], epoch: int) -> Iterator[T
     while True:
         _LG.info("Starting source epoch %d.", epoch)
         t0 = time.monotonic()
+        if isinstance(src, IterableWithShuffle):
+            src.shuffle(seed=epoch)
         num_rows = 0
         for batch in src:
             num_rows += 1
@@ -355,16 +357,17 @@ def repeat_source(
     .. code-block::
 
        while True:
-           yield from src
-
-           epoch += 1
-           if hasattr(src, "shuffle"):
+           if isinstance(src, IterableWithShuffle):
                src.shuffle(seed=epoch)
+           yield from src
+           epoch += 1
 
     Args:
         src: The source to repeat.
         epoch: The epoch number to start with.
+
+    .. versionchanged:: 0.7.0
+       ``epoch`` now also controls the first shuffle seed.
     """
-    src_ = embed_shuffle(src) if isinstance(src, IterableWithShuffle) else src
     # Returning object so that it can be passed to a subprocess.
-    return _RepeatIterator(src_, epoch)
+    return _RepeatIterator(src, epoch)
