@@ -52,6 +52,8 @@ CPUStorage& CPUStorage::operator=(CPUStorage&& other) noexcept {
   using std::swap;
   swap(data_, other.data_);
   swap(deallocator_, other.deallocator_);
+  swap(size, other.size);
+  swap(memory_pinned_, other.memory_pinned_);
   return *this;
 }
 CPUStorage::~CPUStorage() {
