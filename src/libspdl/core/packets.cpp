@@ -116,6 +116,7 @@ template <MediaType media>
 Packets<media>::Packets(const Packets<media>& other)
     : id(other.id),
       src(other.src),
+      stream_index(other.stream_index),
       pkts(other.pkts),
       time_base(other.time_base),
       timestamp(other.timestamp),
@@ -138,6 +139,7 @@ Packets<media>& Packets<media>::operator=(Packets<media>&& other) noexcept {
   using std::swap;
   swap(id, other.id);
   swap(src, other.src);
+  swap(stream_index, other.stream_index);
   swap(pkts, other.pkts);
   swap(time_base, other.time_base);
   swap(timestamp, other.timestamp);
@@ -252,7 +254,10 @@ VideoPacketsPtr
 extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
   auto& src_packets = src->pkts.get_packets();
   auto ret = std::make_unique<VideoPackets>();
+  ret->id = src->id;
   ret->src = src->src;
+  ret->stream_index = src->stream_index;
+  ret->time_base = src->time_base;
   ret->codec = src->codec;
   // Do not preserve timestamp as indices are already adjusted
   ret->timestamp = std::nullopt;
@@ -846,13 +851,18 @@ std::vector<uint8_t> serialize_packets(const Packets<media>& packets) {
   // Codec
   w.write<uint8_t>(packets.codec.has_value() ? 1 : 0);
   if (packets.codec) {
+    const auto* parameters = packets.codec->get_parameters();
+    if (!parameters) {
+      throw std::runtime_error(
+          "Cannot serialize Codec with null codec parameters");
+    }
     auto tb = packets.codec->get_time_base();
     auto fr = packets.codec->get_frame_rate();
     w.write<int32_t>(tb.num);
     w.write<int32_t>(tb.den);
     w.write<int32_t>(fr.num);
     w.write<int32_t>(fr.den);
-    serialize_codec_parameters(w, packets.codec->get_parameters());
+    serialize_codec_parameters(w, parameters);
   }
 
   // Packets

@@ -126,7 +126,7 @@ struct Packets {
   /// Source URI or identifier.
   std::string src;
   /// Stream index in the source.
-  int stream_index;
+  int stream_index{};
 
   /// Series of compressed packets.
   PacketSeries pkts;
@@ -243,8 +243,9 @@ std::vector<double> get_timestamps(
 /// `AV_INPUT_BUFFER_PADDING_SIZE` zeroed bytes so it can be restored as a
 /// zero-copy view (see `deserialize_packets_view`).
 ///
-/// Throws std::runtime_error if any non-serializable pointer field
-/// (AVPacket::opaque, AVPacket::opaque_ref) is non-NULL.
+/// Throws std::runtime_error if an engaged Codec has null parameters, or if
+/// any non-serializable pointer field (AVPacket::opaque,
+/// AVPacket::opaque_ref) is non-NULL.
 ///
 /// @tparam media Media type (Audio, Video, or Image).
 /// @param packets Packets to serialize.
