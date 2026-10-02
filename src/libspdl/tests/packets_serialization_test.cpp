@@ -154,6 +154,13 @@ TEST(PacketsSerializationTest, MediaTypeMismatchThrows) {
   EXPECT_THROW(deserialize_packets<MediaType::Video>(data), std::runtime_error);
 }
 
+TEST(PacketsSerializationTest, CodecWithoutParametersThrows) {
+  Packets<MediaType::Video> packets;
+  packets.codec.emplace();
+
+  EXPECT_THROW(serialize_packets(packets), std::runtime_error);
+}
+
 TEST(PacketsSerializationTest, ViewAliasesBufferWithPadding) {
   Packets<MediaType::Audio> packets;
   packets.src = "test://view";

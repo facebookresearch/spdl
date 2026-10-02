@@ -846,13 +846,18 @@ std::vector<uint8_t> serialize_packets(const Packets<media>& packets) {
   // Codec
   w.write<uint8_t>(packets.codec.has_value() ? 1 : 0);
   if (packets.codec) {
+    const auto* parameters = packets.codec->get_parameters();
+    if (!parameters) {
+      throw std::runtime_error(
+          "Cannot serialize Codec with null codec parameters");
+    }
     auto tb = packets.codec->get_time_base();
     auto fr = packets.codec->get_frame_rate();
     w.write<int32_t>(tb.num);
     w.write<int32_t>(tb.den);
     w.write<int32_t>(fr.num);
     w.write<int32_t>(fr.den);
-    serialize_codec_parameters(w, packets.codec->get_parameters());
+    serialize_codec_parameters(w, parameters);
   }
 
   // Packets
