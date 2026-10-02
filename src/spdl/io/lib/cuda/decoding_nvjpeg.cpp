@@ -48,16 +48,12 @@ void register_decoding_nvjpeg(nb::module_& m) {
 #ifndef SPDL_USE_NVJPEG
         NOT_SUPPORTED_NVJPEG;
 #else
+        const auto encoded = detail::memoryview_to_sv(data);
+        nb::gil_scoped_release _;
         return decode_image_nvjpeg(
-            detail::memoryview_to_sv(data),
-            cuda_config,
-            scale_width,
-            scale_height,
-            pix_fmt,
-            sync);
+            encoded, cuda_config, scale_width, scale_height, pix_fmt, sync);
 #endif
       },
-      nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("data"),
       nb::kw_only(),
       nb::arg("device_config"),
@@ -82,11 +78,11 @@ void register_decoding_nvjpeg(nb::module_& m) {
         for (const auto& d : data) {
           dataset.emplace_back(detail::memoryview_to_sv(d));
         }
+        nb::gil_scoped_release _;
         return decode_image_nvjpeg(
             dataset, cuda_config, scale_width, scale_height, pix_fmt, sync);
 #endif
       },
-      nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("data"),
       nb::kw_only(),
       nb::arg("device_config"),
