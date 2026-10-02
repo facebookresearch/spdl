@@ -40,7 +40,7 @@ void resize(
     const NppiRect& src_roi,
     nvjpegImage_t& dst,
     const NppiSize& dst_size,
-    const NppiRect&, // TODO: Support ROI
+    const NppiRect& dst_roi,
     const NppStreamContext& stream,
     int index = 0) {
   TRACE_EVENT("decoding", "nppiResize");
@@ -53,7 +53,7 @@ void resize(
           dst.channel[index],
           (int)dst.pitch[index],
           dst_size,
-          src_roi,
+          dst_roi,
           NPPI_INTER_LANCZOS,
           stream),
       "Failed to resize the image.");
