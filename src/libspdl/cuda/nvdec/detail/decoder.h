@@ -38,6 +38,8 @@ using spdl::core::Rational;
 // If the previous decoder configuration is not compatible with the new
 // config, then the decoder object is re-created.
 class NvDecDecoderCore {
+  friend struct NvDecDecoderCoreTestAccess;
+
   //---------------------------------------------------------------------------
   // Device config
   //---------------------------------------------------------------------------
