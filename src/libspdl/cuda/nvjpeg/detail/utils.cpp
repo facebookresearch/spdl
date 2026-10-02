@@ -14,6 +14,7 @@
 #include <fmt/ranges.h>
 #include <glog/logging.h>
 
+#include <exception>
 #include <mutex>
 #include <set>
 
@@ -200,6 +201,55 @@ void wrap_nvjpeg_image(
     image.channel[c] = ptr;
     image.pitch[c] = pitch;
     ptr += pitch * layout.height;
+  }
+}
+
+namespace {
+struct StorageWithDependencies {
+  std::vector<CUDAStoragePtr> dependencies;
+  CUDAStoragePtr storage;
+};
+} // namespace
+
+void retain_cuda_storage_dependencies(
+    CUDAStoragePtr& storage,
+    std::vector<CUDAStoragePtr> dependencies) {
+  auto* const ptr = storage.get();
+  auto owner = std::make_shared<StorageWithDependencies>(
+      std::move(dependencies), CUDAStoragePtr{});
+  owner->storage = std::move(storage);
+  storage = CUDAStoragePtr{std::move(owner), ptr};
+}
+
+CUDAStreamSyncOnExceptionGuard::CUDAStreamSyncOnExceptionGuard(
+    uintptr_t stream,
+    SynchronizeFn synchronize) noexcept
+    : stream_{stream},
+      synchronize_{synchronize},
+      uncaught_exceptions_{std::uncaught_exceptions()} {}
+
+CUDAStreamSyncOnExceptionGuard::~CUDAStreamSyncOnExceptionGuard() noexcept {
+  if (std::uncaught_exceptions() <= uncaught_exceptions_) {
+    return;
+  }
+
+  try {
+    // NOLINTNEXTLINE(performance-no-int-to-ptr)
+    const auto stream = reinterpret_cast<cudaStream_t>(stream_);
+    // cudaStreamSynchronize blocks until all preceding work finishes. Its
+    // return value may report a delayed asynchronous failure, but that does not
+    // mean the work remains in flight. Preserve the original exception and
+    // report this secondary cleanup failure without terminating the process.
+    if (const cudaError_t status = synchronize_(stream);
+        status != cudaSuccess) {
+      LOG(ERROR)
+          << "Failed to synchronize CUDA stream during exception cleanup ("
+          << cudaGetErrorName(status) << ": " << cudaGetErrorString(status)
+          << ").";
+    }
+  } catch (...) {
+    // Destructors cannot safely surface a secondary cleanup failure while
+    // another exception is already unwinding.
   }
 }
 
