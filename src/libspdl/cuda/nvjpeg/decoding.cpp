@@ -47,6 +47,15 @@ std::tuple<size_t, bool> get_shape(nvjpegOutputFormat_t out_fmt) {
   }
 }
 
+bool validate_resize_dimensions(int scale_width, int scale_height) {
+  const bool has_width = scale_width > 0;
+  const bool has_height = scale_height > 0;
+  if (has_width != has_height) {
+    SPDL_FAIL("`scale_width` and `scale_height` must both be positive.");
+  }
+  return has_width;
+}
+
 std::tuple<CUDABufferPtr, detail::NVJPEGImageLayout> get_output(
     nvjpegOutputFormat_t out_fmt,
     size_t height,
@@ -140,13 +149,14 @@ CUDABufferPtr decode_image_nvjpeg(
     int scale_height,
     const std::string& pix_fmt,
     bool sync) {
+  const bool resize = validate_resize_dimensions(scale_width, scale_height);
   auto fmt = detail::get_nvjpeg_output_format(pix_fmt);
 
   detail::CUDAContextPushGuard context_guard{cuda_config.device_index};
 
   auto [buffer, src_meta, decoded] = decode(data, fmt, cuda_config);
 
-  if (scale_width > 0 && scale_height > 0) {
+  if (resize) {
 #ifndef SPDL_USE_NPPI
     SPDL_FAIL(
         "Image resizing while decoding with NVJPEG reqreuires SPDL to be compiled with NPPI support.");
@@ -188,18 +198,21 @@ CUDABufferPtr decode_image_nvjpeg(
     int scale_height,
     const std::string& pix_fmt,
     bool sync) {
+  const auto batch_size = dataset.size();
+  if (batch_size == 0) {
+    SPDL_FAIL("No input is provided.");
+  }
+  // Batch decoding always produces one uniformly-sized output allocation and
+  // always runs the NPP resize path. Unlike single-image decoding, it therefore
+  // has no no-resize mode and requires explicit positive output dimensions.
+  if (!validate_resize_dimensions(scale_width, scale_height)) {
+    SPDL_FAIL("Both `scale_width` and `scale_height` must be specified.");
+  }
+
 #ifndef SPDL_USE_NPPI
   SPDL_FAIL(
       "Image resizing while decoding with NVJPEG reqreuires SPDL to be compiled with NPPI support.");
 #else
-  auto batch_size = dataset.size();
-  if (batch_size == 0) {
-    SPDL_FAIL("No input is provided.");
-  }
-  if (scale_width <= 0 && scale_height <= 0) {
-    SPDL_FAIL("Both `scale_width` and `scale_height` must be specified.");
-  }
-
   auto fmt = detail::get_nvjpeg_output_format(pix_fmt);
 
   detail::CUDAContextPushGuard context_guard{cuda_config.device_index};
