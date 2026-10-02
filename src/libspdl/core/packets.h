@@ -126,7 +126,7 @@ struct Packets {
   /// Source URI or identifier.
   std::string src;
   /// Stream index in the source.
-  int stream_index;
+  int stream_index{};
 
   /// Series of compressed packets.
   PacketSeries pkts;
