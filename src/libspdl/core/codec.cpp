@@ -22,38 +22,36 @@ extern "C" {
 
 namespace spdl::core {
 namespace {
-inline AVCodecParameters* copy(const AVCodecParameters* src) {
+inline AVCodecParameters* copy(const AVCodecParameters& src) {
   auto dst = CHECK_AVALLOCATE(avcodec_parameters_alloc());
-  CHECK_AVERROR(
-      avcodec_parameters_copy(dst, src), "Failed to copy codec parameters.")
+  const int ret = avcodec_parameters_copy(dst, &src);
+  if (ret < 0) {
+    avcodec_parameters_free(&dst);
+    CHECK_AVERROR(ret, "Failed to copy codec parameters.")
+  }
   return dst;
 }
 } // namespace
 
 template <MediaType media>
-Codec<media>::Codec(
-    const AVCodecParameters* p,
-    Rational tb,
-    Rational fr) noexcept
-    : codecpar_(copy(p)), time_base_(tb), frame_rate_(fr) {}
+Codec<media>::Codec(const AVCodecParameters* p, Rational tb, Rational fr)
+    : codecpar_(p ? copy(*p) : nullptr), time_base_(tb), frame_rate_(fr) {}
 
 template <MediaType media>
 Codec<media>::Codec(const Codec<media>& other)
-    : codecpar_(copy(other.codecpar_)),
+    : codecpar_(other.codecpar_ ? copy(*other.codecpar_) : nullptr),
       time_base_(other.time_base_),
       frame_rate_(other.frame_rate_) {}
 
 template <MediaType media>
 Codec<media>& Codec<media>::operator=(const Codec<media>& other) {
-  codecpar_ = copy(other.codecpar_);
-  time_base_ = other.time_base_;
-  frame_rate_ = other.frame_rate_;
+  Codec<media> tmp(other);
+  *this = std::move(tmp);
   return *this;
 }
 
 template <MediaType media>
-Codec<media>::Codec(Codec<media>&& other) noexcept
-    : codecpar_(nullptr), time_base_({1, 1}), frame_rate_({1, 1}) {
+Codec<media>::Codec(Codec<media>&& other) noexcept {
   *this = std::move(other);
 }
 
