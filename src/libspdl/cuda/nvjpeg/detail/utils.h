@@ -31,7 +31,11 @@ nvjpegHandle_t get_nvjpeg();
 // nvjpeg Jpeg state
 //////////////////////////////////////////////////////////////////////////////
 struct nvjpeg_state_deleter {
-  void operator()(nvjpegJpegState*);
+  using DestroyFn = decltype(&nvjpegJpegStateDestroy);
+
+  DestroyFn destroy = nvjpegJpegStateDestroy;
+
+  void operator()(nvjpegJpegState*) const noexcept;
 };
 
 using nvjpegStatePtr = std::unique_ptr<nvjpegJpegState, nvjpeg_state_deleter>;
