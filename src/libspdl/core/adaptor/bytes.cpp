@@ -8,10 +8,14 @@
 
 #include <libspdl/core/adaptor.h>
 
+#include "libspdl/core/detail/bytes.h"
 #include "libspdl/core/detail/ffmpeg/ctx_utils.h"
 
 #include <fmt/core.h>
 #include <glog/logging.h>
+
+#include <cerrno>
+#include <limits>
 
 extern "C" {
 #include <libavformat/avio.h>
@@ -21,10 +25,52 @@ extern "C" {
 namespace spdl::core {
 namespace detail {
 
+int64_t seek_bytes(size_t size, size_t& position, int64_t offset, int whence) {
+  if (size > static_cast<size_t>(std::numeric_limits<int64_t>::max())) {
+    return AVERROR(EOVERFLOW);
+  }
+
+  const int64_t signed_size = static_cast<int64_t>(size);
+  const int mode = whence & ~AVSEEK_FORCE;
+  if (mode == AVSEEK_SIZE) {
+    return signed_size;
+  }
+
+  int64_t base;
+  switch (mode) {
+    case SEEK_SET:
+      base = 0;
+      break;
+    case SEEK_CUR:
+      if (position > size) {
+        return AVERROR(EINVAL);
+      }
+      base = static_cast<int64_t>(position);
+      break;
+    case SEEK_END:
+      base = signed_size;
+      break;
+    default:
+      LOG(ERROR) << "Unexpected whence value was found: " << whence;
+      return AVERROR(EINVAL);
+  }
+
+  if (offset < -base || offset > std::numeric_limits<int64_t>::max() - base) {
+    return AVERROR(EINVAL);
+  }
+  const int64_t next = base + offset;
+  if (next > signed_size) {
+    return AVERROR(EINVAL);
+  }
+
+  position = static_cast<size_t>(next);
+  return next;
+}
+
 namespace {
 class Bytes {
   std::string_view buffer;
-  uint64_t pos = 0;
+  size_t pos = 0;
 
  public:
   explicit Bytes(std::string_view data) : buffer(std::move(data)) {}
@@ -48,27 +94,7 @@ class Bytes {
   }
 
   int64_t seek(int64_t offset, int whence) {
-    auto size = buffer.size();
-    switch (whence) {
-      case AVSEEK_SIZE:
-        return static_cast<int64_t>(size);
-      case SEEK_SET:
-        pos = offset;
-        break;
-      case SEEK_CUR:
-        pos += offset;
-        break;
-      case SEEK_END:
-        pos = buffer.size() + offset;
-        break;
-      default:
-        LOG(ERROR) << "Unexpected whence value was found: " << whence;
-        return -1;
-    }
-    if (pos > size) {
-      pos = size;
-    }
-    return pos;
+    return seek_bytes(buffer.size(), pos, offset, whence);
   }
 
  public:
