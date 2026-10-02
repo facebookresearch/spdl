@@ -37,11 +37,11 @@ class CPUStorage : public Storage {
   static void* default_alloc(size_t s);
   static void default_dealloc(void* p);
 
-  deallocator_type deallocator_;
+  deallocator_type deallocator_ = nullptr;
 
  public:
   /// Size of the storage in bytes.
-  size_t size;
+  size_t size = 0;
   // So far, we only need this in CPUStorage. So we are not adding it
   // in CUDAStorage. If we need to add that to CUDAStorage, revisit
   // the interface/abstraction. (Is virtual `get_size` better?)
