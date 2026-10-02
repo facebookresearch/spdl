@@ -116,6 +116,7 @@ template <MediaType media>
 Packets<media>::Packets(const Packets<media>& other)
     : id(other.id),
       src(other.src),
+      stream_index(other.stream_index),
       pkts(other.pkts),
       time_base(other.time_base),
       timestamp(other.timestamp),
@@ -138,6 +139,7 @@ Packets<media>& Packets<media>::operator=(Packets<media>&& other) noexcept {
   using std::swap;
   swap(id, other.id);
   swap(src, other.src);
+  swap(stream_index, other.stream_index);
   swap(pkts, other.pkts);
   swap(time_base, other.time_base);
   swap(timestamp, other.timestamp);
