@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import asyncio
+import inspect
 import queue
 import sys
 import threading
@@ -18,10 +19,10 @@ from concurrent.futures import (
     TimeoutError as FutureTimeoutError,
 )
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from spdl.pipeline import Pipeline, PipelineBuilder
-from spdl.pipeline._pipeline import _QueueReadTimedOut
+from spdl.pipeline._pipeline import _EventLoopState, _QueueReadTimedOut
 
 _TIMEOUT: float = 30.0
 _RELEASE_OP: threading.Event = threading.Event()
@@ -589,3 +590,149 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
                 pipeline.get_item(timeout=_TIMEOUT)
         finally:
             pipeline.stop(timeout=_TIMEOUT)
+
+
+class PipelineStartTimeoutTest(unittest.TestCase):
+    def test_timeout_after_loop_initialization_never_runs_user_code(self) -> None:
+        """A startup timeout wins even after the loop signals initialization."""
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+        user_code_started = threading.Event()
+        entered_first_wait = threading.Event()
+
+        async def run_pipeline() -> None:
+            user_code_started.set()
+
+        raw_user_coro = run_pipeline()
+        user_coro = MagicMock(wraps=raw_user_coro, spec=Coroutine)
+        pipeline = _make_pipeline(user_coro, output_queue)
+        event_loop = pipeline._impl._event_loop
+        real_task_started_wait = event_loop._task_started.wait
+        real_asyncio_wait = asyncio.wait
+        paused = False
+
+        def timeout_after_first_task_wait(timeout: float | None = None) -> bool:
+            self.assertTrue(real_task_started_wait(timeout))
+            self.assertTrue(entered_first_wait.wait(_TIMEOUT))
+            return False
+
+        async def pause_first_task_wait(
+            futures: Iterable[asyncio.Task[Any]],
+            *,
+            timeout: float | None = None,
+        ) -> tuple[set[asyncio.Task[Any]], set[asyncio.Task[Any]]]:
+            nonlocal paused
+            if not paused:
+                paused = True
+                entered_first_wait.set()
+                while not event_loop._stop_requested.is_set():
+                    await asyncio.sleep(0)
+            return await real_asyncio_wait(futures, timeout=timeout)
+
+        try:
+            with (
+                patch.object(
+                    event_loop._task_started,
+                    "wait",
+                    side_effect=timeout_after_first_task_wait,
+                ),
+                patch.object(asyncio, "wait", new=pause_first_task_wait),
+            ):
+                with self.assertRaisesRegex(TimeoutError, "did not start"):
+                    pipeline.start(timeout=_TIMEOUT)
+        finally:
+            pipeline.stop(timeout=_TIMEOUT)
+
+        self.assertFalse(user_code_started.is_set())
+        user_coro.close.assert_called_once_with()
+        self.assertEqual(
+            inspect.getcoroutinestate(raw_user_coro),
+            inspect.CORO_CLOSED,
+        )
+
+    def test_stop_drains_started_pipeline_after_loop_stops_running(self) -> None:
+        """A stale loop-running signal cannot suppress backpressure release."""
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+        output_queue.put_nowait(1)
+
+        async def run_pipeline() -> None:
+            return None
+
+        pipeline = _make_pipeline(run_pipeline(), output_queue)
+        event_loop = pipeline._impl._event_loop
+        # This post-start snapshot is intentionally synthetic. The race occurs
+        # after user code starts but before a timed-out join observes that the
+        # loop has stopped; reproducing that scheduling window through start()
+        # would make the regression nondeterministic.
+        pipeline._impl._event_loop_state = _EventLoopState.STARTED
+        event_loop._user_task_started.set()
+        try:
+            with (
+                patch.object(event_loop, "needs_join", return_value=True),
+                patch.object(event_loop, "join", side_effect=[TimeoutError, None]),
+            ):
+                pipeline.stop(timeout=_TIMEOUT)
+        finally:
+            event_loop._coro.close()
+
+        self.assertTrue(output_queue.empty())
+
+    def test_start_timeout_returns_promptly_then_stop_joins_thread(self) -> None:
+        """A timed-out start is terminal; later cleanup joins the starting thread."""
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+        output_queue.put_nowait(1)
+
+        async def run_pipeline() -> None:
+            return None
+
+        user_coro = run_pipeline()
+        pipeline = _make_pipeline(user_coro, output_queue)
+        allow_event_loop_start = threading.Event()
+        real_asyncio_run = asyncio.run
+        prior_threads = {
+            thread.ident
+            for thread in threading.enumerate()
+            if thread.name == "spdl_event_loop_thread"
+        }
+
+        def delayed_asyncio_run(coro: Coroutine[Any, Any, Any]) -> Any:
+            allow_event_loop_start.wait()
+            return real_asyncio_run(coro)
+
+        try:
+            t0 = time.monotonic()
+            with patch(
+                "spdl.pipeline._pipeline.asyncio.run", side_effect=delayed_asyncio_run
+            ):
+                with self.assertRaisesRegex(TimeoutError, "did not start"):
+                    pipeline.start(timeout=0.01)
+
+            elapsed = time.monotonic() - t0
+            self.assertLess(elapsed, 1.0)
+            with self.assertRaisesRegex(RuntimeError, "already started"):
+                pipeline.start()
+            with self.assertRaises(TimeoutError):
+                pipeline.stop(timeout=0)
+            self.assertEqual(output_queue.qsize(), 1)
+        finally:
+            # Release only after ``start`` has returned. ``stop`` must still join the
+            # thread even though the failed start already marked the pipeline STOPPED.
+            allow_event_loop_start.set()
+            deadline = time.monotonic() + _TIMEOUT
+            while pipeline._impl._event_loop.is_alive() and time.monotonic() < deadline:
+                time.sleep(0.001)
+            self.assertFalse(pipeline._impl._event_loop.is_alive())
+            self.assertTrue(pipeline._impl._event_loop.needs_join())
+            pipeline.stop(timeout=_TIMEOUT)
+            self.assertFalse(pipeline._impl._event_loop.needs_join())
+            self.assertEqual(
+                inspect.getcoroutinestate(user_coro),
+                inspect.CORO_CLOSED,
+            )
+
+        leaked_threads = {
+            thread.ident
+            for thread in threading.enumerate()
+            if thread.name == "spdl_event_loop_thread"
+            and thread.ident not in prior_threads
+        }
+        self.assertEqual(leaked_threads, set())

@@ -51,11 +51,14 @@ class _EventLoop:
         self._loop: AbstractEventLoop | None = None
 
         self._task_started = SyncEvent()
+        self._user_task_started = SyncEvent()
         self._task_completed = SyncEvent()
         self._task_exception: BaseException | None = None
         self._stop_requested = SyncEvent()
 
         self._thread: Thread | None = None
+        self._joined = False
+        self._start_gate: asyncio.Event | None = None
 
     def __str__(self) -> str:
         return str(
@@ -69,27 +72,43 @@ class _EventLoop:
             }
         )
 
+    async def _run_task_after_start(self) -> None:
+        """Run user code only after ``start`` has observed loop initialization."""
+        assert self._start_gate is not None
+        await self._start_gate.wait()
+        if self._stop_requested.is_set():
+            return
+        self._user_task_started.set()
+        await self._coro
+
     async def _execute_task(self) -> None:
         _LG.debug("The event loop thread coroutine is started.")
         self._loop = asyncio.get_running_loop()
         self._loop.set_default_executor(self._executor)
+        self._start_gate = asyncio.Event()
 
         _LG.debug("Starting the task.")
 
-        task = create_task(self._coro, name="Pipeline::main")
+        task = create_task(self._run_task_after_start(), name="Pipeline::main")
         task.add_done_callback(lambda _: self._task_completed.set())
 
         self._task_started.set()
         while not task.done():
-            await asyncio.wait([task], timeout=0.1)
-
-            if not task.done() and self._stop_requested.is_set():
+            if self._stop_requested.is_set():
                 _LG.debug(
                     "Stop request is received, but the task is not complete. "
                     "Cancelling the task."
                 )
                 task.cancel()
                 await asyncio.wait([task])
+                continue
+            await asyncio.wait([task], timeout=0.1)
+
+        # Cancelling an asyncio Task before its first step does not enter the
+        # wrapper coroutine, so its ``finally`` cannot close the still-unawaited
+        # user coroutine. Close it here as a final cleanup backstop.
+        if not self._user_task_started.is_set():
+            self._coro.close()
 
         _LG.debug("The task is completed.")
 
@@ -136,7 +155,16 @@ class _EventLoop:
         )
         self._thread.start()
         _LG.debug("Waiting for the loop to be initialized.")
-        self._task_started.wait(timeout=timeout)
+        if not self._task_started.wait(timeout=timeout):
+            # A timed-out start is terminal. Request shutdown, but do not join here:
+            # the thread may not have reached its entry point yet, and an unbounded
+            # join would make ``timeout`` meaningless. ``_PipelineImpl.stop`` (including
+            # its finalizer path) can join this still-starting thread later.
+            self.stop()
+            raise TimeoutError(f"Event loop did not start after {timeout} seconds.")
+        assert self._loop is not None
+        assert self._start_gate is not None
+        self._loop.call_soon_threadsafe(self._start_gate.set)
         _LG.debug("The event loop thread is initialized.")
 
     def is_started(self) -> bool:
@@ -147,9 +175,21 @@ class _EventLoop:
         """Check if the task is completed."""
         return self._task_completed.is_set()
 
+    def has_user_task_started(self) -> bool:
+        """Check whether the caller-confirmed pipeline task began execution."""
+        return self._user_task_started.is_set()
+
     def is_running(self) -> bool:
         """Check if the event loop can still service submitted work."""
         return self._loop is not None and self._loop.is_running()
+
+    def is_alive(self) -> bool:
+        """Check whether the event-loop thread still needs to be joined."""
+        return self._thread is not None and self._thread.is_alive()
+
+    def needs_join(self) -> bool:
+        """Check whether a started thread still needs its first successful join."""
+        return self._thread is not None and not self._joined
 
     def stop(self) -> None:
         """Issue loop stop request."""
@@ -169,6 +209,7 @@ class _EventLoop:
         self._thread.join(timeout=timeout)
         if self._thread.is_alive():  # pyre-ignore[undefined-attribute]
             raise TimeoutError(f"Thread did not join after {timeout} seconds.")
+        self._joined = True
         _LG.debug("The event loop thread joined.")
 
     def run_coroutine_threadsafe(
@@ -245,7 +286,14 @@ class _PipelineImpl(Generic[T]):
         if self._event_loop_state >= _EventLoopState.STARTED:
             raise RuntimeError("The pipeline was already started.")
 
-        self._event_loop.start(timeout=timeout, **kwargs)
+        try:
+            self._event_loop.start(timeout=timeout, **kwargs)
+        except TimeoutError:
+            # The event loop has requested stop, but its thread may still be starting.
+            # Mark this pipeline terminal so a later auto-start cannot pretend it is
+            # reusable. Resource cleanup remains with ``stop`` / the finalizer.
+            self._event_loop_state = _EventLoopState.STOPPED
+            raise
         self._event_loop_state = _EventLoopState.STARTED
 
     def stop(self, *, timeout: float | None = None) -> None:
@@ -259,7 +307,10 @@ class _PipelineImpl(Generic[T]):
 
            It is safe to call ``stop`` multiple times.
         """
-        if _EventLoopState.STARTED <= self._event_loop_state < _EventLoopState.STOPPED:
+        if (
+            _EventLoopState.STARTED <= self._event_loop_state < _EventLoopState.STOPPED
+            or self._event_loop.needs_join()
+        ):
             self._event_loop.stop()
 
             # Try to join first. If it doesn't join, drain the output queue
@@ -271,12 +322,17 @@ class _PipelineImpl(Generic[T]):
             try:
                 self._event_loop.join(timeout=to1)
             except TimeoutError:
-                # Empty queue, release backpressure
-                while not self._output_queue.empty():
-                    try:
-                        self._output_queue.get_nowait()
-                    except Exception:
-                        break
+                # A timed-out start never owned the caller's queue. Once user code
+                # has started, however, drain its output even if the loop has since
+                # stopped reporting itself as running: this may be the only way to
+                # release producer backpressure before the second join.
+                if self._event_loop.has_user_task_started():
+                    # Empty queue, release backpressure.
+                    while not self._output_queue.empty():
+                        try:
+                            self._output_queue.get_nowait()
+                        except Exception:
+                            break
                 self._event_loop.join(timeout=to2)
             self._event_loop_state = _EventLoopState.STOPPED
 
