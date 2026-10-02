@@ -18,6 +18,7 @@ import logging
 import warnings
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 from fractions import Fraction
 from functools import partial
 from typing import Any, Generic, TypeVar
@@ -143,42 +144,63 @@ def _build_pipeline(
         except Exception:
             _LG.exception("Build callback failed.")
 
-    # Fuse each `.to()` region into one nested-pipeline stage that runs in a worker pool,
-    # eliminating the inter-stage IPC within the region. A no-op when the config has no markers.
-    # The pools are owned by the returned Pipeline and reaped when it stops.
-    # stacklevel=4: _fuse_marked_regions -> _build_pipeline -> build_pipeline -> user.
-    pipeline_cfg, pools = _fuse_marked_regions(
-        pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
-    )
+    # Region fusion eagerly starts worker pools. Until ownership transfers to the
+    # returned Pipeline, this function must roll those pools back if any later build
+    # step fails.
+    pools: list[Any] = []
+    coro = None
+    executor = None
+    try:
+        # Fuse each `.to()` region into one nested-pipeline stage that runs in a worker
+        # pool, eliminating the inter-stage IPC within the region. A no-op when the
+        # config has no markers. stacklevel=4: _fuse_marked_regions ->
+        # _build_pipeline -> build_pipeline -> user.
+        pipeline_cfg, pools = _fuse_marked_regions(
+            pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
+        )
 
-    desc = repr(pipeline_cfg)
+        desc = repr(pipeline_cfg)
 
-    _LG.debug("%s", desc)
+        _LG.debug("%s", desc)
 
-    # Merge per-pipeline background tasks with defaults
-    all_bg_tasks: list[BackgroundTaskFactory] = []
-    default_bg = get_default_background_tasks()
-    if default_bg:
-        all_bg_tasks.extend(default_bg)
-    if background_tasks:
-        all_bg_tasks.extend(background_tasks)
+        # Merge per-pipeline background tasks with defaults
+        all_bg_tasks: list[BackgroundTaskFactory] = []
+        default_bg = get_default_background_tasks()
+        if default_bg:
+            all_bg_tasks.extend(default_bg)
+        if background_tasks:
+            all_bg_tasks.extend(background_tasks)
 
-    coro, queue = _build_pipeline_coro(
-        pipeline_cfg,
-        max_failures=max_failures,
-        report_stats_interval=report_stats_interval,
-        queue_class=queue_class,
-        task_hook_factory=task_hook_factory,
-        stage_id=stage_id,
-        background_tasks=all_bg_tasks or None,
-        use_thread_output_queue=use_thread_output_queue,
-    )
+        executor = ThreadPoolExecutor(
+            max_workers=num_threads,
+            thread_name_prefix="spdl_worker_thread_",
+        )
 
-    executor = ThreadPoolExecutor(
-        max_workers=num_threads,
-        thread_name_prefix="spdl_worker_thread_",
-    )
-    return Pipeline(coro, queue, executor, desc=desc, pools=pools)
+        coro, queue = _build_pipeline_coro(
+            pipeline_cfg,
+            max_failures=max_failures,
+            report_stats_interval=report_stats_interval,
+            queue_class=queue_class,
+            task_hook_factory=task_hook_factory,
+            stage_id=stage_id,
+            background_tasks=all_bg_tasks or None,
+            use_thread_output_queue=use_thread_output_queue,
+        )
+
+        return Pipeline(coro, queue, executor, desc=desc, pools=pools)
+    except BaseException:
+        # Neither the coroutine nor executor has a Pipeline owner yet.
+        try:
+            with ExitStack() as cleanup:
+                for pool in reversed(pools):
+                    cleanup.callback(pool.shutdown)
+                if executor is not None:
+                    cleanup.callback(executor.shutdown)
+                if coro is not None:
+                    cleanup.callback(coro.close)
+        except Exception:
+            _LG.exception("Failed to clean up resources after a build failure.")
+        raise
 
 
 def build_pipeline(
