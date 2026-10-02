@@ -38,10 +38,10 @@ nvjpegHandle_t get_nvjpeg() {
 ////////////////////////////////////////////////////////////////////////////////
 // nvjpegJpegState_t
 ////////////////////////////////////////////////////////////////////////////////
-void nvjpeg_state_deleter::operator()(nvjpegJpegState* p) {
+void nvjpeg_state_deleter::operator()(nvjpegJpegState* p) const noexcept {
   TRACE_EVENT("decoding", "nvjpegJpegStateDestroy");
-  if (!p) {
-    auto status = nvjpegJpegStateDestroy(p);
+  if (p) {
+    const auto status = destroy(p);
     if (status != NVJPEG_STATUS_SUCCESS) {
       LOG(WARNING) << "Failed to destroy nvjpeg state: "
                    << detail::to_string(status);
