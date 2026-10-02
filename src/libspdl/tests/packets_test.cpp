@@ -12,10 +12,13 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavutil/buffer.h>
 }
 
+#include <limits>
 #include <memory>
 #include <new>
+#include <stdexcept>
 #include <utility>
 
 namespace spdl::core {
@@ -29,6 +32,28 @@ AVPacket* make_key_packet(int64_t pts) {
   packet->pts = pts;
   packet->dts = pts;
   packet->flags = AV_PKT_FLAG_KEY;
+  return packet;
+}
+
+AVPacket* make_owned_packet() {
+  AVPacket* packet = av_packet_alloc();
+  if (!packet) {
+    throw std::bad_alloc();
+  }
+  if (av_new_packet(packet, 1) < 0) {
+    av_packet_free(&packet);
+    throw std::bad_alloc();
+  }
+  return packet;
+}
+
+AVPacket* make_unclonable_packet(uint8_t& data) {
+  AVPacket* packet = av_packet_alloc();
+  if (!packet) {
+    throw std::bad_alloc();
+  }
+  packet->data = &data;
+  packet->size = std::numeric_limits<int>::max();
   return packet;
 }
 
@@ -81,6 +106,20 @@ TEST(PacketsTest, ExtractionPreservesDecodeMetadata) {
   EXPECT_EQ(packets->time_base.num, 1);
   EXPECT_EQ(packets->time_base.den, 90'000);
   EXPECT_FALSE(packets->timestamp.has_value());
+}
+
+TEST(PacketsTest, CopyFailureReleasesPreviouslyClonedPackets) {
+  uint8_t invalid_data = 0;
+  PacketSeries source;
+  AVPacket* first = make_owned_packet();
+  AVBufferRef* first_buffer = first->buf;
+  source.push(first);
+  source.push(make_unclonable_packet(invalid_data));
+  ASSERT_EQ(av_buffer_get_ref_count(first_buffer), 1);
+
+  EXPECT_THROW((void)PacketSeries{source}, std::runtime_error);
+
+  EXPECT_EQ(av_buffer_get_ref_count(first_buffer), 1);
 }
 
 } // namespace
