@@ -284,7 +284,7 @@ bool is_sample_rate_supported(int rate, const int* rates) {
 
 std::vector<int> to_str(const int* rates) {
   std::vector<int> ret;
-  for (; *rates != AV_SAMPLE_FMT_NONE; ++rates) {
+  for (; *rates; ++rates) {
     ret.push_back(*rates);
   }
   return ret;
