@@ -191,6 +191,33 @@ class WAVUtilsTest(unittest.TestCase):
 
         np.testing.assert_array_equal(result, reference[sample_rate // 2 :])
 
+    def test_zero_copy_result_inherits_source_writability(self) -> None:
+        """A WAV view cannot make an immutable source buffer writable."""
+        wav_data, _ = create_wav_data(num_samples=100)
+
+        readonly = spdl.io.to_numpy(spdl.io.load_wav(wav_data))
+        writable = spdl.io.to_numpy(spdl.io.load_wav(bytearray(wav_data)))
+
+        self.assertFalse(readonly.flags["WRITEABLE"])
+        self.assertTrue(writable.flags["WRITEABLE"])
+        with self.assertRaises(ValueError):
+            readonly[0, 0] = 0
+
+    def test_releasing_public_owner_does_not_unpin_source(self) -> None:
+        """The exposed array-interface metadata is not the sole buffer pin."""
+        wav_data, _ = create_wav_data(num_samples=100)
+        source = bytearray(wav_data)
+        wav = spdl.io.load_wav(source)
+
+        owner = wav.__array_interface__["owner"]
+        self.assertIsInstance(owner, memoryview)
+        owner.release()
+        with self.assertRaises(BufferError):
+            source.extend(b"more")
+
+        samples = spdl.io.to_numpy(wav)
+        self.assertEqual(samples.shape, (100, 2))
+
 
 class ParseWAVTest(unittest.TestCase):
     def test_parse_wav_basic_metadata(self) -> None:
