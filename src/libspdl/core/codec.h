@@ -26,10 +26,10 @@ namespace spdl::core {
 /// decoders.
 template <MediaType media>
 class Codec {
-  AVCodecParameters* codecpar_;
+  AVCodecParameters* codecpar_ = nullptr;
 
-  Rational time_base_;
-  Rational frame_rate_;
+  Rational time_base_{};
+  Rational frame_rate_{};
 
  public:
   /// Default constructor.
@@ -43,7 +43,7 @@ class Codec {
   Codec(
       const AVCodecParameters* codecpar,
       Rational time_base,
-      Rational frame_rate) noexcept;
+      Rational frame_rate);
 
   /// Destructor.
   ~Codec();
