@@ -6,16 +6,23 @@
 
 import gc
 import multiprocessing as mp
+import os
 import queue
+import sys
 import time
 import unittest
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from functools import partial
 from typing import Any
 from unittest.mock import call, MagicMock, patch
 
-from spdl.pipeline import iterate_in_subprocess
-from spdl.pipeline._iter_utils._common import _Cmd, _Msg, _Status
+from spdl.pipeline import iterate_in_subinterpreter, iterate_in_subprocess
+from spdl.pipeline._iter_utils._common import (
+    _Cmd,
+    _get_worker_message,
+    _Msg,
+    _Status,
+)
 
 
 def _short_source() -> Iterable[int]:
@@ -24,6 +31,22 @@ def _short_source() -> Iterable[int]:
 
 def _blocked_initializer(release: Any) -> None:
     release.wait()
+
+
+class _AbruptProcessExitIterable:
+    def __init__(self, release: Any) -> None:
+        self._release = release
+
+    def __iter__(self) -> Iterator[int]:
+        yield 0
+        # The parent releases this only after receiving the first result, so the queue
+        # feeder has flushed all preceding protocol messages before abnormal teardown.
+        self._release.wait()
+        os._exit(17)
+
+
+def _abrupt_process_exit_source(release: Any) -> Iterable[int]:
+    return _AbruptProcessExitIterable(release)
 
 
 class IterateInSubprocessLifecycleTest(unittest.TestCase):
@@ -139,3 +162,96 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
                     if process.is_alive():
                         process.terminate()
                         process.join(timeout=1)
+
+    def test_dead_worker_is_detected_without_inactivity_timeout(self) -> None:
+        """Unexpected subprocess death fails an unbounded result wait promptly."""
+        release = mp.get_context("spawn").Event()
+        iterable = iterate_in_subprocess(
+            partial(_abrupt_process_exit_source, release),
+            mp_context="spawn",
+            timeout=None,
+        )
+
+        iterator = iter(iterable)
+        self.assertEqual(next(iterator), 0)
+        release.set()
+
+        t0 = time.monotonic()
+        with self.assertRaisesRegex(RuntimeError, "exited unexpectedly"):
+            next(iterator)
+        self.assertLess(time.monotonic() - t0, 2.0)
+
+    def test_dead_worker_waits_for_delayed_terminal_message(self) -> None:
+        """A delayed worker failure wins over the generic dead-worker error."""
+        cmd_q = MagicMock()
+        data_q = MagicMock()
+        data_q.get.side_effect = [
+            _Msg(_Status.INITIALIZATION_SUCCEEDED),
+            _Msg(_Status.ITERATION_STARTED),
+            queue.Empty,
+            queue.Empty,
+            queue.Empty,
+            _Msg(_Status.ITERATOR_FAILED, "final worker failure"),
+        ]
+        data_q.get_nowait.side_effect = queue.Empty
+        process = MagicMock()
+        process.pid = 1
+        process.exitcode = 1
+        process.is_alive.return_value = False
+        context = MagicMock()
+        context.Queue.side_effect = [cmd_q, data_q]
+        context.Process.return_value = process
+
+        with patch(
+            "spdl.pipeline._iter_utils._subprocess.mp.get_context",
+            return_value=context,
+        ):
+            iterable = iterate_in_subprocess(_short_source)
+            with self.assertRaisesRegex(RuntimeError, "final worker failure"):
+                next(iter(iterable))
+
+        self.assertEqual(data_q.get.call_count, 6)
+
+    def test_dead_worker_checks_for_message_at_grace_deadline(self) -> None:
+        """A message visible at the grace boundary wins over generic failure."""
+        terminal = _Msg(_Status.ITERATOR_FAILED, "final worker failure")
+        data_q = MagicMock()
+        data_q.get.side_effect = queue.Empty
+        data_q.get_nowait.return_value = terminal
+
+        with patch(
+            "spdl.pipeline._iter_utils._common.time.monotonic",
+            side_effect=[0.0, 1.0],
+        ):
+            result = _get_worker_message(data_q, 0.0, lambda: False, "subprocess")
+
+        self.assertIs(result, terminal)
+        data_q.get_nowait.assert_called_once_with()
+
+
+if sys.version_info >= (3, 14):
+
+    class _AbruptSubinterpreterExitIterable:
+        def __iter__(self) -> Iterator[int]:
+            yield 0
+            time.sleep(0.2)
+            raise SystemExit(17)
+
+    def _abrupt_subinterpreter_exit_source() -> Iterable[int]:
+        return _AbruptSubinterpreterExitIterable()
+
+    class IterateInSubinterpreterLifecycleTest(unittest.TestCase):
+        def test_dead_worker_is_detected_without_inactivity_timeout(self) -> None:
+            """Unexpected subinterpreter death fails an unbounded wait promptly."""
+            iterable = iterate_in_subinterpreter(
+                _abrupt_subinterpreter_exit_source,
+                timeout=None,
+            )
+
+            iterator = iter(iterable)
+            self.assertEqual(next(iterator), 0)
+
+            t0 = time.monotonic()
+            with self.assertRaisesRegex(RuntimeError, "exited unexpectedly"):
+                next(iterator)
+            self.assertLess(time.monotonic() - t0, 2.0)
