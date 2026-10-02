@@ -19,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from enum import IntEnum
 from threading import Event as SyncEvent, Thread
-from typing import Any, Generic, TypeVar
+from typing import Any, cast, Generic, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._components import _ThreadBasedAsyncQueue, is_epoch_end
@@ -147,6 +147,10 @@ class _EventLoop:
         """Check if the task is completed."""
         return self._task_completed.is_set()
 
+    def is_running(self) -> bool:
+        """Check if the event loop can still service submitted work."""
+        return self._loop is not None and self._loop.is_running()
+
     def stop(self) -> None:
         """Issue loop stop request."""
         if not self._stop_requested.is_set():
@@ -191,6 +195,11 @@ class _EventLoopState(IntEnum):
 
 
 _EOF_MSG: str = "Reached the end of the pipeline."
+_NO_PENDING_OUTPUT_ITEM = object()
+
+
+class _QueueReadTimedOut(Exception):
+    """Signal that one loop-side queue-read slice expired."""
 
 
 class _PipelineImpl(Generic[T]):
@@ -213,6 +222,8 @@ class _PipelineImpl(Generic[T]):
         self._output_queue: AsyncQueue = output_queue
         self._event_loop = _EventLoop(coro, executor)
         self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
+        self._pending_output_read: concurrent.futures.Future[T] | None = None
+        self._pending_output_item: T | object = _NO_PENDING_OUTPUT_ITEM
         # Worker pools owned by this pipeline (from subprocess-stage fusion). They are reaped in
         # ``stop`` (and via the Pipeline finalizer), exactly once.
         self._pools: list[Any] = list(pools)
@@ -311,7 +322,160 @@ class _PipelineImpl(Generic[T]):
             return self._get_item_thread_queue(timeout=timeout)
         return self._get_item_async_queue(timeout=timeout)
 
+    async def _get_with_timeout_on_loop(self, timeout: float) -> T:
+        """Wait for one item on the queue's owning loop without orphaning the get."""
+        task = asyncio.create_task(self._output_queue.get())
+        try:
+            done, _ = await asyncio.wait([task], timeout=timeout)
+        except BaseException:
+            if not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+            if not task.cancelled() and task.exception() is None:
+                # A producer may refill a bounded queue as soon as this read
+                # frees a slot. Keep the recovered item outside the queue so
+                # restoring it cannot fail with QueueFull or reorder it.
+                assert self._pending_output_item is _NO_PENDING_OUTPUT_ITEM
+                self._pending_output_item = task.result()
+            raise
+
+        if done or task.done():
+            return task.result()
+
+        task.cancel()
+        try:
+            return await task
+        except asyncio.CancelledError:
+            raise _QueueReadTimedOut from None
+
+    def _consume_settled_output_read(self, future: concurrent.futures.Future[T]) -> T:
+        """Consume a settled read, normalizing only internal empty results."""
+        self._pending_output_read = None
+        try:
+            return future.result()
+        except (_QueueReadTimedOut, asyncio.QueueEmpty):
+            raise queue.Empty from None
+        except concurrent.futures.CancelledError:
+            raise queue.Empty from None
+
+    def _get_pending_output_read(self, *, timeout: float) -> T:
+        """Resolve the pending loop-side read without abandoning a consumed item."""
+        future = self._pending_output_read
+        if future is None:
+            raise queue.Empty
+
+        try:
+            item = future.result(timeout=timeout)
+        except _QueueReadTimedOut:
+            self._pending_output_read = None
+            raise queue.Empty from None
+        except asyncio.QueueEmpty:
+            self._pending_output_read = None
+            raise queue.Empty from None
+        except concurrent.futures.TimeoutError:
+            if not future.done():
+                raise
+            # The Future completed as the foreground wait expired. Resolve its
+            # settled result so a real sink TimeoutError is not mistaken for the
+            # foreground deadline.
+            return self._consume_settled_output_read(future)
+        except concurrent.futures.CancelledError:
+            self._pending_output_read = None
+            raise queue.Empty from None
+        except BaseException:
+            if future.done():
+                self._pending_output_read = None
+            raise
+
+        self._pending_output_read = None
+        return item
+
+    def _take_pending_output_item(self) -> T:
+        """Return an item recovered from an interrupted loop-side read."""
+        item = self._pending_output_item
+        if item is _NO_PENDING_OUTPUT_ITEM:
+            raise queue.Empty
+        self._pending_output_item = _NO_PENDING_OUTPUT_ITEM
+        return cast(T, item)
+
+    def _resolve_output_read_after_loop_stop(self) -> T:
+        """Cancel a stopped-loop read, harvesting a concurrently completed item."""
+        future = self._pending_output_read
+        assert future is not None
+        if future.cancel():
+            self._pending_output_read = None
+        else:
+            try:
+                return self._get_pending_output_read(timeout=0.0)
+            except concurrent.futures.TimeoutError:
+                if self._pending_output_read is None:
+                    raise
+            except queue.Empty:
+                pass
+        self._pending_output_read = None
+        try:
+            return self._take_pending_output_item()
+        except queue.Empty:
+            pass
+        raise TimeoutError(
+            "The event loop stopped before publishing the queue read."
+        ) from None
+
+    def _poll_output_queue_on_loop(self) -> T:
+        """Submit or resume one nonblocking owner-loop queue poll."""
+        try:
+            return self._take_pending_output_item()
+        except queue.Empty:
+            pass
+        if self._pending_output_read is None:
+            read = self._get_nowait_on_loop()
+            try:
+                self._pending_output_read = self._event_loop.run_coroutine_threadsafe(
+                    read
+                )
+            except RuntimeError as error:
+                read.close()
+                return self._recover_output_after_read_submission_failure(error)
+        try:
+            return self._get_pending_output_read(timeout=0.0)
+        except concurrent.futures.TimeoutError:
+            if self._pending_output_read is None:
+                raise
+            raise queue.Empty from None
+
+    def _get_completed_output_item(self) -> T:
+        """Return buffered output or EOF after the pipeline task completes."""
+        try:
+            return self._take_pending_output_item()
+        except queue.Empty:
+            pass
+        if not self._output_queue.empty():
+            return self._output_queue.get_nowait()
+        self._event_loop.stop()
+        raise EOFError(_EOF_MSG) from None
+
+    def _recover_output_after_read_submission_failure(self, error: RuntimeError) -> T:
+        """Drain completed output when its owner loop stops before submission."""
+        if not self._event_loop.is_task_completed() or self._event_loop.is_running():
+            raise error
+        return self._get_completed_output_item()
+
+    def _poll_output_at_deadline(self, t0: float) -> T:
+        """Make one final nonblocking poll before reporting a caller timeout."""
+        try:
+            return self._get_item_nowait()
+        except queue.Empty:
+            _LG.debug("EventLoop: %s", str(self._event_loop))
+            raise TimeoutError(
+                f"The next item is not available after {time.monotonic() - t0:.1f} sec."
+            ) from None
+
     def _get_item_async_queue(self, *, timeout: float | None) -> T:
+        try:
+            return self._take_pending_output_item()
+        except queue.Empty:
+            pass
+
         # The event loop (thread) was started, but it might be stopped by now.
         # However, what matters for `get_item` method is whether the task is running or not.
         # Because if the task is running, then accessing the sink queue must be done through
@@ -319,52 +483,75 @@ class _PipelineImpl(Generic[T]):
         # If the task is not running, then, sync method can be used to access sink queue,
         # even if the loop is not running.
 
-        if self._event_loop.is_task_completed():
-            # The pipeline is stopped.
-            # The sink queue is not accessed by background event loop anymore, so we can use
-            # sync access without being worried about thread safety.
-
-            # There are remaining items in the queue if the pipeline was stopped by client code
-            # before it processes all the items.
-            if not self._output_queue.empty():
-                return self._output_queue.get_nowait()
-
-            # Now, all the items from the queue are fetched. We can stop the pipeline loop/thread.
-            self._event_loop.stop()
-            raise EOFError(_EOF_MSG)
+        if self._pending_output_read is None and self._event_loop.is_task_completed():
+            return self._get_completed_output_item()
 
         # The task is not completed. To access the sink queue, the async method must be used.
         # The loop keeps running unless we explicitly request stop, so the use of async method
         # itself is fine.
 
-        # However, the background task can complete at any point.
-        # It turned out to be very easy to hit the race condition where the foreground execution
-        # control reaches here, in the short time window between the background thread puts the
-        # last item and issues task completion.
-        # In this case, without timeout, the foreground gets stuck.
-        # Therefore, we split the timeout into small window and periodically check the state of
-        # the background task.
-        max_elapsed = float("inf") if timeout is None else timeout
-
-        future = self._event_loop.run_coroutine_threadsafe(self._output_queue.get())
-        t0 = time.monotonic()
-        while (elapsed := time.monotonic() - t0) < max_elapsed:
+        # Handle a zero timeout as a true one-shot poll. Submitting ``queue.get()`` and
+        # timing out its cross-thread future would leave that coroutine pending,
+        # allowing it to consume (and lose) the next item produced after this call
+        # returns.
+        if timeout == 0:
             try:
-                return future.result(timeout=min(0.1, max_elapsed))
+                return self._get_item_nowait()
+            except queue.Empty:
+                raise TimeoutError(
+                    "The next item is not available after 0.0 sec."
+                ) from None
+
+        # The background task can complete at any point. Wait in bounded queue-get
+        # slices so completion is observed even when no final item is written.
+        # A single loop-side read remains registered until it settles. If the
+        # foreground caller times out first, the next call resumes that read so
+        # no consumed item is abandoned.
+        deadline = None if timeout is None else time.monotonic() + timeout
+        t0 = time.monotonic()
+        while True:
+            remaining = None if deadline is None else deadline - time.monotonic()
+            if remaining is not None and remaining <= 0:
+                # A tiny positive timeout can round the deadline to ``t0``. Always
+                # poll once so an item that was already buffered still wins.
+                return self._poll_output_at_deadline(t0)
+            if self._pending_output_read is None:
+                wait_timeout = 0.1 if remaining is None else min(0.1, remaining)
+                read = self._get_with_timeout_on_loop(wait_timeout)
+                try:
+                    self._pending_output_read = (
+                        self._event_loop.run_coroutine_threadsafe(read)
+                    )
+                except RuntimeError as error:
+                    read.close()
+                    return self._recover_output_after_read_submission_failure(error)
+
+            publication_timeout = 0.2
+            if deadline is not None:
+                publication_timeout = min(
+                    publication_timeout, max(0.0, deadline - time.monotonic())
+                )
+            try:
+                return self._get_pending_output_read(timeout=publication_timeout)
             except concurrent.futures.TimeoutError:
-                # The sink queue is empty.
-                # In this condition, we cannot really tell if it is due to EOF or
-                # pipeline being too slow.
+                if self._pending_output_read is None:
+                    raise
+                if not self._event_loop.is_running():
+                    return self._resolve_output_read_after_loop_stop()
+                # Preserve this Future across caller timeouts: it may already
+                # own an item that has not yet been published cross-thread.
+                continue
+            except queue.Empty:
+                pass
 
-                # One exception is that the task is now complete and queue is still empty.
-                # This case we can switch to EOFError.
-                if self._event_loop.is_task_completed() and self._output_queue.empty():
-                    self._event_loop.stop()
-                    raise EOFError(_EOF_MSG) from None
+            # The sink queue is empty.
+            # In this condition, we cannot really tell if it is due to EOF or
+            # pipeline being too slow.
 
-        _LG.debug("EventLoop: %s", str(self._event_loop))
-
-        raise TimeoutError(f"The next item is not available after {elapsed:.1f} sec.")
+            # One exception is that the task is now complete and queue is still empty.
+            # This case we can switch to EOFError.
+            if self._event_loop.is_task_completed():
+                return self._get_completed_output_item()
 
     def get_item_nowait(self) -> T:
         """Get the next item if one is already buffered in the sink, without blocking.
@@ -385,10 +572,8 @@ class _PipelineImpl(Generic[T]):
 
     async def _get_nowait_on_loop(self) -> T:
         # Runs on the event loop thread. Deliberately has no ``await``: it completes within a
-        # single loop tick, so the future returned by ``run_coroutine_threadsafe`` is never left
-        # pending. That is what makes this safe where ``get_item(timeout=0)`` is not -- the
-        # latter submits ``queue.get()`` and abandons the future on timeout, stranding whatever
-        # item that ``get()`` eventually receives.
+        # single loop tick. ``get_item(timeout=0)`` routes through this same primitive so both
+        # APIs perform a one-shot poll and never leave a pending consumer behind.
         return self._output_queue.get_nowait()
 
     def _get_item_nowait(self) -> T:
@@ -412,7 +597,7 @@ class _PipelineImpl(Generic[T]):
                     raise EOFError(_EOF_MSG) from None
                 raise
 
-        if self._event_loop.is_task_completed():
+        if self._pending_output_read is None and self._event_loop.is_task_completed():
             # The background loop no longer touches the sink, so direct access is thread-safe.
             if not self._output_queue.empty():
                 return self._output_queue.get_nowait()
@@ -420,11 +605,13 @@ class _PipelineImpl(Generic[T]):
             raise EOFError(_EOF_MSG)
 
         try:
-            return self._event_loop.run_coroutine_threadsafe(
-                self._get_nowait_on_loop()
-            ).result()
-        except asyncio.QueueEmpty:
-            if self._event_loop.is_task_completed() and self._output_queue.empty():
+            return self._poll_output_queue_on_loop()
+        except queue.Empty:
+            if (
+                self._pending_output_read is None
+                and self._event_loop.is_task_completed()
+                and self._output_queue.empty()
+            ):
                 self._event_loop.stop()
                 raise EOFError(_EOF_MSG) from None
             raise queue.Empty from None
@@ -469,16 +656,18 @@ def _stop_impl(impl: _PipelineImpl[Any]) -> None:
 
 
 def _register_stop_at_exit(impl: _PipelineImpl[Any]) -> None:
-    """Register :py:func:`_stop_impl` to run for ``impl`` at the start of interpreter finalization.
+    """Run :py:func:`_stop_impl` at the start of interpreter finalization.
 
-    Uses ``threading._register_atexit`` -- **not** ``atexit.register``: threading-atexit callbacks
-    run inside ``threading._shutdown()``, before non-daemon threads and child processes are joined,
-    whereas an ``atexit`` hook runs *after*, by which point the interpreter has already hung joining
-    the pipeline's non-daemon event-loop thread. This is the same private API, for the same reason,
-    that ``concurrent.futures`` uses. Called from :py:meth:`Pipeline.start` (after the pipeline
-    started its own threads/processes, so this registers last and, being LIFO, runs first). The
-    hook holds only a weak reference, so it never keeps the pipeline alive; once the pipeline is
-    stopped or collected it is a safe no-op (``stop`` is idempotent).
+    Uses ``threading._register_atexit`` -- **not** ``atexit.register``:
+    threading-atexit callbacks run inside ``threading._shutdown()``, before
+    non-daemon threads and child processes are joined. An ``atexit`` hook runs
+    later, after the interpreter may have hung joining the pipeline's event-loop
+    thread. This is the same private API, for the same reason, that
+    ``concurrent.futures`` uses. Called from :py:meth:`Pipeline.start` (after the
+    pipeline started its own threads/processes, so this registers last and,
+    being LIFO, runs first). The hook holds only a weak reference, so it never
+    keeps the pipeline alive; once the pipeline is stopped or collected it is a
+    safe no-op (``stop`` is idempotent).
     """
     ref = weakref.ref(impl)
 
@@ -489,11 +678,12 @@ def _register_stop_at_exit(impl: _PipelineImpl[Any]) -> None:
     try:
         threading._register_atexit(_hook)  # pyre-ignore[16]
     except (AttributeError, RuntimeError):
-        # Defensive around a private stdlib API: ``RuntimeError`` if the interpreter is already
-        # shutting down, ``AttributeError`` if a future Python drops the hook. The exit hook is
-        # only a safety net (explicit ``stop()`` and the GC finalizer still work), so failing to
-        # register must never break pipeline start; a unit test asserts the API exists so a genuine
-        # regression surfaces loudly in CI.
+        # Defensive around a private stdlib API: ``RuntimeError`` if the
+        # interpreter is already shutting down, ``AttributeError`` if a future
+        # Python drops the hook. The exit hook is only a safety net (explicit
+        # ``stop()`` and the GC finalizer still work), so failing to register
+        # must never break pipeline start; a unit test asserts the API exists so
+        # a genuine regression surfaces loudly in CI.
         _LG.debug("Could not register interpreter-exit stop hook.", exc_info=True)
 
 
