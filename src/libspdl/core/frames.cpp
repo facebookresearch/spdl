@@ -52,6 +52,7 @@ template <MediaType media>
 Frames<media>& Frames<media>::operator=(Frames<media>&& other) noexcept {
   using std::swap;
   swap(id_, other.id_);
+  swap(time_base_, other.time_base_);
   swap(frames_, other.frames_);
   return *this;
 }
