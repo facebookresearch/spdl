@@ -11,6 +11,7 @@
 #include <libspdl/core/types.h>
 
 #include <memory>
+#include <utility>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -142,8 +143,14 @@ class DPtr {
   explicit DPtr(T* p_ = nullptr) : p(p_) {}
   DPtr(const DPtr&) = delete;
   DPtr& operator=(const DPtr&) = delete;
-  DPtr(DPtr&&) noexcept = default;
-  DPtr& operator=(DPtr&&) noexcept = default;
+  DPtr(DPtr&& other) noexcept : p(std::exchange(other.p, nullptr)) {}
+  DPtr& operator=(DPtr&& other) noexcept {
+    if (this != &other) {
+      DeleteFunc(&p);
+      p = std::exchange(other.p, nullptr);
+    }
+    return *this;
+  }
   ~DPtr() {
     DeleteFunc(&p);
   }
