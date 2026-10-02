@@ -94,3 +94,44 @@ class TestNvjpegDecode(unittest.TestCase):
         self.assertFalse(torch.equal(tensor[0], tensor[1]))
         self.assertFalse(torch.equal(tensor[1], tensor[2]))
         self.assertFalse(torch.equal(tensor[2], tensor[0]))
+
+    def test_rejects_partially_specified_resize_dimensions(self) -> None:
+        """Resize dimensions must be provided together when either is set."""
+        sources = {
+            "single": b"invalid JPEG data",
+            "batch": [b"invalid JPEG data"],
+        }
+        dimensions = {
+            "width_only": (160, -1),
+            "height_only": (-1, 120),
+        }
+
+        for source_type, source in sources.items():
+            for dimension_type, (scale_width, scale_height) in dimensions.items():
+                with self.subTest(
+                    source_type=source_type,
+                    dimension_type=dimension_type,
+                ):
+                    with self.assertRaisesRegex(
+                        RuntimeError,
+                        "`scale_width` and `scale_height` must both be positive",
+                    ):
+                        spdl.io.decode_image_nvjpeg(
+                            source,
+                            device_config=spdl.io.cuda_config(
+                                device_index=DEFAULT_CUDA
+                            ),
+                            scale_width=scale_width,
+                            scale_height=scale_height,
+                        )
+
+    def test_batch_requires_explicit_resize_dimensions(self) -> None:
+        """Batch decoding rejects its unsupported no-resize configuration."""
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "Both `scale_width` and `scale_height` must be specified",
+        ):
+            spdl.io.decode_image_nvjpeg(
+                [b"invalid JPEG data"],
+                device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            )
