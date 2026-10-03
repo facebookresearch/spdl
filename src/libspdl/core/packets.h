@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <variant>
@@ -75,7 +76,23 @@ class PacketSeries {
   friend struct Packets<MediaType::Video>;
   friend struct Packets<MediaType::Image>;
 
+  template <MediaType media>
+  friend std::vector<uint8_t> serialize_packets(const Packets<media>&);
+  template <MediaType media>
+  friend std::unique_ptr<Packets<media>> deserialize_packets(
+      const std::vector<uint8_t>&);
+  template <MediaType media>
+  friend std::unique_ptr<Packets<media>> deserialize_packets_view(
+      const uint8_t*,
+      size_t);
+
   std::vector<AVPacket*> container_ = {};
+  // Preserves serialized per-packet time bases on FFmpeg versions where
+  // AVPacket has no time_base field.
+  std::vector<std::optional<Rational>> packet_time_bases_ = {};
+
+  void push(AVPacket* packet, std::optional<Rational> time_base);
+  Rational get_packet_time_base(size_t index, const Rational& fallback) const;
 
  public:
   /// Default constructor.
@@ -105,6 +122,13 @@ class PacketSeries {
   ///
   /// @return Vector of AVPacket pointers.
   const std::vector<AVPacket*>& get_packets() const;
+
+  /// Deep-copy a range of packets and their transport metadata.
+  ///
+  /// @param start Start index (inclusive).
+  /// @param end End index (exclusive).
+  /// @return New packet series containing the selected range.
+  PacketSeries clone_range(size_t start, size_t end) const;
 
   /// Iterate through packet data.
   ///
