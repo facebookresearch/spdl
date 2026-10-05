@@ -22,6 +22,14 @@ extern "C" {
 namespace spdl::core {
 namespace {
 
+#if LIBAVCODEC_VERSION_MAJOR < 59
+template <typename T>
+void append_scalar(std::vector<uint8_t>& data, T value) {
+  const auto* bytes = reinterpret_cast<const uint8_t*>(&value);
+  data.insert(data.end(), bytes, bytes + sizeof(T));
+}
+#endif
+
 // Build a standalone AVPacket with owned data and the given metadata.
 AVPacket* make_packet(
     const std::vector<uint8_t>& data,
@@ -36,16 +44,27 @@ AVPacket* make_packet(
   std::memcpy(pkt->data, data.data(), data.size());
   pkt->pts = pts;
   pkt->dts = dts;
+  pkt->stream_index = 7;
   pkt->flags = flags;
   pkt->duration = duration;
+  pkt->pos = 123;
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  pkt->time_base = AVRational{1, 90'000};
+#endif
   return pkt;
 }
 
 void expect_packet_eq(const AVPacket* a, const AVPacket* b) {
   EXPECT_EQ(a->pts, b->pts);
   EXPECT_EQ(a->dts, b->dts);
+  EXPECT_EQ(a->stream_index, b->stream_index);
   EXPECT_EQ(a->flags, b->flags);
   EXPECT_EQ(a->duration, b->duration);
+  EXPECT_EQ(a->pos, b->pos);
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  EXPECT_EQ(a->time_base.num, b->time_base.num);
+  EXPECT_EQ(a->time_base.den, b->time_base.den);
+#endif
   ASSERT_EQ(a->size, b->size);
   EXPECT_EQ(0, std::memcmp(a->data, b->data, a->size));
   ASSERT_EQ(a->side_data_elems, b->side_data_elems);
@@ -101,7 +120,52 @@ TEST(PacketsSerializationTest, RoundTripPreservesMetadataAndPayload) {
   for (size_t i = 0; i < orig.size(); ++i) {
     expect_packet_eq(orig[i], got[i]);
   }
+
+  EXPECT_EQ(serialize_packets(*restored), data);
 }
+
+#if LIBAVCODEC_VERSION_MAJOR < 59
+TEST(PacketsSerializationTest, OldFfmpegForwardsPerPacketTimeBase) {
+  std::vector<uint8_t> data;
+  append_scalar<uint32_t>(data, 0x53504B54); // "SPKT"
+  append_scalar<uint8_t>(data, 2); // serialization version
+  append_scalar<uint8_t>(data, static_cast<uint8_t>(MediaType::Video));
+  append_scalar<int32_t>(data, 0); // empty src
+  append_scalar<int32_t>(data, 2); // stream index
+  append_scalar<int32_t>(data, 1); // stream time base
+  append_scalar<int32_t>(data, 1'000);
+  append_scalar<uint8_t>(data, 0); // no timestamp
+  append_scalar<uint8_t>(data, 0); // no codec
+  append_scalar<int32_t>(data, 1); // one packet
+  append_scalar<int64_t>(data, 100); // pts
+  append_scalar<int64_t>(data, 90); // dts
+  append_scalar<int32_t>(data, 7); // packet stream index
+  append_scalar<int32_t>(data, AV_PKT_FLAG_KEY);
+  append_scalar<int64_t>(data, 10); // duration
+  append_scalar<int64_t>(data, 123); // pos
+  append_scalar<int32_t>(data, 1); // per-packet time base
+  append_scalar<int32_t>(data, 90'000);
+  append_scalar<int32_t>(data, 0); // empty payload
+  append_scalar<int32_t>(data, 0); // no side data
+
+  auto restored = deserialize_packets<MediaType::Video>(data);
+
+  EXPECT_EQ(restored->time_base.num, 1);
+  EXPECT_EQ(restored->time_base.den, 1'000);
+  EXPECT_EQ(serialize_packets(*restored), data);
+
+  VideoPackets copied{*restored};
+  EXPECT_EQ(serialize_packets(copied), data);
+
+  auto viewed =
+      deserialize_packets_view<MediaType::Video>(data.data(), data.size());
+  EXPECT_EQ(serialize_packets(*viewed), data);
+
+  auto extracted = extract_packets_at_indices(restored, {0});
+  ASSERT_EQ(extracted.size(), 1);
+  EXPECT_EQ(serialize_packets(*std::get<0>(extracted[0])), data);
+}
+#endif
 
 TEST(PacketsSerializationTest, RoundTripPreservesSideData) {
   Packets<MediaType::Audio> packets;
@@ -154,6 +218,14 @@ TEST(PacketsSerializationTest, MediaTypeMismatchThrows) {
   EXPECT_THROW(deserialize_packets<MediaType::Video>(data), std::runtime_error);
 }
 
+TEST(PacketsSerializationTest, OldSerializationVersionThrows) {
+  Packets<MediaType::Audio> packets;
+  auto data = serialize_packets(packets);
+  data[sizeof(uint32_t)] = 1;
+
+  EXPECT_THROW(deserialize_packets<MediaType::Audio>(data), std::runtime_error);
+}
+
 TEST(PacketsSerializationTest, CodecWithoutParametersThrows) {
   Packets<MediaType::Video> packets;
   packets.codec.emplace();
@@ -193,6 +265,8 @@ TEST(PacketsSerializationTest, ViewAliasesBufferWithPadding) {
   const uint8_t* lo = buf.data();
   const uint8_t* hi = buf.data() + buf.size();
   for (size_t i = 0; i < got.size(); ++i) {
+    expect_packet_eq(orig[i], got[i]);
+
     // Non-owning view pointing inside the serialized buffer.
     EXPECT_EQ(got[i]->buf, nullptr);
     EXPECT_GE(got[i]->data, lo);
