@@ -95,6 +95,48 @@ class TestNvjpegDecode(unittest.TestCase):
         self.assertFalse(torch.equal(tensor[1], tensor[2]))
         self.assertFalse(torch.equal(tensor[2], tensor[0]))
 
+    def test_async_resize_retains_decode_intermediate(self) -> None:
+        """An asynchronous resize keeps its decoded source alive until completion."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+        sample = get_sample(cmd)
+        with open(sample.path, "rb") as file:
+            data = memoryview(file.read())
+
+        buffer = spdl.io._core._libspdl_cuda.decode_image_nvjpeg(
+            data,
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            scale_width=160,
+            scale_height=120,
+            sync=False,
+        )
+        tensor = spdl.io.to_torch(buffer)
+        torch.cuda.synchronize(DEFAULT_CUDA)
+
+        self.assertEqual(tensor.shape, torch.Size([3, 120, 160]))
+        self.assertFalse(torch.equal(tensor[0], tensor[1]))
+
+    def test_async_batch_resize_retains_decode_intermediates(self) -> None:
+        """An asynchronous batch keeps every decoded source until completion."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 2 sample_%d.jpg"
+        samples = get_samples(cmd)
+        data = []
+        for sample in samples:
+            with open(sample.path, "rb") as file:
+                data.append(memoryview(file.read()))
+
+        buffer = spdl.io._core._libspdl_cuda.decode_image_nvjpeg(
+            data,
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            scale_width=160,
+            scale_height=120,
+            sync=False,
+        )
+        tensor = spdl.io.to_torch(buffer)
+        torch.cuda.synchronize(DEFAULT_CUDA)
+
+        self.assertEqual(tensor.shape, torch.Size([2, 3, 120, 160]))
+        self.assertFalse(torch.equal(tensor[:, 0], tensor[:, 1]))
+
     def test_rejects_partially_specified_resize_dimensions(self) -> None:
         """Resize dimensions must be provided together when either is set."""
         sources = {
