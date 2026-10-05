@@ -61,11 +61,11 @@ TEST(BytesSeekTest, RejectsOutOfRangeSeeksWithoutChangingPosition) {
 
 TEST(BytesSeekTest, RejectsSizesThatCannotFitInCallbackResult) {
   if constexpr (
-      std::numeric_limits<size_t>::max() >
-      static_cast<size_t>(std::numeric_limits<int64_t>::max())) {
+      (std::numeric_limits<size_t>::max)() >
+      static_cast<size_t>((std::numeric_limits<int64_t>::max)())) {
     size_t position = 0;
     const size_t size =
-        static_cast<size_t>(std::numeric_limits<int64_t>::max()) + 1;
+        static_cast<size_t>((std::numeric_limits<int64_t>::max)()) + 1;
     EXPECT_EQ(seek_bytes(size, position, 0, AVSEEK_SIZE), AVERROR(EOVERFLOW));
   }
 }
