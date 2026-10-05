@@ -57,7 +57,8 @@ _HELD_SUBPROCESS_ITERABLE: Iterable[int] | None = None
 
 def _retain_subprocess_iterable_until_process_exit(ready: Connection) -> None:
     global _HELD_SUBPROCESS_ITERABLE
-    os.setsid()
+    if os.name == "posix":
+        os.setsid()
     _HELD_SUBPROCESS_ITERABLE = iterate_in_subprocess(
         partial(SourceIterable, 1), timeout=10
     )
@@ -92,7 +93,10 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
         finally:
             ready.close()
             if process.is_alive():
-                os.killpg(process_id, signal.SIGKILL)
+                if os.name == "posix":
+                    os.killpg(process_id, signal.SIGKILL)
+                else:
+                    process.kill()
                 process.join(timeout=10)
 
         self.assertFalse(
