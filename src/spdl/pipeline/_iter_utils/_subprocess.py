@@ -74,7 +74,18 @@ class _ipc(Generic[T]):
             shutdown = getattr(arena, "shutdown_arena", None)
             if shutdown is not None:
                 shutdown()
-        _drain(self.data_q)
+        try:
+            _drain(self.data_q)
+        except (EOFError, OSError):
+            # Queue cleanup discards values, but multiprocessing.Queue still
+            # unpickles them. Tensor payloads rebuild storage through the
+            # producer's resource_sharer socket; that socket may disappear as
+            # soon as ABORT lets the producer exit. The value is already being
+            # discarded, so a missing transport resource must not skip joining
+            # the process (or turn successful training into a cleanup failure).
+            _LG.debug(
+                "Ignoring stale subprocess payload during teardown", exc_info=True
+            )
         _join(self.process)
         # Unlink the shared-memory arena only after the worker is confirmed
         # dead, so nothing touches the segment afterwards. ``unlink`` runs in
