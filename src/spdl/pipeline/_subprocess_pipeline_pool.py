@@ -38,10 +38,11 @@ break across the process boundary.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import queue as _queue
 import traceback
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import replace
 from typing import Any
 
@@ -69,8 +70,8 @@ __all__ = [
 _LG: logging.Logger = logging.getLogger(__name__)
 
 
-# Poll interval for a worker's blocking queue read, so a drain parked on an empty queue wakes to
-# observe shutdown instead of blocking forever after the pool has been torn down.
+# Poll interval for a worker's blocking queue read, so a thread executing a cancelled async
+# source read releases promptly instead of parking forever on an empty queue during teardown.
 _DRAIN_POLL_TIMEOUT: float = 0.5
 
 # How long to wait for a subinterpreter worker thread to observe ``_POOL_SHUTDOWN`` and exit.
@@ -82,6 +83,11 @@ _INTERPRETER_JOIN_TIMEOUT: float = 10.0
 # ``_InterpreterBackend.try_put_shutdown`` -- a subinterpreter worker cannot be force-killed, so
 # try a little harder than a non-blocking put to deliver the marker, while still capping teardown.
 _INTERPRETER_SHUTDOWN_PUT_TIMEOUT: float = 1.0
+
+
+def _get_input_message(in_q: Any) -> tuple[int, Any]:
+    """Read one worker-input message, with a bound for async-source cancellation."""
+    return in_q.get(timeout=_DRAIN_POLL_TIMEOUT)
 
 
 def _to_picklable_error(err: BaseException, tb: str) -> RuntimeError:
@@ -99,27 +105,36 @@ def _to_picklable_error(err: BaseException, tb: str) -> RuntimeError:
 
 
 class _DrainSource:
-    """Re-iterable source that drains one epoch of items from a worker's input queue.
+    """Re-iterable async source that drains one epoch from a worker's input queue.
 
-    Used as a *continuous* source: :py:func:`spdl.pipeline._components._source._source_continuous`
-    calls ``iter()`` once per epoch, so ``__iter__`` must return a fresh generator each time
-    (a one-shot generator object would only ever run one epoch). Each pass yields the items
-    inside each ``_ITEM`` payload until an ``_EPOCH`` (epoch boundary) or ``_POOL_SHUTDOWN``
-    (teardown) message.
+    Used as a *continuous* source:
+    :py:func:`spdl.pipeline._components._source._source_continuous` iterates it once per
+    epoch, so ``__aiter__`` returns a fresh async generator each time (a one-shot generator
+    object would only ever run one epoch). The queue read runs in the worker pipeline's thread
+    pool once per ``_ITEM`` message; the generator then yields every item in that message on
+    the event loop. Keeping the payload expansion async is important: adapting a synchronous
+    iterator would dispatch ``next()`` to the thread pool once per *item*, undoing the
+    process-boundary batching that ``buffer_size`` is meant to provide.
 
     ``exiting`` latches once ``_POOL_SHUTDOWN`` is seen; the worker loop reads it to stop after
     the current epoch. The blocking read uses a timeout so the drain thread wakes periodically
-    to observe shutdown rather than parking forever on an empty queue during teardown.
+    after cancellation rather than parking forever on an empty queue during teardown.
     """
 
     def __init__(self, in_q: Any) -> None:
         self._in_q = in_q
         self.exiting = False
 
-    def __iter__(self) -> Iterator[Any]:
+    def __aiter__(self) -> AsyncIterator[Any]:
+        return self._iterate()
+
+    async def _iterate(self) -> AsyncIterator[Any]:
+        loop = asyncio.get_running_loop()
         while True:
             try:
-                kind, payload = self._in_q.get(timeout=_DRAIN_POLL_TIMEOUT)
+                kind, payload = await loop.run_in_executor(
+                    None, _get_input_message, self._in_q
+                )
             except _queue.Empty:
                 if self.exiting:
                     return
@@ -128,7 +143,8 @@ class _DrainSource:
                 # An ``_ITEM`` payload is always a list (one item when the region is
                 # unbuffered), so unpacking it here is what keeps the region's buffering
                 # invisible to the sub-pipeline's stages.
-                yield from payload
+                for item in payload:
+                    yield item
             elif kind == _EPOCH:
                 return
             else:  # _POOL_SHUTDOWN
@@ -201,12 +217,21 @@ def _run_sessions(
     exiting = False
     session_ended = False
 
-    def _drain() -> Iterator[Any]:
+    async def _drain() -> AsyncIterator[Any]:
         nonlocal exiting, session_ended
+        loop = asyncio.get_running_loop()
         while True:
-            kind, payload = in_q.get()
+            try:
+                kind, payload = await loop.run_in_executor(
+                    None, _get_input_message, in_q
+                )
+            except _queue.Empty:
+                if exiting or session_ended:
+                    return
+                continue
             if kind == _ITEM:
-                yield from payload
+                for item in payload:
+                    yield item
             elif kind == _SESSION_END:
                 session_ended = True
                 return
