@@ -18,6 +18,7 @@
 
 #ifdef SPDL_USE_NPPI
 #include "libspdl/cuda/npp/detail/resize.h"
+#include "libspdl/cuda/npp/detail/utils.h"
 #endif
 
 #include <fmt/format.h>
@@ -163,7 +164,7 @@ CUDABufferPtr decode_image_nvjpeg(
     bool sync) {
   auto fmt = detail::get_nvjpeg_output_format(pix_fmt);
 
-  detail::set_cuda_primary_context(cuda_config.device_index);
+  detail::CUDAContextPushGuard context_guard{cuda_config.device_index};
 
   auto [buffer, src_meta, decoded] = decode(data, fmt, cuda_config);
 
@@ -186,6 +187,7 @@ CUDABufferPtr decode_image_nvjpeg(
         scale_width,
         scale_height,
         cuda_config.stream,
+        cuda_config.device_index,
         sync);
 
     return std::move(buffer2);
@@ -222,7 +224,9 @@ CUDABufferPtr decode_image_nvjpeg(
 
   auto fmt = detail::get_nvjpeg_output_format(pix_fmt);
 
-  detail::set_cuda_primary_context(cuda_config.device_index);
+  detail::CUDAContextPushGuard context_guard{cuda_config.device_index};
+  const NppStreamContext npp_context = detail::get_npp_stream_context(
+      cuda_config.stream, cuda_config.device_index);
 
   auto [out_buffer, out_meta] =
       get_output(fmt, scale_height, scale_width, cuda_config, batch_size);
@@ -240,7 +244,7 @@ CUDABufferPtr decode_image_nvjpeg(
         out_wrapper,
         scale_width,
         scale_height,
-        cuda_config.stream,
+        npp_context,
         false);
   }
 
