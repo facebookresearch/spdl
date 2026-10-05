@@ -26,7 +26,7 @@ namespace spdl::core {
 namespace detail {
 
 int64_t seek_bytes(size_t size, size_t& position, int64_t offset, int whence) {
-  if (size > static_cast<size_t>(std::numeric_limits<int64_t>::max())) {
+  if (size > static_cast<size_t>((std::numeric_limits<int64_t>::max)())) {
     return AVERROR(EOVERFLOW);
   }
 
@@ -55,7 +55,7 @@ int64_t seek_bytes(size_t size, size_t& position, int64_t offset, int whence) {
       return AVERROR(EINVAL);
   }
 
-  if (offset < -base || offset > std::numeric_limits<int64_t>::max() - base) {
+  if (offset < -base || offset > (std::numeric_limits<int64_t>::max)() - base) {
     return AVERROR(EINVAL);
   }
   const int64_t next = base + offset;
