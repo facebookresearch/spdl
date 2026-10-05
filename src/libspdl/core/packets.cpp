@@ -254,7 +254,10 @@ VideoPacketsPtr
 extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
   auto& src_packets = src->pkts.get_packets();
   auto ret = std::make_unique<VideoPackets>();
+  ret->id = src->id;
   ret->src = src->src;
+  ret->stream_index = src->stream_index;
+  ret->time_base = src->time_base;
   ret->codec = src->codec;
   // Do not preserve timestamp as indices are already adjusted
   ret->timestamp = std::nullopt;
