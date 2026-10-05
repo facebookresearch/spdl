@@ -16,9 +16,11 @@ import unittest
 import warnings
 from collections.abc import Iterable, Iterator
 from functools import partial
+from unittest.mock import MagicMock
 
 from spdl.pipeline import iterate_in_subprocess as _iterate_in_subprocess
 from spdl.pipeline._iter_utils._common import _Cmd, _execute_iterable, _Status
+from spdl.pipeline._iter_utils._subprocess import _ipc
 
 
 def _ignore_fork_warning(fn):
@@ -66,6 +68,26 @@ def initializer(path: str, val: str) -> None:
 
 @_ignore_fork_warning_in_class
 class TestIterateInSubprocess(unittest.TestCase):
+    def test_teardown_joins_after_tensor_transport_disappears(self) -> None:
+        process = MagicMock()
+        process.exitcode = 0
+        cmd_q = MagicMock()
+        data_q = MagicMock()
+        data_q.get_nowait.side_effect = FileNotFoundError(
+            "resource_sharer socket disappeared"
+        )
+
+        interface = _ipc(
+            process=process,
+            cmd_q=cmd_q,
+            data_q=data_q,
+            timeout=1.0,
+        )
+        interface.terminate()
+
+        cmd_q.put.assert_called_once_with(_Cmd.ABORT)
+        process.join.assert_called_once_with(3)
+
     def test_iterate_in_subprocess(self) -> None:
         """iterate_in_subprocess iterates"""
         N = 10
