@@ -38,6 +38,14 @@ def _make_async_router(
     return _to_async(router, executor=None)  # pyre-ignore[7]
 
 
+async def _wait_for_room(queues: Sequence[AsyncQueue]) -> None:
+    # asyncio.Queue cannot wait for a free slot without putting into it, so poll.
+    # The router is the only producer of these queues, so a free slot stays free.
+    # No deadline: a path that ends cancels the router, which ends this wait.
+    while any(q.full() for q in queues):
+        await asyncio.sleep(0.005)
+
+
 @asynccontextmanager
 async def _queue_stage_hook(queues: Sequence[AsyncQueue]) -> AsyncGenerator[None, None]:
     # Custom _queue_stage_hook.
@@ -48,9 +56,11 @@ async def _queue_stage_hook(queues: Sequence[AsyncQueue]) -> AsyncGenerator[None
     #   If one of the variant path cause the cancellation of upstream tasks,
     #   we need to stop the other variant paths, which is not handled by the
     #   general cancellation mechanism. To handle this, we always put _EOF.
-    #   When doing this, to handle the case where the queue is full,
-    #   we put trial-and-error, and make sure that the _EOF is processed.
+    #   When cancelled, we cannot await, so a full queue is evicted to make room.
+    # - On normal shutdown, put _EOF to all queues in one step once all have room,
+    #   so no path finishes (cancelling this task) before every path has _EOF.
     cancelled = False
+    exc_in_flight = False
     async with AsyncExitStack() as stack:
         for q in queues:
             # Use the shared guarded wrapper so stage finalization (e.g. final
@@ -63,24 +73,29 @@ async def _queue_stage_hook(queues: Sequence[AsyncQueue]) -> AsyncGenerator[None
         except asyncio.CancelledError:
             cancelled = True
             raise
+        except BaseException:
+            exc_in_flight = True
+            raise
         finally:
+            interrupted: asyncio.CancelledError | None = None
+            if not cancelled:
+                try:
+                    await _wait_for_room(queues)
+                except asyncio.CancelledError as e:
+                    interrupted = e
             for i, q in enumerate(queues):
                 try:
-                    if cancelled:
-                        # When cancelled (e.g. a variant path failed), we cannot
-                        # await, so evict items to make room for EOF.
-                        while q.full():
-                            q.get_nowait()
-                        q.put_nowait(_EOF)
-                    else:
-                        # Normal shutdown: wait for queue space so we don't
-                        # drop items that downstream hasn't consumed yet.
-                        await q.put(_EOF)
+                    while q.full():
+                        q.get_nowait()
+                    q.put_nowait(_EOF)
                 except Exception:
                     _LG.error(
                         "Failed to pass EOF to path:%d. The pipeline might not shutdown properly.",
                         i,
                     )
+            # Don't let a cancellation during the wait mask an exception in flight.
+            if interrupted is not None and not exc_in_flight:
+                raise interrupted
 
 
 def _path_variants_router(
