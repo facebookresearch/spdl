@@ -195,6 +195,72 @@ class TestLoadNpy(unittest.TestCase):
 
 
 class TestParseZip(unittest.TestCase):
+    def test_npz_file_rejects_unsupported_compression_method(self) -> None:
+        """Unsupported methods cannot bypass decompression validation."""
+        with self.assertRaisesRegex(ValueError, "unsupported compression method"):
+            spdl.io.NpzFile(
+                b"x",
+                {"x.npy": (0, 1, 1 << 60, 99)},
+            )
+
+    def test_npz_file_limits_declared_decompression_size(self) -> None:
+        """Untrusted metadata cannot request an unbounded native allocation."""
+        data = b"x"
+        oversized_meta = {"x.npy": (0, 1, (1 << 30) + 1, 8)}
+
+        with self.assertRaisesRegex(ValueError, "max_uncompressed_bytes"):
+            spdl.io.NpzFile(data, oversized_meta)
+
+        archive = spdl.io.NpzFile(
+            data,
+            oversized_meta,
+            max_uncompressed_bytes=(1 << 30) + 1,
+        )
+        self.assertEqual(len(archive), 1)
+
+    def test_load_npz_enforces_cumulative_decompression_budget(self) -> None:
+        """The convenience loader forwards its explicit allocation budget."""
+        data = _dump_npz_compressed(x=np.arange(4), y=np.arange(4))
+
+        with self.assertRaisesRegex(ValueError, "max_uncompressed_bytes"):
+            spdl.io.load_npz(data, max_uncompressed_bytes=1)
+
+    def test_npz_file_rejects_out_of_bounds_public_metadata(self) -> None:
+        """Public metadata cannot reach the native loader outside its buffer."""
+        data = b"data"
+        cases = [
+            (len(data) + 1, 0),
+            (0, len(data) + 1),
+            (len(data), 1),
+            (-1, 1),
+            (0, -1),
+        ]
+        for offset, compressed_size in cases:
+            with self.subTest(offset=offset, compressed_size=compressed_size):
+                with self.assertRaisesRegex(ValueError, "payload|negative"):
+                    spdl.io.NpzFile(
+                        data,
+                        {
+                            "x.npy": (
+                                offset,
+                                compressed_size,
+                                compressed_size,
+                                0,
+                            )
+                        },
+                    )
+
+    def test_npz_file_snapshots_public_metadata(self) -> None:
+        """Caller mutation cannot replace previously validated payload bounds."""
+        ref = np.arange(4)
+        data = _dump_npy(ref)
+        meta = {"x.npy": (0, len(data), len(data), 0)}
+        archive = spdl.io.NpzFile(data, meta)
+
+        meta.clear()
+
+        np.testing.assert_array_equal(archive["x"], ref)
+
     def test_parse_zip_too_short(self) -> None:
         for i in range(21):
             with self.assertRaisesRegex(
@@ -207,6 +273,189 @@ class TestParseZip(unittest.TestCase):
             RuntimeError, "Failed to locate the end of the central directory."
         ):
             spdl.io.load_npz((b"foooooooooooooooooooooooooo"))
+
+    def test_parse_zip_with_unaligned_comment_length(self) -> None:
+        """The EOCD search examines every byte offset allowed by ZIP."""
+        data = bytearray(_dump_npz(x=np.arange(4)))
+        data[-2:] = struct.pack("<H", 1)
+        data.append(ord("x"))
+
+        np.testing.assert_array_equal(spdl.io.load_npz(data)["x"], np.arange(4))
+
+    def test_parse_zip_allows_trailing_data(self) -> None:
+        """Bytes after the declared EOCD comment do not hide the archive."""
+        ref = np.arange(4)
+        data = _dump_npz(x=ref) + b"trailing data"
+
+        np.testing.assert_array_equal(spdl.io.load_npz(data)["x"], ref)
+
+    def test_parse_zip_ignores_false_unsupported_eocd_candidates(self) -> None:
+        """Unsupported-looking signatures do not stop the EOCD search."""
+        false_candidates = {
+            "multi-disk": struct.pack("<IHHHHIIH", 0x06054B50, 1, 0, 0, 0, 0, 0, 0),
+            "zip64": struct.pack(
+                "<IHHHHIIH",
+                0x06054B50,
+                0,
+                0,
+                0xFFFF,
+                0xFFFF,
+                0xFFFFFFFF,
+                0xFFFFFFFF,
+                0,
+            ),
+        }
+        ref = np.arange(4)
+        for name, false_candidate in false_candidates.items():
+            with self.subTest(name=name):
+                data = _dump_npz(x=ref) + false_candidate
+
+                np.testing.assert_array_equal(spdl.io.load_npz(data)["x"], ref)
+
+    def test_parse_zip_rejects_selected_unsupported_eocd(self) -> None:
+        """A selected multi-disk or ZIP64 EOCD remains unsupported."""
+        cases = [
+            ("multi-disk", 4, 1, "Multi-disk ZIP"),
+            ("zip64", 10, 0xFFFF, "ZIP64 central directories"),
+        ]
+        for name, field_offset, field_value, message in cases:
+            with self.subTest(name=name):
+                data = bytearray(_dump_npz(x=np.arange(4)))
+                eocd_offset = data.rfind(b"PK\x05\x06")
+                self.assertGreaterEqual(eocd_offset, 0)
+                struct.pack_into("<H", data, eocd_offset + field_offset, field_value)
+
+                with self.assertRaisesRegex(RuntimeError, message):
+                    spdl.io.load_npz(data)
+
+    def test_parse_zip_rejects_gap_before_eocd(self) -> None:
+        """The central directory must end immediately before the EOCD."""
+        data = bytearray(_dump_npz(x=np.arange(4)))
+        eocd_offset = data.rfind(b"PK\x05\x06")
+        self.assertGreaterEqual(eocd_offset, 0)
+        data[eocd_offset:eocd_offset] = b"gap"
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "central directory does not end at the EOCD",
+        ):
+            spdl.io.load_npz(data)
+
+    def test_parse_zip_rejects_out_of_bounds_payload(self) -> None:
+        """A central-directory size cannot expose bytes outside the archive."""
+        data = bytearray(_dump_npz(x=np.arange(4)))
+        cd_offset = data.find(b"PK\x01\x02")
+        self.assertGreaterEqual(cd_offset, 0)
+        struct.pack_into("<I", data, cd_offset + 20, len(data))
+
+        with self.assertRaisesRegex(ValueError, "payload is outside"):
+            spdl.io.load_npz(data)
+
+    def test_parse_zip_rejects_mismatched_stored_sizes(self) -> None:
+        """Stored ZIP entries must declare identical compressed and raw sizes."""
+        data = bytearray(_dump_npz(x=np.arange(4)))
+        cd_offset = data.find(b"PK\x01\x02")
+        self.assertGreaterEqual(cd_offset, 0)
+        compressed_size = struct.unpack_from("<I", data, cd_offset + 20)[0]
+        struct.pack_into("<I", data, cd_offset + 24, compressed_size + 1)
+
+        with self.assertRaisesRegex(ValueError, "matching compressed"):
+            spdl.io.load_npz(data)
+
+    def test_parse_zip64_entry_metadata(self) -> None:
+        """ZIP64 sizes are read from the central directory's extra field."""
+        ref = np.arange(4)
+        data = bytearray(_dump_npz(x=ref))
+        cd_offset = data.find(b"PK\x01\x02")
+        eocd_offset = data.rfind(b"PK\x05\x06")
+        self.assertGreaterEqual(cd_offset, 0)
+        self.assertGreater(eocd_offset, cd_offset)
+
+        compressed_size = struct.unpack_from("<I", data, cd_offset + 20)[0]
+        uncompressed_size = struct.unpack_from("<I", data, cd_offset + 24)[0]
+        filename_size = struct.unpack_from("<H", data, cd_offset + 28)[0]
+        extra_size = struct.unpack_from("<H", data, cd_offset + 30)[0]
+        insert_at = cd_offset + 46 + filename_size + extra_size
+        zip64_extra = struct.pack(
+            "<HHQQ", 0x0001, 16, uncompressed_size, compressed_size
+        )
+
+        struct.pack_into("<II", data, cd_offset + 20, 0xFFFFFFFF, 0xFFFFFFFF)
+        struct.pack_into("<H", data, cd_offset + 30, extra_size + len(zip64_extra))
+        data[insert_at:insert_at] = zip64_extra
+        eocd_offset += len(zip64_extra)
+        cd_size = struct.unpack_from("<I", data, eocd_offset + 12)[0]
+        struct.pack_into("<I", data, eocd_offset + 12, cd_size + len(zip64_extra))
+
+        np.testing.assert_array_equal(spdl.io.load_npz(data)["x"], ref)
+
+    def test_parse_zip64_rejects_truncated_required_fields(self) -> None:
+        """Every sentinel-backed ZIP64 value must fit in its extra field."""
+        sentinel_fields = [
+            (20, "<I", 0xFFFFFFFF),
+            (24, "<I", 0xFFFFFFFF),
+            (34, "<H", 0xFFFF),
+            (42, "<I", 0xFFFFFFFF),
+        ]
+        for field_offset, field_format, sentinel in sentinel_fields:
+            with self.subTest(field_offset=field_offset):
+                data = bytearray(_dump_npz(x=np.arange(4)))
+                cd_offset = data.find(b"PK\x01\x02")
+                eocd_offset = data.rfind(b"PK\x05\x06")
+                self.assertGreaterEqual(cd_offset, 0)
+                self.assertGreater(eocd_offset, cd_offset)
+
+                filename_size = struct.unpack_from("<H", data, cd_offset + 28)[0]
+                extra_size = struct.unpack_from("<H", data, cd_offset + 30)[0]
+                insert_at = cd_offset + 46 + filename_size + extra_size
+                truncated_zip64_extra = struct.pack("<HH", 0x0001, 0)
+
+                struct.pack_into(field_format, data, cd_offset + field_offset, sentinel)
+                struct.pack_into(
+                    "<H",
+                    data,
+                    cd_offset + 30,
+                    extra_size + len(truncated_zip64_extra),
+                )
+                data[insert_at:insert_at] = truncated_zip64_extra
+                eocd_offset += len(truncated_zip64_extra)
+                cd_size = struct.unpack_from("<I", data, eocd_offset + 12)[0]
+                struct.pack_into(
+                    "<I",
+                    data,
+                    eocd_offset + 12,
+                    cd_size + len(truncated_zip64_extra),
+                )
+
+                with self.assertRaisesRegex(ValueError, "ZIP64 extended metadata"):
+                    spdl.io.load_npz(data)
+
+    def test_parse_zip64_rejects_unrequested_fields(self) -> None:
+        """ZIP64 fields must correspond exactly to sentinel-backed values."""
+        data = bytearray(_dump_npz(x=np.arange(4)))
+        cd_offset = data.find(b"PK\x01\x02")
+        eocd_offset = data.rfind(b"PK\x05\x06")
+        self.assertGreaterEqual(cd_offset, 0)
+        self.assertGreater(eocd_offset, cd_offset)
+
+        compressed_size = struct.unpack_from("<I", data, cd_offset + 20)[0]
+        uncompressed_size = struct.unpack_from("<I", data, cd_offset + 24)[0]
+        filename_size = struct.unpack_from("<H", data, cd_offset + 28)[0]
+        extra_size = struct.unpack_from("<H", data, cd_offset + 30)[0]
+        insert_at = cd_offset + 46 + filename_size + extra_size
+        zip64_extra = struct.pack(
+            "<HHQQ", 0x0001, 16, uncompressed_size, compressed_size
+        )
+
+        struct.pack_into("<I", data, cd_offset + 20, 0xFFFFFFFF)
+        struct.pack_into("<H", data, cd_offset + 30, extra_size + len(zip64_extra))
+        data[insert_at:insert_at] = zip64_extra
+        eocd_offset += len(zip64_extra)
+        cd_size = struct.unpack_from("<I", data, eocd_offset + 12)[0]
+        struct.pack_into("<I", data, eocd_offset + 12, cd_size + len(zip64_extra))
+
+        with self.assertRaisesRegex(ValueError, "ZIP64 extended metadata"):
+            spdl.io.load_npz(data)
 
 
 def _get_test_float_arr(dtype: type[np.floating]) -> np.ndarray:

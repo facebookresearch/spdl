@@ -21,6 +21,9 @@ from . import lib as _libspdl
 
 Buffer: TypeAlias = "bytes | bytearray | memoryview[bytes]"
 
+_NpzEntry: TypeAlias = "tuple[int, int, int, int]"
+_DEFAULT_MAX_UNCOMPRESSED_BYTES = 1 << 30
+
 
 def _get_pointer(data: Buffer) -> int:
     return np.frombuffer(data, dtype=np.byte).ctypes.data
@@ -128,21 +131,82 @@ class NpzFile(Mapping):
     :py:class:`collections.abc.Mapping` interface.
 
     See :py:func:`load_npz` for the usage.
+
+    Args:
+        data: The archive data to load.
+        meta: Metadata describing each archive entry.
+        max_uncompressed_bytes: Maximum cumulative declared uncompressed size
+            of DEFLATE-compressed entries. Defaults to 1 GiB.
+
+    .. versionadded:: 0.7.0
+
+       The ``max_uncompressed_bytes`` argument.
     """
 
     def __init__(
         self,
-        data: "bytes | memoryview[bytes]",
-        meta: dict[str, tuple[int, int, int, int]],
+        data: Buffer,
+        meta: "Mapping[str, _NpzEntry]",
+        *,
+        max_uncompressed_bytes: int = _DEFAULT_MAX_UNCOMPRESSED_BYTES,
     ) -> None:
         # `_data` is a raw pointer into `data`, so the archive must be kept
         # alive. A memoryview also blocks resizing a mutable source, which
         # would reallocate the buffer and leave `_data` dangling.
         self._buf: "memoryview[bytes]" = memoryview(data)
         self._data: int = _get_pointer(self._buf)
-        self._len: int = len(data)
-        self._meta = meta
-        self.files: list[str] = [f.removesuffix(".npy") for f in meta]
+        self._len: int = self._buf.nbytes
+
+        # `NpzFile` is part of the public API, so callers can construct it with
+        # metadata that did not come from the bounds-checked ZIP parser. Check
+        # every borrowed region before it reaches the raw-pointer C++ API and
+        # snapshot the dictionary so later caller mutation cannot bypass the
+        # validation.
+        if max_uncompressed_bytes < 0:
+            raise ValueError("max_uncompressed_bytes must be non-negative.")
+
+        validated_meta: dict[str, tuple[int, int, int, int]] = {}
+        total_uncompressed_bytes = 0
+        for name, entry in meta.items():
+            offset, compressed_size, uncompressed_size, compression_method = entry
+            if offset < 0 or compressed_size < 0:
+                raise ValueError(f"NPZ entry {name!r} has a negative payload region.")
+            if offset > self._len or compressed_size > self._len - offset:
+                raise ValueError(
+                    f"NPZ entry {name!r} payload is outside the archive buffer."
+                )
+            if uncompressed_size < 0:
+                raise ValueError(
+                    f"NPZ entry {name!r} has a negative uncompressed size."
+                )
+            if compression_method == 0:
+                # Stored entries are borrowed directly from the already-bounded
+                # archive buffer, so they cannot expand or consume a separate
+                # decompression allocation budget.
+                if compressed_size != uncompressed_size:
+                    raise ValueError(
+                        f"NPZ stored entry {name!r} must have matching compressed "
+                        "and uncompressed sizes."
+                    )
+            elif compression_method == 8:
+                if (
+                    uncompressed_size
+                    > max_uncompressed_bytes - total_uncompressed_bytes
+                ):
+                    raise ValueError(
+                        "NPZ deflated entries exceed max_uncompressed_bytes "
+                        f"({max_uncompressed_bytes})."
+                    )
+                total_uncompressed_bytes += uncompressed_size
+            else:
+                raise ValueError(
+                    f"NPZ entry {name!r} uses unsupported compression method "
+                    f"{compression_method}."
+                )
+            validated_meta[name] = entry
+
+        self._meta = validated_meta
+        self.files: list[str] = [f.removesuffix(".npy") for f in validated_meta]
 
     def __iter__(self) -> Iterator[str]:
         return iter(self.files)
@@ -193,7 +257,11 @@ class NpzFile(Mapping):
         return f"NpzFile object with {len(self)} entries."
 
 
-def load_npz(data: "bytes | memoryview[bytes]") -> NpzFile:
+def load_npz(
+    data: Buffer,
+    *,
+    max_uncompressed_bytes: int = _DEFAULT_MAX_UNCOMPRESSED_BYTES,
+) -> NpzFile:
     """**[Experimental]** Load a numpy archive file (``npz``).
 
     It is almost a drop-in replacement for :py:func:`numpy.load` function,
@@ -205,6 +273,13 @@ def load_npz(data: "bytes | memoryview[bytes]") -> NpzFile:
 
     Args:
         data: The data to load.
+        max_uncompressed_bytes: Maximum cumulative declared uncompressed size
+            of DEFLATE-compressed entries. Defaults to 1 GiB. Increase this
+            explicitly only for trusted archives that require more space.
+
+    .. versionadded:: 0.7.0
+
+       The ``max_uncompressed_bytes`` argument.
 
     .. versionchanged:: 0.7.0
 
@@ -228,4 +303,8 @@ def load_npz(data: "bytes | memoryview[bytes]") -> NpzFile:
     """
     mv = memoryview(data)
     meta = {val[0]: val[1:] for val in _libspdl._archive.parse_zip(mv)}
-    return NpzFile(data, meta)
+    return NpzFile(
+        data,
+        meta,
+        max_uncompressed_bytes=max_uncompressed_bytes,
+    )
