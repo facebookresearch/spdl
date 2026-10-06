@@ -58,7 +58,7 @@ def load_npy(data: Buffer, *, copy: bool = False) -> NDArray:
 
     .. note::
 
-       This function does not support ``object`` dtype, and Fortran order.
+       This function does not support ``object``, structured, or record dtypes.
 
     Example:
 
@@ -86,7 +86,10 @@ def load_npy(data: Buffer, *, copy: bool = False) -> NDArray:
        Zero-copy arrays now retain their source buffer and are read-only when
        that source is read-only. A resizable source cannot be resized while a
        returned zero-copy array is alive. Pass ``copy=True`` when a writable,
-       independently resizable array is required.
+       independently resizable array is required. Fortran-contiguous arrays now expose their
+       column-major strides correctly. Malformed shape or dtype metadata and
+       truncated payloads are now rejected instead of constructing an invalid
+       array view.
 
     .. seealso::
 
