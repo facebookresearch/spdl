@@ -7,6 +7,7 @@
  */
 
 #include <nanobind/nanobind.h>
+#include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
@@ -69,23 +70,36 @@ NB_MODULE(_archive, m) {
 
   m.def(
       "load_npy",
-      [](uintptr_t p, size_t s, size_t o) {
-        return load_npy((const char*)p + o, s);
+      [](uintptr_t p, size_t s, size_t o, std::optional<uint32_t> crc32) {
+        // NOLINTNEXTLINE(performance-no-int-to-ptr)
+        const auto* data = reinterpret_cast<const char*>(p) + o;
+        if (crc32) {
+          zip::verify_crc32(data, s, *crc32);
+        }
+        return load_npy(data, s);
       },
       nb::arg("data"),
       nb::arg("size"),
       nb::arg("offset") = 0,
+      nb::arg("crc32") = nb::none(),
       nb::call_guard<nb::gil_scoped_release>());
 
   m.def(
       "load_npy_compressed",
-      [](uintptr_t p, size_t o, uint32_t cs, uint32_t ucs) {
-        return load_npy_compressed((const char*)p + o, cs, ucs);
+      [](uintptr_t p,
+         size_t o,
+         size_t cs,
+         size_t ucs,
+         std::optional<uint32_t> crc32) {
+        // NOLINTNEXTLINE(performance-no-int-to-ptr)
+        const auto* data = reinterpret_cast<const char*>(p) + o;
+        return load_npy_compressed(data, cs, ucs, crc32);
       },
       nb::arg("data"),
       nb::arg("offset"),
       nb::arg("compressed_size"),
       nb::arg("uncompressed_size"),
+      nb::arg("crc32") = nb::none(),
       nb::call_guard<nb::gil_scoped_release>());
 
   register_tar(m);
