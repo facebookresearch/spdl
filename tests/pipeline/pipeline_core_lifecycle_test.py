@@ -184,6 +184,62 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
         finally:
             pipeline.stop(timeout=_TIMEOUT)
 
+    def test_repeated_eof_does_not_submit_during_shutdown(self) -> None:
+        """A repeated terminal read does not enqueue work on a closing loop."""
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+
+        async def complete_immediately() -> None:
+            return None
+
+        pipeline = _make_pipeline(complete_immediately(), output_queue)
+        try:
+            pipeline.start(timeout=_TIMEOUT)
+            with self.assertRaises(EOFError):
+                pipeline.get_item(timeout=_TIMEOUT)
+
+            event_loop = pipeline._impl._event_loop
+            with patch.object(
+                event_loop,
+                "run_coroutine_threadsafe",
+                wraps=event_loop.run_coroutine_threadsafe,
+            ) as submit:
+                with self.assertRaises(EOFError):
+                    pipeline.get_item(timeout=_TIMEOUT)
+            submit.assert_not_called()
+        finally:
+            pipeline.stop(timeout=_TIMEOUT)
+
+    def test_submission_failure_recovers_completed_buffered_output(self) -> None:
+        """A stopped owner loop does not strand already-buffered output."""
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+        output_queue.put_nowait(1)
+
+        async def complete_immediately() -> None:
+            return None
+
+        pipeline = _make_pipeline(complete_immediately(), output_queue)
+        try:
+            pipeline.start(timeout=_TIMEOUT)
+            event_loop = pipeline._impl._event_loop
+            deadline = time.monotonic() + _TIMEOUT
+            while not event_loop.is_task_completed():
+                if time.monotonic() >= deadline:
+                    self.fail("Pipeline task did not complete before the timeout.")
+                time.sleep(0.001)
+
+            with (
+                patch.object(
+                    event_loop,
+                    "run_coroutine_threadsafe",
+                    side_effect=RuntimeError("Event loop is closed"),
+                ) as submit,
+                patch.object(event_loop, "is_running", return_value=False),
+            ):
+                self.assertEqual(pipeline.get_item(timeout=_TIMEOUT), 1)
+            submit.assert_called_once()
+        finally:
+            pipeline.stop(timeout=_TIMEOUT)
+
     def test_completed_task_waits_for_delayed_queue_publication(self) -> None:
         """Task completion does not abandon a queue result awaiting publication."""
         output_queue: asyncio.Queue[int] = asyncio.Queue(1)
