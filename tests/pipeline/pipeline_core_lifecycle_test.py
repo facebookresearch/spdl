@@ -19,10 +19,15 @@ from concurrent.futures import (
     TimeoutError as FutureTimeoutError,
 )
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import call, MagicMock, patch
 
 from spdl.pipeline import Pipeline, PipelineBuilder
-from spdl.pipeline._pipeline import _EventLoop, _QueueReadTimedOut
+from spdl.pipeline._components import _ThreadBasedAsyncQueue, StageInfo
+from spdl.pipeline._pipeline import (
+    _EventLoop,
+    _EventLoopState,
+    _QueueReadTimedOut,
+)
 
 _TIMEOUT: float = 30.0
 _RELEASE_OP: threading.Event = threading.Event()
@@ -1206,3 +1211,593 @@ class EventLoopFailureStateTest(unittest.TestCase):
             event_loop.stop()
             event_loop.join(timeout=_TIMEOUT)
             worker_executor.shutdown()
+
+
+class PipelineStopTest(unittest.TestCase):
+    def test_async_sink_drain_is_bounded_to_initial_size(self) -> None:
+        """A synchronously refilling custom sink cannot monopolize the event loop."""
+
+        class _RefillingDrainQueue(asyncio.Queue[int]):
+            def __init__(self) -> None:
+                super().__init__()
+                self.put_nowait(1)
+                self.reads = 0
+
+            def get_nowait(self) -> int:
+                item = super().get_nowait()
+                self.reads += 1
+                if self.reads > 1:
+                    raise AssertionError("drain chased a synchronously refilled item")
+                self.put_nowait(item)
+                return item
+
+        async def unused_pipeline() -> None:
+            return None
+
+        output_queue = _RefillingDrainQueue()
+        pipeline_coro = unused_pipeline()
+        executor = ThreadPoolExecutor(max_workers=1)
+        pipeline = Pipeline(
+            pipeline_coro,
+            output_queue,
+            executor,
+            desc="bounded async sink drain test",
+        )
+
+        async def drain_one_pass() -> None:
+            drain = asyncio.create_task(
+                pipeline._impl._drain_output_queue_until_task_completes_on_loop()
+            )
+            await asyncio.sleep(0)
+            pipeline._impl._event_loop._task_completed.set()
+            await drain
+
+        try:
+            asyncio.run(drain_one_pass())
+            self.assertEqual(output_queue.reads, 1)
+            self.assertEqual(output_queue.qsize(), 1)
+        finally:
+            pipeline_coro.close()
+            executor.shutdown()
+
+    def test_thread_queue_drain_follows_delayed_refills_until_deadline(self) -> None:
+        """Foreground stop retries an empty queue for delayed producer refills."""
+
+        async def unused_pipeline() -> None:
+            return None
+
+        output_queue = _ThreadBasedAsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
+        )
+        pipeline_coro = unused_pipeline()
+        executor = ThreadPoolExecutor(max_workers=1)
+        pipeline = Pipeline(
+            pipeline_coro,
+            output_queue,
+            executor,
+            desc="refilling thread queue drain test",
+        )
+        pipeline._impl._event_loop_state = _EventLoopState.STARTED
+        original_get_nowait = output_queue._queue.get_nowait
+        attempts = 0
+        reads = 0
+        sleeps = 0
+
+        def get_and_refill() -> int:
+            nonlocal attempts, reads
+            attempts += 1
+            if attempts == 1:
+                raise queue.Empty
+            item = original_get_nowait()
+            reads += 1
+            if reads < 3:
+                output_queue._queue.put_nowait(item)
+            return item
+
+        def sleep_and_refill(delay: float) -> None:
+            nonlocal sleeps
+            self.assertEqual(delay, 0.005)
+            sleeps += 1
+            if sleeps == 1:
+                output_queue._queue.put_nowait(1)
+
+        try:
+            with (
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "is_running",
+                    return_value=True,
+                ),
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "join",
+                    side_effect=[TimeoutError, None],
+                ) as join,
+                patch.object(
+                    output_queue._queue,
+                    "get_nowait",
+                    side_effect=get_and_refill,
+                ),
+                patch(
+                    "spdl.pipeline._pipeline.time.monotonic",
+                    side_effect=[
+                        100.0,
+                        100.1,
+                        100.2,
+                        100.3,
+                        100.4,
+                        100.45,
+                        100.5,
+                        100.55,
+                        100.55,
+                    ],
+                ),
+                patch(
+                    "spdl.pipeline._pipeline.time.sleep",
+                    side_effect=sleep_and_refill,
+                ),
+                self.assertNoLogs("spdl.pipeline._pipeline", level="WARNING"),
+            ):
+                pipeline.stop(timeout=1)
+
+            self.assertEqual(attempts, 4)
+            self.assertEqual(reads, 3)
+            self.assertEqual(sleeps, 1)
+            self.assertTrue(output_queue._queue.empty())
+            self.assertAlmostEqual(
+                join.call_args_list[-1].kwargs["timeout"],
+                0.45,
+            )
+        finally:
+            pipeline_coro.close()
+            executor.shutdown()
+
+    def test_thread_queue_drain_stops_chasing_refills_at_deadline(self) -> None:
+        """Foreground draining cannot overrun a bounded stop deadline."""
+
+        async def unused_pipeline() -> None:
+            return None
+
+        output_queue = _ThreadBasedAsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
+        )
+        output_queue._queue.put_nowait(1)
+        pipeline_coro = unused_pipeline()
+        executor = ThreadPoolExecutor(max_workers=1)
+        pipeline = Pipeline(
+            pipeline_coro,
+            output_queue,
+            executor,
+            desc="bounded refilling thread queue drain test",
+        )
+        pipeline._impl._event_loop_state = _EventLoopState.STARTED
+        original_get_nowait = output_queue._queue.get_nowait
+        reads = 0
+
+        def get_and_refill() -> int:
+            nonlocal reads
+            item = original_get_nowait()
+            reads += 1
+            if reads < 3:
+                output_queue._queue.put_nowait(item)
+            return item
+
+        try:
+            with (
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "join",
+                    side_effect=[TimeoutError, None],
+                ) as join,
+                patch.object(
+                    output_queue._queue,
+                    "get_nowait",
+                    side_effect=get_and_refill,
+                ),
+                patch(
+                    "spdl.pipeline._pipeline.time.monotonic",
+                    side_effect=[100.0, 100.25, 100.5, 100.625, 100.625],
+                ),
+                self.assertNoLogs("spdl.pipeline._pipeline", level="WARNING"),
+            ):
+                pipeline.stop(timeout=1)
+
+            self.assertEqual(reads, 1)
+            self.assertFalse(output_queue._queue.empty())
+            self.assertEqual(
+                join.call_args_list,
+                [call(timeout=0.5), call(timeout=0.375)],
+            )
+        finally:
+            pipeline_coro.close()
+            executor.shutdown()
+
+    def test_thread_queue_drain_has_fallback_deadline_and_yields(self) -> None:
+        """An unbounded stop yields while chasing thread-queue refills."""
+
+        async def unused_pipeline() -> None:
+            return None
+
+        output_queue = _ThreadBasedAsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
+        )
+        output_queue._queue.put_nowait(1)
+        pipeline_coro = unused_pipeline()
+        executor = ThreadPoolExecutor(max_workers=1)
+        pipeline = Pipeline(
+            pipeline_coro,
+            output_queue,
+            executor,
+            desc="fallback-bounded thread queue drain test",
+        )
+        pipeline._impl._event_loop_state = _EventLoopState.STARTED
+        original_get_nowait = output_queue._queue.get_nowait
+        reads = 0
+
+        def get_and_refill() -> int:
+            nonlocal reads
+            item = original_get_nowait()
+            reads += 1
+            if reads < 3:
+                output_queue._queue.put_nowait(item)
+            return item
+
+        try:
+            with (
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "join",
+                    side_effect=[TimeoutError, None],
+                ) as join,
+                patch.object(
+                    output_queue._queue,
+                    "get_nowait",
+                    side_effect=get_and_refill,
+                ),
+                patch(
+                    "spdl.pipeline._pipeline.time.monotonic",
+                    side_effect=[100.0, 100.25, 100.5, 101.5, 101.5],
+                ),
+                patch("spdl.pipeline._pipeline.time.sleep") as sleep,
+                patch("spdl.pipeline._pipeline._THREAD_DRAIN_BATCH_SIZE", 1),
+                self.assertNoLogs("spdl.pipeline._pipeline", level="WARNING"),
+            ):
+                pipeline.stop()
+
+            self.assertEqual(reads, 1)
+            self.assertFalse(output_queue._queue.empty())
+            self.assertEqual(
+                join.call_args_list,
+                [call(timeout=3), call(timeout=1.5)],
+            )
+            sleep.assert_called_once_with(0.005)
+        finally:
+            pipeline_coro.close()
+            executor.shutdown()
+
+    def test_thread_queue_drain_failure_does_not_skip_final_join(self) -> None:
+        """A thread-backed sink error cannot bypass terminal cleanup."""
+
+        async def unused_pipeline() -> None:
+            return None
+
+        output_queue = _ThreadBasedAsyncQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
+        )
+        output_queue._queue.put_nowait(1)
+        pipeline_coro = unused_pipeline()
+        executor = ThreadPoolExecutor(max_workers=1)
+        pipeline = Pipeline(
+            pipeline_coro,
+            output_queue,
+            executor,
+            desc="thread queue drain failure test",
+        )
+        pipeline._impl._event_loop_state = _EventLoopState.STARTED
+        try:
+            with (
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "is_running",
+                    return_value=True,
+                ),
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "join",
+                    side_effect=[TimeoutError, None],
+                ) as join,
+                patch.object(
+                    output_queue._queue,
+                    "get_nowait",
+                    side_effect=RuntimeError("drain failed"),
+                ),
+                self.assertLogs("spdl.pipeline._pipeline", level="WARNING"),
+            ):
+                pipeline.stop(timeout=1)
+
+            self.assertEqual(join.call_count, 2)
+            self.assertEqual(pipeline._impl._event_loop_state, _EventLoopState.STOPPED)
+        finally:
+            pipeline_coro.close()
+            executor.shutdown()
+
+    def test_exhausted_deadline_gives_async_drain_one_scheduling_slice(self) -> None:
+        """An expired stop deadline still makes a bounded backpressure attempt."""
+
+        async def unused_pipeline() -> None:
+            return None
+
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+        pipeline_coro = unused_pipeline()
+        executor = ThreadPoolExecutor(max_workers=1)
+        pipeline = Pipeline(
+            pipeline_coro,
+            output_queue,
+            executor,
+            desc="expired async drain deadline test",
+        )
+        pipeline._impl._event_loop_state = _EventLoopState.STARTED
+        output_queue.put_nowait(1)
+
+        try:
+            with (
+                patch.object(
+                    time,
+                    "monotonic",
+                    side_effect=[100.0, 101.0, 101.0, 101.0],
+                ),
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "is_running",
+                    return_value=True,
+                ),
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "join",
+                    side_effect=[TimeoutError, None],
+                ) as join,
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "run_coroutine_threadsafe",
+                ) as submit,
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "call_soon_threadsafe",
+                    side_effect=lambda callback: callback(),
+                ) as schedule,
+            ):
+                pipeline.stop(timeout=1)
+
+            submit.assert_not_called()
+            schedule.assert_called_once_with(
+                pipeline._impl._drain_output_queue_once_with_logging_on_loop
+            )
+            self.assertTrue(output_queue.empty())
+            self.assertEqual(join.call_args_list[-1].kwargs["timeout"], 0.0)
+            self.assertEqual(pipeline._impl._event_loop_state, _EventLoopState.STOPPED)
+        finally:
+            pipeline_coro.close()
+            executor.shutdown()
+
+    def test_async_drain_scheduling_slice_logs_failure(self) -> None:
+        """A failed scheduled drain is logged without escaping the loop callback."""
+
+        async def unused_pipeline() -> None:
+            return None
+
+        pipeline_coro = unused_pipeline()
+        executor = ThreadPoolExecutor(max_workers=1)
+        pipeline = Pipeline(
+            pipeline_coro,
+            asyncio.Queue[int](),
+            executor,
+            desc="failed async drain callback test",
+        )
+        try:
+            with (
+                patch.object(
+                    pipeline._impl,
+                    "_drain_output_queue_on_loop",
+                    side_effect=RuntimeError("drain failed"),
+                ),
+                self.assertLogs("spdl.pipeline._pipeline", level="WARNING"),
+            ):
+                pipeline._impl._drain_output_queue_once_with_logging_on_loop()
+        finally:
+            pipeline_coro.close()
+            executor.shutdown()
+
+    def test_unbounded_stop_caps_stalled_drain_and_final_join(self) -> None:
+        """A stalled drain cannot turn a no-timeout stop into an endless join."""
+
+        class _StalledFuture(Future[None]):
+            def __init__(self) -> None:
+                super().__init__()
+                self.timeouts: list[float | None] = []
+
+            def result(self, timeout: float | None = None) -> None:
+                self.timeouts.append(timeout)
+                return super().result(timeout=0)
+
+        async def unused_pipeline() -> None:
+            return None
+
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+        pipeline_coro = unused_pipeline()
+        executor = ThreadPoolExecutor(max_workers=1)
+        pipeline = Pipeline(
+            pipeline_coro,
+            output_queue,
+            executor,
+            desc="unbounded drain callback test",
+        )
+        pipeline._impl._event_loop_state = _EventLoopState.STARTED
+        stalled_future = _StalledFuture()
+
+        def stall_drain(coro: Coroutine[Any, Any, None]) -> Future[None]:
+            coro.close()
+            return stalled_future
+
+        try:
+            with (
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "is_running",
+                    return_value=True,
+                ),
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "join",
+                    side_effect=[TimeoutError, None],
+                ) as join,
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "run_coroutine_threadsafe",
+                    side_effect=stall_drain,
+                ),
+                patch(
+                    "spdl.pipeline._pipeline.time.monotonic",
+                    side_effect=[100.0, 100.5, 101.0],
+                ),
+            ):
+                pipeline.stop()
+
+            # The foreground wait is finite; cancellation then invokes the done
+            # callback, whose ordinary result() call has no timeout.
+            self.assertEqual(stalled_future.timeouts, [1.0, None])
+            self.assertTrue(stalled_future.cancelled())
+            self.assertEqual(join.call_args_list[-1].kwargs["timeout"], 2.0)
+        finally:
+            pipeline_coro.close()
+            executor.shutdown()
+
+    def test_late_drain_failure_is_logged(self) -> None:
+        """A drain failure remains visible after its foreground wait expires."""
+
+        class _LateFailureFuture(Future[None]):
+            def result(self, timeout: float | None = None) -> None:
+                if timeout is not None:
+                    raise TimeoutError("drain result is delayed")
+                return super().result()
+
+        async def unused_pipeline() -> None:
+            return None
+
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+        pipeline_coro = unused_pipeline()
+        executor = ThreadPoolExecutor(max_workers=1)
+        pipeline = Pipeline(
+            pipeline_coro,
+            output_queue,
+            executor,
+            desc="late drain failure test",
+        )
+        pipeline._impl._event_loop_state = _EventLoopState.STARTED
+        future = _LateFailureFuture()
+        self.assertTrue(future.set_running_or_notify_cancel())
+
+        def delay_drain(coro: Coroutine[Any, Any, None]) -> Future[None]:
+            coro.close()
+            return future
+
+        try:
+            with (
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "is_running",
+                    return_value=True,
+                ),
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "join",
+                    side_effect=[TimeoutError, None],
+                ),
+                patch.object(
+                    pipeline._impl._event_loop,
+                    "run_coroutine_threadsafe",
+                    side_effect=delay_drain,
+                ),
+            ):
+                pipeline.stop()
+
+            with self.assertLogs("spdl.pipeline._pipeline", level="WARNING"):
+                future.set_exception(RuntimeError("late drain failed"))
+
+            self.assertFalse(future.cancelled())
+        finally:
+            pipeline_coro.close()
+            executor.shutdown()
+
+    def test_full_async_sink_is_drained_on_its_event_loop(self) -> None:
+        """Stopping safely wakes a task blocked writing cleanup output to a full sink."""
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+        cleanup_started = threading.Event()
+        cleanup_finished = threading.Event()
+
+        async def block_with_full_sink() -> None:
+            asyncio.get_running_loop().set_debug(True)
+            await output_queue.put(1)
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cleanup_started.set()
+                await output_queue.put(2)
+                await output_queue.put(3)
+                cleanup_finished.set()
+
+        pipeline = _make_pipeline(block_with_full_sink(), output_queue)
+        pipeline.start(timeout=_TIMEOUT)
+        try:
+            deadline = time.monotonic() + _TIMEOUT
+            while output_queue.empty() and time.monotonic() < deadline:
+                time.sleep(0.001)
+            self.assertFalse(output_queue.empty())
+
+            pipeline.stop(timeout=1)
+
+            self.assertTrue(cleanup_started.is_set())
+            self.assertTrue(cleanup_finished.is_set())
+        finally:
+            pipeline.stop(timeout=_TIMEOUT)
+
+    def test_drain_failure_does_not_skip_final_join(self) -> None:
+        """A custom sink drain error cannot bypass final event-loop cleanup."""
+
+        class _FailingDrainQueue(asyncio.Queue[int]):
+            def __init__(self) -> None:
+                super().__init__(1)
+                self._failed = False
+
+            def get_nowait(self) -> int:
+                item = super().get_nowait()
+                if not self._failed:
+                    self._failed = True
+                    raise RuntimeError("drain failed")
+                return item
+
+        output_queue = _FailingDrainQueue()
+        cleanup_started = threading.Event()
+
+        async def block_with_full_sink() -> None:
+            await output_queue.put(1)
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cleanup_started.set()
+                await output_queue.put(2)
+
+        pipeline = _make_pipeline(block_with_full_sink(), output_queue)
+        pipeline.start(timeout=_TIMEOUT)
+        try:
+            deadline = time.monotonic() + _TIMEOUT
+            while output_queue.empty() and time.monotonic() < deadline:
+                time.sleep(0.001)
+            self.assertFalse(output_queue.empty())
+
+            with self.assertLogs("spdl.pipeline._pipeline", level="WARNING"):
+                pipeline.stop(timeout=1)
+
+            self.assertTrue(cleanup_started.is_set())
+            self.assertEqual(output_queue.get_nowait(), 2)
+        finally:
+            pipeline.stop(timeout=_TIMEOUT)
