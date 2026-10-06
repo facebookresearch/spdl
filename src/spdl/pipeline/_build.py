@@ -44,6 +44,7 @@ from spdl.pipeline._subprocess_worker_pool import (
     _hoist_process_pools,
     _IterableWithPoolShutdown,
     _shutdown_pools,
+    _start_pool_monitors,
 )
 from spdl.pipeline.defs import MergeConfig, PipelineConfig, SourceConfig
 
@@ -650,6 +651,19 @@ def run_pipeline_in_subprocess(
             initializer=initializer,
             **kwargs,
         )
+        try:
+            # A liveness monitor is a live thread. Start these only after the outer pipeline
+            # process has been spawned, so the default ``fork`` path never forks from a
+            # process made multi-threaded by the monitors themselves.
+            _start_pool_monitors(pools)
+        except BaseException:
+            # The outer subprocess is already running. Join it before the surrounding handler
+            # tears down the queues and workers it may still be using.
+            if (
+                iterable_finalizer := getattr(iterable, "_finalizer", None)
+            ) is not None:
+                iterable_finalizer()
+            raise
     except BaseException:
         # Any eager-spawn pass above (region fusion, hoisting) or the iterable creation failed;
         # the iterable is never returned to the caller, so reap the region and hoisted pools

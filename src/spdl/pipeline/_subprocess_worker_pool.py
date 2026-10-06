@@ -46,8 +46,10 @@ from concurrent.futures import (
     InvalidStateError,
     ProcessPoolExecutor,
 )
+from multiprocessing.connection import wait as wait_for_mp_handles
 from multiprocessing.reduction import ForkingPickler
-from typing import Any, TypeVar
+from multiprocessing.util import register_after_fork
+from typing import Any, NamedTuple, TypeVar
 
 from spdl.pipeline._executor_proxy import (
     _ensure_executor_unused,
@@ -58,6 +60,7 @@ from spdl.pipeline.defs import PipelineConfig
 __all__ = [
     "_hoist_process_pools",
     "_IterableWithPoolShutdown",
+    "_start_pool_monitors",
     "_shutdown_pools",
 ]
 
@@ -79,6 +82,7 @@ _RESULT_QUEUE_RETRY_ERRNOS: tuple[int, ...] = (
 _SHUTDOWN = None
 
 _POOL_SHUTDOWN_REASON = "The worker pool shut down before the result was received."
+_MONITOR_JOIN_TIMEOUT = 5.0
 
 # A graceful output queue normally has only the small router sentinel left in its
 # local feeder. Bound that feeder join so a dead router behind a full pipe cannot
@@ -117,6 +121,12 @@ def _reduce_queue_payload(
     except BaseException as error:  # noqa: B036 - normalize it for Queue's feeder hook
         raise _QueueSerializationBaseException(error) from None
     return _load_queue_payload, (data,)
+
+
+class _WorkerStatus(NamedTuple):
+    """Owner-to-submit-side notification for worker-pool liveness."""
+
+    failure_reason: str | None
 
 
 class _Submission:
@@ -315,10 +325,10 @@ def _worker_loop(
 class _RemoteExecutor(Executor):
     """Submit side of a main-owned worker pool, designed to live in the pipeline subprocess.
 
-    Holds only the shared input/output queues (no worker handles), so it is cheap to pickle
-    into the subprocess. On first :py:meth:`submit` it starts a daemon routing thread that
-    reads results off ``out_q`` and resolves the matching
-    :py:class:`~concurrent.futures.Future`.
+    Holds only the shared input/output queues and a liveness channel (no worker handles), so it
+    is cheap to pickle into the subprocess. On first :py:meth:`submit` it starts daemon
+    threads that route results and observe worker-pool failure, resolving the matching
+    :py:class:`~concurrent.futures.Future` in either case.
 
     It exposes ``_pool_executor_class = ProcessPoolExecutor`` so SPDL's ``_is_process_pool``
     detection treats it like a process pool (correct sync-generator batching and traceback
@@ -328,9 +338,24 @@ class _RemoteExecutor(Executor):
 
     _pool_executor_class: type[ProcessPoolExecutor] = ProcessPoolExecutor
 
-    def __init__(self, in_q: Any, out_q: Any, max_workers: int) -> None:
+    def __init__(
+        self,
+        in_q: Any,
+        out_q: Any,
+        max_workers: int,
+        worker_status: Any,
+        worker_status_close_lock: Any | None = None,
+        worker_status_watcher_started: threading.Event | None = None,
+    ) -> None:
         self._in_q = in_q
         self._out_q = out_q
+        self._worker_status = worker_status
+        # Direct same-process users share the owner's exact receive endpoint. Coordinate its
+        # close with owner-side send/close operations; a subprocess receives a duplicated
+        # endpoint and reconstructs this field as ``None``.
+        self._worker_status_close_lock = worker_status_close_lock
+        self._worker_status_watcher_started = worker_status_watcher_started
+        self._worker_status_closed = False
         # Mirror ``ProcessPoolExecutor._max_workers`` so consumers that introspect a process
         # pool (e.g. pipeline-stats logging) can read the worker count off this proxy too —
         # it advertises ``_pool_executor_class = ProcessPoolExecutor``, so they expect it.
@@ -339,8 +364,9 @@ class _RemoteExecutor(Executor):
         self._lock = threading.Lock()
         self._futures: dict[int, Future[Any]] = {}
         self._thread: threading.Thread | None = None
-        # Set (under ``_lock``) when the router thread exits because ``_out_q`` closed: the
-        # router never restarts, so further ``submit`` calls must fail fast rather than hang.
+        self._worker_watcher: threading.Thread | None = None
+        # Set (under ``_lock``) when a required helper cannot start or the router exits: those
+        # helpers never restart, so further ``submit`` calls must fail fast rather than hang.
         self._broken: str | None = None
         _install_queue_feeder_error_handler(
             self._in_q, self._handle_input_queue_feeder_error
@@ -364,19 +390,128 @@ class _RemoteExecutor(Executor):
         except BaseException:  # noqa: B036 - never kill the sole queue feeder
             traceback.print_exc()
 
+    @staticmethod
+    def _run_after_helper_startup(
+        startup_ready: threading.Event,
+        startup_failed: threading.Event,
+        target: Callable[[], None],
+    ) -> None:
+        """Run a helper only after every required thread starts successfully."""
+        startup_ready.wait()
+        if not startup_failed.is_set():
+            target()
+
     def _ensure_router(self) -> None:
         # Double-checked locking so concurrent ``submit`` calls start exactly one router; two
         # routers would race on ``_out_q`` and each could claim results destined for the other,
         # silently dropping them and leaving callers blocked on ``Future.result()``.
-        if self._thread is None:
+        if self._thread is not None:
+            return
+        startup_failure_reason: str | None = None
+        startup_ready = threading.Event()
+        startup_failed = threading.Event()
+        started_helpers: list[threading.Thread] = []
+        try:
             with self._lock:
-                if self._thread is None:
-                    self._thread = threading.Thread(
-                        target=self._route,
-                        name="spdl_remote_executor_router",
-                        daemon=True,
+                if self._broken is not None:
+                    self._close_worker_status()
+                    raise BrokenExecutor(self._broken)
+                if self._thread is not None:
+                    return
+                router = threading.Thread(
+                    target=self._run_after_helper_startup,
+                    args=(startup_ready, startup_failed, self._route),
+                    name="spdl_remote_executor_router",
+                    daemon=True,
+                )
+                worker_watcher = threading.Thread(
+                    target=self._run_after_helper_startup,
+                    args=(startup_ready, startup_failed, self._watch_worker_pool),
+                    name="spdl_remote_executor_worker_watcher",
+                    daemon=True,
+                )
+                try:
+                    router.start()
+                    started_helpers.append(router)
+                    self._start_worker_watcher(worker_watcher)
+                    started_helpers.append(worker_watcher)
+                    self._thread = router
+                    self._worker_watcher = worker_watcher
+                except BaseException as e:  # noqa: B036 - permanently break partial startup
+                    startup_failure_reason = (
+                        f"Remote executor helper thread failed to start: {e!r}"
                     )
-                    self._thread.start()
+                    self._broken = startup_failure_reason
+                    startup_failed.set()
+                    self._close_worker_status()
+                    raise
+                finally:
+                    # Never strand a helper behind the startup barrier, including
+                    # when process control flow interrupts post-start bookkeeping.
+                    startup_ready.set()
+        except BaseException:
+            if startup_failure_reason is not None:
+                for helper in started_helpers:
+                    helper.join()
+                # Resolve callbacks only after releasing the non-reentrant executor lock.
+                self._fail_pending(startup_failure_reason)
+            raise
+
+    def _start_worker_watcher(self, worker_watcher: threading.Thread) -> None:
+        """Start the watcher and atomically transfer a same-process endpoint."""
+        lock = self._worker_status_close_lock
+        if lock is None:
+            worker_watcher.start()
+            return
+        with lock:
+            worker_watcher.start()
+            if self._worker_status_watcher_started is not None:
+                self._worker_status_watcher_started.set()
+
+    def _close_worker_status(self) -> None:
+        """Close the receive endpoint, coordinating exact same-process handles."""
+        lock = self._worker_status_close_lock
+        if lock is None:
+            self._close_worker_status_unlocked()
+            return
+        with lock:
+            self._close_worker_status_unlocked()
+
+    def _close_worker_status_unlocked(self) -> None:
+        if self._worker_status_closed:
+            return
+        # Latch before close so even an invalid endpoint is attempted and logged only once.
+        self._worker_status_closed = True
+        try:
+            self._worker_status.close()
+        except (EOFError, OSError, ValueError):
+            _LG.exception("Failed to close worker pool status channel.")
+
+    def _watch_worker_pool(self) -> None:
+        """Fail pending work when the owner reports that the worker pool stopped."""
+        try:
+            try:
+                status = self._worker_status.recv()
+                failure_reason = status.failure_reason
+            except (EOFError, OSError):
+                failure_reason = "The worker pool status channel closed unexpectedly."
+            except BaseException as e:  # noqa: B036 - fail work if this watcher breaks
+                # Deserialization and malformed-message failures would otherwise kill this
+                # non-restarting daemon thread and leave every pending Future unresolved.
+                _LG.exception("Worker pool status watcher failed.")
+                try:
+                    detail = str(e)
+                except BaseException:  # noqa: B036 - error may have broken __str__
+                    detail = "<error message unavailable>"
+                failure_reason = (
+                    f"Worker pool status watcher failed: {type(e).__name__}: {detail}"
+                )
+        finally:
+            # Closing a shared or already-invalid endpoint must not skip the
+            # pending-Future failure below.
+            self._close_worker_status()
+        if failure_reason is not None:
+            self._fail_pending(failure_reason)
 
     def _route(self) -> None:
         while True:
@@ -495,26 +630,37 @@ class _RemoteExecutor(Executor):
         pass
 
     def __getstate__(self) -> dict[str, Any]:
-        # Only the queues + worker count cross the pickle boundary; the router thread and
+        # Only IPC primitives + the worker count cross the pickle boundary; the threads and
         # pending futures are process-local and recreated lazily in the subprocess.
         return {
             "in_q": self._in_q,
             "out_q": self._out_q,
             "max_workers": self._max_workers,
+            "worker_status": self._worker_status,
         }
 
     def __setstate__(self, state: dict[str, Any]) -> None:
         self._in_q = state["in_q"]
         self._out_q = state["out_q"]
         self._max_workers = state["max_workers"]
+        self._worker_status = state["worker_status"]
+        self._worker_status_close_lock = None
+        self._worker_status_watcher_started = None
+        self._worker_status_closed = False
         self._counter = itertools.count()
         self._lock = threading.Lock()
         self._futures = {}
         self._thread = None
+        self._worker_watcher = None
         self._broken = None
         _install_queue_feeder_error_handler(
             self._in_q, self._handle_input_queue_feeder_error
         )
+
+
+def _close_connection_after_fork(connection: Any) -> None:
+    """Close an owner-only pipe endpoint inherited by a forked child."""
+    connection.close()
 
 
 class _WorkerPool:
@@ -526,11 +672,20 @@ class _WorkerPool:
         max_workers: int,
         initializer: Callable[..., object] | None,
         initargs: tuple[Any, ...],
+        defer_monitor: bool = False,
     ) -> None:
         self._in_q: Any = ctx.Queue()
         self._out_q: Any = ctx.Queue()
         self._max_workers = max_workers
         self._closed = False
+        # The remote executor cannot safely infer worker death from ``out_q`` EOF because the
+        # owner retains a writer. Even if that writer were closed, killing a worker midway
+        # through a queue write could leave the result pipe or its write lock wedged. Publish
+        # pool state through a pipe that never shares the result transport. The two Events are
+        # owner-process-only flags: a multiprocessing.Event waiter that is killed can leave its
+        # Condition bookkeeping inconsistent and deadlock a later Event.set() during teardown.
+        self._shutdown_started = threading.Event()
+        self._worker_failed = threading.Event()
         self._procs: list[Any] = [
             ctx.Process(
                 target=_worker_loop,
@@ -555,10 +710,112 @@ class _WorkerPool:
                 q.close()
                 q.join_thread()
             raise
+        worker_status_recv: Any | None = None
+        worker_status_send: Any | None = None
+        try:
+            worker_status_recv, worker_status_send = ctx.Pipe(duplex=False)
+            # The write endpoint belongs exclusively to the owner process. In particular, the
+            # pipeline subprocess must not retain a copy: otherwise owner closure would not
+            # deliver EOF to its watcher. Pool workers were started before the pipe was
+            # created, so they cannot inherit either endpoint under ``fork``.
+            register_after_fork(worker_status_send, _close_connection_after_fork)
+        except BaseException:
+            for connection in (worker_status_recv, worker_status_send):
+                if connection is not None:
+                    try:
+                        connection.close()
+                    except (EOFError, OSError):
+                        pass
+            self._terminate(self._procs)
+            for q in (self._in_q, self._out_q):
+                q.close()
+                q.join_thread()
+            raise
+        self._worker_status_recv = worker_status_recv
+        self._worker_status_send = worker_status_send
+        self._status_receiver_transferred = False
+        self._status_receiver_watcher_started = threading.Event()
+        self._status_lock = threading.Lock()
+        self._status_sent = False
+        self._monitor: threading.Thread | None = None
+        if not defer_monitor:
+            try:
+                self._start_monitor()
+            except BaseException:
+                self.shutdown()
+                raise
 
-    def make_executor(self) -> _RemoteExecutor:
+    def _start_monitor(self) -> None:
+        """Start the worker-liveness monitor after all forked pools are constructed."""
+        if self._monitor is not None:
+            return
+        monitor = threading.Thread(
+            target=self._monitor_workers,
+            name="spdl_worker_pool_monitor",
+            daemon=True,
+        )
+        monitor.start()
+        self._monitor = monitor
+
+    def _monitor_workers(self) -> None:
+        """Break the remote executor when any worker exits before pool shutdown."""
+        try:
+            wait_for_mp_handles([proc.sentinel for proc in self._procs])
+        except BaseException as error:  # noqa: B036 - this sole monitor must report failure
+            if self._shutdown_started.is_set():
+                return
+            _LG.exception("Worker pool monitor failed.")
+            try:
+                detail = str(error)
+            except BaseException:  # noqa: B036 - error may have broken __str__
+                detail = "<error message unavailable>"
+            failure_reason = (
+                f"Worker pool monitor failed: {type(error).__name__}: {detail}"
+            )
+        else:
+            failure_reason = "A worker process exited unexpectedly."
+        if self._shutdown_started.is_set():
+            return
+        self._worker_failed.set()
+        self._send_worker_status(failure_reason)
+
+    def _send_worker_status(self, failure_reason: str | None) -> None:
+        """Wake the remote watcher once without sharing a kill-sensitive semaphore."""
+        with self._status_lock:
+            if self._status_sent:
+                return
+            try:
+                self._worker_status_send.send(_WorkerStatus(failure_reason))
+            except (EOFError, OSError, ValueError):
+                # A failed send cannot leave the receiver blocked forever. Close
+                # this endpoint so the watcher observes EOF and fails pending work.
+                try:
+                    self._worker_status_send.close()
+                except (EOFError, OSError, ValueError):
+                    _LG.exception("Failed to close worker pool status sender.")
+                finally:
+                    self._status_sent = True
+            else:
+                self._status_sent = True
+
+    def make_executor(self, *, receiver_is_shared: bool = True) -> _RemoteExecutor:
         """Create the submit-side executor that rides in the pipeline config."""
-        return _RemoteExecutor(self._in_q, self._out_q, self._max_workers)
+        # In the usual subprocess path the executor receives a duplicated handle,
+        # so owner shutdown still closes its original. Direct same-process use
+        # shares this exact Connection. Its watcher atomically takes cleanup
+        # ownership when it starts; until then owner shutdown retains fallback
+        # ownership of the unused endpoint.
+        with self._status_lock:
+            executor = _RemoteExecutor(
+                self._in_q,
+                self._out_q,
+                self._max_workers,
+                self._worker_status_recv,
+                self._status_lock,
+                (self._status_receiver_watcher_started if receiver_is_shared else None),
+            )
+            self._status_receiver_transferred = receiver_is_shared
+        return executor
 
     @staticmethod
     def _close_queue(
@@ -637,6 +894,7 @@ class _WorkerPool:
         if self._closed:
             return
         self._closed = True
+        self._shutdown_started.set()
         for _ in self._procs:
             try:
                 self._in_q.put(_SHUTDOWN)
@@ -648,7 +906,16 @@ class _WorkerPool:
         unexpectedly_exited = any(
             proc.exitcode not in (None, 0) for proc in self._procs
         )
-        abandon_feeders = forced or unexpectedly_exited
+        if self._monitor is not None:
+            # Usually _terminate() makes a worker sentinel ready. A process stuck
+            # in an uninterruptible state may survive even the bounded kill/join
+            # escalation, so never let its monitor wedge owner teardown forever.
+            # Give the monitor a chance to publish a worker failure before feeder
+            # policy is chosen. A delayed monitor alone does not make a cleanly
+            # reaped worker unsafe to flush.
+            self._monitor.join(timeout=_MONITOR_JOIN_TIMEOUT)
+        abandon_feeders = forced or unexpectedly_exited or self._worker_failed.is_set()
+        status_reason = _POOL_SHUTDOWN_REASON if abandon_feeders else None
         # Wake a result router that is blocked on an otherwise-idle output queue. Queue.close()
         # alone does not close the reader in a process that has never produced onto that queue,
         # so without an explicit sentinel direct users of ``_WorkerPool`` leak one daemon thread
@@ -670,26 +937,48 @@ class _WorkerPool:
                 )
         except queue.Full:
             abandon_output_feeder = True
+            status_reason = _POOL_SHUTDOWN_REASON
         except (EOFError, OSError, ValueError):
             abandon_output_feeder = True
+            status_reason = _POOL_SHUTDOWN_REASON
             _LG.warning(
                 "Failed to enqueue the worker-pool output shutdown marker.",
                 exc_info=True,
             )
+        except BaseException:
+            status_reason = _POOL_SHUTDOWN_REASON
+            raise
         finally:
-            # Close this process's queue handles so the feeder thread started when the main
-            # process put the shutdown sentinels exits; otherwise a long-lived main process
-            # that creates and destroys many pipelines leaks feeder threads and pipe fds.
-            # A feeder can still be blocked writing queued data after its only reader exits.
-            # Forced teardown abandons both queues. Graceful teardown flushes the input queue
-            # (clean worker exits prove it was consumed), but gives the output feeder only a
-            # bounded opportunity to flush its router sentinel.
-            self._close_queue(self._in_q, abandon=abandon_feeders)
-            self._close_queue(
-                self._out_q,
-                abandon=abandon_output_feeder,
-                feeder_join_timeout=_OUTPUT_FEEDER_JOIN_TIMEOUT,
-            )
+            try:
+                # Close this process's queue handles so the feeder thread started when the
+                # main process put the shutdown sentinels exits; otherwise a long-lived
+                # main process leaks feeder threads and pipe fds. A feeder can still be
+                # blocked after its only reader exits: forced teardown abandons both
+                # queues, while graceful teardown gives the output feeder only a bounded
+                # opportunity to flush its router sentinel.
+                try:
+                    self._close_queue(self._in_q, abandon=abandon_feeders)
+                finally:
+                    self._close_queue(
+                        self._out_q,
+                        abandon=abandon_output_feeder,
+                        feeder_join_timeout=_OUTPUT_FEEDER_JOIN_TIMEOUT,
+                    )
+            finally:
+                # A bounded feeder join timing out does not prove the sentinel was
+                # lost: a live result reader can still drain the pipe and let the
+                # daemon feeder finish asynchronously. Report failure only for the
+                # worker or enqueue failures identified above.
+                try:
+                    self._send_worker_status(status_reason)
+                finally:
+                    with self._status_lock:
+                        if (
+                            not self._status_receiver_transferred
+                            or not self._status_receiver_watcher_started.is_set()
+                        ):
+                            self._worker_status_recv.close()
+                        self._worker_status_send.close()
         # Release the queue-owned SemLocks promptly instead of retaining them on
         # this finalized pool until interpreter shutdown.
         self._in_q = None
@@ -705,7 +994,8 @@ def _hoist_process_pools(
     Returns a rewritten config in which each stdlib
     :py:class:`~concurrent.futures.ProcessPoolExecutor` attached to a pipe is replaced with a
     :py:class:`_RemoteExecutor`, plus the list of :py:class:`_WorkerPool` handles that own the
-    spawned workers (the caller must :py:func:`_shutdown_pools` them at teardown).
+    spawned workers (the caller must start their liveness monitors after any subsequent
+    process creation, then :py:func:`_shutdown_pools` them at teardown).
 
     ``mp_context`` is the multiprocessing start-method name (as accepted by
     :py:func:`multiprocessing.get_context`). The context is created lazily, only when a
@@ -751,9 +1041,10 @@ def _hoist_process_pools(
             ppe._max_workers,
             ppe._initializer,
             ppe._initargs,
+            defer_monitor=True,
         )
         pools.append(pool)
-        remote = pool.make_executor()
+        remote = pool.make_executor(receiver_is_shared=False)
         seen[key] = remote
         return remote
 
@@ -767,6 +1058,16 @@ def _hoist_process_pools(
         _shutdown_pools(pools)
         raise
     return new_config, pools
+
+
+def _start_pool_monitors(pools: list[_WorkerPool]) -> None:
+    """Start liveness monitors after every process that may use ``fork`` is spawned."""
+    # A monitor is a live thread. Starting it before another pool or the outer pipeline
+    # process is forked could copy a lock held by that thread into the child and deadlock it.
+    # Pool construction therefore defers monitor startup until the caller has completed all
+    # process creation; ``_start_monitor`` is idempotent for rollback-friendly callers.
+    for pool in pools:
+        pool._start_monitor()
 
 
 def _shutdown_pools(pools: list[_WorkerPool]) -> None:
