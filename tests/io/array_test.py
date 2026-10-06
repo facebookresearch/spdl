@@ -9,6 +9,7 @@ import gc
 import io
 import sys
 import unittest
+import weakref
 from collections.abc import Callable
 from io import BytesIO
 
@@ -25,6 +26,42 @@ def _dump_npy(arr: np.ndarray) -> bytes:
 
 
 class TestLoadNpy(unittest.TestCase):
+    def test_zero_copy_array_retains_source(self) -> None:
+        """A zero-copy array keeps its borrowed NPY source alive."""
+        ref = np.arange(10, dtype=np.int64)
+        src = np.frombuffer(_dump_npy(ref), dtype=np.uint8).copy()
+        src_ref = weakref.ref(src)
+
+        arr = spdl.io.load_npy(src)
+        del src
+        gc.collect()
+
+        self.assertIsNotNone(src_ref())
+        np.testing.assert_array_equal(arr, ref)
+
+        del arr
+        gc.collect()
+        self.assertIsNone(src_ref())
+
+    def test_zero_copy_array_inherits_source_writability(self) -> None:
+        """A zero-copy array cannot mutate an immutable source buffer."""
+        ref = np.arange(10, dtype=np.int64)
+
+        readonly = spdl.io.load_npy(_dump_npy(ref))
+        writable = spdl.io.load_npy(bytearray(_dump_npy(ref)))
+        copied = spdl.io.load_npy(_dump_npy(ref), copy=True)
+
+        # @lint-ignore SPELL NumPy spells the public flag this way.
+        self.assertFalse(readonly.flags.writeable)
+        # @lint-ignore SPELL NumPy spells the public flag this way.
+        self.assertTrue(writable.flags.writeable)
+        # @lint-ignore SPELL NumPy spells the public flag this way.
+        self.assertTrue(copied.flags.writeable)
+        with self.assertRaises(ValueError):
+            readonly[0] = -1
+        copied[0] = -1
+        self.assertEqual(copied[0], -1)
+
     @parameterized.expand(
         [
             (np.uint8,),
@@ -248,6 +285,25 @@ class TestLoadNpz(unittest.TestCase):
         np.testing.assert_array_equal(data["uint32_array"], uint32_array)
         np.testing.assert_array_equal(data["int64_array"], int64_array)
         np.testing.assert_array_equal(data["uint64_array"], uint64_array)
+
+    def test_array_writability_matches_entry_storage(self) -> None:
+        """Stored entries inherit the source; inflated entries own storage."""
+        ref = np.arange(3)
+        stored_archive = _dump_npz(x=ref)
+
+        readonly = spdl.io.load_npz(stored_archive)["x"]
+        writable = spdl.io.load_npz(memoryview(bytearray(stored_archive)))["x"]
+        inflated = spdl.io.load_npz(_dump_npz_compressed(x=ref))["x"]
+
+        self.assertFalse(readonly.flags["W"])
+        self.assertTrue(writable.flags["W"])
+        self.assertTrue(inflated.flags["W"])
+        with self.assertRaisesRegex(ValueError, "read-only"):
+            readonly[0] = 10
+        writable[0] = 11
+        inflated[0] = 12
+        self.assertEqual(writable[0], 11)
+        self.assertEqual(inflated[0], 12)
 
     def test_load_npy_cpp(self) -> None:
         """load_npy can handle version 1, 2 and 3."""
