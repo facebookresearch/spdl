@@ -2604,6 +2604,9 @@ class TestPipelineMax(unittest.TestCase):
         pipeline = builder.build(num_threads=1, max_failures=2)
         with pipeline.auto_stop():
             vals = list(pipeline.get_iterator(timeout=30))
+        # Completion order is not input order when concurrency > 1.
+        if output_order == "completion":
+            vals = sorted(vals)
         self.assertEqual([0, 2, 4, 6, 8], vals)
 
     @parameterized.expand(
