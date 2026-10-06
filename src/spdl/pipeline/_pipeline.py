@@ -15,7 +15,7 @@ import warnings
 import weakref
 from asyncio import AbstractEventLoop, Queue as AsyncQueue
 from collections import deque
-from collections.abc import Coroutine, Iterator, Sequence
+from collections.abc import Callable, Coroutine, Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from enum import IntEnum
@@ -28,10 +28,27 @@ from spdl.pipeline._components import _ThreadBasedAsyncQueue, is_epoch_end
 __all__ = ["Pipeline"]
 
 _LG: logging.Logger = logging.getLogger(__name__)
+_DRAIN_RETRY_INTERVAL: float = 0.005
+_THREAD_DRAIN_BATCH_SIZE: int = 64
 
 T = TypeVar("T")
 
 _OUTPUT_READ_PUBLICATION_GRACE = 0.01
+
+
+def _log_late_drain_failure(
+    future: concurrent.futures.Future[None],
+) -> None:
+    """Report a drain callback that failed after its foreground wait expired."""
+    try:
+        future.result()
+    except concurrent.futures.CancelledError:
+        pass
+    except Exception:
+        _LG.warning(
+            "Exception while draining the pipeline output queue.",
+            exc_info=True,
+        )
 
 
 ##############################################################################
@@ -242,15 +259,6 @@ class _EventLoop:
             _LG.debug("Requesting the event loop thread to stop.")
             self._stop_requested.set()
 
-    def wake(self) -> None:
-        """Wake the loop after another thread changes queue state."""
-        if self._loop is None:
-            return
-        try:
-            self._loop.call_soon_threadsafe(lambda: None)
-        except RuntimeError:
-            _LG.debug("Event loop closed before it could be woken.", exc_info=True)
-
     def join(self, *, timeout: float | None = None) -> None:
         """Let the thread join. ``stop`` must be called before calling ``join``."""
         if not self._stop_requested.is_set():
@@ -276,6 +284,15 @@ class _EventLoop:
         if not self._loop.is_running():
             raise RuntimeError("Event loop is not running.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop)  # pyre-ignore[6]
+
+    def call_soon_threadsafe(self, callback: Callable[[], None]) -> None:
+        """Schedule a callback without waiting for the loop thread to run it."""
+        if not self._task_started.is_set():
+            raise RuntimeError("Event loop is not started.")
+        assert self._loop is not None
+        if not self._loop.is_running():
+            raise RuntimeError("Event loop is not running.")
+        self._loop.call_soon_threadsafe(callback)
 
 
 ################################################################################
@@ -353,6 +370,105 @@ class _PipelineImpl(Generic[T]):
             raise
         self._event_loop_state = _EventLoopState.STARTED
 
+    def _drain_thread_output_queue_until(self, deadline: float) -> None:
+        """Release thread-backed sink pressure until the cleanup deadline."""
+        assert isinstance(self._output_queue, _ThreadBasedAsyncQueue)
+        q = self._output_queue._queue  # pyrefly: ignore [missing-attribute]
+        try:
+            # Each removal can wake a producer blocked on this thread-safe
+            # queue, so consume refills until the drain half of the remaining
+            # cleanup budget. Keep the other half available for the final join.
+            items_since_yield = 0
+            while time.monotonic() < deadline:
+                try:
+                    q.get_nowait()
+                except queue.Empty:
+                    if self._event_loop.is_task_completed():
+                        break
+                    # An empty queue can be transient: removing an earlier item
+                    # may have woken a producer that has not published its refill.
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    time.sleep(min(_DRAIN_RETRY_INTERVAL, remaining))
+                    continue
+                items_since_yield += 1
+                if items_since_yield == _THREAD_DRAIN_BATCH_SIZE:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    time.sleep(min(_DRAIN_RETRY_INTERVAL, remaining))
+                    items_since_yield = 0
+        except Exception:
+            # A custom thread-backed sink may fail while being drained. Continue
+            # joining so cleanup still reaches a terminal state.
+            _LG.warning(
+                "Exception while draining the pipeline output queue.",
+                exc_info=True,
+            )
+
+    def _drain_async_output_queue_until(self, deadline: float) -> None:
+        """Release asyncio sink pressure without exceeding the cleanup deadline."""
+        drain_timeout = max(0.0, deadline - time.monotonic())
+        if not self._event_loop.is_running():
+            # The owner loop can no longer mutate this asyncio queue, so a
+            # foreground drain is now safe and may be the only remaining way to
+            # release producer backpressure before joining the thread.
+            try:
+                self._drain_output_queue_on_loop()
+            except Exception:
+                _LG.warning(
+                    "Exception while draining the pipeline output queue.",
+                    exc_info=True,
+                )
+            return
+
+        if drain_timeout == 0:
+            # Preserve the caller's exhausted deadline, but still enqueue one
+            # bounded snapshot drain. This gives a backpressured producer a chance
+            # to finish without blocking the foreground beyond its timeout.
+            try:
+                self._event_loop.call_soon_threadsafe(
+                    self._drain_output_queue_once_with_logging_on_loop
+                )
+            except RuntimeError:
+                # The loop stopped between the running check and submission. The
+                # final join remains the only safe action in that race.
+                pass
+            return
+
+        self._submit_async_output_drain(drain_timeout)
+
+    def _submit_async_output_drain(self, timeout: float) -> None:
+        """Submit a bounded drain to the queue's owning event loop."""
+        drain_coro = self._drain_output_queue_until_task_completes_on_loop()
+        try:
+            future = self._event_loop.run_coroutine_threadsafe(drain_coro)
+        except RuntimeError:
+            drain_coro.close()
+            # A startup-timeout race can leave a thread alive before its event loop
+            # begins accepting work. Joining remains the only safe action.
+            return
+
+        try:
+            future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            # A coroutine submitted while the loop is stopping may never run, so
+            # even an otherwise unbounded stop uses a finite foreground wait here.
+            # Cancellation is best effort; the final join still gets one finite
+            # cleanup attempt.
+            future.cancel()
+            future.add_done_callback(_log_late_drain_failure)
+        except concurrent.futures.CancelledError:
+            pass
+        except Exception:
+            # A custom sink may fail while being drained. Continue joining so
+            # cleanup still reaches a terminal state.
+            _LG.warning(
+                "Exception while draining the pipeline output queue.",
+                exc_info=True,
+            )
+
     def stop(self, *, timeout: float | None = None) -> None:
         """Stop the pipeline.
 
@@ -376,24 +492,42 @@ class _PipelineImpl(Generic[T]):
             # to resolve the congestion, then retry.
             # (e.g. the frontend does not consume any data, thus the upstream tasks
             # are not able to complete),
-            to1: float = 3 if timeout is None else min(3, timeout)
-            to2: float | None = None if timeout is None else timeout - to1
+            deadline = None if timeout is None else time.monotonic() + timeout
+            # A bounded stop must reserve part of the caller's deadline for
+            # draining producer backpressure and joining again. Giving the
+            # first join the whole budget would guarantee that a full sink
+            # cannot be unblocked before the deadline.
+            first_join_timeout: float = 3 if timeout is None else min(3, timeout / 2)
             try:
-                self._event_loop.join(timeout=to1)
+                self._event_loop.join(timeout=first_join_timeout)
             except TimeoutError:
-                # A timed-out start never owned the caller's queue. Once user code
-                # has started, however, drain its output even if the loop has since
-                # stopped reporting itself as running: this may be the only way to
-                # release producer backpressure before the second join.
-                if self._event_loop.has_user_task_started():
-                    # Empty queue, release backpressure.
-                    while not self._output_queue.empty():
-                        try:
-                            self._output_queue.get_nowait()
-                        except Exception:
-                            break
-                    self._event_loop.wake()
-                self._event_loop.join(timeout=to2)
+                cleanup_start = time.monotonic()
+                cleanup_deadline = (
+                    deadline
+                    if deadline is not None
+                    else cleanup_start + first_join_timeout
+                )
+                drain_deadline = (
+                    cleanup_start + max(0.0, cleanup_deadline - cleanup_start) / 2
+                )
+                # A timed-out start never owned the caller's queue. Once startup
+                # succeeds (or user code did begin), drain its output even if the
+                # loop has since stopped reporting itself as running: this may be
+                # the only way to release producer backpressure before the second
+                # join.
+                if (
+                    self._event_loop_state == _EventLoopState.STARTED
+                    or self._event_loop.has_user_task_started()
+                ):
+                    # Empty the sink to release producer backpressure. asyncio.Queue
+                    # wakes blocked putters while draining, so it must be touched on
+                    # its owning event loop rather than from this foreground thread.
+                    if isinstance(self._output_queue, _ThreadBasedAsyncQueue):
+                        self._drain_thread_output_queue_until(drain_deadline)
+                    else:
+                        self._drain_async_output_queue_until(drain_deadline)
+                remaining = max(0.0, cleanup_deadline - time.monotonic())
+                self._event_loop.join(timeout=remaining)
             self._event_loop_state = _EventLoopState.STOPPED
 
         self._shutdown_pools()
@@ -624,6 +758,30 @@ class _PipelineImpl(Generic[T]):
             raise TimeoutError(
                 f"The next item is not available after {time.monotonic() - t0:.1f} sec."
             ) from None
+
+    def _drain_output_queue_on_loop(self) -> None:
+        """Drain one bounded sink snapshot without chasing synchronous refills."""
+        for _ in range(self._output_queue.qsize()):
+            try:
+                self._output_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                return
+
+    def _drain_output_queue_once_with_logging_on_loop(self) -> None:
+        """Drain one sink snapshot without propagating callback failures."""
+        try:
+            self._drain_output_queue_on_loop()
+        except Exception:
+            _LG.warning(
+                "Exception while draining the pipeline output queue.",
+                exc_info=True,
+            )
+
+    async def _drain_output_queue_until_task_completes_on_loop(self) -> None:
+        """Drain bounded passes without busy-spinning while producers finish."""
+        while not self._event_loop.is_task_completed():
+            self._drain_output_queue_on_loop()
+            await asyncio.sleep(_DRAIN_RETRY_INTERVAL)
 
     def _get_item_async_queue(self, *, timeout: float | None) -> T:
         try:
