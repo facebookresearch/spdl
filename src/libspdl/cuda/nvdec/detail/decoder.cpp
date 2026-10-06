@@ -227,14 +227,14 @@ void NvDecDecoderCore::init_decoder(
     SPDL_FAIL(fmt::format("target_height must be positive. Found: {}", tgt_h));
   }
   if (device_config_.device_index != device_config.device_index) {
-    device_config_ = device_config;
-    cu_ctx_ = get_cucontext(device_config_.device_index);
+    cu_ctx_ = get_cucontext(device_config.device_index);
     lock_ = get_lock(cu_ctx_);
     CHECK_CU(cuCtxSetCurrent(cu_ctx_), "Failed to set current context.");
 
     parser_ = nullptr;
     decoder_ = nullptr; // will be re-initialized in the callback
   }
+  device_config_ = device_config;
 
   auto cdc = convert_codec_id(codec.get_codec_id());
   if (!parser_ || codec_ != cdc) {
