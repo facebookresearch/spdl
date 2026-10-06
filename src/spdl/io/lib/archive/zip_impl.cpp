@@ -283,7 +283,8 @@ void inflate(
       uncompressed_size,
       &actual_decompressed_size);
 
-  if (result != LIBDEFLATE_SUCCESS) {
+  if (result != LIBDEFLATE_SUCCESS ||
+      actual_decompressed_size != uncompressed_size) {
     throw std::runtime_error("Failed to decompress the data");
   }
 }

@@ -7,6 +7,7 @@
 
 import gc
 import io
+import struct
 import sys
 import unittest
 import weakref
@@ -25,7 +26,51 @@ def _dump_npy(arr: np.ndarray) -> bytes:
     return buffer.getvalue()
 
 
+def _dump_npy_with_descr(arr: np.ndarray, descr: str) -> bytes:
+    header = (
+        f"{{'descr': '{descr}', 'fortran_order': False, 'shape': {arr.shape!r}, }}"
+    ).encode()
+    preamble_size = 10
+    padding = (64 - ((preamble_size + len(header) + 1) % 64)) % 64
+    header += b" " * padding + b"\n"
+    return (
+        b"\x93NUMPY\x01\x00"
+        + len(header).to_bytes(2, "little")
+        + header
+        + arr.tobytes()
+    )
+
+
 class TestLoadNpy(unittest.TestCase):
+    @parameterized.expand(
+        [
+            ("int32",),
+            ("double",),
+            ("half",),
+            ("int",),
+            ("d",),
+            ("e",),
+            ("datetime64[ns]",),
+        ]
+    )
+    def test_load_npy_accepts_dtype_alias(self, descr: str) -> None:
+        """The loader accepts scalar dtype aliases understood by NumPy."""
+        dtype = np.dtype(descr)
+        ref = np.array([1, 2], dtype=dtype)
+
+        array = spdl.io.load_npy(_dump_npy_with_descr(ref, descr))
+
+        self.assertEqual(array.dtype, dtype)
+        np.testing.assert_array_equal(array, ref)
+
+    def test_load_npy_rejects_structured_dtype(self) -> None:
+        """Structured records are rejected instead of being misparsed as scalars."""
+        dtype = np.dtype("i4,f8")
+        ref = np.array([(1, 2.0)], dtype=dtype)
+
+        with self.assertRaisesRegex(RuntimeError, "Structured NPY dtypes"):
+            spdl.io.load_npy(_dump_npy(ref))
+
     def test_zero_copy_array_retains_source(self) -> None:
         """A zero-copy array keeps its borrowed NPY source alive."""
         ref = np.arange(10, dtype=np.int64)
@@ -61,6 +106,17 @@ class TestLoadNpy(unittest.TestCase):
             readonly[0] = -1
         copied[0] = -1
         self.assertEqual(copied[0], -1)
+
+    def test_load_npy_preserves_fortran_order(self) -> None:
+        """The loader exposes Fortran-contiguous payloads with byte strides."""
+        ref = np.asfortranarray(np.arange(12).reshape(3, 4))
+
+        array = spdl.io.load_npy(_dump_npy(ref))
+
+        np.testing.assert_array_equal(array, ref)
+        self.assertEqual(array.strides, ref.strides)
+        self.assertTrue(array.flags.f_contiguous)
+        self.assertFalse(array.flags.c_contiguous)
 
     @parameterized.expand(
         [
@@ -178,6 +234,18 @@ def _dump_npz_compressed(*arrays: np.ndarray, **kwarrays: np.ndarray) -> bytes:
 
 
 class TestLoadNpz(unittest.TestCase):
+    def test_rejects_incorrect_uncompressed_size(self) -> None:
+        """DEFLATE output must match the central directory's declared size."""
+        data = bytearray(_dump_npz_compressed(x=np.arange(4)))
+        cd_offset = data.find(b"PK\x01\x02")
+        self.assertGreaterEqual(cd_offset, 0)
+        uncompressed_size = struct.unpack_from("<I", data, cd_offset + 24)[0]
+        struct.pack_into("<I", data, cd_offset + 24, uncompressed_size + 1)
+
+        archive = spdl.io.load_npz(bytes(data))
+        with self.assertRaisesRegex(RuntimeError, "Failed to decompress"):
+            archive["x"]
+
     def test_load_npz(self) -> None:
         """spdl.io.load_npz() should load a .npz file."""
         x = np.arange(10)

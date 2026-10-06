@@ -11,6 +11,8 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
+#include <limits>
+
 #include "numpy_support.h"
 #include "register_tar.h"
 #include "zip_impl.h"
@@ -23,13 +25,31 @@ namespace spdl::archive {
 
 namespace {
 
+std::vector<size_t> get_fortran_strides(const NPYArray& array) {
+  std::vector<size_t> strides;
+  strides.reserve(array.shape.size());
+  size_t stride = array.item_size;
+  for (const size_t dim : array.shape) {
+    strides.push_back(stride);
+    if (dim != 0 && stride > std::numeric_limits<size_t>::max() / dim) {
+      throw nb::value_error("NPY array strides exceed the supported range.");
+    }
+    stride *= dim;
+  }
+  return strides;
+}
+
 nb::dict _cast(const NPYArray& a) {
   nb::dict ret;
   ret["version"] = 3;
   ret["shape"] = nb::tuple(nb::cast(a.shape));
   ret["typestr"] = a.descr;
   ret["data"] = std::tuple<size_t, bool>{(uintptr_t)a.data, false};
-  ret["strides"] = nb::none();
+  if (a.fortran_order) {
+    ret["strides"] = nb::tuple(nb::cast(get_fortran_strides(a)));
+  } else {
+    ret["strides"] = nb::none();
+  }
   ret["descr"] =
       std::vector<std::tuple<std::string, std::string>>{{"", a.descr}};
   return ret;
