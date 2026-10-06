@@ -66,8 +66,10 @@ class NvDecDecoderCore {
   //---------------------------------------------------------------------------
   // Global objects (handle to device)
   //---------------------------------------------------------------------------
-  CUcontext cu_ctx_;
-  CUvideoctxlock lock_;
+  using PushCurrentFn = decltype(&cuCtxPushCurrent);
+  CUcontext cu_ctx_ = nullptr;
+  PushCurrentFn push_current_ = cuCtxPushCurrent;
+  CUvideoctxlockPtr lock_{nullptr};
   //---------------------------------------------------------------------------
 
   // Cache the result of `cuvidGetDecoderCaps` as
@@ -79,10 +81,13 @@ class NvDecDecoderCore {
   CUvideodecoderPtr decoder_{nullptr};
 
  private:
+  void abandon_device_resources() noexcept;
+  void release_device_resources() noexcept;
+
   // Source packet information. Initialized in init
   int src_width_ = 0;
   int src_height_ = 0;
-  spdl::core::CodecID codec_id_;
+  spdl::core::CodecID codec_id_{};
   spdl::core::Rational timebase_{}; // Time base of the PTS
 
   //---------------------------------------------------------------------------
@@ -120,7 +125,7 @@ class NvDecDecoderCore {
   NvDecDecoderCore& operator=(const NvDecDecoderCore&) = delete;
   NvDecDecoderCore(NvDecDecoderCore&&) = delete;
   NvDecDecoderCore& operator=(NvDecDecoderCore&&) noexcept = delete;
-  ~NvDecDecoderCore() = default;
+  ~NvDecDecoderCore() noexcept;
 
   // Reset the state of decoder
   void reset();
