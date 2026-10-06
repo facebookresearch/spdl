@@ -23,7 +23,11 @@ from threading import Event as SyncEvent, Thread
 from typing import Any, Generic, NoReturn, TypeVar
 
 from spdl.pipeline._common._misc import create_task
-from spdl.pipeline._components import _ThreadBasedAsyncQueue, is_epoch_end
+from spdl.pipeline._components import (
+    _AsyncQueueWithSyncMirror,
+    _ThreadBasedAsyncQueue,
+    is_epoch_end,
+)
 
 __all__ = ["Pipeline"]
 
@@ -222,6 +226,10 @@ class _EventLoop:
     def has_user_task_started(self) -> bool:
         """Check whether the caller-confirmed pipeline task began execution."""
         return self._user_task_started.is_set()
+
+    def is_stop_requested(self) -> bool:
+        """Check if shutdown was requested for the event-loop thread."""
+        return self._stop_requested.is_set()
 
     def is_running(self) -> bool:
         """Check if the event loop can still service submitted work."""
@@ -572,6 +580,8 @@ class _PipelineImpl(Generic[T]):
         if not self._event_loop.is_started():
             raise RuntimeError("Pipeline is not started.")
 
+        if isinstance(self._output_queue, _AsyncQueueWithSyncMirror):
+            return self._get_item_mirrored_queue(timeout=timeout)
         if isinstance(self._output_queue, _ThreadBasedAsyncQueue):
             return self._get_item_thread_queue(timeout=timeout)
         return self._get_item_async_queue(timeout=timeout)
@@ -734,14 +744,18 @@ class _PipelineImpl(Generic[T]):
             return self._take_pending_output_item()
 
     def _get_completed_output_item(self) -> T:
-        """Return buffered output or EOF after the pipeline task completes."""
+        """Read completed output when direct access is safe."""
         try:
             return self._take_pending_output_item()
         except queue.Empty:
             pass
-        if not self._output_queue.empty():
-            return self._output_queue.get_nowait()
-        self._raise_task_failure_or_eof()
+        if self._output_queue.empty():
+            self._raise_task_failure_or_eof()
+        if self._event_loop.is_running():
+            # A custom sink can transform values in its async ``get`` method.
+            # Signal the caller to preserve that owner-loop path.
+            raise queue.Empty
+        return self._output_queue.get_nowait()
 
     def _recover_output_after_read_submission_failure(self, error: RuntimeError) -> T:
         """Drain completed output when its owner loop stops before submission."""
@@ -761,6 +775,9 @@ class _PipelineImpl(Generic[T]):
 
     def _drain_output_queue_on_loop(self) -> None:
         """Drain one bounded sink snapshot without chasing synchronous refills."""
+        if isinstance(self._output_queue, _AsyncQueueWithSyncMirror):
+            self._output_queue._drain()
+            return
         for _ in range(self._output_queue.qsize()):
             try:
                 self._output_queue.get_nowait()
@@ -783,6 +800,16 @@ class _PipelineImpl(Generic[T]):
             self._drain_output_queue_on_loop()
             await asyncio.sleep(_DRAIN_RETRY_INTERVAL)
 
+    def _raise_if_async_output_is_terminal(self) -> None:
+        """Raise the terminal result once no async output read can remain."""
+        if (
+            self._pending_output_read is None
+            and self._event_loop.is_task_completed()
+            and self._event_loop.is_stop_requested()
+            and self._output_queue.empty()
+        ):
+            self._raise_task_failure_or_eof()
+
     def _get_item_async_queue(self, *, timeout: float | None) -> T:
         try:
             return self._take_pending_output_item()
@@ -796,15 +823,14 @@ class _PipelineImpl(Generic[T]):
         # If the task is not running, then, sync method can be used to access sink queue,
         # even if the loop is not running.
 
-        if self._pending_output_read is None and self._event_loop.is_task_completed():
-            # The background loop no longer touches the sink, so direct access is thread-safe.
-            if not self._output_queue.empty():
-                return self._output_queue.get_nowait()
-            self._raise_task_failure_or_eof()
+        # Use the async sink API while its owner loop remains available, including
+        # after task completion so custom ``get`` behavior is preserved. If the
+        # loop stops before submission, the recovery path below drains directly.
 
-        # The task is not completed. To access the sink queue, the async method must be used.
-        # The loop keeps running unless we explicitly request stop, so the use of async method
-        # itself is fine.
+        # A terminal observer requests loop shutdown after confirming that the
+        # completed task has no buffered output. Repeated reads are therefore
+        # terminal too and must not submit new work while the loop is closing.
+        self._raise_if_async_output_is_terminal()
 
         # Handle a zero timeout as a true one-shot poll. Submitting ``queue.get()`` and
         # timing out its cross-thread future would leave that coroutine pending,
@@ -869,7 +895,85 @@ class _PipelineImpl(Generic[T]):
                 self._pending_output_read is None
                 and self._event_loop.is_task_completed()
             ):
-                return self._get_completed_output_item()
+                try:
+                    return self._get_completed_output_item()
+                except queue.Empty:
+                    pass
+
+    def _release_mirrored_output_slot(self) -> None:
+        """Release async backpressure after a foreground mirror read."""
+        assert isinstance(self._output_queue, _AsyncQueueWithSyncMirror)
+        self._output_queue._register_release()
+        try:
+            self._event_loop.call_soon_threadsafe(self._output_queue._release_one)
+        except RuntimeError:
+            # A closed loop cannot consume the wrapped queue or resume its
+            # producers. Keep returning items that were already published to the
+            # foreground mirror, but make an unexpected early closure visible.
+            self._output_queue._release_one_nowait()
+            if self._event_loop.is_task_completed():
+                _LG.debug(
+                    "The completed pipeline event loop closed before releasing "
+                    "a mirrored output slot.",
+                    exc_info=True,
+                )
+            else:
+                _LG.warning(
+                    "The pipeline event loop closed before releasing a mirrored "
+                    "output slot.",
+                    exc_info=True,
+                )
+
+    def _get_mirrored_item_nowait(self) -> T:
+        """Pop one mirrored item and asynchronously release its backpressure slot."""
+        assert isinstance(self._output_queue, _AsyncQueueWithSyncMirror)
+        item = self._output_queue._sync_queue.get_nowait()
+        self._release_mirrored_output_slot()
+        return item
+
+    def _get_item_mirrored_queue(self, *, timeout: float | None) -> T:
+        """Read the asyncio sink through its thread-safe foreground mirror."""
+        assert isinstance(self._output_queue, _AsyncQueueWithSyncMirror)
+        q = self._output_queue._sync_queue
+
+        # ``_task_completed`` is published only after the pipeline coroutine has
+        # returned. The built-in queue adapter publishes each mirror entry
+        # synchronously in the same event-loop turn as its wrapped ``put``. Thus,
+        # once completion is visible, an empty mirror is terminal: no final item
+        # can still be in flight to this queue.
+        if self._event_loop.is_task_completed():
+            try:
+                return self._get_mirrored_item_nowait()
+            except queue.Empty:
+                self._raise_task_failure_or_eof()
+
+        if timeout == 0:
+            try:
+                return self._get_mirrored_item_nowait()
+            except queue.Empty:
+                task_completed = self._event_loop.is_task_completed() and q.empty()
+            if task_completed:
+                self._raise_task_failure_or_eof()
+            raise TimeoutError(
+                "The next item is not available after 0.0 sec."
+            ) from None
+
+        max_elapsed = float("inf") if timeout is None else timeout
+        t0 = time.monotonic()
+        while (elapsed := time.monotonic() - t0) < max_elapsed:
+            remaining = max_elapsed - elapsed
+            try:
+                item = q.get(timeout=min(0.1, remaining))
+            except queue.Empty:
+                if self._event_loop.is_task_completed() and q.empty():
+                    self._raise_task_failure_or_eof()
+            else:
+                self._release_mirrored_output_slot()
+                return item
+
+        raise TimeoutError(
+            f"The next item is not available after {time.monotonic() - t0:.1f} sec."
+        )
 
     def get_item_nowait(self) -> T:
         """Get the next item if one is already buffered in the sink, without blocking.
@@ -906,6 +1010,14 @@ class _PipelineImpl(Generic[T]):
         """
         if not self._event_loop.is_started():
             raise RuntimeError("Pipeline is not started.")
+
+        if isinstance(self._output_queue, _AsyncQueueWithSyncMirror):
+            try:
+                return self._get_mirrored_item_nowait()
+            except queue.Empty:
+                if self._event_loop.is_task_completed():
+                    self._raise_task_failure_or_eof()
+                raise
 
         if isinstance(self._output_queue, _ThreadBasedAsyncQueue):
             q = self._output_queue._queue  # pyre-ignore[16]
@@ -1284,8 +1396,7 @@ class Pipeline(Generic[T]):
         """Get the next item if one is already buffered, without blocking.
 
         Internal: used to drain a burst of already-produced results in one go (see the
-        fused-region worker in :py:mod:`spdl.pipeline._subprocess_pipeline_pool`). Unlike
-        ``get_item(timeout=0)``, this cannot strand an item.
+        fused-region worker in :py:mod:`spdl.pipeline._subprocess_pipeline_pool`).
 
         Raises:
             RuntimeError: The pipeline is not started.
