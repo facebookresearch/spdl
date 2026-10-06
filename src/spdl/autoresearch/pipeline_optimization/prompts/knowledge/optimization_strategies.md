@@ -64,6 +64,49 @@ SPDL runs stages on its own event loop, so it awaits async stage functions nativ
 
 If a stage is already synchronous, just pass it as a normal function — no event loop is involved either way.
 
+### Keep Storage and Image Decode Native in Hot Stages
+
+Do not hide synchronous compatibility layers inside a concurrent SPDL stage.
+They defeat SPDL's event loop or add per-item dispatch, copying, and locking:
+
+- Do not call `await_sync`, `asyncio.run`, or another async-to-sync bridge around
+  a storage client's coroutine. Pass an `async def` stage to `.pipe()` and await
+  the native client operation directly.
+- Do not use `PathManager` for per-sample reads or downloads. It is appropriate
+  for one-time setup such as reading a manifest, but handler dispatch, local-path
+  materialization, file locking, and a second file read are expensive in a hot
+  stage. Call the storage backend's native async API and keep the result as bytes.
+- Do not use Pillow for a CPU decode stage that relies on thread concurrency.
+  Pillow operations do not consistently release the GIL across the complete
+  decode/EXIF/colorspace path. Prefer SPDL's native image APIs or another native
+  decoder verified to release the GIL, and pass encoded bytes directly so the
+  pipeline does not round-trip through a temporary file.
+
+Keep I/O and decode as separate stages so their concurrency can be tuned
+independently:
+
+```python
+async def fetch_image(key: str) -> bytes:
+    return await storage_client.async_read(key)
+
+
+def decode_image(data: bytes):
+    return spdl.io.load_image(data)
+
+
+pipeline = (
+    PipelineBuilder()
+    .add_source(keys)
+    .pipe(fetch_image, concurrency=32, output_order="completion")
+    .pipe(decode_image, concurrency=8)
+)
+```
+
+Before migrating, compare decoded values and metadata against the old path.
+Decoder libraries can differ in EXIF handling, JPEG rounding, colorspace
+conversion, and reduced-resolution decoding; validate these explicitly before
+running an end-to-end accuracy comparison.
+
 ## Recommended Architectures: Benchmark MTP and MP Regions
 
 There is no universal winner. Benchmark both of these process-isolated shapes:

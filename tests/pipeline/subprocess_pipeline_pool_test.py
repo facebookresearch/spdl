@@ -6,26 +6,139 @@
 
 # pyre-strict
 
-"""Tests for the fused worker's result chunking (``_subprocess_pipeline_pool``).
+"""Tests for the fused worker's transfer handling (``_subprocess_pipeline_pool``).
 
-Output coalescing is invisible end to end -- it changes how many transfers a worker sends, not
-what comes out of the region -- so the properties that matter are asserted here against a
-scripted stand-in for the nested pipeline rather than through a real worker pool. That keeps
-"blocks exactly once", "stops at the bound" and "flushes what it already has" deterministic
-instead of dependent on how fast a subprocess happens to produce.
+Input expansion and output coalescing are invisible end to end -- they change where a transfer
+is unpacked and how many transfers a worker sends, not what comes out of the region -- so their
+properties are asserted here against scripted queues and a stand-in for the nested pipeline.
+That keeps thread placement, "blocks exactly once", "stops at the bound" and "flushes what it
+already has" deterministic instead of dependent on how fast a subprocess happens to produce.
 """
 
+import asyncio
 import queue
+import threading
 import unittest
+from collections.abc import Iterator
 from typing import Any
 
-from spdl.pipeline._components import _RESULT
-from spdl.pipeline._subprocess_pipeline_pool import _drain_chunk, _stream_results
+from spdl.pipeline import AsyncQueue
+from spdl.pipeline._components import (
+    _EPOCH,
+    _ITEM,
+    _POOL_SHUTDOWN,
+    _RESULT,
+    _SESSION_END,
+)
+from spdl.pipeline._subprocess_pipeline_pool import (
+    _drain_chunk,
+    _DrainSource,
+    _run_sessions,
+    _stream_results,
+)
+from spdl.pipeline.defs import Pipe, PipelineConfig, SinkConfig, SourceConfig
 
 # Script markers for _FakePipeline.
 _EOF: object = object()  # raise EOFError -- end of the epoch/session
 _EMPTY: object = object()  # raise queue.Empty -- nothing buffered right now
 _BOOM: object = object()  # raise RuntimeError -- an unexpected failure mid-chunk
+
+
+class _CountingQueue(queue.Queue[Any]):
+    """Queue that records how many transport messages the worker reads."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.get_calls = 0
+
+    def get(self, block: bool = True, timeout: float | None = None) -> Any:
+        self.get_calls += 1
+        return super().get(block=block, timeout=timeout)
+
+
+class _ThreadRecordingList(list[Any]):
+    """Transfer payload that records the thread expanding each of its items."""
+
+    def __init__(self, items: list[Any]) -> None:
+        super().__init__(items)
+        self.iteration_threads: list[int] = []
+
+    def __iter__(self) -> Iterator[Any]:
+        for item in super().__iter__():
+            self.iteration_threads.append(threading.get_ident())
+            yield item
+
+
+class InputTransferDrainTest(unittest.TestCase):
+    """A worker reads one message in its pool, then expands its items on the event loop."""
+
+    def test_session_payload_is_expanded_on_worker_event_loop(self) -> None:
+        """A finite transfer is expanded beside async region ops, not by executor next calls."""
+        items = _ThreadRecordingList([1, [2, 3], 4])
+        in_q = _CountingQueue()
+        in_q.put((_ITEM, items))
+        in_q.put((_SESSION_END, None))
+        in_q.put((_POOL_SHUTDOWN, None))
+        out_q: queue.Queue[Any] = queue.Queue()
+        op_threads: list[int] = []
+
+        async def _record_thread(item: Any) -> Any:
+            op_threads.append(threading.get_ident())
+            return item
+
+        config = PipelineConfig(
+            src=SourceConfig([]),
+            pipes=[Pipe(_record_thread)],
+            sink=SinkConfig(8),
+        )
+        _run_sessions(
+            in_q,
+            out_q,
+            config,
+            {
+                "num_threads": 2,
+                "queue_class": AsyncQueue,
+                "task_hook_factory": lambda _: [],
+            },
+            output_buffer_size=8,
+        )
+
+        messages = [out_q.get_nowait() for _ in range(out_q.qsize())]
+        results = [
+            item for kind, payload in messages if kind == _RESULT for item in payload
+        ]
+        self.assertEqual(results, [1, [2, 3], 4])
+        self.assertEqual(in_q.get_calls, 3)
+        self.assertEqual(len(items.iteration_threads), 3)
+        self.assertEqual(len(set(op_threads)), 1)
+        self.assertEqual(set(items.iteration_threads), set(op_threads))
+
+    def test_continuous_source_expands_each_epoch_on_event_loop(self) -> None:
+        """A continuous source reads per transfer and keeps chunks inside epoch boundaries."""
+        first = _ThreadRecordingList([1, 2])
+        second = _ThreadRecordingList([[3, 4]])
+        in_q = _CountingQueue()
+        for message in (
+            (_ITEM, first),
+            (_EPOCH, None),
+            (_ITEM, second),
+            (_EPOCH, None),
+            (_POOL_SHUTDOWN, None),
+        ):
+            in_q.put(message)
+        source = _DrainSource(in_q)
+
+        async def _read_epochs() -> tuple[int, list[list[Any]]]:
+            loop_thread = threading.get_ident()
+            epochs = [[item async for item in source] for _ in range(3)]
+            return loop_thread, epochs
+
+        loop_thread, epochs = asyncio.run(_read_epochs())
+        self.assertEqual(epochs, [[1, 2], [[3, 4]], []])
+        self.assertEqual(in_q.get_calls, 5)
+        self.assertEqual(first.iteration_threads, [loop_thread, loop_thread])
+        self.assertEqual(second.iteration_threads, [loop_thread])
+        self.assertTrue(source.exiting)
 
 
 class _FakePipeline:
