@@ -22,7 +22,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 from spdl.pipeline import Pipeline, PipelineBuilder
-from spdl.pipeline._pipeline import _QueueReadTimedOut
+from spdl.pipeline._pipeline import _EventLoop, _QueueReadTimedOut
 
 _TIMEOUT: float = 30.0
 _RELEASE_OP: threading.Event = threading.Event()
@@ -1066,3 +1066,143 @@ class PipelineStartTimeoutTest(unittest.TestCase):
             and thread.ident not in prior_threads
         }
         self.assertEqual(leaked_threads, set())
+
+
+class PipelineFailureIterationTest(unittest.TestCase):
+    def test_completed_failure_is_sticky_for_blocking_reads(self) -> None:
+        """Blocking reads repeatedly surface a task failure visible before the first read."""
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+
+        async def fail() -> None:
+            raise RuntimeError("pipeline task failed")
+
+        pipeline = _make_pipeline(fail(), output_queue)
+        errors: list[RuntimeError] = []
+        try:
+            pipeline.start(timeout=_TIMEOUT)
+            self.assertTrue(
+                pipeline._impl._event_loop._task_completed.wait(timeout=_TIMEOUT)
+            )
+
+            for _ in range(2):
+                with self.assertRaisesRegex(
+                    RuntimeError, "pipeline task failed"
+                ) as caught:
+                    pipeline.get_item(timeout=_TIMEOUT)
+                errors.append(caught.exception)
+            self.assertIs(errors[0], errors[1])
+        finally:
+            pipeline.stop(timeout=_TIMEOUT)
+
+    def test_bare_iteration_raises_after_buffered_items(self) -> None:
+        """Iteration reports a fatal task error after yielding every buffered result."""
+        output_queue: asyncio.Queue[int] = asyncio.Queue(2)
+
+        async def produce_then_fail() -> None:
+            await output_queue.put(1)
+            await output_queue.put(2)
+            raise RuntimeError("pipeline task failed")
+
+        pipeline = _make_pipeline(produce_then_fail(), output_queue)
+        items: list[int] = []
+        iterator = iter(pipeline)
+        try:
+            with self.assertRaisesRegex(
+                RuntimeError, "pipeline task failed"
+            ) as first_failure:
+                for item in iterator:
+                    items.append(item)
+            self.assertEqual(items, [1, 2])
+
+            with self.assertRaisesRegex(
+                RuntimeError, "pipeline task failed"
+            ) as repeated_failure:
+                next(iterator)
+            self.assertIs(repeated_failure.exception, first_failure.exception)
+        finally:
+            # A foreground observation keeps cleanup from raising the failure again.
+            pipeline.stop(timeout=_TIMEOUT)
+
+    def test_stop_does_not_hide_failure_from_foreground_reads(self) -> None:
+        """Cleanup cannot turn a terminal task failure into EOF for readers."""
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+
+        async def fail() -> None:
+            raise RuntimeError("pipeline task failed")
+
+        pipeline = _make_pipeline(fail(), output_queue)
+        try:
+            pipeline.start(timeout=_TIMEOUT)
+            self.assertTrue(
+                pipeline._impl._event_loop._task_completed.wait(timeout=_TIMEOUT)
+            )
+
+            with self.assertRaisesRegex(RuntimeError, "pipeline task failed"):
+                pipeline.stop(timeout=_TIMEOUT)
+            self.assertFalse(pipeline._finalizer.alive)
+            for _ in range(2):
+                with self.assertRaisesRegex(RuntimeError, "pipeline task failed"):
+                    pipeline._get_item_nowait()
+        finally:
+            pipeline.stop(timeout=_TIMEOUT)
+
+    def test_terminal_failure_preserves_original_exception_context(self) -> None:
+        """Queue polling cannot replace a task failure's original context."""
+        output_queue: asyncio.Queue[int] = asyncio.Queue(1)
+
+        async def fail_with_context() -> None:
+            try:
+                raise ValueError("original context")
+            except ValueError:
+                raise RuntimeError("pipeline task failed")
+
+        pipeline = _make_pipeline(fail_with_context(), output_queue)
+        try:
+            pipeline.start(timeout=_TIMEOUT)
+            event_loop = pipeline._impl._event_loop
+            self.assertTrue(event_loop._task_completed.wait(timeout=_TIMEOUT))
+
+            with self.assertRaisesRegex(RuntimeError, "pipeline task failed") as caught:
+                pipeline._impl._get_item_nowait()
+            self.assertIsInstance(caught.exception.__context__, ValueError)
+            self.assertEqual(str(caught.exception.__context__), "original context")
+        finally:
+            pipeline.stop(timeout=_TIMEOUT)
+
+
+class EventLoopFailureStateTest(unittest.TestCase):
+    def test_completion_publishes_failure_before_concurrent_cleanup(self) -> None:
+        """Completion exposes the failure before exactly one cleanup claims it."""
+
+        async def fail() -> None:
+            raise RuntimeError("pipeline task failed")
+
+        worker_executor = ThreadPoolExecutor(max_workers=1)
+        event_loop = _EventLoop(fail(), worker_executor)
+        event_loop.start(timeout=_TIMEOUT)
+        try:
+            self.assertTrue(event_loop._task_completed.wait(timeout=_TIMEOUT))
+            with event_loop._task_exception_lock:
+                self.assertIsInstance(event_loop._task_exception, RuntimeError)
+                self.assertFalse(event_loop._task_exception_raised)
+
+            num_callers = 8
+            barrier = threading.Barrier(num_callers)
+
+            def claim_after_barrier() -> BaseException | None:
+                barrier.wait(timeout=_TIMEOUT)
+                return event_loop.claim_unobserved_task_exception()
+
+            with ThreadPoolExecutor(max_workers=num_callers) as callers:
+                futures = [
+                    callers.submit(claim_after_barrier) for _ in range(num_callers)
+                ]
+                results = [future.result() for future in futures]
+
+            exceptions = [result for result in results if result is not None]
+            self.assertEqual(len(exceptions), 1)
+            self.assertEqual(str(exceptions[0]), "pipeline task failed")
+        finally:
+            event_loop.stop()
+            event_loop.join(timeout=_TIMEOUT)
+            worker_executor.shutdown()

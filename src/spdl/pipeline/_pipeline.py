@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from enum import IntEnum
 from threading import Event as SyncEvent, Thread
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, NoReturn, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._components import _ThreadBasedAsyncQueue, is_epoch_end
@@ -57,6 +57,8 @@ class _EventLoop:
         self._user_task_started = SyncEvent()
         self._task_completed = SyncEvent()
         self._task_exception: BaseException | None = None
+        self._task_exception_raised = False
+        self._task_exception_lock = threading.Lock()
         self._stop_requested = SyncEvent()
 
         self._thread: Thread | None = None
@@ -84,6 +86,18 @@ class _EventLoop:
         self._user_task_started.set()
         await self._coro
 
+    def _publish_task_completion(self, task: asyncio.Future[None]) -> None:
+        """Publish the task result before making its completion observable."""
+        try:
+            task_exception = task.exception()
+        except asyncio.CancelledError:
+            # Normal shutdown cancels the pipeline task and treats cancellation as
+            # EOF rather than a foreground failure.
+            task_exception = None
+        with self._task_exception_lock:
+            self._task_exception = task_exception
+        self._task_completed.set()
+
     async def _execute_task(self) -> None:
         _LG.debug("The event loop thread coroutine is started.")
         self._loop = asyncio.get_running_loop()
@@ -93,7 +107,11 @@ class _EventLoop:
         _LG.debug("Starting the task.")
 
         task = create_task(self._run_task_after_start(), name="Pipeline::main")
-        task.add_done_callback(lambda _: self._task_completed.set())
+        # The inner task can outlive this driver if the driver is cancelled during
+        # event-loop shutdown. Publish completion from the inner task itself so
+        # foreground observers are never left waiting for a signal this coroutine
+        # can no longer send.
+        task.add_done_callback(self._publish_task_completion)
 
         self._task_started.set()
         while not task.done():
@@ -122,11 +140,6 @@ class _EventLoop:
                 await asyncio.sleep(0.1)
         _LG.debug("The background task is completed.")
         _LG.debug("The event loop is now shutdown.")
-
-        try:
-            self._task_exception = task.exception()
-        except asyncio.CancelledError:
-            pass
 
     def start(self, *, timeout: float | None = None, daemon: bool = False) -> None:
         """Start the thread and block until the loop is initialized."""
@@ -204,6 +217,24 @@ class _EventLoop:
     def needs_join(self) -> bool:
         """Check whether a started thread still needs its first successful join."""
         return self._thread is not None and not self._joined
+
+    def observe_task_exception(self) -> BaseException | None:
+        """Return the task exception without hiding it from later readers."""
+        with self._task_exception_lock:
+            exception = self._task_exception
+            if exception is not None:
+                self._task_exception_raised = True
+            return exception
+
+    def claim_unobserved_task_exception(self) -> BaseException | None:
+        """Return an unobserved task exception once to a cleanup caller."""
+        with self._task_exception_lock:
+            if self._task_exception_raised:
+                return None
+            exception = self._task_exception
+            if exception is not None:
+                self._task_exception_raised = True
+            return exception
 
     def stop(self) -> None:
         """Issue loop stop request."""
@@ -331,7 +362,9 @@ class _PipelineImpl(Generic[T]):
 
         .. note::
 
-           It is safe to call ``stop`` multiple times.
+           At most one ``stop`` call raises a task failure not yet observed by a
+           foreground read; later ``stop`` calls return normally. Terminal reads
+           continue raising the task failure after the sink is drained.
         """
         if (
             _EventLoopState.STARTED <= self._event_loop_state < _EventLoopState.STOPPED
@@ -365,8 +398,9 @@ class _PipelineImpl(Generic[T]):
 
         self._shutdown_pools()
 
-        if self._event_loop._task_exception is not None:
-            raise self._event_loop._task_exception
+        exception = self._event_loop.claim_unobserved_task_exception()
+        if exception is not None:
+            raise exception
 
     def _shutdown_pools(self) -> None:
         """Reap any owned worker pools exactly once (safe to call repeatedly)."""
@@ -391,6 +425,9 @@ class _PipelineImpl(Generic[T]):
 
             EOFError: When the pipeline is exhausted or cancelled and there are no more items
                 in the sink.
+
+            BaseException: A terminal exception raised by a pipeline task, after all buffered
+                items have been returned. Subsequent terminal reads raise the same failure.
         """
         item = self._get_item(timeout=timeout)
         if is_epoch_end(item):
@@ -404,6 +441,14 @@ class _PipelineImpl(Generic[T]):
         if isinstance(self._output_queue, _ThreadBasedAsyncQueue):
             return self._get_item_thread_queue(timeout=timeout)
         return self._get_item_async_queue(timeout=timeout)
+
+    def _raise_task_failure_or_eof(self) -> NoReturn:
+        """Report a sticky task failure or normal exhaustion."""
+        self._event_loop.stop()
+        exception = self._event_loop.observe_task_exception()
+        if exception is not None:
+            raise exception
+        raise EOFError(_EOF_MSG)
 
     async def _get_with_timeout_on_loop(self, timeout: float) -> T:
         """Wait for one item on the queue's owning loop without orphaning the get."""
@@ -562,8 +607,7 @@ class _PipelineImpl(Generic[T]):
             pass
         if not self._output_queue.empty():
             return self._output_queue.get_nowait()
-        self._event_loop.stop()
-        raise EOFError(_EOF_MSG) from None
+        self._raise_task_failure_or_eof()
 
     def _recover_output_after_read_submission_failure(self, error: RuntimeError) -> T:
         """Drain completed output when its owner loop stops before submission."""
@@ -598,8 +642,7 @@ class _PipelineImpl(Generic[T]):
             # The background loop no longer touches the sink, so direct access is thread-safe.
             if not self._output_queue.empty():
                 return self._output_queue.get_nowait()
-            self._event_loop.stop()
-            raise EOFError(_EOF_MSG)
+            self._raise_task_failure_or_eof()
 
         # The task is not completed. To access the sink queue, the async method must be used.
         # The loop keeps running unless we explicitly request stop, so the use of async method
@@ -660,12 +703,10 @@ class _PipelineImpl(Generic[T]):
                 except queue.Empty:
                     pass
 
-            # The sink queue is empty.
-            # In this condition, we cannot really tell if it is due to EOF or
-            # pipeline being too slow.
-
-            # One exception is that the task is now complete and queue is still empty.
-            # This case we can switch to EOFError.
+            # The sink queue is empty. Usually we cannot tell whether the pipeline
+            # is merely slow, but a completed task and empty queue is terminal.
+            # Check outside the exception handler so a task failure keeps its own
+            # exception chain instead of acquiring TimeoutError as its context.
             if (
                 self._pending_output_read is None
                 and self._event_loop.is_task_completed()
@@ -683,6 +724,9 @@ class _PipelineImpl(Generic[T]):
 
             EOFError: The pipeline is exhausted (or reached an epoch boundary) and the sink is
                 drained.
+
+            BaseException: A terminal exception raised by a pipeline task, after all buffered
+                items have been returned. Subsequent terminal reads raise the same failure.
         """
         item = self._get_item_nowait()
         if is_epoch_end(item):
@@ -710,11 +754,12 @@ class _PipelineImpl(Generic[T]):
             try:
                 return q.get_nowait()
             except queue.Empty:
-                # Empty *and* the producing task is done means no item is ever coming.
-                if self._event_loop.is_task_completed() and q.empty():
-                    self._event_loop.stop()
-                    raise EOFError(_EOF_MSG) from None
-                raise
+                task_completed = self._event_loop.is_task_completed() and q.empty()
+            # Raise terminal failures outside the queue exception handler so the
+            # implementation detail does not replace their original context.
+            if task_completed:
+                self._raise_task_failure_or_eof()
+            raise queue.Empty from None
 
         try:
             return self._take_pending_output_item()
@@ -725,20 +770,19 @@ class _PipelineImpl(Generic[T]):
             # The background loop no longer touches the sink, so direct access is thread-safe.
             if not self._output_queue.empty():
                 return self._output_queue.get_nowait()
-            self._event_loop.stop()
-            raise EOFError(_EOF_MSG)
+            self._raise_task_failure_or_eof()
 
         try:
             return self._poll_output_queue_on_loop()
         except queue.Empty:
-            if (
+            task_completed = (
                 self._pending_output_read is None
                 and self._event_loop.is_task_completed()
                 and self._output_queue.empty()
-            ):
-                self._event_loop.stop()
-                raise EOFError(_EOF_MSG) from None
-            raise queue.Empty from None
+            )
+        if task_completed:
+            self._raise_task_failure_or_eof()
+        raise queue.Empty from None
 
     def _get_item_thread_queue(self, *, timeout: float | None) -> T:
         q = self._output_queue._queue  # pyre-ignore[16]
@@ -746,8 +790,7 @@ class _PipelineImpl(Generic[T]):
         if self._event_loop.is_task_completed():
             if not q.empty():
                 return q.get_nowait()
-            self._event_loop.stop()
-            raise EOFError(_EOF_MSG)
+            self._raise_task_failure_or_eof()
 
         max_elapsed = float("inf") if timeout is None else timeout
         t0 = time.monotonic()
@@ -756,9 +799,9 @@ class _PipelineImpl(Generic[T]):
             try:
                 return q.get(timeout=min(0.1, remaining))
             except queue.Empty:
-                if self._event_loop.is_task_completed() and q.empty():
-                    self._event_loop.stop()
-                    raise EOFError(_EOF_MSG) from None
+                task_completed = self._event_loop.is_task_completed() and q.empty()
+            if task_completed:
+                self._raise_task_failure_or_eof()
 
         raise TimeoutError(
             f"The next item is not available after {time.monotonic() - t0:.1f} sec."
@@ -1016,10 +1059,22 @@ class Pipeline(Generic[T]):
 
         .. note::
 
-           It is safe to call ``stop`` multiple times.
+           At most one ``stop`` call raises a task failure not yet observed by a
+           foreground read; later ``stop`` calls return normally. Terminal reads
+           continue raising the task failure after the sink is drained.
+
+        .. versionchanged:: 0.7.0
+           Terminal task failures are raised by at most one ``stop`` call and remain
+           observable to foreground reads.
         """
-        self._impl.stop(timeout=timeout)
-        self._finalizer.detach()
+        try:
+            self._impl.stop(timeout=timeout)
+        finally:
+            # A completed join means explicit cleanup owns the terminal result,
+            # even when stop() raises that result's task failure. Keep automatic
+            # cleanup armed only when a timed-out join still needs a retry.
+            if not self._impl._event_loop.needs_join():
+                self._finalizer.detach()
 
     @contextmanager
     def auto_stop(self, *, timeout: float | None = None) -> Iterator[None]:
@@ -1050,6 +1105,13 @@ class Pipeline(Generic[T]):
 
             EOFError: When the pipeline is exhausted or cancelled and there are no more items
                 in the sink.
+
+            BaseException: A terminal exception raised by a pipeline task, after all buffered
+                items have been returned. Subsequent terminal reads raise the same failure.
+
+        .. versionchanged:: 0.7.0
+           Terminal task failures are raised after buffered items have been returned and remain
+           observable to foreground reads.
         """
         # Ensure that the pipeline is started before accessing the sink queue. Route through the
         # facade `start` (not `_impl.start`) so an auto-started pipeline also registers the
@@ -1073,6 +1135,9 @@ class Pipeline(Generic[T]):
             queue.Empty: No item is currently available.
 
             EOFError: The pipeline is exhausted (or reached an epoch boundary) and drained.
+
+            BaseException: A terminal exception raised by a pipeline task, after all buffered
+                items have been returned. Subsequent terminal reads raise the same failure.
         """
         # Unlike `get_item`, do not auto-start: a caller polling a not-yet-started pipeline
         # wants "nothing available", and silently starting it here would hide a usage error.
@@ -1093,6 +1158,10 @@ class Pipeline(Generic[T]):
                 for item in pipeline.get_iterator(timeout=...):
                     ...
 
+        A terminal task failure is raised after all buffered items have been
+        returned. If the caller catches it, subsequent calls on the same iterator
+        raise the same failure rather than ``StopIteration``.
+
         Args:
             timeout: Timeout value used for each `get_item` call.
 
@@ -1101,6 +1170,10 @@ class Pipeline(Generic[T]):
            epoch boundary used to resume into the next epoch when reused, but
            now stays exhausted, consistent with non-continuous sources. Use one
            iterator per epoch.
+
+        .. versionchanged:: 0.7.0
+           Documented that terminal task failures remain observable on subsequent
+           reads from the same iterator.
         """
         return PipelineIterator(self, timeout)
 
