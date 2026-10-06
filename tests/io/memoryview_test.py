@@ -11,6 +11,7 @@ import io
 import tarfile
 import unittest
 import wave
+from typing import cast
 
 import numpy as np
 import spdl.io
@@ -141,3 +142,22 @@ class MemoryviewValidationTest(unittest.TestCase):
                         ValueError, "one-dimensional, C-contiguous byte buffer"
                     ):
                         call(view)
+
+
+class MemoryviewLifetimeTest(unittest.TestCase):
+    def test_demuxer_retains_an_independent_buffer_export(self) -> None:
+        """Releasing a caller view cannot invalidate a live demuxer."""
+        data = bytearray(_create_wav_data())
+        caller_view = cast(memoryview[bytes], memoryview(data))
+        demuxer = spdl.io.Demuxer(caller_view)
+
+        caller_view.release()
+        with self.assertRaises(BufferError):
+            data.extend(b"more")
+
+        packets = demuxer.demux_audio()
+        self.assertGreater(len(packets), 0)
+        del packets, demuxer
+
+        data.extend(b"more")
+        self.assertTrue(data.endswith(b"more"))
