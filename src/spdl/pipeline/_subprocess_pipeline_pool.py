@@ -546,6 +546,7 @@ class _SubprocessPipelinePool:
         self._continuous = continuous
         self._input_buffer_size = input_buffer_size
         self._output_buffer_size = output_buffer_size
+        self._closed = False
         self._out_q: Any = backend.make_queue(size)
         # One input queue per worker in both modes. Continuous mode needs it to broadcast epoch
         # boundaries cleanly; non-continuous mode needs it so each worker receives exactly one
@@ -627,12 +628,24 @@ class _SubprocessPipelinePool:
 
     def shutdown(self) -> None:
         """Tell every worker to exit, then reap them."""
+        if self._closed:
+            return
+        self._closed = True
         self._broadcast_shutdown()
         self._reap(self._workers)
         # Release this process's queue handles so any feeder threads created on first ``put``
         # exit; otherwise a process that creates many pipelines leaks threads and pipe fds.
         for q in (*self._in_qs, self._out_q):
             self._backend.close_queue(q)
+        # A bounded multiprocessing.Queue owns one process-shared capacity
+        # semaphore. The pool object outlives its finalizer through the wrapper,
+        # so retaining these closed queues defers their SemLock finalizers until
+        # interpreter shutdown, where resource_tracker reports one leak per queue.
+        # Drop the last owner references after all workers are reaped and handles
+        # are closed. ``_closed`` makes repeated shutdown harmless.
+        self._in_qs = []
+        self._out_q = None
+        self._workers = []
 
 
 def _shutdown_pipeline_pools(pools: Sequence[_SubprocessPipelinePool]) -> None:

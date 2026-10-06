@@ -708,6 +708,8 @@ class ContinuousRegionTest(unittest.TestCase):
             .get_config()
         )
         src = run_pipeline_in_subprocess(config, num_threads=4)
+        pools = src._pools  # pyrefly: ignore [missing-attribute]
+        workers = [worker._proc for pool in pools for worker in pool._workers]
         it = iter(src)
         next(it)  # consume a couple of items so the queues stay backed up
         next(it)
@@ -724,6 +726,10 @@ class ContinuousRegionTest(unittest.TestCase):
             "region-pool teardown hung on a full input queue after a mid-stream stop",
         )
         t.join(timeout=10)
+        self.assertTrue(all(not worker.is_alive() for worker in workers))
+        for pool in pools:
+            self.assertEqual(pool._in_qs, [])
+            self.assertIsNone(pool._out_q)
 
     def test_continuous_in_subprocess(self) -> None:
         """A continuous region composes with ``run_pipeline_in_subprocess`` across epochs."""
