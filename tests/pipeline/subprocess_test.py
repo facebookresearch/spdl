@@ -8,6 +8,7 @@
 import functools
 import multiprocessing as mp
 import os.path
+import queue
 import random
 import tempfile
 import threading
@@ -68,6 +69,28 @@ def initializer(path: str, val: str) -> None:
 
 @_ignore_fork_warning_in_class
 class TestIterateInSubprocess(unittest.TestCase):
+    def test_full_wakeup_queue_does_not_skip_arena_cleanup(self) -> None:
+        """A full result queue cannot prevent shared-memory cleanup."""
+        process = MagicMock()
+        process.exitcode = 0
+        cmd_q = MagicMock()
+        data_q = MagicMock()
+        data_q.get_nowait.side_effect = queue.Empty
+        data_q.put_nowait.side_effect = queue.Full
+        arena = MagicMock()
+
+        interface = _ipc(
+            process=process,
+            cmd_q=cmd_q,
+            data_q=data_q,
+            timeout=1.0,
+            arena=arena,
+        )
+        interface.terminate()
+
+        arena.close.assert_called_once_with()
+        arena.unlink.assert_called_once_with()
+
     def test_teardown_joins_after_tensor_transport_disappears(self) -> None:
         process = MagicMock()
         process.exitcode = 0

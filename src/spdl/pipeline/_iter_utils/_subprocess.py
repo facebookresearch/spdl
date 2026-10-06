@@ -14,8 +14,9 @@ using Python's multiprocessing module.
 import logging
 import multiprocessing as mp
 import queue
+import threading
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from multiprocessing.util import Finalize
 from typing import cast, Generic, TypeVar
 
@@ -27,6 +28,7 @@ from spdl.pipeline._iter_utils._common import (
     _execute_iterable,
     _iterate_results,
     _Msg,
+    _Status,
     _wait_for_init,
 )
 
@@ -63,8 +65,10 @@ class _ipc(Generic[T]):
     data_q: queue.Queue[_Msg[T]]
     timeout: float
     arena: ArenaProtocol | None = None
+    closed: threading.Event = field(default_factory=threading.Event)
 
     def terminate(self) -> None:
+        self.closed.set()
         self.cmd_q.put(_Cmd.ABORT)
         # Wake any worker that is currently blocked in ``write_binary`` /
         # ``begin_unit`` on the arena's space condition variable. Without this,
@@ -87,6 +91,19 @@ class _ipc(Generic[T]):
                 "Ignoring stale subprocess payload during teardown", exc_info=True
             )
         _join(self.process)
+        # A consumer can be blocked in ``data_q.get(timeout=...)`` while another
+        # thread invokes the finalizer.  Process exit alone does not wake that
+        # parent-side queue reader because this process still owns the queue's
+        # read descriptor.  Wake it explicitly so a surrounding pipeline can
+        # cancel its continuous source immediately instead of waiting for the
+        # (potentially very long) data timeout.
+        try:
+            _drain(self.data_q)
+            self.data_q.put_nowait(_Msg(_Status.ITERATION_FINISHED))
+        except (EOFError, OSError, queue.Full):
+            _LG.debug(
+                "Failed to wake subprocess consumer during teardown", exc_info=True
+            )
         # Unlink the shared-memory arena only after the worker is confirmed
         # dead, so nothing touches the segment afterwards. ``unlink`` runs in
         # ``finally`` so a failing ``close`` never leaves the OS-level shm
@@ -121,6 +138,8 @@ class _SubprocessIterable(Iterable[T]):
         """Instruct the worker process to enter iteration mode and iterate on the results."""
         if (if_ := self._interface) is None:
             raise RuntimeError("The worker process is shutdown. Cannot iterate again.")
+        if if_.closed.is_set():
+            return
 
         try:
             arena = self._arena
