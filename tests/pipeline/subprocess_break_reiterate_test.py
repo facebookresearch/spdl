@@ -11,6 +11,8 @@ import functools
 import multiprocessing as mp
 import os
 import signal
+import threading
+import time
 import unittest
 import warnings
 from collections.abc import Iterable, Iterator
@@ -52,6 +54,13 @@ class SourceIterable:
         yield from range(self.n)
 
 
+class StalledSourceIterable:
+    def __iter__(self) -> Iterator[int]:
+        yield 0
+        time.sleep(60)
+        yield 1
+
+
 _HELD_SUBPROCESS_ITERABLE: Iterable[int] | None = None
 
 
@@ -68,6 +77,34 @@ def _retain_subprocess_iterable_until_process_exit(ready: Connection) -> None:
 
 @_ignore_fork_warning_in_class
 class TestSubprocessBreakAndReiterate(unittest.TestCase):
+    def test_finalizer_wakes_blocked_parent_queue_reader(self) -> None:
+        """Finalizer must wake a parent reader blocked on a stalled subprocess."""
+        src = iterate_in_subprocess(
+            StalledSourceIterable,
+            timeout=30,
+            mp_context="fork",
+        )
+        iterator = iter(src)
+        self.assertEqual(next(iterator), 0)
+
+        result: list[object] = []
+
+        def read_next() -> None:
+            try:
+                result.append(next(iterator))
+            except StopIteration:
+                result.append("stopped")
+
+        reader = threading.Thread(target=read_next)
+        reader.start()
+        time.sleep(0.1)
+
+        getattr(src, "_finalizer")()
+        reader.join(timeout=10)
+
+        self.assertFalse(reader.is_alive())
+        self.assertEqual(result, ["stopped"])
+
     def test_retained_iterable_does_not_block_process_exit(self) -> None:
         """A retained subprocess iterable must not block interpreter shutdown."""
         ctx = mp.get_context("spawn")
