@@ -260,6 +260,7 @@ class _WorkerPool:
         self._in_q: Any = ctx.Queue()
         self._out_q: Any = ctx.Queue()
         self._max_workers = max_workers
+        self._closed = False
         self._procs: list[Any] = [
             ctx.Process(
                 target=_worker_loop,
@@ -302,6 +303,9 @@ class _WorkerPool:
                 p.join(5)
 
     def shutdown(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
         for _ in self._procs:
             try:
                 self._in_q.put(_SHUTDOWN)
@@ -316,6 +320,10 @@ class _WorkerPool:
         for q in (self._in_q, self._out_q):
             q.close()
             q.join_thread()
+        # Release the queue-owned SemLocks promptly instead of retaining them on
+        # this finalized pool until interpreter shutdown.
+        self._in_q = None
+        self._out_q = None
 
 
 def _hoist_process_pools(
