@@ -225,14 +225,25 @@ class _SubprocessIterable(Iterable[T]):
                 if_.timeout,
                 "subprocess",
                 None if arena is None else arena.discard,
+                if_.process.is_alive,
             )
             if arena is None:
-                yield from _iterate_results(data_q, if_.timeout, "subprocess")
+                yield from _iterate_results(
+                    data_q,
+                    if_.timeout,
+                    "subprocess",
+                    if_.process.is_alive,
+                )
             else:
                 # Let the backend prepare for the next iteration after the
                 # worker has prepared its side.
                 arena.reader.reset()
-                for blob in _iterate_results(data_q, if_.timeout, "subprocess"):
+                for blob in _iterate_results(
+                    data_q,
+                    if_.timeout,
+                    "subprocess",
+                    if_.process.is_alive,
+                ):
                     yield cast(T, arena.restore(cast(bytes, blob)))
         except GeneratorExit:
             return
@@ -347,7 +358,12 @@ def iterate_in_subprocess(
 
     try:
         process.start()
-        _wait_for_init(data_q, if_.timeout, "subprocess")
+        _wait_for_init(
+            data_q,
+            if_.timeout,
+            "subprocess",
+            if_.process.is_alive,
+        )
     except BaseException:
         # No iterable/finalizer has been returned yet, so setup owns cleanup.
         # Force termination because a blocked initializer cannot consume ABORT.
