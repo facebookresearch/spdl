@@ -16,24 +16,46 @@ already has" deterministic instead of dependent on how fast a subprocess happens
 """
 
 import asyncio
+import contextlib
+import gc
 import queue
 import threading
 import unittest
+import weakref
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
+from multiprocessing.reduction import ForkingPickler
 from typing import Any
+from unittest import mock
 
 from spdl.pipeline import AsyncQueue
 from spdl.pipeline._components import (
+    _DONE,
     _EPOCH,
+    _EPOCH_DONE,
+    _ERROR,
     _ITEM,
     _POOL_SHUTDOWN,
     _RESULT,
     _SESSION_END,
+    _subprocess_pipe,
+)
+from spdl.pipeline._components._common import StageInfo
+from spdl.pipeline._components._subprocess_pipe import (
+    _check_serialization_error_relay,
+    _collect,
+    _serialization_failure_boundaries,
 )
 from spdl.pipeline._subprocess_pipeline_pool import (
     _drain_chunk,
     _DrainSource,
+    _handle_queue_feeder_error,
+    _install_queue_feeder_error_handler,
+    _run_continuous,
     _run_sessions,
+    _serialization_error,
+    _SERIALIZATION_ERROR_DETAIL_LIMIT,
+    _SerializationFailureState,
     _stream_results,
 )
 from spdl.pipeline.defs import Pipe, PipelineConfig, SinkConfig, SourceConfig
@@ -120,9 +142,9 @@ class InputTransferDrainTest(unittest.TestCase):
         in_q = _CountingQueue()
         for message in (
             (_ITEM, first),
-            (_EPOCH, None),
+            (_EPOCH, 0),
             (_ITEM, second),
-            (_EPOCH, None),
+            (_EPOCH, 1),
             (_POOL_SHUTDOWN, None),
         ):
             in_q.put(message)
@@ -139,6 +161,26 @@ class InputTransferDrainTest(unittest.TestCase):
         self.assertEqual(first.iteration_threads, [loop_thread, loop_thread])
         self.assertEqual(second.iteration_threads, [loop_thread])
         self.assertTrue(source.exiting)
+
+
+def _serialization_failure_state(
+    *,
+    failed: bool = False,
+    relay_failed: bool = False,
+    non_payload_failed: bool = False,
+) -> _SerializationFailureState:
+    failed_event = threading.Event()
+    relay_failed_event = threading.Event()
+    non_payload_failed_event = threading.Event()
+    if failed:
+        failed_event.set()
+    if relay_failed:
+        relay_failed_event.set()
+    if non_payload_failed:
+        non_payload_failed_event.set()
+    return _SerializationFailureState(
+        failed_event, relay_failed_event, non_payload_failed_event
+    )
 
 
 class _FakePipeline:
@@ -245,3 +287,572 @@ class StreamResultsTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "boom"):
             _stream_results(pipeline, out_q, 8)
         self.assertEqual(out_q.get_nowait(), (_RESULT, [1, 2]))
+
+
+class RunContinuousTest(unittest.TestCase):
+    """Continuous workers publish each completed generation without losing the next."""
+
+    def test_clears_completed_epoch_before_publishing_boundary(self) -> None:
+        """Publishing one boundary cannot clear a concurrently completed next epoch."""
+        source_ref: list[Any] = []
+        completed_when_published: list[int | None] = []
+        next_epoch_seen: list[int | None] = []
+        messages: list[tuple[int, Any]] = []
+        stream_calls = 0
+
+        class _OutputQueue:
+            def put(self, message: tuple[int, Any]) -> None:
+                messages.append(message)
+                if message[0] == _EPOCH_DONE:
+                    source = source_ref[0]
+                    completed_when_published.append(source.completed_epoch)
+                    source.completed_epoch = 1
+
+        pipeline = mock.Mock()
+        pipeline.auto_stop.return_value = contextlib.nullcontext()
+
+        def _build_pipeline(config: PipelineConfig[Any], **kwargs: Any) -> Any:
+            del kwargs
+            if not isinstance(config.src, SourceConfig):
+                raise AssertionError("continuous worker must install one source")
+            source_ref.append(config.src.source)
+            return pipeline
+
+        def _stream_one_epoch(*args: Any) -> None:
+            nonlocal stream_calls
+            del args
+            source = source_ref[0]
+            stream_calls += 1
+            if stream_calls == 1:
+                source.completed_epoch = 0
+            else:
+                next_epoch_seen.append(source.completed_epoch)
+                source.exiting = True
+
+        config = PipelineConfig(
+            src=SourceConfig([]),
+            pipes=[],
+            sink=SinkConfig(1),
+        )
+        with (
+            mock.patch(
+                "spdl.pipeline._build.build_pipeline", side_effect=_build_pipeline
+            ),
+            mock.patch(
+                "spdl.pipeline._subprocess_pipeline_pool._stream_results",
+                side_effect=_stream_one_epoch,
+            ),
+        ):
+            _run_continuous(queue.Queue(), _OutputQueue(), 7, config, {}, 1)
+
+        self.assertEqual(completed_when_published, [None])
+        self.assertEqual(next_epoch_seen, [1])
+        self.assertEqual(messages, [(_EPOCH_DONE, (0, 7)), (_DONE, None)])
+
+
+class SerializationFailureRelayTest(unittest.TestCase):
+    def test_serialization_error_contains_hostile_exception_formatting(self) -> None:
+        """Broken exception formatting cannot escape the queue feeder callback."""
+
+        class _BrokenNameMeta(type):
+            def __getattribute__(cls, name: str) -> Any:
+                if name == "__name__":
+                    raise RuntimeError("type name failed")
+                return super().__getattribute__(name)
+
+        class _UnformattableError(Exception, metaclass=_BrokenNameMeta):
+            def __str__(self) -> str:
+                raise RuntimeError("error detail failed")
+
+        formatted = _serialization_error("output", _UnformattableError())
+
+        self.assertEqual(
+            str(formatted),
+            "Fused subprocess output could not be serialized: "
+            "<exception type unavailable>: <error message unavailable>",
+        )
+
+    def test_serialization_error_truncates_large_exception_detail(self) -> None:
+        """A hostile payload cannot create an unbounded fallback message."""
+        detail = "x" * (_SERIALIZATION_ERROR_DETAIL_LIMIT + 1)
+
+        formatted = _serialization_error("output", RuntimeError(detail))
+
+        self.assertTrue(
+            str(formatted).endswith(
+                "x" * _SERIALIZATION_ERROR_DETAIL_LIMIT + "... <truncated>"
+            )
+        )
+
+    def test_full_output_queue_does_not_block_feeder_error_handler(self) -> None:
+        """The output feeder never waits for capacity on its own bounded queue."""
+        occupied = object()
+        out_q: queue.Queue[Any] = queue.Queue(maxsize=1)
+        out_q.put_nowait(occupied)
+        serialization_failure = _serialization_failure_state()
+        callback_done = threading.Event()
+
+        def _invoke_handler() -> None:
+            try:
+                _handle_queue_feeder_error(
+                    out_q,
+                    serialization_failure,
+                    "output",
+                    _RESULT,
+                    TypeError("unpicklable result"),
+                    (_RESULT, [object()]),
+                )
+            finally:
+                callback_done.set()
+
+        callback = threading.Thread(target=_invoke_handler, daemon=True)
+        with self.assertLogs(
+            "spdl.pipeline._subprocess_pipeline_pool", level="WARNING"
+        ):
+            callback.start()
+            try:
+                self.assertTrue(
+                    callback_done.wait(timeout=1),
+                    "feeder error handler blocked on its own full output queue",
+                )
+                self.assertTrue(serialization_failure.failed.is_set())
+                self.assertTrue(serialization_failure.relay_failed.is_set())
+            finally:
+                self.assertIs(out_q.get_nowait(), occupied)
+                callback.join(timeout=1)
+
+    def test_control_message_feeder_errors_are_terminal(self) -> None:
+        """A dropped control message cannot let collection report success."""
+
+        class _HostileTuple(tuple[Any, ...]):
+            def __len__(self) -> int:
+                raise RuntimeError("message length failed")
+
+        class _HostileKind(int):
+            def __eq__(self, other: object) -> bool:
+                raise RuntimeError("message kind comparison failed")
+
+        for obj in (
+            (_ERROR, RuntimeError("worker failed")),
+            (_DONE, None),
+            b"serialized control message",
+            _HostileTuple((_RESULT, [object()])),
+            (_HostileKind(_RESULT), [object()]),
+        ):
+            with self.subTest(obj_type=type(obj).__name__):
+                out_q: queue.Queue[Any] = queue.Queue()
+                serialization_failure = _serialization_failure_state()
+
+                with mock.patch(
+                    "spdl.pipeline._subprocess_pipeline_pool.traceback.print_exception"
+                ) as print_exception:
+                    _handle_queue_feeder_error(
+                        out_q,
+                        serialization_failure,
+                        "output",
+                        _RESULT,
+                        RuntimeError("control message was dropped"),
+                        obj,
+                    )
+
+                self.assertTrue(serialization_failure.failed.is_set())
+                self.assertTrue(serialization_failure.relay_failed.is_set())
+                self.assertTrue(serialization_failure.non_payload_failed.is_set())
+                self.assertTrue(out_q.empty())
+                print_exception.assert_called_once()
+
+    def test_feeder_error_diagnostic_formatting_cannot_escape(self) -> None:
+        """A broken traceback formatter cannot kill the queue's feeder thread."""
+        serialization_failure = _serialization_failure_state()
+
+        with mock.patch(
+            "spdl.pipeline._subprocess_pipeline_pool.traceback.print_exception",
+            side_effect=RuntimeError("formatting failed"),
+        ):
+            _handle_queue_feeder_error(
+                queue.Queue(),
+                serialization_failure,
+                "output",
+                _RESULT,
+                RuntimeError("unrelated feeder error"),
+                object(),
+            )
+
+        self.assertTrue(serialization_failure.failed.is_set())
+        self.assertTrue(serialization_failure.relay_failed.is_set())
+        self.assertTrue(serialization_failure.non_payload_failed.is_set())
+
+    def test_failed_error_fallback_marks_relay_failed(self) -> None:
+        """Failure of the safe ``_ERROR`` tuple ends the relay grace promptly."""
+        out_q: queue.Queue[Any] = queue.Queue()
+        serialization_failure = _serialization_failure_state(failed=True)
+
+        with mock.patch(
+            "spdl.pipeline._subprocess_pipeline_pool.traceback.print_exception"
+        ) as print_exception:
+            _handle_queue_feeder_error(
+                out_q,
+                serialization_failure,
+                "output",
+                _RESULT,
+                RuntimeError("fallback feeder error"),
+                (_ERROR, RuntimeError("serialization detail")),
+            )
+
+        self.assertTrue(serialization_failure.relay_failed.is_set())
+        self.assertTrue(serialization_failure.non_payload_failed.is_set())
+        self.assertTrue(out_q.empty())
+        print_exception.assert_called_once()
+
+    def test_missing_feeder_hook_uses_synchronous_fallback(self) -> None:
+        """A queue without CPython's private hook still transfers valid messages."""
+        raw_q: queue.Queue[Any] = queue.Queue()
+        failure = _serialization_failure_state()
+        with self.assertLogs(
+            "spdl.pipeline._subprocess_pipeline_pool", level="WARNING"
+        ):
+            checked_q = _install_queue_feeder_error_handler(
+                raw_q,
+                queue.Queue(),
+                failure,
+                "output",
+                _RESULT,
+            )
+        checked_q.put((_RESULT, [1]))
+
+        wire_message = raw_q.get_nowait()
+        self.assertEqual(
+            ForkingPickler.loads(ForkingPickler.dumps(wire_message)),
+            (_RESULT, [1]),
+        )
+        self.assertFalse(failure.failed.is_set())
+
+    def test_synchronous_fallback_reports_unpicklable_payload(self) -> None:
+        """The portable fallback preserves serialization-failure reporting."""
+        raw_q: queue.Queue[Any] = queue.Queue()
+        out_q: queue.Queue[Any] = queue.Queue()
+        failure = _serialization_failure_state()
+        with self.assertLogs(
+            "spdl.pipeline._subprocess_pipeline_pool", level="WARNING"
+        ):
+            checked_q = _install_queue_feeder_error_handler(
+                raw_q,
+                out_q,
+                failure,
+                "output",
+                _RESULT,
+            )
+
+        checked_q.put((_RESULT, [lambda: None]))
+
+        kind, error = out_q.get_nowait()
+        self.assertEqual(kind, _ERROR)
+        self.assertIn("could not be serialized", str(error))
+        self.assertTrue(failure.failed.is_set())
+        self.assertTrue(raw_q.empty())
+
+    def test_synchronous_fallback_serializes_once_across_full_retries(self) -> None:
+        """Backpressure retries cannot invoke a user reducer more than once."""
+        calls: list[int] = []
+
+        class _StatefulPayload:
+            def __reduce__(self) -> Any:
+                calls.append(1)
+                return int, (7,)
+
+        raw_q: queue.Queue[Any] = queue.Queue(maxsize=1)
+        raw_q.put_nowait(object())
+        failure = _serialization_failure_state()
+        with self.assertLogs(
+            "spdl.pipeline._subprocess_pipeline_pool", level="WARNING"
+        ):
+            checked_q = _install_queue_feeder_error_handler(
+                raw_q,
+                queue.Queue(),
+                failure,
+                "output",
+                _RESULT,
+            )
+        message = (_RESULT, [_StatefulPayload()])
+
+        with self.assertRaises(queue.Full):
+            checked_q.put(message, timeout=0)
+        self.assertEqual(calls, [1])
+        raw_q.get_nowait()
+        checked_q.put(message, timeout=0)
+
+        self.assertEqual(calls, [1])
+        wire_message = raw_q.get_nowait()
+        self.assertEqual(
+            ForkingPickler.loads(ForkingPickler.dumps(wire_message)),
+            (_RESULT, [7]),
+        )
+        self.assertFalse(failure.failed.is_set())
+
+    def test_synchronous_fallback_releases_abandoned_full_retry(self) -> None:
+        """Teardown releases an object retained for a backpressure retry."""
+        serialized = threading.Event()
+
+        class _Payload:
+            def __reduce__(self) -> Any:
+                serialized.set()
+                return int, (7,)
+
+        raw_q: queue.Queue[Any] = queue.Queue(maxsize=1)
+        raw_q.put_nowait(object())
+        failure = _serialization_failure_state()
+        with self.assertLogs(
+            "spdl.pipeline._subprocess_pipeline_pool", level="WARNING"
+        ):
+            checked_q = _install_queue_feeder_error_handler(
+                raw_q,
+                queue.Queue(),
+                failure,
+                "output",
+                _RESULT,
+            )
+        payload = _Payload()
+        payload_ref = weakref.ref(payload)
+        message = (_RESULT, [payload])
+        stop = threading.Event()
+        put_thread = threading.Thread(
+            target=_subprocess_pipe._put,
+            args=(checked_q, message, stop),
+        )
+
+        put_thread.start()
+        try:
+            self.assertTrue(serialized.wait(timeout=1))
+        finally:
+            stop.set()
+            put_thread.join(timeout=1)
+
+        self.assertFalse(put_thread.is_alive())
+        del message, payload
+        gc.collect()
+        self.assertIsNone(payload_ref())
+
+    def test_synchronous_fallback_propagates_base_exceptions(self) -> None:
+        """Fallback serialization cannot swallow process-termination signals."""
+
+        class _InterruptingPayload:
+            def __reduce__(self) -> Any:
+                raise KeyboardInterrupt
+
+        failure = _serialization_failure_state()
+        with self.assertLogs(
+            "spdl.pipeline._subprocess_pipeline_pool", level="WARNING"
+        ):
+            checked_q = _install_queue_feeder_error_handler(
+                queue.Queue(),
+                queue.Queue(),
+                failure,
+                "output",
+                _RESULT,
+            )
+
+        with self.assertRaises(KeyboardInterrupt):
+            checked_q.put((_RESULT, [_InterruptingPayload()]))
+        self.assertFalse(failure.failed.is_set())
+
+    def test_non_payload_feeder_failure_uses_queue_diagnostic(self) -> None:
+        """A dropped control/transport message is not blamed on user payloads."""
+        failure = _serialization_failure_state(
+            failed=True,
+            relay_failed=True,
+            non_payload_failed=True,
+        )
+
+        async def _scenario() -> None:
+            await _subprocess_pipe._check_serialization_error_relay_after_progress(
+                queue.Queue(),
+                mock.Mock(),
+                (("output", failure),),
+                None,
+            )
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "queue feeder failed while sending a protocol or transport message",
+        ) as raised:
+            asyncio.run(_scenario())
+        self.assertNotIn("serialization failed", str(raised.exception))
+
+    def test_missing_detailed_error_identifies_boundary_after_grace(self) -> None:
+        """A bounded generic fallback identifies the failed queue boundary."""
+        for boundary in ("input", "output"):
+            with self.subTest(boundary=boundary):
+                input_failure = _serialization_failure_state(failed=boundary == "input")
+                output_failure = _serialization_failure_state(
+                    failed=boundary == "output"
+                )
+                failures = (
+                    ("input", input_failure),
+                    ("output", output_failure),
+                )
+                with mock.patch.object(
+                    _subprocess_pipe.time,
+                    "monotonic",
+                    side_effect=[10.0, 15.0],
+                ):
+                    deadline = _check_serialization_error_relay(
+                        _serialization_failure_boundaries(failures), None
+                    )
+                    with self.assertRaisesRegex(
+                        RuntimeError,
+                        f"Fused subprocess {boundary} serialization failed",
+                    ):
+                        _check_serialization_error_relay(
+                            _serialization_failure_boundaries(failures), deadline
+                        )
+
+    def test_missing_detailed_error_identifies_all_failed_boundaries(self) -> None:
+        """The generic fallback names every queue whose feeder reported failure."""
+        input_failure = _serialization_failure_state(failed=True)
+        output_failure = _serialization_failure_state(failed=True)
+
+        self.assertEqual(
+            _serialization_failure_boundaries(
+                (("input", input_failure), ("output", output_failure))
+            ),
+            "input and output",
+        )
+
+    def test_detailed_error_can_arrive_after_multiple_empty_polls(self) -> None:
+        """A delayed detailed feeder error wins over the generic fallback."""
+
+        async def scenario() -> None:
+            input_failure = _serialization_failure_state(failed=True)
+            failures = (
+                ("input", input_failure),
+                ("output", _serialization_failure_state()),
+            )
+            output_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
+            )
+            responses = [
+                None,
+                None,
+                (_ERROR, RuntimeError("detailed input failure")),
+                (_DONE, None),
+            ]
+            with (
+                ThreadPoolExecutor(max_workers=1) as executor,
+                mock.patch.object(
+                    _subprocess_pipe,
+                    "_drain_one",
+                    side_effect=responses,
+                ),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "detailed input failure"):
+                    await _collect(
+                        object(),
+                        1,
+                        output_queue,
+                        executor,
+                        asyncio.Event(),
+                        asyncio.Event(),
+                        failures,
+                    )
+
+        asyncio.run(scenario())
+
+    def test_dropped_done_after_worker_error_preserves_original_error(self) -> None:
+        """A lost terminal marker cannot stall or mask an earlier worker error."""
+
+        async def scenario() -> None:
+            failure = _serialization_failure_state(failed=True, relay_failed=True)
+            original_error = RuntimeError("original worker failure")
+            output_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
+            )
+            with (
+                ThreadPoolExecutor(max_workers=1) as executor,
+                mock.patch.object(
+                    _subprocess_pipe,
+                    "_drain_one",
+                    side_effect=[(_ERROR, original_error), None],
+                ),
+                mock.patch.object(_subprocess_pipe, "_WORKER_STALL_TIMEOUT", -1.0),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "original worker failure"):
+                    await _collect(
+                        object(),
+                        1,
+                        output_queue,
+                        executor,
+                        asyncio.Event(),
+                        asyncio.Event(),
+                        (("output", failure),),
+                    )
+
+        asyncio.run(scenario())
+
+    def test_stall_after_worker_error_preserves_original_error(self) -> None:
+        """The stall guard cannot replace an error already received from a worker."""
+
+        async def scenario() -> None:
+            original_error = RuntimeError("original worker failure")
+            output_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
+            )
+            with (
+                ThreadPoolExecutor(max_workers=1) as executor,
+                mock.patch.object(
+                    _subprocess_pipe,
+                    "_drain_one",
+                    side_effect=[(_ERROR, original_error), None],
+                ),
+                mock.patch.object(_subprocess_pipe, "_WORKER_STALL_TIMEOUT", -1.0),
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError, "original worker failure"
+                ) as raised:
+                    await _collect(
+                        object(),
+                        1,
+                        output_queue,
+                        executor,
+                        asyncio.Event(),
+                        asyncio.Event(),
+                    )
+                self.assertIs(raised.exception, original_error)
+                self.assertIsNone(raised.exception.__cause__)
+
+        asyncio.run(scenario())
+
+    def test_queue_teardown_after_worker_error_preserves_original_error(self) -> None:
+        """Output-queue teardown cannot replace an error already received from a worker."""
+
+        async def scenario(queue_error: BaseException) -> None:
+            out_q = mock.Mock()
+            original_error = RuntimeError("original worker failure")
+            out_q.get.side_effect = [
+                (_ERROR, original_error),
+                queue_error,
+            ]
+            output_queue = AsyncQueue(
+                StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
+            )
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                with self.assertRaisesRegex(
+                    RuntimeError, "original worker failure"
+                ) as raised:
+                    await _collect(
+                        out_q,
+                        1,
+                        output_queue,
+                        executor,
+                        asyncio.Event(),
+                        asyncio.Event(),
+                    )
+                self.assertIs(raised.exception, original_error)
+                self.assertIsNone(raised.exception.__cause__)
+                self.assertTrue(raised.exception.__suppress_context__)
+
+        for queue_error in (
+            RuntimeError("interpreter queue is closed"),
+            ValueError("output queue is closed"),
+        ):
+            with self.subTest(error=type(queue_error).__name__):
+                asyncio.run(scenario(queue_error))
