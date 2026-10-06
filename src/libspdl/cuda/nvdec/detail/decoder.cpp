@@ -55,6 +55,37 @@ CUvideoctxlock get_lock(CUcontext ctx) {
   return lock;
 }
 
+int CUDAAPI video_sequence_callback(void* p, CUVIDEOFORMAT* data) noexcept {
+  auto* core = static_cast<NvDecDecoderCore*>(p);
+  return core->invoke_callback(
+      [&]() { return core->handle_video_sequence(data); });
+}
+
+int CUDAAPI decode_picture_callback(void* p, CUVIDPICPARAMS* data) noexcept {
+  auto* core = static_cast<NvDecDecoderCore*>(p);
+  return core->invoke_callback(
+      [&]() { return core->handle_decode_picture(data); });
+}
+
+int CUDAAPI
+display_picture_callback(void* p, CUVIDPARSERDISPINFO* data) noexcept {
+  auto* core = static_cast<NvDecDecoderCore*>(p);
+  return core->invoke_callback(
+      [&]() { return core->handle_display_picture(data); });
+}
+
+int CUDAAPI
+operating_point_callback(void* p, CUVIDOPERATINGPOINTINFO* data) noexcept {
+  auto* core = static_cast<NvDecDecoderCore*>(p);
+  return core->invoke_callback(
+      [&]() { return core->handle_operating_point(data); });
+}
+
+int CUDAAPI sei_message_callback(void* p, CUVIDSEIMESSAGEINFO* data) noexcept {
+  auto* core = static_cast<NvDecDecoderCore*>(p);
+  return core->invoke_callback([&]() { return core->handle_sei_msg(data); });
+}
+
 CUvideoparserPtr get_parser(
     NvDecDecoderCore* decoder,
     cudaVideoCodec codec_id,
@@ -62,33 +93,18 @@ CUvideoparserPtr get_parser(
     unsigned int max_display_delay = 2,
     bool extract_sei_message = true // temp
 ) {
-  static const auto cb_vseq = [](void* p, CUVIDEOFORMAT* data) -> int {
-    return ((NvDecDecoderCore*)p)->handle_video_sequence(data);
-  };
-  static const auto cb_decode = [](void* p, CUVIDPICPARAMS* data) -> int {
-    return ((NvDecDecoderCore*)p)->handle_decode_picture(data);
-  };
-  static const auto cb_disp = [](void* p, CUVIDPARSERDISPINFO* data) -> int {
-    return ((NvDecDecoderCore*)p)->handle_display_picture(data);
-  };
-  static const auto cb_op = [](void* p, CUVIDOPERATINGPOINTINFO* data) -> int {
-    return ((NvDecDecoderCore*)p)->handle_operating_point(data);
-  };
-  static const auto cb_sei = [](void* p, CUVIDSEIMESSAGEINFO* data) -> int {
-    return ((NvDecDecoderCore*)p)->handle_sei_msg(data);
-  };
   CUVIDPARSERPARAMS parser_params{
       .CodecType = codec_id,
       .ulMaxNumDecodeSurfaces = max_num_decode_surfaces,
       .ulClockRate = CLOCKRATE, // Timestamp units in Hz
       .ulMaxDisplayDelay = max_display_delay,
       .pUserData = (void*)decoder,
-      .pfnSequenceCallback = cb_vseq,
-      .pfnDecodePicture = cb_decode,
-      .pfnDisplayPicture = cb_disp,
-      .pfnGetOperatingPoint = cb_op,
+      .pfnSequenceCallback = video_sequence_callback,
+      .pfnDecodePicture = decode_picture_callback,
+      .pfnDisplayPicture = display_picture_callback,
+      .pfnGetOperatingPoint = operating_point_callback,
       .pfnGetSEIMsg = extract_sei_message
-          ? cb_sei
+          ? sei_message_callback
           : static_cast<PFNVIDSEIMSGCALLBACK>(nullptr),
   };
   CUvideoparser parser;
@@ -499,9 +515,16 @@ void NvDecDecoderCore::decode_packet(
       .payload = pkt.data,
       .timestamp = pkt.pts};
 
-  CHECK_CU(
-      cuvidParseVideoData(parser_.get(), &packet),
-      "Failed to parse video data.");
+  callback_error_ = nullptr;
+  const CUresult status = cuvidParseVideoData(parser_.get(), &packet);
+  rethrow_callback_error();
+  CHECK_CU(status, "Failed to parse video data.");
+}
+
+void NvDecDecoderCore::rethrow_callback_error() {
+  if (auto error = std::exchange(callback_error_, std::exception_ptr{})) {
+    std::rethrow_exception(error);
+  }
 }
 
 void NvDecDecoderCore::reset() {
