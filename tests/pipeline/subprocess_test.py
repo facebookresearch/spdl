@@ -8,6 +8,7 @@
 import functools
 import multiprocessing as mp
 import os.path
+import queue
 import random
 import tempfile
 import threading
@@ -20,7 +21,7 @@ from unittest.mock import MagicMock
 
 from spdl.pipeline import iterate_in_subprocess as _iterate_in_subprocess
 from spdl.pipeline._iter_utils._common import _Cmd, _execute_iterable, _Status
-from spdl.pipeline._iter_utils._subprocess import _ipc
+from spdl.pipeline._iter_utils._subprocess import _close_queue, _ipc
 
 
 def _ignore_fork_warning(fn):
@@ -68,6 +69,60 @@ def initializer(path: str, val: str) -> None:
 
 @_ignore_fork_warning_in_class
 class TestIterateInSubprocess(unittest.TestCase):
+    def test_failed_abort_still_releases_queues(self) -> None:
+        """A failed abort enqueue cannot bypass queue cleanup."""
+        process = MagicMock()
+        process.exitcode = 0
+        cmd_q = MagicMock()
+        cmd_q.put_nowait.side_effect = BrokenPipeError
+        data_q = MagicMock()
+        data_q.get_nowait.side_effect = queue.Empty
+
+        interface = _ipc(
+            process=process,
+            cmd_q=cmd_q,
+            data_q=data_q,
+            timeout=1.0,
+        )
+        interface.terminate()
+
+        cmd_q.close.assert_called_once_with()
+        data_q.close.assert_called_once_with()
+        self.assertIsNone(interface.cmd_q)
+        self.assertIsNone(interface.data_q)
+
+    def test_full_wakeup_queue_does_not_skip_arena_cleanup(self) -> None:
+        """A full result queue cannot prevent shared-memory cleanup."""
+        process = MagicMock()
+        process.exitcode = 0
+        cmd_q = MagicMock()
+        data_q = MagicMock()
+        data_q.get_nowait.side_effect = queue.Empty
+        data_q.put_nowait.side_effect = queue.Full
+        arena = MagicMock()
+
+        interface = _ipc(
+            process=process,
+            cmd_q=cmd_q,
+            data_q=data_q,
+            timeout=1.0,
+            arena=arena,
+        )
+        interface.terminate()
+
+        arena.close.assert_called_once_with()
+        arena.unlink.assert_called_once_with()
+
+    def test_queue_cleanup_does_not_mask_pipeline_result(self) -> None:
+        """Unexpected queue cleanup failures remain best-effort."""
+        q = MagicMock()
+        q.join_thread.side_effect = RuntimeError("feeder cleanup failed")
+
+        _close_queue(q)
+
+        q.close.assert_called_once_with()
+        q.join_thread.assert_called_once_with()
+
     def test_teardown_joins_after_tensor_transport_disappears(self) -> None:
         process = MagicMock()
         process.exitcode = 0
@@ -85,7 +140,7 @@ class TestIterateInSubprocess(unittest.TestCase):
         )
         interface.terminate()
 
-        cmd_q.put.assert_called_once_with(_Cmd.ABORT)
+        cmd_q.put_nowait.assert_called_once_with(_Cmd.ABORT)
         process.join.assert_called_once_with(3)
 
     def test_iterate_in_subprocess(self) -> None:

@@ -3045,6 +3045,8 @@ class TestHoistProcessPools(unittest.TestCase):
             _shutdown_pools([pool])
         for p in pool._procs:
             self.assertFalse(p.is_alive())
+        self.assertIsNone(pool._in_q)
+        self.assertIsNone(pool._out_q)
 
     def test_worker_pool_initializer_failure_fails_tasks(self) -> None:
         """If the pool initializer raises, every task fails with a picklable error (no hang)."""
