@@ -8,6 +8,7 @@
 """Regression tests for reusable subprocess iterable lifecycle."""
 
 import functools
+import gc
 import multiprocessing as mp
 import os
 import signal
@@ -15,11 +16,14 @@ import threading
 import time
 import unittest
 import warnings
+import weakref
 from collections.abc import Iterable, Iterator
 from functools import partial
 from multiprocessing.connection import Connection
+from typing import cast
 
 from spdl.pipeline import iterate_in_subprocess
+from spdl.pipeline._iter_utils._subprocess import _SubprocessIterable
 
 
 def _ignore_fork_warning(fn):
@@ -61,6 +65,10 @@ class StalledSourceIterable:
         yield 1
 
 
+def _raise_while_building_source() -> Iterable[int]:
+    raise RuntimeError("source setup failed")
+
+
 _HELD_SUBPROCESS_ITERABLE: Iterable[int] | None = None
 
 
@@ -77,12 +85,55 @@ def _retain_subprocess_iterable_until_process_exit(ready: Connection) -> None:
 
 @_ignore_fork_warning_in_class
 class TestSubprocessBreakAndReiterate(unittest.TestCase):
+    def test_explicit_shutdown_reaps_process_and_releases_queues(self) -> None:
+        """Successful dataloader close releases its process and queue SemLocks."""
+        src = iterate_in_subprocess(
+            partial(SourceIterable, 3), timeout=30, mp_context="spawn"
+        )
+        interface = src._interface  # pyrefly: ignore [missing-attribute]
+        self.assertIsNotNone(interface)
+        process = interface.process
+        cmd_q = interface.cmd_q
+        data_q = interface.data_q
+        self.assertIsNotNone(cmd_q)
+        self.assertIsNotNone(data_q)
+        cmd_ref = weakref.ref(cmd_q)
+        data_ref = weakref.ref(data_q)
+
+        self.assertEqual(list(src), [0, 1, 2])
+        src._shutdown()  # pyrefly: ignore [missing-attribute]
+
+        self.assertFalse(process.is_alive())
+        self.assertIsNone(interface.cmd_q)
+        self.assertIsNone(interface.data_q)
+        del cmd_q, data_q
+        gc.collect()
+        self.assertIsNone(cmd_ref())
+        self.assertIsNone(data_ref())
+
+    def test_failed_source_setup_reaps_process(self) -> None:
+        """Initialization failure closes the dataloader before propagating."""
+        before = {p.pid for p in mp.active_children()}
+        with self.assertRaisesRegex(RuntimeError, "source setup failed"):
+            iterate_in_subprocess(
+                _raise_while_building_source,
+                timeout=30,
+                mp_context="spawn",
+            )
+        leaked = [
+            p for p in mp.active_children() if p.pid not in before and p.is_alive()
+        ]
+        self.assertEqual(leaked, [])
+
     def test_finalizer_wakes_blocked_parent_queue_reader(self) -> None:
         """Finalizer must wake a parent reader blocked on a stalled subprocess."""
-        src = iterate_in_subprocess(
-            StalledSourceIterable,
-            timeout=30,
-            mp_context="fork",
+        src = cast(
+            _SubprocessIterable[int],
+            iterate_in_subprocess(
+                StalledSourceIterable,
+                timeout=30,
+                mp_context="fork",
+            ),
         )
         iterator = iter(src)
         self.assertEqual(next(iterator), 0)
@@ -99,7 +150,7 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
         reader.start()
         time.sleep(0.1)
 
-        getattr(src, "_finalizer")()
+        src._finalizer()
         reader.join(timeout=10)
 
         self.assertFalse(reader.is_alive())
