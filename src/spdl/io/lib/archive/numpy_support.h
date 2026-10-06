@@ -8,8 +8,10 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -29,6 +31,7 @@ struct NPYArray {
 };
 
 NPYArray load_npy(const char*, size_t);
-NPYArray load_npy_compressed(const char*, uint32_t, uint32_t);
+NPYArray
+load_npy_compressed(const char*, size_t, size_t, std::optional<uint32_t>);
 
 } // namespace spdl::archive

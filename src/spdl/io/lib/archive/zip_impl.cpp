@@ -217,6 +217,7 @@ struct CDFH {
   uint64_t local_header_offset;
   uint64_t compressed_size;
   uint64_t uncompressed_size;
+  uint32_t crc32;
   uint16_t compression_method;
   uint16_t filename_length;
   uint16_t disk;
@@ -249,10 +250,14 @@ CDFH parse_cdh(
         "Invalid data found. "
         "The central directory record extends to the outside of the given data.");
   }
+  // Central-directory size and offset fields are 32-bit on disk. ZIP64 stores
+  // 0xffffffff sentinels here; parse_zip64_extended_info resolves them to the
+  // corresponding 64-bit values before they are used.
   return CDFH{
       .local_header_offset = read_u32(root, len, offset + 42),
       .compressed_size = read_u32(root, len, offset + 20),
       .uncompressed_size = read_u32(root, len, offset + 24),
+      .crc32 = read_u32(root, len, offset + 16),
       .compression_method = read_u16(root, len, offset + 10),
       .filename_length = filename_length,
       .disk = read_u16(root, len, offset + 34),
@@ -445,10 +450,17 @@ std::vector<ZipMetaData> parse_zip(const char* root, const size_t len) {
         file_start,
         metadata.compressed_size,
         metadata.uncompressed_size,
-        cdfh.compression_method);
+        cdfh.compression_method,
+        cdfh.crc32);
     cd_offset += cdfh.size;
   }
   return ret;
+}
+
+void verify_crc32(const char* data, size_t size, uint32_t expected) {
+  if (libdeflate_crc32(0, data, size) != expected) {
+    throw std::runtime_error("ZIP entry failed CRC-32 validation.");
+  }
 }
 
 namespace {
@@ -475,9 +487,9 @@ struct Decompressor {
 
 void inflate(
     const char* src,
-    uint32_t compressed_size,
+    size_t compressed_size,
     void* dst,
-    uint32_t uncompressed_size) {
+    size_t uncompressed_size) {
   Decompressor d{};
   size_t actual_decompressed_size = 0;
   enum libdeflate_result result = libdeflate_deflate_decompress(

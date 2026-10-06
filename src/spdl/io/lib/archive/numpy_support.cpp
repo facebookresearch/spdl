@@ -746,10 +746,19 @@ NPYArray load_npy(const char* data, size_t size) {
 
 NPYArray load_npy_compressed(
     const char* data,
-    uint32_t compressed_size,
-    uint32_t uncompressed_size) {
+    size_t compressed_size,
+    size_t uncompressed_size,
+    std::optional<uint32_t> expected_crc32) {
+  // This is the size of the complete NPY file, including its header. Even an
+  // array with zero elements therefore has a nonzero uncompressed size.
+  if (uncompressed_size == 0) {
+    throw std::runtime_error("`uncompressed_size` must be greater than zero.");
+  }
   auto buffer = std::make_unique<char[]>(uncompressed_size);
   zip::inflate(data, compressed_size, buffer.get(), uncompressed_size);
+  if (expected_crc32) {
+    zip::verify_crc32(buffer.get(), uncompressed_size, *expected_crc32);
+  }
   auto ret = load_npy(buffer.get(), uncompressed_size);
   ret.buffer = std::move(buffer);
   return ret;

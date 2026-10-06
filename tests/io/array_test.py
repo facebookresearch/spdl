@@ -11,12 +11,14 @@ import struct
 import sys
 import unittest
 import weakref
+import zipfile
 from collections.abc import Callable
 from io import BytesIO
 
 import numpy as np
 import spdl.io
 from parameterized import parameterized
+from spdl.io import lib as _libspdl
 
 
 def _dump_npy(arr: np.ndarray) -> bytes:
@@ -70,6 +72,20 @@ class TestLoadNpy(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "Structured NPY dtypes"):
             spdl.io.load_npy(_dump_npy(ref))
+
+    def test_compressed_binding_accepts_size_t_arguments(self) -> None:
+        """Compressed sizes are not narrowed to 32 bits by the binding."""
+        # Nanobind converts compressed_size before entering the C++ body. The
+        # former uint32_t binding rejected 1 << 32; reaching the unrelated
+        # uncompressed_size validation proves that size_t accepted the value
+        # without allocating a buffer larger than 4 GiB.
+        with self.assertRaisesRegex(RuntimeError, "uncompressed_size"):
+            _libspdl._archive.load_npy_compressed(
+                1,
+                0,
+                1 << 32,
+                0,
+            )
 
     def test_zero_copy_array_retains_source(self) -> None:
         """A zero-copy array keeps its borrowed NPY source alive."""
@@ -224,6 +240,33 @@ class TestParseZip(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "max_uncompressed_bytes"):
             spdl.io.load_npz(data, max_uncompressed_bytes=1)
+
+    def test_npz_file_accepts_legacy_metadata_without_crc(self) -> None:
+        """Legacy four-field metadata loads stored and deflated entries."""
+        ref = np.arange(4)
+        for name, data in (
+            ("stored", _dump_npz(x=ref)),
+            ("deflated", _dump_npz_compressed(x=ref)),
+        ):
+            with self.subTest(name=name):
+                with zipfile.ZipFile(BytesIO(data)) as archive:
+                    info = archive.getinfo("x.npy")
+                filename_size, extra_size = struct.unpack_from(
+                    "<HH", data, info.header_offset + 26
+                )
+                data_offset = info.header_offset + 30 + filename_size + extra_size
+                legacy_meta = {
+                    info.filename: (
+                        data_offset,
+                        info.compress_size,
+                        info.file_size,
+                        info.compress_type,
+                    )
+                }
+
+                restored = spdl.io.NpzFile(data, legacy_meta)
+
+                np.testing.assert_array_equal(restored["x"], ref)
 
     def test_npz_file_rejects_out_of_bounds_public_metadata(self) -> None:
         """Public metadata cannot reach the native loader outside its buffer."""
@@ -456,6 +499,23 @@ class TestParseZip(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "ZIP64 extended metadata"):
             spdl.io.load_npz(data)
+
+    def test_rejects_crc_mismatch(self) -> None:
+        """Stored and compressed entries are checked against their CRC-32."""
+        for name, dump in (
+            ("stored", _dump_npz),
+            ("deflated", _dump_npz_compressed),
+        ):
+            with self.subTest(name=name):
+                data = bytearray(dump(x=np.arange(4)))
+                cd_offset = data.find(b"PK\x01\x02")
+                self.assertGreaterEqual(cd_offset, 0)
+                crc32 = struct.unpack_from("<I", data, cd_offset + 16)[0]
+                struct.pack_into("<I", data, cd_offset + 16, crc32 ^ 1)
+
+                archive = spdl.io.load_npz(data)
+                with self.assertRaisesRegex(RuntimeError, "CRC-32"):
+                    archive["x"]
 
 
 def _get_test_float_arr(dtype: type[np.floating]) -> np.ndarray:

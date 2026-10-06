@@ -21,7 +21,7 @@ from . import lib as _libspdl
 
 Buffer: TypeAlias = "bytes | bytearray | memoryview[bytes]"
 
-_NpzEntry: TypeAlias = "tuple[int, int, int, int]"
+_NpzEntry: TypeAlias = "tuple[int, int, int, int] | tuple[int, int, int, int, int]"
 _DEFAULT_MAX_UNCOMPRESSED_BYTES = 1 << 30
 
 
@@ -165,10 +165,24 @@ class NpzFile(Mapping):
         if max_uncompressed_bytes < 0:
             raise ValueError("max_uncompressed_bytes must be non-negative.")
 
-        validated_meta: dict[str, tuple[int, int, int, int]] = {}
+        validated_meta: dict[str, tuple[int, int, int, int, int | None]] = {}
         total_uncompressed_bytes = 0
         for name, entry in meta.items():
-            offset, compressed_size, uncompressed_size, compression_method = entry
+            if len(entry) == 4:
+                offset, compressed_size, uncompressed_size, compression_method = entry
+                crc32 = None
+            elif len(entry) == 5:
+                (
+                    offset,
+                    compressed_size,
+                    uncompressed_size,
+                    compression_method,
+                    crc32,
+                ) = entry
+            else:
+                raise ValueError(
+                    f"NPZ entry {name!r} metadata must contain 4 or 5 fields."
+                )
             if offset < 0 or compressed_size < 0:
                 raise ValueError(f"NPZ entry {name!r} has a negative payload region.")
             if offset > self._len or compressed_size > self._len - offset:
@@ -203,7 +217,13 @@ class NpzFile(Mapping):
                     f"NPZ entry {name!r} uses unsupported compression method "
                     f"{compression_method}."
                 )
-            validated_meta[name] = entry
+            validated_meta[name] = (
+                offset,
+                compressed_size,
+                uncompressed_size,
+                compression_method,
+                crc32,
+            )
 
         self._meta = validated_meta
         self.files: list[str] = [f.removesuffix(".npy") for f in validated_meta]
@@ -228,21 +248,34 @@ class NpzFile(Mapping):
         else:
             raise KeyError(f"{key} is not a file in the archive")
 
-        offset, compressed_size, uncompressed_size, compression_method = self._meta[key]
+        (
+            offset,
+            compressed_size,
+            uncompressed_size,
+            compression_method,
+            crc32,
+        ) = self._meta[key]
         match compression_method:
             case 0:
                 # The data is stored uncompressed, so the resulting array refers
                 # to the archive itself. It must keep the archive alive, as it
                 # can outlive this `NpzFile` object.
                 buffer = _libspdl._archive.load_npy(
-                    self._data, size=compressed_size, offset=offset
+                    self._data,
+                    size=compressed_size,
+                    offset=offset,
+                    crc32=crc32,
                 )
                 return np.array(_OwnedArrayInterface(buffer, self._buf), copy=False)
             case 8:
                 # The data is inflated into a buffer owned by the `NPYArray`
                 # object, which NumPy keeps alive as the base of the array.
                 buffer = _libspdl._archive.load_npy_compressed(
-                    self._data, offset, compressed_size, uncompressed_size
+                    self._data,
+                    offset,
+                    compressed_size,
+                    uncompressed_size,
+                    crc32,
                 )
                 return np.array(buffer, copy=False)
             case _:
