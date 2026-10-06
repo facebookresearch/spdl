@@ -32,9 +32,14 @@ namespace spdl::core {
 PacketSeries::PacketSeries() {}
 
 PacketSeries::PacketSeries(const PacketSeries& other) {
+  PacketSeries tmp;
+  tmp.container_.reserve(other.container_.size());
   for (const AVPacket* pkt : other.container_) {
-    container_.push_back(CHECK_AVALLOCATE(av_packet_clone(pkt)));
+    detail::AVPacketPtr clone{CHECK_AVALLOCATE(av_packet_clone(pkt))};
+    tmp.container_.push_back(clone.get());
+    (void)clone.release();
   }
+  *this = std::move(tmp);
 }
 
 PacketSeries::PacketSeries(PacketSeries&& other) noexcept {
