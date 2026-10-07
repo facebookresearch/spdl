@@ -192,15 +192,7 @@ void MuxerImpl::flush() {
 }
 
 void MuxerImpl::close() {
-  CHECK_AVERROR(av_write_trailer(fmt_ctx_.get()), "Failed to write trailer.")
-  // Close the file if it was not provided by client code (i.e. when not
-  // file-like object)
-  AVFORMAT_CONST AVOutputFormat* fmt = fmt_ctx_->oformat;
-  if (!(fmt->flags & AVFMT_NOFILE) &&
-      !(fmt_ctx_->flags & AVFMT_FLAG_CUSTOM_IO)) {
-    // avio_closep can be only applied to AVIOContext opened by avio_open
-    avio_closep(&(fmt_ctx_->pb));
-  }
+  close_format(fmt_ctx_.get());
 }
 
 } // namespace spdl::core::detail

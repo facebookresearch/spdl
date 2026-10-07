@@ -11,6 +11,7 @@ import io
 import tarfile
 import unittest
 import wave
+from typing import cast
 
 import numpy as np
 import spdl.io
@@ -116,3 +117,47 @@ class TestLoadNpzMemoryview(unittest.TestCase):
         # pyrefly: ignore [bad-argument-type]
         data = spdl.io.load_npz(mv)
         np.testing.assert_array_equal(data["x"], np.arange(5))
+
+
+class MemoryviewValidationTest(unittest.TestCase):
+    def test_each_extension_rejects_unsupported_memoryview_layouts(self) -> None:
+        """Every separately built extension validates its memoryview boundary."""
+        views = {
+            "positive_stride": memoryview(bytearray(8))[::2],
+            "negative_stride": memoryview(bytearray(8))[::-1],
+            "multidimensional": memoryview(bytearray(8)).cast("B", (2, 4)),
+            "multi_byte": memoryview(np.arange(4, dtype=np.uint16)),
+        }
+        calls = {
+            "core": lambda view: spdl.io.Demuxer(view),
+            "archive_zip": lambda view: spdl.io.load_npz(view),
+            "archive_tar": lambda view: list(spdl.io.iter_tarfile(view)),
+            "wav": lambda view: spdl.io.parse_wav(view),
+        }
+
+        for extension, call in calls.items():
+            for layout, view in views.items():
+                with self.subTest(extension=extension, layout=layout):
+                    with self.assertRaisesRegex(
+                        ValueError, "one-dimensional, C-contiguous byte buffer"
+                    ):
+                        call(view)
+
+
+class MemoryviewLifetimeTest(unittest.TestCase):
+    def test_demuxer_retains_an_independent_buffer_export(self) -> None:
+        """Releasing a caller view cannot invalidate a live demuxer."""
+        data = bytearray(_create_wav_data())
+        caller_view = cast(memoryview[bytes], memoryview(data))
+        demuxer = spdl.io.Demuxer(caller_view)
+
+        caller_view.release()
+        with self.assertRaises(BufferError):
+            data.extend(b"more")
+
+        packets = demuxer.demux_audio()
+        self.assertGreater(len(packets), 0)
+        del packets, demuxer
+
+        data.extend(b"more")
+        self.assertTrue(data.endswith(b"more"))

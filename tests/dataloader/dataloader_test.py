@@ -5,8 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import os
-import platform
+import threading
 import time
 import unittest
 
@@ -73,45 +72,35 @@ class TestDataLoader(unittest.TestCase):
 
         self.assertNotEqual(list(dl), src)
 
-    @unittest.skipIf(
-        platform.system() == "Darwin" and "CI" in os.environ,
-        "GitHub macOS CI is not timely enough.",
-    )
     def test_dataloader_buffer_size(self) -> None:
-        """Bigger buffer_size allows the BG to proceed while FG is not fetching the data"""
-        src = list(range(12))
+        """A larger buffer lets background work finish while foreground is paused."""
+        src = list(range(64))
 
-        def delay(x):
-            time.sleep(0.05)
-            return x
+        def finishes_in_background(buffer_size: int) -> bool:
+            last_processed = threading.Event()
 
-        def test(dl):
-            # Kick off the background thread
-            dli = iter(dl)
-            self.assertEqual(next(dli), 0)
+            def track(item: int) -> int:
+                if item == src[-1]:
+                    last_processed.set()
+                return item
 
-            # Wait: (simulate foreground load)
-            time.sleep(1)
+            iterator = iter(
+                get_dl(
+                    src,
+                    preprocessor=track,
+                    num_threads=1,
+                    buffer_size=buffer_size,
+                )
+            )
+            self.assertEqual(next(iterator), 0)
 
-            # Iterate the rest
-            t0 = time.monotonic()
-            result = list(dli)
-            elapsed = time.monotonic() - t0
-            print(elapsed)
-            self.assertEqual(result, src[1:])
-            return elapsed
+            reached_last = last_processed.wait(timeout=3)
+            self.assertEqual(list(iterator), src[1:])
+            self.assertTrue(last_processed.is_set())
+            return reached_last
 
-        # With buffer_size == 1, then  the background thread cannot proceed
-        # while foreground thread does not fetch any.
-        dl = get_dl(src, preprocessor=delay, num_threads=1, buffer_size=1)
-        elapsed = test(dl)
-        self.assertGreater(elapsed, 0.3)
-
-        # With bigger buffer_size, the background thread proceed
-        # while foreground thread does not fetch any.
-        dl = get_dl(src, preprocessor=delay, num_threads=1, buffer_size=len(src))
-        elapsed = test(dl)
-        self.assertLess(elapsed, 0.15)
+        self.assertFalse(finishes_in_background(1))
+        self.assertTrue(finishes_in_background(len(src)))
 
     def test_dataloader_num_threads(self) -> None:
         """Increasing the num_threads reduces the overall time."""
