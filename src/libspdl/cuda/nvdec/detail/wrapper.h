@@ -15,21 +15,33 @@
 namespace spdl::cuda::detail {
 
 struct CUvideoparserDeleter {
-  void operator()(CUvideoparser p);
+  using DestroyFn = decltype(&cuvidDestroyVideoParser);
+
+  DestroyFn destroy = cuvidDestroyVideoParser;
+
+  void operator()(CUvideoparser p) const;
 };
 
 using CUvideoparserPtr =
     std::unique_ptr</* *CUvideoparser */ void, CUvideoparserDeleter>;
 
 struct CUvideodecoderDeleter {
-  void operator()(void* p);
+  using DestroyFn = decltype(&cuvidDestroyDecoder);
+
+  DestroyFn destroy = cuvidDestroyDecoder;
+
+  void operator()(void* p) const;
 };
 
 using CUvideodecoderPtr =
     std::unique_ptr</* *CUvideodecoder */ void, CUvideodecoderDeleter>;
 
 struct CUvideoctxlockDeleter {
-  void operator()(void* p);
+  using DestroyFn = decltype(&cuvidCtxLockDestroy);
+
+  DestroyFn destroy = cuvidCtxLockDestroy;
+
+  void operator()(void* p) const;
 };
 
 using CUvideoctxlockPtr =

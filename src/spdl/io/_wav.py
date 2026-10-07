@@ -12,7 +12,7 @@ __all__ = [
     "parse_wav",
 ]
 
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, TypeAlias
 
 # Importing `spdl.io.lib` instead of `spdl.io.lilb._archive`
 # so as to delay the import of C++ extension module
@@ -21,6 +21,9 @@ from ._convert import ArrayInterface
 
 if TYPE_CHECKING:
     WAVHeader = _libspdl._wav.WAVHeader
+
+
+_Buffer: TypeAlias = "bytes | bytearray | memoryview[bytes]"
 
 
 def __dir__() -> list[str]:
@@ -43,6 +46,10 @@ class _WAVArrayInterface(ArrayInterface):
                 from the C++ binding, including version, shape, typestr, data, and owner.
         """
         self._array_interface = array_interface_dict
+        # The C++ dictionary exposes its owner for introspection. Keep a
+        # separate export so releasing that public memoryview cannot allow a
+        # mutable source to resize while this object still exposes its pointer.
+        self._owner = memoryview(array_interface_dict["owner"])
 
     @property
     def __array_interface__(self) -> dict[str, Any]:
@@ -60,14 +67,20 @@ class _WAVArrayInterface(ArrayInterface):
 
 
 def load_wav(
-    data: "bytes | memoryview[bytes]",
+    data: _Buffer,
     time_offset_seconds: float | None = None,
     duration_seconds: float | None = None,
 ) -> ArrayInterface:
     """Extract audio samples from WAV data.
 
+    .. versionchanged:: 0.7.0
+       Malformed or unsupported sample layouts and non-finite time windows are
+       rejected instead of constructing an invalid array view. The ``data``
+       argument now accepts mutable ``bytearray`` inputs, and zero-copy views
+       inherit the source buffer's writability.
+
     Args:
-        data: Binary WAV data as bytes or memoryview
+        data: Binary WAV data as bytes, bytearray, or memoryview
         time_offset_seconds: Optional starting time in seconds (default: 0.0)
         duration_seconds: Optional duration in seconds (default: until end)
 
@@ -100,11 +113,15 @@ def load_wav(
     return _WAVArrayInterface(array_interface_dict)
 
 
-def parse_wav(data: "bytes | memoryview[bytes]") -> "WAVHeader":
+def parse_wav(data: _Buffer) -> "WAVHeader":
     """Parse WAV file header and extract metadata.
 
+    .. versionchanged:: 0.7.0
+       The ``data`` argument now accepts mutable ``bytearray`` inputs without
+       copying the input buffer.
+
     Args:
-        data: Binary WAV data as bytes or memoryview
+        data: Binary WAV data as bytes, bytearray, or memoryview
 
     Returns:
         WAVHeader: Object containing WAV header information.
