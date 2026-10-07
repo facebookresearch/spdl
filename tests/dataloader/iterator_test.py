@@ -16,6 +16,7 @@ from functools import partial
 from unittest.mock import patch
 
 from spdl.pipeline import iterate_in_subprocess as _iterate_in_subprocess
+from spdl.source import utils as source_utils
 from spdl.source.utils import (
     embed_shuffle,
     IterableWithShuffle,
@@ -188,6 +189,21 @@ class TestMergeIterator(unittest.TestCase):
         self.assertEqual(first.num_next_calls, 2)
         self.assertEqual(second.num_next_calls, 2)
 
+    def test_mergeiterator_stochastic_draws_lazily_through_exhaustion(self) -> None:
+        """Exhaustion does not discard a batch of precomputed RNG draws."""
+        with patch.object(random.Random, "randrange", return_value=0) as draw:
+            result = list(MergeIterator([[0], [10]], weights=[1, 1], seed=0))
+
+        self.assertEqual(result, [0, 10])
+        self.assertEqual(draw.call_count, 2)
+
+    def test_mergeiterator_stochastic_rejects_unrepresentable_integer_weight(
+        self,
+    ) -> None:
+        """An integer outside float range fails validation with a clear error."""
+        with self.assertRaisesRegex(ValueError, "finite and non-negative"):
+            MergeIterator([[1], [2]], weights=[10**400, 1])
+
     def test_mergeiterator_stochastic_rejects_invalid_weight_sum(self) -> None:
         """Weighted merging requires a positive finite total weight."""
         for weights in ([0.0, 0.0], [1e308, 1e308]):
@@ -210,8 +226,8 @@ class TestMergeIterator(unittest.TestCase):
         self.assertGreater(count, 4_500)
         self.assertLess(count, 5_500)
 
-    def test_mergeiterator_stochastic_renormalizes_after_exhaustion(self) -> None:
-        """Surviving tiny weights are rescaled after a dominant source ends."""
+    def test_mergeiterator_stochastic_preserves_ratio_after_exhaustion(self) -> None:
+        """Surviving tiny weights preserve their ratio after a source ends."""
         result = list(
             MergeIterator(
                 [[0], itertools.repeat(1), itertools.repeat(2)],
@@ -226,17 +242,58 @@ class TestMergeIterator(unittest.TestCase):
         self.assertGreater(count, 4_500)
         self.assertLess(count, 5_500)
 
-    def test_mergeiterator_stochastic_rejects_zero(self) -> None:
-        """weight=0 is rejected."""
-        weights = [1, 0]
+    def test_mergeiterator_stochastic_converts_weights_once(self) -> None:
+        """Exhausting sources does not repeat exact bigint conversion."""
+        with patch.object(
+            source_utils,
+            "_exact_integer_weights",
+            wraps=source_utils._exact_integer_weights,
+        ) as convert:
+            result = list(
+                MergeIterator(
+                    [[0], [1], [2]],
+                    weights=[1e308, 5e-324, 5e-324],
+                    seed=0,
+                )
+            )
 
-        with self.assertRaises(ValueError):
-            MergeIterator([[1]], weights=weights)
+        self.assertCountEqual(result, [0, 1, 2])
+        convert.assert_called_once()
 
-        weights = [1, 0.0]
+    def test_mergeiterator_stochastic_preserves_tiny_positive_weight(self) -> None:
+        """A tiny positive weight retains an exact selectable bucket."""
+        with patch.object(
+            random.Random,
+            "getrandbits",
+            return_value=1,
+        ):
+            result = list(
+                MergeIterator(
+                    [itertools.repeat(0), [1]],
+                    weights=[1e308, 5e-324],
+                    stop_after=1,
+                )
+            )
 
-        with self.assertRaises(ValueError):
-            MergeIterator([[1]], weights=weights)
+        self.assertEqual(result, [1])
+
+    def test_mergeiterator_stochastic_avoids_wide_random_draws(self) -> None:
+        """Extreme finite ratios use a lazy exact binary comparison."""
+        with (
+            patch.object(random.Random, "randrange") as wide_draw,
+            patch.object(random.Random, "getrandbits", return_value=0) as bit_draw,
+        ):
+            result = list(
+                MergeIterator(
+                    [itertools.repeat(0), itertools.repeat(1)],
+                    weights=[1e308, 5e-324],
+                    stop_after=1,
+                )
+            )
+
+        self.assertEqual(result, [0])
+        wide_draw.assert_not_called()
+        bit_draw.assert_called_once_with(1)
 
     def test_mergeiterator_skip_zero_weight(self) -> None:
         """Iterables with zero weight are skipped."""

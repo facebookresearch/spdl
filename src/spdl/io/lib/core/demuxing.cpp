@@ -326,6 +326,7 @@ void register_demuxing(nb::module_& m) {
       nb::arg("src"),
       nb::kw_only(),
       nb::arg("demux_config") = nb::none(),
-      nb::arg("name") = nb::none());
+      nb::arg("name") = nb::none(),
+      nb::keep_alive<0, 1>());
 }
 } // namespace spdl::core
