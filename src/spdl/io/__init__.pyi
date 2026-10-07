@@ -72,7 +72,10 @@ from spdl.io._preprocessing import (
     get_video_filter_desc as get_video_filter_desc,
 )
 from spdl.io._tar import iter_tarfile as iter_tarfile
-from spdl.io._transfer import transfer_tensor as transfer_tensor
+from spdl.io._transfer import (
+    transfer_tensor as transfer_tensor,
+    transfer_tensor_d2h as transfer_tensor_d2h,
+)
 from spdl.io._wav import load_wav as load_wav, parse_wav as parse_wav
 
 # C++ extension classes and functions from _libspdl
@@ -173,6 +176,7 @@ __all__ = [
     "iter_tarfile",
     # From _transfer
     "transfer_tensor",
+    "transfer_tensor_d2h",
     # From _wav
     "load_wav",
     "parse_wav",

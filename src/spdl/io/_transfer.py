@@ -6,23 +6,25 @@
 
 __all__ = [
     "transfer_tensor",
+    "transfer_tensor_d2h",
 ]
 
 import logging
 import os
 import threading
 from collections import defaultdict
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import fields, is_dataclass
 from functools import partial
 from types import ModuleType
-from typing import Any, TYPE_CHECKING, TypeVar
+from typing import Any, cast, TYPE_CHECKING, TypeVar
 
 from ._internal import import_utils
 
 if TYPE_CHECKING:
     import torch
     from torch import device as TDevice, Tensor
+
 else:
     torch: ModuleType = import_utils.lazy_import("torch")
 
@@ -172,4 +174,327 @@ def transfer_tensor(batch: T, /, *, num_caches: int = 4) -> T:
         tensors are transferred to CUDA device.
     """
     transfer = _get_trancfer_func(num_caches)
+    return transfer(batch)
+
+
+###############################################################################
+# Device-to-host transfer
+###############################################################################
+
+
+def _iter_leaves(obj: Any) -> Iterator[Any]:
+    """Iterate over leaves without rebuilding the input containers."""
+    match obj:
+        case list() | tuple():
+            for value in obj:
+                yield from _iter_leaves(value)
+        case Mapping():
+            for value in obj.values():
+                yield from _iter_leaves(value)
+        case value if is_dataclass(value) and not isinstance(value, type):
+            for field in fields(value):
+                if field.init:
+                    yield from _iter_leaves(getattr(value, field.name))
+            for field in fields(value):
+                if not field.init:
+                    yield from _iter_leaves(getattr(value, field.name))
+        case _:
+            yield obj
+
+
+def _gather_tensors(batch: T, device: "TDevice") -> "list[Tensor]":
+    """Gather tensors from a batch.
+
+    Args:
+        batch: A Tensor or a composition of tensors with container types.
+        device: The device to which the tensors are transferred.
+
+    Returns:
+        A list of all tensors in the batch.
+    """
+    return [
+        obj
+        for obj in _iter_leaves(batch)
+        if isinstance(obj, torch.Tensor) and obj.device == device
+    ]
+
+
+def _get_tensor_offsets(tensors: "list[Tensor]") -> tuple[list[int], int]:
+    """Return byte-aligned offsets and the total packed-buffer size."""
+    offsets = []
+    size = 0
+    for tensor in tensors:
+        alignment = tensor.element_size()
+        size = (size + alignment - 1) // alignment * alignment
+        offsets.append(size)
+        size += tensor.nbytes
+    return offsets, size
+
+
+def _get_pinned_memory(size: int) -> "Tensor":
+    """Allocate page-locked memory or fetch a cache.
+
+    Args:
+        size: Minimum size in bytes required.
+
+    Returns:
+        Pinned memory tensor (uint8).
+    """
+    if (
+        not hasattr(_THREAD_LOCAL, "d2h_pinned_memory")
+        or _THREAD_LOCAL.d2h_pinned_memory.numel() < size
+    ):
+        _THREAD_LOCAL.d2h_pinned_memory = torch.empty(
+            size, dtype=torch.uint8
+        ).pin_memory()
+    return _THREAD_LOCAL.d2h_pinned_memory[:size]
+
+
+def _transfer_with_autograd(
+    batch: T,
+    source_device: "TDevice",
+    destination_device: "TDevice",
+) -> T:
+    """Transfer tensors individually so that PyTorch preserves autograd edges."""
+
+    def _copy(obj: S) -> S:
+        if isinstance(obj, torch.Tensor) and obj.device == source_device:
+            return cast(S, obj.to(destination_device))
+        return obj
+
+    return _recursive_apply(_copy, batch)
+
+
+def _rebuild_batch(
+    batch: T,
+    source_device: "TDevice",
+    buffer: "Tensor",
+    offsets: list[int],
+) -> T:
+    """Rebuild a batch with tensors represented by views into a packed buffer.
+
+    Args:
+        batch: Original batch structure.
+        source_device: Device identifying tensors to replace.
+        buffer: Packed destination buffer.
+        offsets: Byte-aligned offset for each replaced tensor.
+
+    Returns:
+        New batch with tensors that share ``buffer`` storage but have independent
+        TensorImpls and version counters.
+    """
+    index = 0
+
+    def _rebuild(obj: S) -> S:
+        if isinstance(obj, torch.Tensor) and obj.device == source_device:
+            nonlocal index
+            offset = offsets[index]
+            index += 1
+            strides = []
+            stride = 1
+            for dimension in reversed(obj.shape):
+                strides.append(stride)
+                stride *= max(dimension, 1)
+            view = torch.empty(0, dtype=obj.dtype, device=buffer.device)
+            return cast(
+                S,
+                view.set_(
+                    buffer.untyped_storage(),
+                    offset // obj.element_size(),
+                    obj.shape,
+                    tuple(reversed(strides)),
+                ),
+            )
+        return obj
+
+    return _recursive_apply(_rebuild, batch)
+
+
+class _AsyncD2HTransfer:
+    """Async Device to Host transfer handler."""
+
+    def __init__(self, device: "TDevice", stream: "torch.cuda.Stream") -> None:
+        self._device = device
+        self._stream = stream
+
+    def __call__(self, batch: T) -> T:
+        """Transfer batch from GPU to CPU asynchronously.
+
+        Args:
+            batch: A Tensor or composition of tensors to transfer.
+
+        Returns:
+            Batch with tensors on CPU.
+        """
+        tensors = _gather_tensors(batch, self._device)
+        if not tensors:
+            return batch
+
+        if any(tensor.requires_grad for tensor in tensors):
+            return _transfer_with_autograd(
+                batch,
+                self._device,
+                torch.device("cpu"),
+            )
+
+        offsets, size = _get_tensor_offsets(tensors)
+        if size > 0:
+            pinned = _get_pinned_memory(size)
+            producer_stream = torch.cuda.current_stream(self._device)
+            if producer_stream != self._stream:
+                self._stream.wait_stream(producer_stream)
+            with torch.cuda.stream(self._stream):
+                for tensor, offset in zip(tensors, offsets, strict=True):
+                    if tensor.nbytes > 0:
+                        destination = (
+                            pinned[offset : offset + tensor.nbytes]
+                            .view(tensor.dtype)
+                            .view(tensor.shape)
+                        )
+                        destination.copy_(tensor, non_blocking=True)
+            self._stream.synchronize()
+            cpu_buffer = pinned.clone()
+        else:
+            cpu_buffer = torch.empty(0, dtype=torch.uint8)
+
+        return _rebuild_batch(
+            batch,
+            self._device,
+            cpu_buffer,
+            offsets,
+        )
+
+
+def _normalize_cuda_device(device: "TDevice | str | None") -> "TDevice":
+    """Resolve a CUDA device to one with an explicit index."""
+    if device is None:
+        device = torch.device("cuda", int(os.environ.get("LOCAL_RANK", "0")))
+    else:
+        device = torch.device(device)
+        if device.type != "cuda":
+            raise ValueError(f"Expected a CUDA device, but received {device}.")
+        if device.index is None:
+            device = torch.device("cuda", torch.cuda.current_device())
+
+    device_count = torch.cuda.device_count()
+    if device.index is None or not 0 <= device.index < device_count:
+        raise RuntimeError(
+            f"CUDA device index {device.index} is invalid for {device_count} devices."
+        )
+    return device
+
+
+def _get_d2h_transfer(
+    device: "TDevice",
+    stream: "torch.cuda.Stream | None" = None,
+) -> _AsyncD2HTransfer:
+    """Get thread-local D2H transfer handler.
+
+    Args:
+        device: CUDA device to use for the transfer.
+        stream: Optional CUDA stream to use. If None, uses a cached handler
+            with a thread-local stream.
+
+    Returns:
+        D2H transfer handler.
+    """
+    if stream is not None:
+        return _AsyncD2HTransfer(device, stream)
+
+    if not hasattr(_THREAD_LOCAL, "d2h_transfer"):
+        _THREAD_LOCAL.d2h_transfer = {}
+    transfers: dict[Any, _AsyncD2HTransfer] = _THREAD_LOCAL.d2h_transfer
+    if device not in transfers:
+        _LG.info("Creating D2H transfer handler on %s", device)
+        stream = torch.cuda.Stream(device)
+        transfers[device] = _AsyncD2HTransfer(device, stream)
+
+    return transfers[device]
+
+
+def transfer_tensor_d2h(
+    batch: T,
+    /,
+    *,
+    device: "TDevice | str | None" = None,
+    stream: "torch.cuda.Stream | None" = None,
+) -> T:
+    """Transfer PyTorch CUDA tensors to CPU through a dedicated stream.
+
+    .. versionadded:: 0.7.0
+
+    This function performs efficient GPU to CPU data transfer using
+    page-locked (pinned) memory and a dedicated CUDA stream. The page-locked
+    memory is cached and reused across calls.
+
+    The transfer process:
+    1. Gathers all tensors from the batch.
+    2. Allocates (or reuses cached) page-locked memory.
+    3. Asynchronously transfers data from GPU to page-locked memory.
+    4. Copies data from page-locked memory to new CPU tensors.
+    5. Rebuilds the batch structure with CPU tensors.
+
+    The copy stream waits for work already submitted to the caller's current
+    stream, and this function waits for the copy stream before returning. If a
+    tensor was produced on another non-current stream, the caller must first
+    establish an ordering dependency with the current stream. When called from
+    a background CPU thread, the transfer can overlap with later GPU work
+    submitted independently by a foreground thread. It is intended for
+    offloading nested results before CPU post-processing or serialization.
+
+    If any transferred tensor requires gradients, the function uses a
+    synchronous per-tensor transfer on the caller's current stream to preserve
+    autograd.
+
+    Example:
+        .. code-block:: python
+
+           import torch
+           from spdl.io import transfer_tensor_d2h
+
+           batch = {"scores": torch.randn(32, device="cuda:0")}
+           cpu_batch = transfer_tensor_d2h(batch, device="cuda:0")
+
+    Args:
+        batch: A :py:class:`torch.Tensor` or a composition of tensors
+            with container types such as ``list``, ``tuple``, ``dict``
+            and ``dataclass``.
+
+        device: **Optional** CUDA device to transfer data from.
+
+            If ``None`` the source device is determined by the ``LOCAL_RANK``
+            environment variable. If not set, ``cuda:0`` is used.
+
+        stream: **Optional** Custom CUDA stream to use for the transfer.
+            If ``None``, a stream is created from the ``device`` argument,
+            and cached to a thread-local storage for future reuse.
+
+            When stream is not ``None``, the ``device`` argument must be provided.
+            The stream must be on the same device.
+
+    Returns:
+        An object of the same type as the input, but the PyTorch CUDA tensors
+        on the specified device are transferred to CPU.
+
+        If there is no PyTorch tensor in the input, the input is returned as-is.
+
+        If there is no CUDA device available, the input is returned as-is.
+
+    Raises:
+        ValueError: If ``device`` is not a CUDA device, or a custom stream does
+            not match the requested device.
+        RuntimeError: If the resolved CUDA device index is unavailable.
+    """
+    if stream is not None and device is None:
+        raise ValueError("device must be provided when stream is not None")
+
+    if not torch.cuda.is_available():
+        return batch
+
+    device = _normalize_cuda_device(device)
+    if stream is not None and stream.device != device:
+        raise ValueError(
+            f"The transfer stream is on {stream.device}, not the requested {device}."
+        )
+    transfer = _get_d2h_transfer(device, stream)
     return transfer(batch)
