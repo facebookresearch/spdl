@@ -865,7 +865,7 @@ def _resolve_src2(obj: object) -> "memoryview[bytes]":
 
 
 def decode_image_nvjpeg(
-    src: "str | bytes | memoryview[bytes] | Sequence[bytes | memoryview[bytes]]",
+    src: "str | bytes | memoryview | Sequence[bytes | memoryview]",
     *,
     device_config: "CUDAConfig | None" = None,
     scale_width: int = -1,
@@ -882,6 +882,9 @@ def decode_image_nvjpeg(
     .. note::
 
        Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
+
+    .. versionchanged:: 0.7.0
+       A single ``memoryview`` is decoded as one image instead of a batch.
 
     Args:
         src: File path to a JPEG image or data in bytes/memoryview.
@@ -900,7 +903,7 @@ def decode_image_nvjpeg(
         raise ValueError("device_config must be provided.")
 
     data: "memoryview[bytes] | Sequence[memoryview[bytes]]"
-    if isinstance(src, Sequence) and not isinstance(src, (str, bytes)):
+    if isinstance(src, Sequence) and not isinstance(src, (str, bytes, memoryview)):
         data = [_resolve_src2(s) for s in src]
     else:
         data = _resolve_src2(src)
