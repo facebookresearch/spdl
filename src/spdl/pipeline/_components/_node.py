@@ -42,7 +42,13 @@ from ._pipe import (
     _ordered_pipe,
     _pipe,
 )
-from ._queue import _ThreadBasedAsyncQueue, AsyncQueue, get_default_queue_class
+from ._queue import (
+    _AsyncQueueWithSyncMirror,
+    _ThreadBasedAsyncQueue,
+    AsyncQueue,
+    get_default_queue_class,
+    StatsQueue,
+)
 from ._sink import _sink
 from ._source import _source, _source_continuous
 from ._subprocess_pipe import _subprocess_pipeline
@@ -496,6 +502,8 @@ def _convert_config(
             sink_out_q = _ThreadBasedAsyncQueue(info, buffer_size=plc.sink.buffer_size)
         else:
             sink_out_q = q_class(info, buffer_size=plc.sink.buffer_size)
+            if type(sink_out_q) in (AsyncQueue, StatsQueue):
+                sink_out_q = _AsyncQueueWithSyncMirror(sink_out_q)
         n = _Node(
             info, plc.sink, [n], input_queue=n.output_queue, output_queue=sink_out_q
         )
