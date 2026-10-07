@@ -122,12 +122,18 @@ There are cases where you want to use a dedicated thread for certain task.
    (caching for faster execution or storing the application context)
 #. You want to specify a different number of concurrency.
 
-One notable example that meets these conditions is transferring data to the GPU.
-Due to the hardware constraints, only one data transfer can be performed
-at a time.
-To transfer data without interrupting the model training,
-you need to use a stream object dedicated for the transfer, and you want
-to keep using the same stream object across multiple function invocations.
+One notable example that meets these conditions is transferring data between
+the CPU and GPU. CUDA streams provide independent scheduling lanes, but they do
+not bypass the GPU's copy-engine limits. On the hardware configuration
+discussed here, at most one host-to-device transfer and one device-to-host
+transfer can run at the same time. Transfers in opposite directions can overlap
+each other, while additional transfers in the same direction are serialized.
+Compute kernels use separate execution resources, so multiple kernels can
+overlap these transfers and one another when the GPU has sufficient resources.
+Creating more CUDA streams does not by itself increase the amount of concurrent
+work. To overlap a transfer with model computation, use a CUDA stream dedicated
+to that transfer direction and reuse the same stream across function
+invocations.
 
 To maintain a state, you can either encapsulate it in a callable class
 instance, or put it in a
@@ -187,12 +193,50 @@ the pipeline.
 This way, the transfer function is always executed in a dedicated thread, so that
 it keeps using the same CUDA stream.
 
-When tracing this pipeline with
-`PyTorch Profiler <https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html>`_,
-we can see that it is always the one background thread that issues data transfer,
-and the transfer overlaps with the stream executing the model training.
+`PyTorch Profiler <https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html>`_
+can verify that the background thread issues transfers on a dedicated CUDA
+stream while the foreground stream executes model work. The following trace
+shows host-to-device transfer using this pattern.
 
 .. image:: ../../_static/data/parallelism_transfer.png
+   :alt: Host-to-device transfer overlapping foreground CUDA work.
+
+The same pattern applies when moving model outputs from the GPU back to the
+CPU. :py:func:`spdl.io.transfer_tensor_d2h` uses a dedicated CUDA stream and a
+cached page-locked staging buffer. Run it on a persistent single-worker
+executor so that consecutive calls reuse both resources while the foreground
+thread continues to submit independent work to its compute stream.
+
+.. code-block:: python
+
+   d2h_executor = ThreadPoolExecutor(max_workers=1)
+
+   with d2h_executor:
+       future = d2h_executor.submit(
+           spdl.io.transfer_tensor_d2h,
+           model_output,
+       )
+
+       # Independent work submitted to the foreground CUDA stream can overlap
+       # with the device-to-host transfer.
+       next_output = model(next_batch)
+       cpu_output = future.result()
+
+The inputs must be ready on the current CUDA stream when
+:py:func:`~spdl.io.transfer_tensor_d2h` is called. The function establishes the
+required ordering between that producer stream and its transfer stream before
+returning CPU tensors. See :py:mod:`benchmark_transfer_overlap` for a
+reproducible benchmark of serialized and concurrent transfer-plus-compute
+makespans.
+
+The following Perfetto view shows the corresponding device-to-host pattern.
+Four ``Memcpy DtoH`` operations on stream 13 overlap the foreground SGEMM
+kernels on the default stream (stream 7). In this capture, 19.4 ms of the
+21.3 ms device-to-host transfer overlaps compute (91%).
+
+.. image:: ../../_static/data/parallelism_transfer_d2h.png
+   :alt: Device-to-host transfer on stream 13 overlapping SGEMM kernels on the default stream.
+   :width: 100%
 
 Multi-processing (stage)
 ------------------------
