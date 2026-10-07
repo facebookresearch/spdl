@@ -7,6 +7,7 @@
 """Tests for PathVariants feature."""
 
 import asyncio
+import time
 import unittest
 from collections.abc import AsyncIterator, Iterable, Sequence
 from typing import Any
@@ -131,6 +132,30 @@ class PathVariantsBasicTest(unittest.TestCase):
         )
         results = _run_pipeline(config)
         self.assertEqual(results, [10, 20, 30])
+
+    def test_idle_path_does_not_block_eof_to_busy_path(self) -> None:
+        """A path that finishes first does not stop EOF from reaching a busy path."""
+
+        def slow(x: int) -> int:
+            time.sleep(0.02)
+            return x
+
+        config = PipelineConfig(
+            src=SourceConfig(range(8)),
+            pipes=[
+                PathVariants(
+                    # The idle path must come first to get EOF before the busy path.
+                    router=lambda x: 1,
+                    paths=[
+                        [Pipe(lambda x: x)],
+                        [Pipe(slow)],
+                    ],
+                ),
+            ],
+            sink=SinkConfig(buffer_size=10),
+        )
+        results = _run_pipeline(config, timeout=10)
+        self.assertEqual(results, list(range(8)))
 
     def test_multiple_paths_different_processing(self) -> None:
         """3 paths with different transforms."""
@@ -661,6 +686,36 @@ class PathVariantsErrorHandlingTest(unittest.TestCase):
         )
         with self.assertRaises(PipelineFailure):
             _run_pipeline(config)
+
+    def test_path_failure_during_eof_broadcast_does_not_hang(self) -> None:
+        """A path failure during EOF broadcast fails the pipeline, not hangs."""
+
+        def fail_last(x: int) -> int:
+            time.sleep(0.01)
+            if x == 7:
+                raise ValueError("boom")
+            return x
+
+        def slow(x: int) -> int:
+            time.sleep(0.1)
+            return x
+
+        config = PipelineConfig(
+            src=SourceConfig(range(8)),
+            pipes=[
+                PathVariants(
+                    # Item 7 fails on path 0 after EOF while path 1's queue is full.
+                    router=lambda x: 0 if x == 7 else 1,
+                    paths=[
+                        [Pipe(fail_last, max_failures=0)],
+                        [Pipe(slow)],
+                    ],
+                ),
+            ],
+            sink=SinkConfig(buffer_size=10),
+        )
+        with self.assertRaises(PipelineFailure):
+            _run_pipeline(config, timeout=10)
 
     def test_router_raises_exception(self) -> None:
         """Router function itself raises — pipeline fails cleanly."""
