@@ -14,6 +14,7 @@ from ._hook import (
 )
 from ._node import _build_pipeline_coro, _get_global_id, _set_global_id, PipelineFailure
 from ._queue import (
+    _AsyncQueueWithSyncMirror,
     _ThreadBasedAsyncQueue,
     AsyncQueue,
     get_default_queue_class,
@@ -26,6 +27,7 @@ from ._subprocess_pipe import (
     _EPOCH,
     _EPOCH_DONE,
     _ERROR,
+    _fused_queue_capacity,
     _ITEM,
     _POOL_SHUTDOWN,
     _RESULT,
@@ -39,6 +41,7 @@ __all__ = [
     "_EPOCH",
     "_EPOCH_DONE",
     "_ERROR",
+    "_fused_queue_capacity",
     "_ITEM",
     "_POOL_SHUTDOWN",
     "_RESULT",
@@ -51,6 +54,7 @@ __all__ = [
     "is_eof",
     "is_epoch_end",
     "PipelineFailure",
+    "_AsyncQueueWithSyncMirror",
     "_ThreadBasedAsyncQueue",
     "set_default_hook_class",
     "set_default_queue_class",

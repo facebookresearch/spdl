@@ -184,6 +184,46 @@ class MarkedRegionFuseTest(unittest.TestCase):
         pipeline = build_pipeline(config, num_threads=2)
         self.assertEqual(sorted(_run(pipeline)), sorted((x + 1) * 2 for x in range(n)))
 
+    def test_unpicklable_input_boundary_raises(self) -> None:
+        """An unpicklable value entering a process region fails instead of disappearing."""
+        pipeline = (
+            PipelineBuilder()
+            .add_source([_Unpicklable(1)])
+            .to(ProcessPoolExecutorConfig(max_workers=1, mp_context="spawn"))
+            .pipe(unwrap)
+            .to(MAIN_PROCESS)
+            .add_sink(1)
+            .build(num_threads=2)
+        )
+        with self.assertRaises(PipelineFailure) as ctx:
+            _run(pipeline)
+        self.assertTrue(
+            any(
+                "Fused subprocess input could not be serialized" in str(err)
+                for err in ctx.exception.exceptions
+            )
+        )
+
+    def test_unpicklable_output_boundary_raises(self) -> None:
+        """An unpicklable value leaving a process region fails instead of disappearing."""
+        pipeline = (
+            PipelineBuilder()
+            .add_source([1])
+            .to(ProcessPoolExecutorConfig(max_workers=1, mp_context="spawn"))
+            .pipe(wrap)
+            .to(MAIN_PROCESS)
+            .add_sink(1)
+            .build(num_threads=2)
+        )
+        with self.assertRaises(PipelineFailure) as ctx:
+            _run(pipeline)
+        self.assertTrue(
+            any(
+                "Fused subprocess output could not be serialized" in str(err)
+                for err in ctx.exception.exceptions
+            )
+        )
+
     def test_region_runs_in_worker_main_runs_in_main(self) -> None:
         """A region stage runs in a worker process; a stage after MAIN_PROCESS runs in main."""
         config = _cfg(
@@ -357,9 +397,9 @@ class RegionBehaviorTest(unittest.TestCase):
     def test_async_op_in_region_runs_in_worker(self) -> None:
         """An async op inside a region runs on the worker's loop, in the worker process.
 
-        The sync stages on either side and the async op in the middle all stamp ``os.getpid()``;
-        the assertion proves the async stage shares the worker process with its neighbours rather
-        than hopping back to the main process.
+        The sync stages on either side and the async op in the middle all stamp
+        ``os.getpid()``; the assertion proves the async stage shares the worker
+        process with its neighbours rather than hopping back to the main process.
         """
         n = 16
         pipeline = (
@@ -402,9 +442,10 @@ class RegionBehaviorTest(unittest.TestCase):
     def test_initializer_failure_surfaces_not_hangs(self) -> None:
         """A region-worker initializer that raises surfaces as a failure instead of hanging.
 
-        A real failure surfaces as :py:class:`PipelineFailure`; a hung pipeline would instead
-        raise :py:class:`TimeoutError` from the finite ``get_iterator`` timeout, so asserting on
-        ``PipelineFailure`` proves the failed initializer is reported rather than wedging forever.
+        A real failure surfaces as :py:class:`PipelineFailure`; a hung pipeline
+        would instead raise :py:class:`TimeoutError` from the finite
+        ``get_iterator`` timeout, so asserting on ``PipelineFailure`` proves the
+        failed initializer is reported rather than wedging forever.
         """
         pipeline = (
             PipelineBuilder()
@@ -753,8 +794,9 @@ class ContinuousRegionTest(unittest.TestCase):
 class MarkedRegionSegmentationTest(unittest.TestCase):
     """Unit tests for the ``_fuse_marked_regions`` config rewrite.
 
-    Replaces the pure-detection coverage of the removed ``_find_fusable_runs`` tests. Because the
-    rewrite eagerly spawns worker pools, each fused case reaps its pools in a ``finally``.
+    Replaces the pure-detection coverage of the removed ``_find_fusable_runs``
+    tests. Because the rewrite eagerly spawns worker pools, each fused case reaps
+    its pools in a ``finally``.
     """
 
     def test_no_markers_returns_config_unchanged(self) -> None:
@@ -1027,12 +1069,13 @@ else:
 class RegionUnderSubprocessTest(unittest.TestCase):
     """A ``.to()`` region driven by :py:func:`run_pipeline_in_subprocess`.
 
-    ``run_pipeline_in_subprocess`` runs the source/sink and any non-region stages in an
-    *intermediate* subprocess, while each ``.to(ProcessPoolExecutorConfig(...))`` region is fused in
-    the **main** process (via ``_fuse_marked_regions``) so its worker pool is main-owned --
-    spawned by main, not by the intermediate subprocess (which, as a daemon, cannot have
-    children). These tests pin that placement and the daemon flags that let teardown reap
-    everything at exit.
+    ``run_pipeline_in_subprocess`` runs the source/sink and any non-region stages
+    in an *intermediate* subprocess, while each
+    ``.to(ProcessPoolExecutorConfig(...))`` region is fused in the **main** process
+    (via ``_fuse_marked_regions``) so its worker pool is main-owned -- spawned by
+    main, not by the intermediate subprocess (which, as a daemon, cannot have
+    children). These tests pin that placement and the daemon flags that let
+    teardown reap everything at exit.
     """
 
     def test_region_pool_is_main_owned_and_daemon(self) -> None:

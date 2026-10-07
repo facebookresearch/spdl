@@ -5,8 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import gc
 import unittest
 import warnings
+import weakref
 
 import numpy as np
 import spdl.io
@@ -59,6 +61,28 @@ class TestDemuxer(unittest.TestCase):
             packets = demuxer.demux_video()
 
         self.assertIsNotNone(packets)
+
+    def test_demuxer_keeps_temporary_buffer_alive(self) -> None:
+        """An in-memory demuxer owns a reference to its borrowed source buffer."""
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 10 sample.mp4"
+        )
+        sample = get_sample(cmd)
+
+        with open(sample.path, "rb") as f:
+            src = np.frombuffer(f.read(), dtype=np.uint8).copy()
+
+        ref = weakref.ref(src)
+        demuxer = spdl.io.Demuxer(src)
+        del src
+        gc.collect()
+
+        self.assertIsNotNone(ref())
+        self.assertGreater(len(demuxer.demux_video()), 0)
+
+        del demuxer
+        gc.collect()
+        self.assertIsNone(ref())
 
     def test_demuxer_accept_torch_tensor(self) -> None:
         """Can instantiate Demuxer with torch tensor as source without copying data."""
