@@ -18,7 +18,9 @@
 #include <cuda.h>
 #include <nvcuvid.h>
 
+#include <exception>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace spdl::cuda::detail {
@@ -38,6 +40,8 @@ using spdl::core::Rational;
 // If the previous decoder configuration is not compatible with the new
 // config, then the decoder object is re-created.
 class NvDecDecoderCore {
+  friend struct NvDecDecoderCoreTestAccess;
+
   //---------------------------------------------------------------------------
   // Device config
   //---------------------------------------------------------------------------
@@ -93,6 +97,11 @@ class NvDecDecoderCore {
 
   // Used to disable all the callbacks during reset.
   bool cb_disabled_ = false;
+
+  // Exceptions must not unwind through the C callbacks registered with
+  // NVDEC. The callback stores the first exception here so decode_packet can
+  // rethrow it after cuvidParseVideoData returns.
+  std::exception_ptr callback_error_;
 
   //---------------------------------------------------------------------------
   // Attributes used for decoding, only during the decoding.
@@ -151,6 +160,20 @@ class NvDecDecoderCore {
   // The buffer is allocated based on the packet count estimate.
   // The decoder is always flushed after decoding all packets.
   CUDABuffer decode_packets(spdl::core::VideoPackets* packets);
+
+  template <typename Callback>
+  int invoke_callback(Callback&& callback) noexcept {
+    try {
+      return std::forward<Callback>(callback)();
+    } catch (...) {
+      if (!callback_error_) {
+        callback_error_ = std::current_exception();
+      }
+      return 0;
+    }
+  }
+
+  void rethrow_callback_error();
 
   ////////////////////////////////////////////////////////////////////////////
   // Callbacks required by CUVID API

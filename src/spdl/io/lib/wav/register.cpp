@@ -24,6 +24,7 @@ namespace {
 nb::dict load_wav_impl(
     const char* p,
     size_t s,
+    bool read_only,
     nb::handle owner,
     std::optional<double> time_offset_seconds,
     std::optional<double> duration_seconds) {
@@ -60,7 +61,7 @@ nb::dict load_wav_impl(
   }();
   array_interface["typestr"] = typestr;
   array_interface["data"] =
-      nb::make_tuple(reinterpret_cast<uintptr_t>(view.data()), false);
+      nb::make_tuple(reinterpret_cast<uintptr_t>(view.data()), read_only);
   array_interface["owner"] = owner;
 
   return array_interface;
@@ -74,6 +75,10 @@ WAVHeader parse_wav_impl(const char* p, size_t s) {
     header = parse_wav_header(d);
   }
   return header;
+}
+
+bool is_read_only(const nb::memoryview& data) {
+  return PyMemoryView_GET_BUFFER(data.ptr())->readonly != 0;
 }
 
 NB_MODULE(_wav, m) {
@@ -103,7 +108,12 @@ NB_MODULE(_wav, m) {
          std::optional<double> duration_seconds = std::nullopt) -> nb::dict {
         auto sv = ::spdl::detail::memoryview_to_sv(data);
         return load_wav_impl(
-            sv.data(), sv.size(), data, time_offset_seconds, duration_seconds);
+            sv.data(),
+            sv.size(),
+            is_read_only(data),
+            data,
+            time_offset_seconds,
+            duration_seconds);
       },
       nb::arg("data"),
       nb::kw_only(),
