@@ -8,11 +8,13 @@
 import asyncio
 import logging
 import queue
+import threading
 import time
-from collections.abc import AsyncGenerator, AsyncIterator
+from collections import deque
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast, Protocol
 
 from spdl.pipeline._common._misc import create_task
 
@@ -27,6 +29,7 @@ from ._common import (
 
 __all__ = [
     "_queue_stage_hook",
+    "_AsyncQueueWithSyncMirror",
     "AsyncQueue",
     "_ThreadBasedAsyncQueue",
     "StatsQueue",
@@ -36,6 +39,10 @@ __all__ = [
 ]
 
 _LG: logging.Logger = logging.getLogger(__name__)
+
+
+class _DequeBackedQueueProtocol(Protocol):
+    _queue: deque[object]
 
 
 class AsyncQueue(asyncio.Queue):
@@ -65,6 +72,20 @@ class AsyncQueue(asyncio.Queue):
     ) -> None:
         super().__init__(buffer_size)
         self.info = info
+        self._put_commit_callback: Callable[[object], None] | None = None
+
+    def _put(self, item: object) -> None:
+        """Store an item and notify an optional same-turn commit observer."""
+        super()._put(item)
+        if (callback := self._put_commit_callback) is None:
+            return
+        try:
+            callback(item)
+        except BaseException:
+            # asyncio.Queue has not updated task accounting or woken a getter yet,
+            # so the just-appended item can still be rolled back transactionally.
+            cast(_DequeBackedQueueProtocol, self)._queue.pop()
+            raise
 
     @asynccontextmanager
     async def stage_hook(self) -> AsyncIterator[None]:
@@ -416,6 +437,208 @@ class _ThreadBasedAsyncQueue(AsyncQueue):
 
     def qsize(self) -> int:
         return self._queue.qsize()
+
+
+class _AsyncQueueWithSyncMirror(AsyncQueue):
+    """Adapt an asyncio sink queue for non-blocking cross-thread reads.
+
+    This adapter is used only with SPDL's identity-preserving built-in queue
+    classes. Custom queues stay on their owning event loop so their ``put`` and
+    ``get`` transformations and exceptions remain authoritative.
+
+    The wrapped queue remains the source of backpressure and owns its stage hook. A
+    standard-library ``queue.Queue`` mirrors items that have completed ``put`` so the
+    foreground thread can inspect the sink without waiting for the event loop. After
+    the foreground removes a mirrored item, it schedules ``_release_one`` on the
+    event-loop thread to release the corresponding slot in the wrapped queue.
+
+    This is intentionally only used for the terminal output queue. Internal pipeline
+    queues have async consumers and do not need a cross-thread mirror.
+    """
+
+    def __init__(self, async_queue: AsyncQueue) -> None:
+        # Initialize the base object so inherited diagnostics remain valid. Its
+        # asyncio storage is intentionally unused; ``async_queue`` owns that state.
+        super().__init__(async_queue.info, buffer_size=async_queue.maxsize)
+        self._async_queue = async_queue
+        self._sync_queue: queue.Queue[Any] = queue.Queue()
+        self._mirror_available = asyncio.Event()
+        self._pending_release_lock = threading.Lock()
+        self._pending_releases = 0
+        async_queue._put_commit_callback = self._publish_mirrored_item
+
+    @property
+    def maxsize(self) -> int:
+        """The maximum number of items accepted by the wrapped queue."""
+        return self._async_queue.maxsize
+
+    async def put(self, item: object) -> None:
+        """Put an item through the wrapped queue's mirrored commit boundary."""
+        await self._async_queue.put(item)
+
+    def put_nowait(self, item: object) -> None:
+        """Put an item through the wrapped queue's mirrored commit boundary."""
+        self._async_queue.put_nowait(item)
+
+    def _publish_mirrored_item(self, item: object) -> None:
+        """Publish an accepted wrapped item to the foreground mirror."""
+        # The event is advisory and cannot expose an item by itself. Set it first
+        # so a mirror-queue failure leaves no foreground-visible partial commit.
+        self._mirror_available.set()
+        self._sync_queue.put_nowait(item)
+
+    async def get(self) -> object:
+        """Get an item asynchronously while keeping the mirror synchronized."""
+        while True:
+            try:
+                return self.get_nowait()
+            except queue.Empty:
+                # Foreground readers do not own this loop and cannot safely clear
+                # its Event. Clear and recheck here so an item published between
+                # the failed poll and ``wait`` cannot be missed.
+                self._mirror_available.clear()
+                try:
+                    return self.get_nowait()
+                except queue.Empty:
+                    await self._mirror_available.wait()
+
+    def get_nowait(self) -> object:
+        """Get an item on the event-loop thread while keeping both queues aligned."""
+        # Claim the externally visible item first. If a foreground reader won the
+        # race, this raises without consuming the wrapped queue's capacity token.
+        item = self._sync_queue.get_nowait()
+        try:
+            self._async_queue.get_nowait()
+        except asyncio.QueueEmpty:
+            # A defensive recovery for skew during shutdown: the visible mirror
+            # item is already claimed, so do not discard it merely because its
+            # wrapped capacity token was consumed elsewhere.
+            pass
+        return item
+
+    def empty(self) -> bool:
+        """Return whether the foreground-visible mirror is empty."""
+        return self._sync_queue.empty()
+
+    def full(self) -> bool:
+        """Return whether the wrapped async queue is full."""
+        return self._async_queue.full()
+
+    def qsize(self) -> int:
+        """Return the number of foreground-visible items."""
+        return self._sync_queue.qsize()
+
+    def task_done(self) -> None:
+        """Delegate task accounting to the wrapped queue."""
+        self._async_queue.task_done()
+
+    async def join(self) -> None:
+        """Wait for the wrapped queue's task accounting to reach zero."""
+        await self._async_queue.join()
+
+    def _get_lap_stats(self) -> QueuePerfStats:
+        """Return interval statistics from a wrapped :class:`StatsQueue`."""
+        if not isinstance(self._async_queue, StatsQueue):
+            raise TypeError("Queue performance stats require a StatsQueue.")
+        return self._async_queue._get_lap_stats()
+
+    @asynccontextmanager
+    async def stage_hook(self) -> AsyncIterator[None]:
+        """Run the wrapped queue's initialization and finalization hook."""
+        async with self._async_queue.stage_hook():
+            yield
+
+    def _register_release(self) -> None:
+        """Record one wrapped slot claimed through the foreground mirror."""
+        with self._pending_release_lock:
+            self._pending_releases += 1
+
+    def _claim_pending_release(self) -> bool:
+        """Claim one registered foreground consumption for release."""
+        with self._pending_release_lock:
+            if self._pending_releases == 0:
+                return False
+            self._pending_releases -= 1
+            return True
+
+    def _release_one(self, retries_remaining: int = 1) -> None:
+        """Release one mirrored item from the wrapped queue on its owning loop."""
+        # Use the wrapped queue's public async path so custom queue behavior (in
+        # particular StatsQueue's get-side accounting) still observes every
+        # foreground consumption. SPDL's ``create_task`` observes every task
+        # result and logs failures at error level, so this release cannot fail
+        # as an unobserved fire-and-forget task.
+        create_task(
+            self._release_one_if_available(retries_remaining),
+            name=f"{self.info}_release_mirrored_output",
+        )
+
+    def _release_one_nowait(self) -> None:
+        """Release one slot directly after the wrapped queue's loop has closed."""
+        if not self._claim_pending_release():
+            return
+        try:
+            self._async_queue.get_nowait()
+        except asyncio.QueueEmpty:
+            # Shutdown may already have drained the wrapped side after the
+            # foreground claimed its mirror entry.
+            pass
+
+    async def _release_one_if_available(self, retries_remaining: int = 1) -> None:
+        """Release one item unless shutdown already drained it."""
+        if not self._claim_pending_release():
+            return
+        # This adapter wraps exact AsyncQueue/StatsQueue instances. For both,
+        # get() on a nonempty queue completes without yielding, so this check and
+        # removal are atomic on the queue's event loop while retaining get stats.
+        if self._async_queue.empty():
+            # The wrapped slot corresponding to this claimed token was already
+            # consumed by shutdown or defensive skew recovery. Restoring the
+            # token here would let a stale callback consume a later refill.
+            return
+        size_before = self._async_queue.qsize()
+        try:
+            await self._async_queue.get()
+        except asyncio.QueueEmpty:
+            # Shutdown may already have drained the corresponding wrapped item.
+            return
+        except Exception:
+            # Restore and retry only when the failed get left its slot in place.
+            # After the one retry is exhausted, release that slot directly so a
+            # bounded sink cannot remain permanently backpressured.
+            if self._async_queue.qsize() >= size_before:
+                if retries_remaining > 0:
+                    self._register_release()
+                    self._release_one(retries_remaining - 1)
+                    return
+                _LG.exception(
+                    "Wrapped queue get failed after retries; releasing its slot directly."
+                )
+                try:
+                    self._async_queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    return
+                else:
+                    return
+            raise
+
+    def _drain(self) -> None:
+        """Drain both sides on the wrapped queue's owning event loop."""
+        # Any wrapped entries corresponding to foreground reads are consumed by
+        # this drain, so their already-scheduled callbacks must become no-ops.
+        with self._pending_release_lock:
+            self._pending_releases = 0
+        while True:
+            try:
+                self._async_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+        while True:
+            try:
+                self._sync_queue.get_nowait()
+            except queue.Empty:
+                break
+        self._mirror_available.clear()
 
 
 _DEFAULT_QUEUE_CLASS: type[AsyncQueue] = StatsQueue

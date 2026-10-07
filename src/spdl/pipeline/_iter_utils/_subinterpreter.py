@@ -16,7 +16,7 @@ import sys
 import threading
 import weakref
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Generic, TypeVar
 
 from spdl.pipeline._iter_utils._common import (
@@ -36,6 +36,8 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
+_DEFERRED_JOIN_POLL_INTERVAL = 60.0
+
 
 if sys.version_info < (3, 14):
 
@@ -50,6 +52,7 @@ if sys.version_info < (3, 14):
             f"iterate_in_subinterpreter requires Python 3.14 or later. "
             f"Current version: {sys.version_info.major}.{sys.version_info.minor}"
         )
+
 else:
     import concurrent.interpreters
 
@@ -58,17 +61,126 @@ else:
     @dataclass
     class _iic(Generic[T]):
         thread: threading.Thread
-        interpreter: "concurrent.interpreters.Interpreter"
+        interpreter: "concurrent.interpreters.Interpreter | None"
         cmd_q: "concurrent.interpreters.Queue"
         data_q: "concurrent.interpreters.Queue"
         timeout: float
+        _cleanup_scheduled: bool = field(default=False, init=False, repr=False)
+        _terminate_owner: object | None = field(default=None, init=False, repr=False)
+        _cleanup_lock: threading.Lock = field(
+            default_factory=threading.Lock, init=False, repr=False
+        )
+
+        def _close_interpreter(self) -> bool:
+            if (interpreter := self.interpreter) is None:
+                return True
+            try:
+                interpreter.close()
+            except Exception:
+                _LG.warning("Failed to close subinterpreter worker.", exc_info=True)
+                return False
+            self.interpreter = None
+            return True
+
+        def _close_after_worker_exit(self) -> None:
+            joined = False
+            warned_pending = False
+            try:
+                try:
+                    while not joined:
+                        self.thread.join(timeout=_DEFERRED_JOIN_POLL_INTERVAL)
+                        joined = not self.thread.is_alive()
+                        if not joined and not warned_pending:
+                            _LG.warning(
+                                "Subinterpreter worker is still running; deferred "
+                                "cleanup remains pending."
+                            )
+                            warned_pending = True
+                except Exception:
+                    _LG.warning(
+                        "Failed to join subinterpreter worker during deferred cleanup.",
+                        exc_info=True,
+                    )
+                if joined:
+                    try:
+                        self._close_interpreter()
+                    except BaseException:
+                        _LG.warning(
+                            "Failed to close subinterpreter worker during deferred "
+                            "cleanup.",
+                            exc_info=True,
+                        )
+                        raise
+            finally:
+                with self._cleanup_lock:
+                    # A failed join or an exceptional close must not suppress a
+                    # later terminate() retry permanently.
+                    self._cleanup_scheduled = False
+
+        def _schedule_deferred_cleanup(self, owner: object) -> None:
+            with self._cleanup_lock:
+                # Keep helper construction/start and ownership publication atomic.
+                # A concurrent terminate() waits here, then either observes the
+                # scheduled reaper or takes over after a startup failure.
+                try:
+                    cleanup_thread = threading.Thread(
+                        target=self._close_after_worker_exit,
+                        name="spdl-subinterpreter-cleanup",
+                        daemon=True,
+                    )
+                    cleanup_thread.start()
+                except BaseException:
+                    if self._terminate_owner is owner:
+                        self._terminate_owner = None
+                    raise
+                self._cleanup_scheduled = True
+                if self._terminate_owner is owner:
+                    self._terminate_owner = None
 
         def terminate(self) -> None:
-            self.cmd_q.put(_Cmd.ABORT)
-            _drain(self.data_q)
-            self.thread.join(timeout=3)
-            if self.thread.is_alive():
-                _LG.warning("Thread did not terminate gracefully")
+            owner = object()
+            with self._cleanup_lock:
+                if self.interpreter is None:
+                    return
+                if self._cleanup_scheduled:
+                    _LG.debug("Deferred subinterpreter cleanup is already scheduled.")
+                    return
+                if self._terminate_owner is not None:
+                    _LG.debug("Subinterpreter cleanup is already in progress.")
+                    return
+                self._terminate_owner = owner
+
+            try:
+                if self.thread.is_alive():
+                    self.cmd_q.put(_Cmd.ABORT)
+                _drain(self.data_q)
+                self.thread.join(timeout=3)
+                if self.thread.is_alive():
+                    # Python cannot safely close a running subinterpreter. A
+                    # background reaper retains it until the worker exits and then
+                    # closes it. If the worker never exits, that interpreter leak is
+                    # unavoidable.
+                    _LG.warning(
+                        "Thread did not terminate gracefully; deferring "
+                        "subinterpreter cleanup."
+                    )
+                    try:
+                        self._schedule_deferred_cleanup(owner)
+                    except Exception:
+                        # Scheduling resets its state for every BaseException, but
+                        # control-flow failures still propagate to the caller.
+                        _LG.warning(
+                            "Failed to schedule subinterpreter cleanup.", exc_info=True
+                        )
+                    return
+                self._close_interpreter()
+            finally:
+                with self._cleanup_lock:
+                    # Scheduling may have atomically transferred or released this
+                    # ownership so another caller can retry. Do not clear that
+                    # caller's newer ownership from this older finally block.
+                    if self._terminate_owner is owner:
+                        self._terminate_owner = None
 
     class _SubinterpreterIterable(Iterable[T]):
         """An Iterable interface that manipulates the iterable in a subinterpreter
@@ -85,7 +197,7 @@ else:
             self._finalizer = weakref.finalize(self, interface.terminate)
 
         def __iter__(self) -> Iterator[T]:
-            """Instruct the subinterpreter to enter iteration mode and iterate on the results."""
+            """Enter iteration mode and yield the subinterpreter results."""
             if (if_ := self._if) is None:
                 raise RuntimeError(
                     "The subinterpreter is shutdown. Cannot iterate again."
@@ -93,9 +205,18 @@ else:
 
             try:
                 _enter_iteration_mode(
-                    if_.cmd_q, if_.data_q, if_.timeout, "subinterpreter"
+                    if_.cmd_q,
+                    if_.data_q,
+                    if_.timeout,
+                    "subinterpreter",
+                    is_alive=if_.thread.is_alive,
                 )
-                yield from _iterate_results(if_.data_q, if_.timeout, "subinterpreter")
+                yield from _iterate_results(
+                    if_.data_q,
+                    if_.timeout,
+                    "subinterpreter",
+                    if_.thread.is_alive,
+                )
             except (Exception, KeyboardInterrupt):
                 self._terminate()
                 raise
@@ -125,14 +246,52 @@ else:
         data_q = concurrent.interpreters.create_queue(maxsize=buffer_size)
         interp = concurrent.interpreters.create()
 
-        thread = interp.call_in_thread(
-            _execute_iterable, cmd_q, data_q, fn, initializers
-        )
+        try:
+            thread = interp.call_in_thread(
+                _execute_iterable, cmd_q, data_q, fn, initializers
+            )
+        except BaseException as error:
+            # No interface/finalizer exists yet, so this scope still owns the
+            # interpreter created immediately above. Preserve the primary failure,
+            # but retain any cleanup BaseException in its notes and the log.
+            try:
+                interp.close()
+            except BaseException as cleanup_error:  # noqa: B036
+                error.add_note(
+                    "Closing the orphaned subinterpreter also failed: "
+                    f"{type(cleanup_error).__name__}: {cleanup_error}"
+                )
+                _LG.warning("Failed to close orphaned subinterpreter.", exc_info=True)
+                raise error from None
+            raise
 
         timeout_ = float("inf") if timeout is None else timeout
         interface = _iic(thread, interp, cmd_q, data_q, timeout_)
 
-        _wait_for_init(interface.data_q, interface.timeout, "subinterpreter")
+        try:
+            _wait_for_init(
+                interface.data_q,
+                interface.timeout,
+                "subinterpreter",
+                interface.thread.is_alive,
+            )
+        except BaseException as error:
+            # No iterable/finalizer has been returned yet, so setup owns cleanup.
+            # Preserve the setup failure, but retain a cleanup BaseException in its
+            # notes and the log.
+            try:
+                interface.terminate()
+            except BaseException as cleanup_error:  # noqa: B036
+                error.add_note(
+                    "Cleaning up the failed subinterpreter initialization also "
+                    f"failed: {type(cleanup_error).__name__}: {cleanup_error}"
+                )
+                _LG.warning(
+                    "Failed to clean up subinterpreter after initialization.",
+                    exc_info=True,
+                )
+                raise error from None
+            raise
 
         return _SubinterpreterIterable(interface)
 
@@ -178,8 +337,9 @@ def iterate_in_subinterpreter(
             pass arguments to the function.
         buffer_size: Maximum number of items to buffer in the queue.
         initializer: Functions executed in the subinterpreter before iteration starts.
-        timeout: Timeout for inactivity. If the generator function does not yield
-            any item for this amount of time, the subinterpreter is terminated.
+        timeout: Maximum time the caller waits during initialization or for a new
+            item. On timeout, cooperative termination is requested. Python cannot
+            forcibly interrupt code actively running in a subinterpreter.
 
     Returns:
         Iterator over the results of the generator function.
