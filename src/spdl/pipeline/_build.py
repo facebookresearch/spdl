@@ -16,10 +16,12 @@ __all__ = [
 
 import logging
 import warnings
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Coroutine, Iterable, Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 from fractions import Fraction
 from functools import partial
+from types import TracebackType
 from typing import Any, Generic, TypeVar
 
 from spdl.pipeline._bg_task import (
@@ -54,6 +56,40 @@ U = TypeVar("U")
 _LG: logging.Logger = logging.getLogger(__name__)
 
 _DEFAULT_BUILD_CALLBACK: Callable[[PipelineConfig[Any]], None] | None = None
+
+
+class _BuildFailureCleanup:
+    """Release resources whose ownership has not transferred to a Pipeline."""
+
+    def __init__(self) -> None:
+        self._cleanup = ExitStack()
+
+    def __enter__(self) -> "_BuildFailureCleanup":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        _exc_value: BaseException | None,
+        _traceback: TracebackType | None,
+    ) -> None:
+        if exc_type is None:
+            self._cleanup.pop_all()
+            return
+        try:
+            self._cleanup.close()
+        except BaseException:  # noqa: B036 - preserve the original build failure
+            _LG.exception("Failed to clean up resources after a build failure.")
+
+    def add_pools(self, pools: Sequence[Any]) -> None:
+        for pool in reversed(pools):
+            self._cleanup.callback(pool.shutdown)
+
+    def add_executor(self, executor: ThreadPoolExecutor) -> None:
+        self._cleanup.callback(executor.shutdown)
+
+    def add_coro(self, coro: Coroutine[None, None, None]) -> None:
+        self._cleanup.callback(coro.close)
 
 
 def get_default_build_callback() -> Callable[[PipelineConfig[Any]], None] | None:
@@ -143,42 +179,47 @@ def _build_pipeline(
         except Exception:
             _LG.exception("Build callback failed.")
 
-    # Fuse each `.to()` region into one nested-pipeline stage that runs in a worker pool,
-    # eliminating the inter-stage IPC within the region. A no-op when the config has no markers.
-    # The pools are owned by the returned Pipeline and reaped when it stops.
-    # stacklevel=4: _fuse_marked_regions -> _build_pipeline -> build_pipeline -> user.
-    pipeline_cfg, pools = _fuse_marked_regions(
-        pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
-    )
+    with _BuildFailureCleanup() as cleanup:
+        # Fuse each `.to()` region into one nested-pipeline stage that runs in a worker
+        # pool, eliminating the inter-stage IPC within the region. A no-op when the
+        # config has no markers. stacklevel=4: _fuse_marked_regions ->
+        # _build_pipeline -> build_pipeline -> user.
+        pipeline_cfg, pools = _fuse_marked_regions(
+            pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
+        )
+        cleanup.add_pools(pools)
 
-    desc = repr(pipeline_cfg)
+        desc = repr(pipeline_cfg)
 
-    _LG.debug("%s", desc)
+        _LG.debug("%s", desc)
 
-    # Merge per-pipeline background tasks with defaults
-    all_bg_tasks: list[BackgroundTaskFactory] = []
-    default_bg = get_default_background_tasks()
-    if default_bg:
-        all_bg_tasks.extend(default_bg)
-    if background_tasks:
-        all_bg_tasks.extend(background_tasks)
+        # Merge per-pipeline background tasks with defaults
+        all_bg_tasks: list[BackgroundTaskFactory] = []
+        default_bg = get_default_background_tasks()
+        if default_bg:
+            all_bg_tasks.extend(default_bg)
+        if background_tasks:
+            all_bg_tasks.extend(background_tasks)
 
-    coro, queue = _build_pipeline_coro(
-        pipeline_cfg,
-        max_failures=max_failures,
-        report_stats_interval=report_stats_interval,
-        queue_class=queue_class,
-        task_hook_factory=task_hook_factory,
-        stage_id=stage_id,
-        background_tasks=all_bg_tasks or None,
-        use_thread_output_queue=use_thread_output_queue,
-    )
+        executor = ThreadPoolExecutor(
+            max_workers=num_threads,
+            thread_name_prefix="spdl_worker_thread_",
+        )
+        cleanup.add_executor(executor)
 
-    executor = ThreadPoolExecutor(
-        max_workers=num_threads,
-        thread_name_prefix="spdl_worker_thread_",
-    )
-    return Pipeline(coro, queue, executor, desc=desc, pools=pools)
+        coro, queue = _build_pipeline_coro(
+            pipeline_cfg,
+            max_failures=max_failures,
+            report_stats_interval=report_stats_interval,
+            queue_class=queue_class,
+            task_hook_factory=task_hook_factory,
+            stage_id=stage_id,
+            background_tasks=all_bg_tasks or None,
+            use_thread_output_queue=use_thread_output_queue,
+        )
+        cleanup.add_coro(coro)
+
+        return Pipeline(coro, queue, executor, desc=desc, pools=pools)
 
 
 def build_pipeline(
