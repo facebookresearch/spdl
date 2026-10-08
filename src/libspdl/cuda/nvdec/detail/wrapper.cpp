@@ -30,21 +30,18 @@
 
 namespace spdl::cuda::detail {
 
-void CUvideoparserDeleter::operator()(CUvideoparser p) {
-  WARN_IF_NOT_SUCCESS(
-      cuvidDestroyVideoParser(p), "Failed to destroy CUvideoparser.");
+void CUvideoparserDeleter::operator()(CUvideoparser p) const {
+  WARN_IF_NOT_SUCCESS(destroy(p), "Failed to destroy CUvideoparser.");
 }
 
-void CUvideodecoderDeleter::operator()(void* p) {
+void CUvideodecoderDeleter::operator()(void* p) const {
   WARN_IF_NOT_SUCCESS(
-      cuvidDestroyDecoder((CUvideodecoder)p),
-      "Failed to destroy CUvideodecoder.");
+      destroy((CUvideodecoder)p), "Failed to destroy CUvideodecoder.");
 }
 
-void CUvideoctxlockDeleter::operator()(void* p) {
+void CUvideoctxlockDeleter::operator()(void* p) const {
   WARN_IF_NOT_SUCCESS(
-      cuvidCtxLockDestroy((CUvideoctxlock)p),
-      "Failed to create CUvideoctxlock.");
+      destroy((CUvideoctxlock)p), "Failed to destroy CUvideoctxlock.");
 }
 
 MapGuard::MapGuard(
