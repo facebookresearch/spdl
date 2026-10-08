@@ -21,6 +21,41 @@ if not spdl.io.utils.built_with_nvjpeg():
 
 
 class TestNvjpegDecode(unittest.TestCase):
+    def test_decode_memoryview(self) -> None:
+        """A memoryview is decoded as one image rather than a batch of integers."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+        sample = get_sample(cmd)
+
+        with open(sample.path, "rb") as file:
+            data = memoryview(file.read())
+
+        buffer = spdl.io.decode_image_nvjpeg(
+            data,
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+        )
+        tensor = spdl.io.to_torch(buffer)
+
+        self.assertEqual(tensor.shape, torch.Size([3, 240, 320]))
+
+    def test_rejects_unsupported_memoryview_layouts(self) -> None:
+        """The CUDA extension validates the layout of borrowed byte buffers."""
+        views = {
+            "positive_stride": memoryview(bytearray(8))[::2],
+            "negative_stride": memoryview(bytearray(8))[::-1],
+            "multidimensional": memoryview(bytearray(8)).cast("B", (2, 4)),
+            "multi_byte": memoryview(bytearray(8)).cast("H"),
+        }
+
+        for layout, data in views.items():
+            with self.subTest(layout=layout):
+                with self.assertRaisesRegex(
+                    ValueError, "one-dimensional, C-contiguous byte buffer"
+                ):
+                    spdl.io.decode_image_nvjpeg(
+                        data,
+                        device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+                    )
+
     def test_decode_pix_fmt(self) -> None:
         """"""
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
@@ -94,3 +129,86 @@ class TestNvjpegDecode(unittest.TestCase):
         self.assertFalse(torch.equal(tensor[0], tensor[1]))
         self.assertFalse(torch.equal(tensor[1], tensor[2]))
         self.assertFalse(torch.equal(tensor[2], tensor[0]))
+
+    def test_async_resize_retains_decode_intermediate(self) -> None:
+        """An asynchronous resize keeps its decoded source alive until completion."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+        sample = get_sample(cmd)
+        with open(sample.path, "rb") as file:
+            data = memoryview(file.read())
+
+        buffer = spdl.io._core._libspdl_cuda.decode_image_nvjpeg(
+            data,
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            scale_width=160,
+            scale_height=120,
+            sync=False,
+        )
+        tensor = spdl.io.to_torch(buffer)
+        torch.cuda.synchronize(DEFAULT_CUDA)
+
+        self.assertEqual(tensor.shape, torch.Size([3, 120, 160]))
+        self.assertFalse(torch.equal(tensor[0], tensor[1]))
+
+    def test_async_batch_resize_retains_decode_intermediates(self) -> None:
+        """An asynchronous batch keeps every decoded source until completion."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 2 sample_%d.jpg"
+        samples = get_samples(cmd)
+        data = []
+        for sample in samples:
+            with open(sample.path, "rb") as file:
+                data.append(memoryview(file.read()))
+
+        buffer = spdl.io._core._libspdl_cuda.decode_image_nvjpeg(
+            data,
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            scale_width=160,
+            scale_height=120,
+            sync=False,
+        )
+        tensor = spdl.io.to_torch(buffer)
+        torch.cuda.synchronize(DEFAULT_CUDA)
+
+        self.assertEqual(tensor.shape, torch.Size([2, 3, 120, 160]))
+        self.assertFalse(torch.equal(tensor[:, 0], tensor[:, 1]))
+
+    def test_rejects_partially_specified_resize_dimensions(self) -> None:
+        """Resize dimensions must be provided together when either is set."""
+        sources = {
+            "single": b"invalid JPEG data",
+            "batch": [b"invalid JPEG data"],
+        }
+        dimensions = {
+            "width_only": (160, -1),
+            "height_only": (-1, 120),
+        }
+
+        for source_type, source in sources.items():
+            for dimension_type, (scale_width, scale_height) in dimensions.items():
+                with self.subTest(
+                    source_type=source_type,
+                    dimension_type=dimension_type,
+                ):
+                    with self.assertRaisesRegex(
+                        RuntimeError,
+                        "`scale_width` and `scale_height` must both be positive",
+                    ):
+                        spdl.io.decode_image_nvjpeg(
+                            source,
+                            device_config=spdl.io.cuda_config(
+                                device_index=DEFAULT_CUDA
+                            ),
+                            scale_width=scale_width,
+                            scale_height=scale_height,
+                        )
+
+    def test_batch_requires_explicit_resize_dimensions(self) -> None:
+        """Batch decoding rejects its unsupported no-resize configuration."""
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "Both `scale_width` and `scale_height` must be specified",
+        ):
+            spdl.io.decode_image_nvjpeg(
+                [b"invalid JPEG data"],
+                device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+            )

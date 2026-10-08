@@ -8,7 +8,34 @@
 
 #include "libspdl/cuda/npp/detail/utils.h"
 
+#include "libspdl/cuda/detail/utils.h"
+
 namespace spdl::cuda::detail {
+
+NppStreamContext get_npp_stream_context(
+    uintptr_t stream_handle,
+    int device_index) {
+  NppStreamContext context{};
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
+  context.hStream = reinterpret_cast<cudaStream_t>(stream_handle);
+  context.nCudaDeviceId = device_index;
+
+  cudaDeviceProp properties{};
+  CHECK_CUDA(
+      cudaGetDeviceProperties(&properties, context.nCudaDeviceId),
+      "Failed to get CUDA device properties for NPP.");
+  context.nMultiProcessorCount = properties.multiProcessorCount;
+  context.nMaxThreadsPerMultiProcessor = properties.maxThreadsPerMultiProcessor;
+  context.nMaxThreadsPerBlock = properties.maxThreadsPerBlock;
+  context.nSharedMemPerBlock = properties.sharedMemPerBlock;
+  context.nCudaDevAttrComputeCapabilityMajor = properties.major;
+  context.nCudaDevAttrComputeCapabilityMinor = properties.minor;
+
+  CHECK_CUDA(
+      cudaStreamGetFlags(context.hStream, &context.nStreamFlags),
+      "Failed to get CUDA stream flags for NPP.");
+  return context;
+}
 
 const char* to_string(NppStatus status) {
   switch (status) {
