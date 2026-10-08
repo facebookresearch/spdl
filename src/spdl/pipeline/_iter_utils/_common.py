@@ -34,6 +34,9 @@ __all__ = [
 
 T = TypeVar("T")
 
+_WORKER_EXIT_GRACE_PERIOD = 1.0
+_WORKER_EXIT_POLL_INTERVAL = 0.1
+
 
 class _Queue(Protocol[T]):
     """Protocol for queue-like objects used in subprocess and subinterpreter communication.
@@ -159,6 +162,35 @@ def _drain(q: _Queue[Any]) -> None:
             q.get_nowait()
         except queue.Empty:
             break
+
+
+def _get_worker_message(
+    data_q: _Queue[_Msg[T]],
+    timeout: float,
+    is_alive: Callable[[], bool] | None,
+    worker_type: str,
+) -> _Msg[T]:
+    """Get one message, allowing final data to flush after worker death."""
+    try:
+        return data_q.get(timeout=timeout)
+    except queue.Empty:
+        if is_alive is None or is_alive():
+            raise
+
+    # multiprocessing.Queue.put() returns before its feeder thread flushes the
+    # item to the pipe. The process can therefore appear dead just before its
+    # final protocol message becomes readable. Poll for a bounded grace period
+    # so transiently empty reads do not discard that message.
+    deadline = time.monotonic() + _WORKER_EXIT_GRACE_PERIOD
+    while (remaining := deadline - time.monotonic()) > 0:
+        try:
+            return data_q.get(timeout=min(_WORKER_EXIT_POLL_INTERVAL, remaining))
+        except queue.Empty:
+            pass
+    try:
+        return data_q.get_nowait()
+    except queue.Empty:
+        raise RuntimeError(f"The worker {worker_type} exited unexpectedly.") from None
 
 
 def _execute_iterable(
@@ -333,7 +365,12 @@ def _execute_iterable(
                 return
 
 
-def _wait_for_init(data_q: _Queue[_Msg[T]], timeout: float, worker_type: str) -> None:
+def _wait_for_init(
+    data_q: _Queue[_Msg[T]],
+    timeout: float,
+    worker_type: str,
+    is_alive: Callable[[], bool] | None = None,
+) -> None:
     """Wait for initialization to complete.
 
     Works with both multiprocessing.Queue and concurrent.interpreters.Queue.
@@ -341,14 +378,15 @@ def _wait_for_init(data_q: _Queue[_Msg[T]], timeout: float, worker_type: str) ->
     Args:
         data_q: Queue to receive initialization status messages
         timeout: Maximum time to wait for initialization
-        worker_name: Name of the worker (for error messages)
+        worker_type: Type of worker (for error messages)
+        is_alive: Optional worker-liveness probe.
     """
     wtype = f"worker {worker_type}"
     wait = min(0.1, timeout)
     t0 = time.monotonic()
     while True:
         try:
-            item = data_q.get(timeout=wait)
+            item = _get_worker_message(data_q, wait, is_alive, worker_type)
         except queue.Empty:
             if (elapsed := time.monotonic() - t0) > timeout:
                 raise RuntimeError(
@@ -373,6 +411,7 @@ def _enter_iteration_mode(
     timeout: float,
     worker_type: str,
     discard: Callable[[Any], None] | None = None,
+    is_alive: Callable[[], bool] | None = None,
 ) -> None:
     """Instruct the worker to enter iteration mode and wait for the acknowledgement.
 
@@ -386,6 +425,7 @@ def _enter_iteration_mode(
         worker_type: Type of worker (for error messages)
         discard: Optional callback that accounts for unread results from the
             previous iteration.
+        is_alive: Optional worker-liveness probe.
     """
     wtype = f"worker {worker_type}"
     cmd_q.put(_Cmd.STOP_ITERATION)
@@ -395,7 +435,7 @@ def _enter_iteration_mode(
     t0 = time.monotonic()
     while True:
         try:
-            item = data_q.get(timeout=wait)
+            item = _get_worker_message(data_q, wait, is_alive, worker_type)
             t0 = time.monotonic()
         except queue.Empty:
             if (elapsed := time.monotonic() - t0) > timeout:
@@ -430,7 +470,10 @@ def _enter_iteration_mode(
 
 
 def _iterate_results(
-    data_q: _Queue[_Msg[T]], timeout: float, worker_type: str
+    data_q: _Queue[_Msg[T]],
+    timeout: float,
+    worker_type: str,
+    is_alive: Callable[[], bool] | None = None,
 ) -> Iterable[T]:
     """Watch the result queue and iterate on the results.
 
@@ -439,7 +482,8 @@ def _iterate_results(
     Args:
         data_q: Queue to receive iteration results
         timeout: Maximum time to wait between results
-        worker_name: Name of the worker (for error messages)
+        worker_type: Type of worker (for error messages)
+        is_alive: Optional worker-liveness probe.
 
     Yields:
         Items from the iterator
@@ -449,7 +493,7 @@ def _iterate_results(
     t0 = time.monotonic()
     while True:
         try:
-            item = data_q.get(timeout=wait)
+            item = _get_worker_message(data_q, wait, is_alive, worker_type)
             t0 = time.monotonic()
         except queue.Empty:
             if (elapsed := time.monotonic() - t0) > timeout:
