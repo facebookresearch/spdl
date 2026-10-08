@@ -55,4 +55,10 @@ void open_format(
     AVFormatContext* format_ctx,
     const std::optional<OptionDict>& option = std::nullopt);
 
+using WriteTrailerFn = int (*)(AVFormatContext*);
+
+void close_format(
+    AVFormatContext* format_ctx,
+    WriteTrailerFn write_trailer = av_write_trailer);
+
 } // namespace spdl::core::detail
