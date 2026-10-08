@@ -11,13 +11,17 @@ This module provides functionality to run iterables in separate processes
 using Python's multiprocessing module.
 """
 
+from __future__ import annotations
+
 import logging
 import multiprocessing as mp
 import queue
 import threading
 from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextlib import ExitStack
 from dataclasses import dataclass, field
 from multiprocessing.util import Finalize
+from types import TracebackType
 from typing import Any, cast, Generic, TypeVar
 
 from spdl.pipeline._arena import _Arena, ArenaProtocol
@@ -28,7 +32,6 @@ from spdl.pipeline._iter_utils._common import (
     _execute_iterable,
     _iterate_results,
     _Msg,
-    _Status,
     _wait_for_init,
 )
 
@@ -45,7 +48,7 @@ def _join(process: mp.Process) -> None:
     process.join(3)
 
     if process.exitcode is None:
-        _LG.warning("Terminaging the worker process.")
+        _LG.warning("Terminating the worker process.")
         process.terminate()
         process.join(10)
 
@@ -58,15 +61,71 @@ def _join(process: mp.Process) -> None:
         _LG.warning("Failed to kill the worker process.")
 
 
-def _close_queue(q: Any) -> None:
+def _close_queue(q: Any, *, abandon: bool = False) -> None:
     """Close a main-process multiprocessing queue and its feeder thread."""
+    if abandon:
+        try:
+            q.cancel_join_thread()
+        except Exception:
+            _LG.debug("Failed to abandon subprocess queue data", exc_info=True)
     try:
         q.close()
-        q.join_thread()
+        if not abandon:
+            q.join_thread()
     except Exception:
         # A concurrent/earlier cleanup can already have closed the queue. Queue
         # teardown is best-effort and must not mask the pipeline's real result.
         _LG.debug("Failed to close subprocess queue cleanly", exc_info=True)
+
+
+def _is_queue_closed_error(error: ValueError, *queues: Any) -> bool:
+    return any(error.args == (f"Queue {q!r} is closed",) for q in queues)
+
+
+class _IPCResourceCleanup:
+    """Release subprocess resources in dependency order."""
+
+    def __init__(
+        self,
+        interface: _ipc[Any],
+        cmd_q: Any,
+        data_q: Any,
+        arena: ArenaProtocol | None,
+        *,
+        process_started: bool,
+    ) -> None:
+        self._interface = interface
+        self._cmd_q = cmd_q
+        self._data_q = data_q
+        self._arena = arena
+        self._process_started = process_started
+        self._cleanup = ExitStack()
+
+    def __enter__(self) -> _IPCResourceCleanup:
+        self._cleanup.__enter__()
+        # ExitStack reverses these callbacks: reap the worker before releasing
+        # its IPC resources, and clear retained queue references last.
+        self._cleanup.callback(self._clear_queue_references)
+        self._cleanup.callback(_close_queue, self._data_q, abandon=True)
+        self._cleanup.callback(_close_queue, self._cmd_q, abandon=True)
+        if self._arena is not None:
+            self._cleanup.callback(self._arena.unlink)
+            self._cleanup.callback(self._arena.close)
+        if self._process_started:
+            self._cleanup.callback(_join, self._interface.process)
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool | None:
+        return self._cleanup.__exit__(exc_type, exc, traceback)
+
+    def _clear_queue_references(self) -> None:
+        self._interface.cmd_q = None
+        self._interface.data_q = None
 
 
 @dataclass
@@ -78,7 +137,51 @@ class _ipc(Generic[T]):
     arena: ArenaProtocol | None = None
     closed: threading.Event = field(default_factory=threading.Event)
 
-    def terminate(self) -> None:
+    def _prepare_process_for_shutdown(
+        self,
+        cmd_q: queue.Queue[_Cmd],
+        data_q: queue.Queue[_Msg[T]],
+        arena: ArenaProtocol | None,
+        *,
+        force: bool,
+        process_started: bool,
+    ) -> None:
+        if process_started and self.process.is_alive():
+            if force:
+                # During initialization the worker cannot observe ABORT until the
+                # initializer returns, so terminate it immediately on setup failure.
+                self.process.terminate()
+            else:
+                try:
+                    cmd_q.put_nowait(_Cmd.ABORT)
+                except (EOFError, OSError, ValueError, queue.Full):
+                    _LG.debug(
+                        "Could not request graceful subprocess shutdown.",
+                        exc_info=True,
+                    )
+
+        if arena is not None:
+            # Wake a producer blocked while waiting for arena space before join.
+            shutdown = getattr(arena, "shutdown_arena", None)
+            if shutdown is not None:
+                try:
+                    shutdown()
+                except Exception:
+                    _LG.warning(
+                        "Failed to wake the subprocess arena during teardown.",
+                        exc_info=True,
+                    )
+
+        try:
+            _drain(data_q)
+        except (EOFError, OSError, RuntimeError, ValueError):
+            # Unread tensor payloads can fail to unpickle after the worker exits.
+            _LG.debug(
+                "Ignoring an unread subprocess payload during teardown.",
+                exc_info=True,
+            )
+
+    def terminate(self, *, force: bool = False) -> None:
         if self.closed.is_set():
             return
         self.closed.set()
@@ -86,65 +189,42 @@ class _ipc(Generic[T]):
         data_q = self.data_q
         assert cmd_q is not None
         assert data_q is not None
-        try:
-            cmd_q.put_nowait(_Cmd.ABORT)
-        except (EOFError, OSError, ValueError, queue.Full):
-            _LG.debug("Failed to abort subprocess during teardown", exc_info=True)
-        # Wake any worker that is currently blocked in ``write_binary`` /
-        # ``begin_unit`` on the arena's space condition variable. Without this,
-        # a producer waiting for a (never-coming) consumer reclaim would stay
-        # blocked through ``_join`` and hang teardown.
-        if (arena := self.arena) is not None:
-            shutdown = getattr(arena, "shutdown_arena", None)
-            if shutdown is not None:
-                shutdown()
-        try:
-            _drain(data_q)
-        except (EOFError, OSError):
-            # Queue cleanup discards values, but multiprocessing.Queue still
-            # unpickles them. Tensor payloads rebuild storage through the
-            # producer's resource_sharer socket; that socket may disappear as
-            # soon as ABORT lets the producer exit. The value is already being
-            # discarded, so a missing transport resource must not skip joining
-            # the process (or turn successful training into a cleanup failure).
-            _LG.debug(
-                "Ignoring stale subprocess payload during teardown", exc_info=True
+        # ``Process.start()`` can fail before assigning a PID (for example when
+        # spawn cannot pickle an argument). In that state ``join()`` raises, but
+        # the queues and optional arena still belong to this setup attempt and
+        # must be released.
+        process_started = self.process.pid is not None
+        arena = self.arena
+        with _IPCResourceCleanup(
+            self,
+            cmd_q,
+            data_q,
+            arena,
+            process_started=process_started,
+        ):
+            self._prepare_process_for_shutdown(
+                cmd_q,
+                data_q,
+                arena,
+                force=force,
+                process_started=process_started,
             )
-        _join(self.process)
-        # A consumer can be blocked in ``data_q.get(timeout=...)`` while another
-        # thread invokes the finalizer.  Process exit alone does not wake that
-        # parent-side queue reader because this process still owns the queue's
-        # read descriptor.  Wake it explicitly so a surrounding pipeline can
-        # cancel its continuous source immediately instead of waiting for the
-        # (potentially very long) data timeout.
-        try:
-            _drain(data_q)
-            data_q.put_nowait(_Msg(_Status.ITERATION_FINISHED))
-        except (EOFError, OSError, queue.Full):
-            _LG.debug(
-                "Failed to wake subprocess consumer during teardown", exc_info=True
-            )
-        try:
-            # Unlink the shared-memory arena only after the worker is confirmed
-            # dead, so nothing touches the segment afterwards. ``unlink`` runs in
-            # ``finally`` so a failing ``close`` never leaves the OS-level shm
-            # segment behind — teardown is the only place that calls ``unlink``.
-            if arena is not None:
-                try:
-                    arena.close()
-                finally:
-                    arena.unlink()
-        finally:
-            # Queue objects own pipe descriptors, feeder threads, and process-shared
-            # semaphores. Keeping them reachable until interpreter shutdown makes the
-            # resource tracker report leaked semaphores (and can accumulate fds in a
-            # long-lived trainer). Close the handles after the worker is reaped and the
-            # terminal wakeup is flushed, then drop our references so SemLock finalizers
-            # run promptly. This must still run if arena cleanup itself fails.
-            _close_queue(cmd_q)
-            _close_queue(data_q)
-            self.cmd_q = None
-            self.data_q = None
+
+
+def _iterate_results_until_closed(
+    interface: _ipc[T], data_q: queue.Queue[_Msg[T]]
+) -> Iterable[T]:
+    """Iterate results until teardown requests cancellation."""
+    try:
+        yield from _iterate_results(
+            data_q,
+            interface.timeout,
+            "subprocess",
+            interface.closed.is_set,
+        )
+    except ValueError as error:
+        if not (interface.closed.is_set() and _is_queue_closed_error(error, data_q)):
+            raise
 
 
 class _SubprocessIterable(Iterable[T]):
@@ -179,21 +259,28 @@ class _SubprocessIterable(Iterable[T]):
             data_q = if_.data_q
             if cmd_q is None or data_q is None:
                 return
-            # pyre-ignore[6]
-            _enter_iteration_mode(
-                cmd_q,
-                data_q,
-                if_.timeout,
-                "subprocess",
-                None if arena is None else arena.discard,
-            )
+            try:
+                _enter_iteration_mode(
+                    cmd_q,
+                    data_q,
+                    if_.timeout,
+                    "subprocess",
+                    None if arena is None else arena.discard,
+                    if_.closed.is_set,
+                )
+            except ValueError as error:
+                if if_.closed.is_set() and _is_queue_closed_error(error, cmd_q, data_q):
+                    return
+                raise
+            if if_.closed.is_set():
+                return
             if arena is None:
-                yield from _iterate_results(data_q, if_.timeout, "subprocess")
+                yield from _iterate_results_until_closed(if_, data_q)
             else:
                 # Let the backend prepare for the next iteration after the
                 # worker has prepared its side.
                 arena.reader.reset()
-                for blob in _iterate_results(data_q, if_.timeout, "subprocess"):
+                for blob in _iterate_results_until_closed(if_, data_q):
                     yield cast(T, arena.restore(cast(bytes, blob)))
         except GeneratorExit:
             return
@@ -306,12 +393,18 @@ def iterate_in_subprocess(
         arena,
     )
 
-    process.start()
-
     try:
+        process.start()
         _wait_for_init(data_q, if_.timeout, "subprocess")
     except BaseException:
-        if_.terminate()
+        # No iterable/finalizer has been returned yet, so setup owns cleanup.
+        # Force termination because a blocked initializer cannot consume ABORT.
+        try:
+            if_.terminate(force=True)
+        except Exception:
+            _LG.warning(
+                "Failed to clean up subprocess after initialization.", exc_info=True
+            )
         raise
 
     return _SubprocessIterable(if_)

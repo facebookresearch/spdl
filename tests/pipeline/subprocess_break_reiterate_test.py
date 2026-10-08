@@ -21,6 +21,7 @@ from collections.abc import Iterable, Iterator
 from functools import partial
 from multiprocessing.connection import Connection
 from typing import cast
+from unittest.mock import patch
 
 from spdl.pipeline import iterate_in_subprocess
 from spdl.pipeline._iter_utils._subprocess import _SubprocessIterable
@@ -155,6 +156,106 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
 
         self.assertFalse(reader.is_alive())
         self.assertEqual(result, ["stopped"])
+
+    def test_finalizer_stops_reader_before_short_queue_timeout(self) -> None:
+        """Intentional teardown wins a race with the normal result timeout."""
+        src = cast(
+            _SubprocessIterable[int],
+            iterate_in_subprocess(
+                StalledSourceIterable,
+                timeout=0.3,
+                mp_context="fork",
+            ),
+        )
+        iterator = iter(src)
+        self.assertEqual(next(iterator), 0)
+
+        result: list[object] = []
+
+        def read_next() -> None:
+            try:
+                result.append(next(iterator))
+            except StopIteration:
+                result.append("stopped")
+
+        reader = threading.Thread(target=read_next)
+        reader.start()
+        time.sleep(0.05)
+
+        src._finalizer()
+        reader.join(timeout=10)
+
+        self.assertFalse(reader.is_alive())
+        self.assertEqual(result, ["stopped"])
+
+    def test_finalizer_during_iteration_entry_stops_reader(self) -> None:
+        """Closing queues while entering iteration ends the pending read."""
+        src = cast(
+            _SubprocessIterable[int],
+            iterate_in_subprocess(
+                StalledSourceIterable,
+                timeout=30,
+                mp_context="fork",
+            ),
+        )
+        iterator = iter(src)
+        entered = threading.Event()
+        resume = threading.Event()
+        result: list[object] = []
+
+        from spdl.pipeline._iter_utils import _subprocess
+
+        original_enter_iteration_mode = _subprocess._enter_iteration_mode
+
+        def gated_enter_iteration_mode(*args, **kwargs) -> None:
+            entered.set()
+            if not resume.wait(timeout=10):
+                raise RuntimeError("Timed out waiting to resume iteration entry.")
+            original_enter_iteration_mode(*args, **kwargs)
+
+        def read_next() -> None:
+            try:
+                result.append(next(iterator))
+            except StopIteration:
+                result.append("stopped")
+
+        with patch.object(
+            _subprocess,
+            "_enter_iteration_mode",
+            side_effect=gated_enter_iteration_mode,
+        ):
+            reader = threading.Thread(target=read_next)
+            reader.start()
+            try:
+                self.assertTrue(entered.wait(timeout=10))
+                src._finalizer()
+            finally:
+                resume.set()
+                src._finalizer()
+                reader.join(timeout=10)
+
+        self.assertFalse(reader.is_alive())
+        self.assertEqual(result, ["stopped"])
+
+    def test_finalizer_closes_paused_iterator_without_waiting(self) -> None:
+        """Finalizing a paused iterator makes its next read stop promptly."""
+        src = cast(
+            _SubprocessIterable[int],
+            iterate_in_subprocess(
+                StalledSourceIterable,
+                timeout=30,
+                mp_context="fork",
+            ),
+        )
+        iterator = iter(src)
+        self.assertEqual(next(iterator), 0)
+
+        start = time.monotonic()
+        src._finalizer()
+        self.assertLess(time.monotonic() - start, 10)
+
+        with self.assertRaises(StopIteration):
+            next(iterator)
 
     def test_retained_iterable_does_not_block_process_exit(self) -> None:
         """A retained subprocess iterable must not block interpreter shutdown."""

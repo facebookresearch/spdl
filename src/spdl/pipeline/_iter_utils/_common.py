@@ -373,6 +373,7 @@ def _enter_iteration_mode(
     timeout: float,
     worker_type: str,
     discard: Callable[[Any], None] | None = None,
+    should_stop: Callable[[], bool] | None = None,
 ) -> None:
     """Instruct the worker to enter iteration mode and wait for the acknowledgement.
 
@@ -386,6 +387,7 @@ def _enter_iteration_mode(
         worker_type: Type of worker (for error messages)
         discard: Optional callback that accounts for unread results from the
             previous iteration.
+        should_stop: Optional callback that requests cancellation while waiting.
     """
     wtype = f"worker {worker_type}"
     cmd_q.put(_Cmd.STOP_ITERATION)
@@ -394,10 +396,14 @@ def _enter_iteration_mode(
     wait = min(0.1, timeout)
     t0 = time.monotonic()
     while True:
+        if should_stop is not None and should_stop():
+            return
         try:
             item = data_q.get(timeout=wait)
             t0 = time.monotonic()
         except queue.Empty:
+            if should_stop is not None and should_stop():
+                return
             if (elapsed := time.monotonic() - t0) > timeout:
                 raise RuntimeError(
                     f"The {wtype} did not produce any data for {elapsed:.2f} seconds."
@@ -430,7 +436,10 @@ def _enter_iteration_mode(
 
 
 def _iterate_results(
-    data_q: _Queue[_Msg[T]], timeout: float, worker_type: str
+    data_q: _Queue[_Msg[T]],
+    timeout: float,
+    worker_type: str,
+    should_stop: Callable[[], bool] | None = None,
 ) -> Iterable[T]:
     """Watch the result queue and iterate on the results.
 
@@ -439,7 +448,8 @@ def _iterate_results(
     Args:
         data_q: Queue to receive iteration results
         timeout: Maximum time to wait between results
-        worker_name: Name of the worker (for error messages)
+        worker_type: Type of worker (for error messages)
+        should_stop: Optional callback that requests cancellation while waiting.
 
     Yields:
         Items from the iterator
@@ -448,10 +458,14 @@ def _iterate_results(
     wait = min(0.1, timeout)
     t0 = time.monotonic()
     while True:
+        if should_stop is not None and should_stop():
+            return
         try:
             item = data_q.get(timeout=wait)
             t0 = time.monotonic()
         except queue.Empty:
+            if should_stop is not None and should_stop():
+                return
             if (elapsed := time.monotonic() - t0) > timeout:
                 raise RuntimeError(
                     f"The {wtype} did not produce any data for {elapsed:.2f} seconds."
