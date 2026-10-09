@@ -19,7 +19,7 @@ Before writing any SPDL code, analyze the existing `__getitem__`, `__iter__`, or
 | **CPU-bound (GIL-free)** | Image/video/audio decode, tokenization (tiktoken), tensor ops, NumPy | `.pipe(fn, concurrency=4-8)` |
 | **CPU-bound (GIL-holding)** | Pure Python transforms, non-GIL-releasing libraries | `.pipe(fn, concurrency=1)` — minimize or replace |
 | **Batching** | Collation, stacking tensors | `.aggregate(batch_size)` then `.pipe(collate_fn)` |
-| **GPU transfer** | `.to(device)`, pinned memory copy | `spdl.io.transfer_tensor` in a dedicated 1-worker ThreadPoolExecutor (see below) |
+| **GPU transfer** | `.to(device)`, pinned memory copy | `spdl.io.transfer_tensor_h2d` in a dedicated 1-worker ThreadPoolExecutor (see below) |
 
 ### Key Questions to Ask
 
@@ -106,22 +106,22 @@ def collate_frames(items):
 
 `spdl.io` keeps data in native format (e.g., YUV420) until batch creation, then converts directly into one contiguous batch tensor with zero-copy to PyTorch.
 
-### GPU Transfer: `spdl.io.transfer_tensor`
+### GPU Transfer: `spdl.io.transfer_tensor_h2d`
 
-Always use `spdl.io.transfer_tensor` for moving batches to GPU. It pins memory and uses a dedicated CUDA stream internally, enabling overlap of data transfer and compute.
+Always use `spdl.io.transfer_tensor_h2d` for moving batches to GPU. It pins memory and uses a dedicated CUDA stream internally, enabling overlap of data transfer and compute.
 
 Run it in a **dedicated ThreadPoolExecutor with 1 worker** to isolate the transfer thread from pipeline worker threads. This ensures the CUDA stream is not shared and transfer does not contend with CPU stages:
 
 ```python
 from concurrent.futures import ThreadPoolExecutor
-from spdl.io import transfer_tensor
+from spdl.io import transfer_tensor_h2d
 
 _gpu_executor = ThreadPoolExecutor(max_workers=1)
 
 pipeline = (
     PipelineBuilder()
     ...
-    .pipe(transfer_tensor, executor=_gpu_executor)
+    .pipe(transfer_tensor_h2d, executor=_gpu_executor)
     .add_sink(buffer_size=3)
     .build(num_threads=1)
 )
@@ -134,7 +134,7 @@ For production training, isolate CPU work in a subprocess to avoid GIL contentio
 ```python
 import spdl.pipeline
 from concurrent.futures import ThreadPoolExecutor
-from spdl.io import transfer_tensor
+from spdl.io import transfer_tensor_h2d
 from spdl.pipeline import PipelineBuilder, PriorityThreadPoolExecutor
 
 _gpu_executor = ThreadPoolExecutor(max_workers=1)
@@ -161,7 +161,7 @@ source2 = spdl.pipeline.run_pipeline_in_subprocess(
 frontend = (
     PipelineBuilder()
     .add_source(source2, continuous=True)
-    .pipe(transfer_tensor, executor=_gpu_executor)
+    .pipe(transfer_tensor_h2d, executor=_gpu_executor)
     .add_sink(buffer_size=3)
 )
 pipeline = frontend.build(num_threads=1)

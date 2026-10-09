@@ -60,8 +60,8 @@ __PIPELINE_CODE__
          return dataset[index]
      backend.pipe(partial(_fetch, dataset=dataset), concurrency=8)
      ```
-   - **Separate CPU and GPU stages**: The backend pipeline (running in the subprocess) must contain ONLY CPU-bound stages (fetch, decode, aggregate, collate). GPU stages like `transfer_tensor` require a CUDA context and MUST be in the frontend pipeline (main process). If the existing code includes GPU stages in the pipeline builder, exclude them from the backend config and add them to the frontend pipeline.
-   - The frontend pipeline takes the subprocess iterable as its source and applies GPU transfer: `PipelineBuilder().add_source(subprocess_iterable, continuous=True).pipe(transfer_tensor).add_sink(buffer_size=3).build(num_threads=1)`.
+   - **Separate CPU and GPU stages**: The backend pipeline (running in the subprocess) must contain ONLY CPU-bound stages (fetch, decode, aggregate, collate). GPU stages like `transfer_tensor_h2d` require a CUDA context and MUST be in the frontend pipeline (main process). If the existing code includes GPU stages in the pipeline builder, exclude them from the backend config and add them to the frontend pipeline.
+   - The frontend pipeline takes the subprocess iterable as its source and applies GPU transfer: `PipelineBuilder().add_source(subprocess_iterable, continuous=True).pipe(transfer_tensor_h2d).add_sink(buffer_size=3).build(num_threads=1)`.
    - **`Pipeline` is iterable, not iterator**: When iterating a `Pipeline` object, always use `pipeline.get_iterator(timeout=<seconds>)` to get an iterator with a timeout. Do NOT use `iter(pipeline)` or `for batch in pipeline` directly — these lack timeout handling.
 12. **MP execution-region robustness**: When applying an `mp_region` change, use `PipelineBuilder.to(ProcessPoolExecutorConfig(...))` and close the region with `.to(MAIN_PROCESS)` before `.add_sink()`.
    - Put adjacent async I/O and CPU transform/collate stages in the same region. Each worker runs a nested SPDL Pipeline and its own async event loop, so pass async functions directly; do NOT use `asyncio.run()`.
@@ -73,7 +73,7 @@ __PIPELINE_CODE__
    - Keep GPU stages outside the region. For GPU training, compose the region config with `run_pipeline_in_subprocess()` and put GPU transfer in the outer main-process pipeline, as in the knowledge-base example.
 13. **GPU video decode (NVDEC) robustness**: When replacing CPU video decode with GPU decode:
    - Replace `decode_packets(packets, ...)` + `convert_frames(frames)` + `transfer_buffer(buffer, ...)` with a single `decode_packets_nvdec(packets, device_config=cuda_cfg, pix_fmt="rgb")`. The result is a `CUDABuffer` already on GPU.
-   - Remove the `transfer_buffer` or `transfer_tensor` stage from the pipeline — data is already on GPU after NVDEC decode.
+   - Remove the `transfer_buffer` or `transfer_tensor_h2d` stage from the pipeline — data is already on GPU after NVDEC decode.
    - Create `CUDAConfig` with PyTorch's caching allocator: `spdl.io.cuda_config(device_index=..., allocator=(torch.cuda.caching_allocator_alloc, torch.cuda.caching_allocator_delete))`.
    - The `device_index` must match the current GPU rank. Use `torch.cuda.current_device()` or the rank/local_rank variable from the training setup.
    - Set decode concurrency based on GPU hardware — H100/B100 have 7 NVDEC instances per GPU (concurrency ~7; higher for sparse decoding patterns). Older GPUs (A100, V100) have 3–5 slots.

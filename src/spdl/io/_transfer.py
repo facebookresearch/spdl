@@ -7,11 +7,13 @@
 __all__ = [
     "transfer_tensor",
     "transfer_tensor_d2h",
+    "transfer_tensor_h2d",
 ]
 
 import logging
 import os
 import threading
+import warnings
 from collections import defaultdict
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import fields, is_dataclass
@@ -111,7 +113,7 @@ class _DataTransfer:
 _THREAD_LOCAL = threading.local()
 
 
-def _get_trancfer_func(num_caches: int) -> _DataTransfer:
+def _get_transfer_func(num_caches: int) -> _DataTransfer:
     if not hasattr(_THREAD_LOCAL, "transfer"):
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
         if local_rank >= torch.cuda.device_count():
@@ -126,11 +128,13 @@ def _get_trancfer_func(num_caches: int) -> _DataTransfer:
     return _THREAD_LOCAL.transfer
 
 
-def transfer_tensor(batch: T, /, *, num_caches: int = 4) -> T:
-    """Transfers PyTorch CPU Tensors to CUDA in a dedicated stream.
+def transfer_tensor_h2d(batch: T, /, *, num_caches: int = 4) -> T:
+    """Transfer PyTorch tensors from CPU to CUDA in a dedicated stream.
+
+    .. versionadded:: 0.7.0
 
     This function wraps calls to :py:meth:`torch.Tensor.pin_memory` and
-    :py:meth:`torch.Tensor.to`, and execute them in a dedicated CUDA stream.
+    :py:meth:`torch.Tensor.to`, and executes them in a dedicated CUDA stream.
 
     When called in a background thread, the data transfer overlaps with
     the GPU computation happening in the foreground thread (such as training
@@ -146,19 +150,19 @@ def transfer_tensor(batch: T, /, *, num_caches: int = 4) -> T:
     Concretely, it performs the following operations.
 
     1. If a dedicated CUDA stream local to the calling thread is not found
-       in a thread-local storage, creates and stashes one.
-       (The target device is deetrmined by ``"LOCAL_RANK"`` environment
+       in thread-local storage, creates and caches one.
+       (The target device is determined by the ``"LOCAL_RANK"`` environment
        variable.)
     2. Activates the CUDA stream.
-    3. Traverses the given object recursively, and transfer tensors to GPU.
-       Data are first copied to page-locked memory by calling ``pin_memory``
-       method, then the data is transferred to the GPU in asynchronous manner.
-       (i.e. ``.to(non_blocking=True)``)
+    3. Traverses the given object recursively and transfers CPU tensors to CUDA.
+       Data is first copied to page-locked memory by calling ``pin_memory``,
+       then transferred to CUDA asynchronously with
+       ``.to(non_blocking=True)``.
     4. Synchronizes the stream, to ensure that all the data transfers are
        completed.
 
     Args:
-        batch: A :py:class:`Torch.Tensor` or a composition of tensors
+        batch: A :py:class:`torch.Tensor` or a composition of tensors
             with container types such as ``list``, ``tuple``, ``dict``
             and ``dataclass``.
 
@@ -172,9 +176,45 @@ def transfer_tensor(batch: T, /, *, num_caches: int = 4) -> T:
     Returns:
         An object of the same type as the input, but the PyTorch
         tensors are transferred to CUDA device.
+
+    Example:
+        .. code-block:: python
+
+           from concurrent.futures import ThreadPoolExecutor
+
+           from spdl.io import transfer_tensor_h2d
+
+           with ThreadPoolExecutor(max_workers=1) as executor:
+               future = executor.submit(transfer_tensor_h2d, cpu_batch)
+               cuda_batch = future.result()
     """
-    transfer = _get_trancfer_func(num_caches)
+    transfer = _get_transfer_func(num_caches)
     return transfer(batch)
+
+
+def transfer_tensor(batch: T, /, *, num_caches: int = 4) -> T:
+    """Transfer PyTorch tensors from CPU to CUDA in a dedicated stream.
+
+    .. deprecated:: 0.7.0
+       Use :py:func:`spdl.io.transfer_tensor_h2d` instead.
+
+    Args:
+        batch: A :py:class:`torch.Tensor` or a composition of tensors with
+            container types such as ``list``, ``tuple``, ``dict`` and
+            ``dataclass``.
+        num_caches: Number of recent output batches retained to mitigate
+            allocator races across CUDA streams.
+
+    Returns:
+        An object of the same type as the input, with CPU tensors transferred
+        to CUDA.
+    """
+    warnings.warn(
+        "transfer_tensor is deprecated; use transfer_tensor_h2d instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
+    return transfer_tensor_h2d(batch, num_caches=num_caches)
 
 
 ###############################################################################

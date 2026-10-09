@@ -20,7 +20,7 @@ The SPDL pipeline API has three distinct types:
 
 **`run_pipeline_in_subprocess()` accepts ONLY `PipelineConfig`** (from `.get_config()`). It does NOT accept `Pipeline` objects or iterators. If existing code calls `.build()` and returns a `Pipeline` or iterator, it must be refactored to return a `PipelineConfig` instead for MTP to work.
 
-**GPU stages (e.g. `transfer_tensor`) must NOT be in the subprocess pipeline.** They require a CUDA context which is unavailable in the subprocess. Split the pipeline: backend (subprocess) has CPU stages only; frontend (main process) applies GPU transfer.
+**GPU stages (e.g. `transfer_tensor_h2d`) must NOT be in the subprocess pipeline.** They require a CUDA context which is unavailable in the subprocess. Split the pipeline: backend (subprocess) has CPU stages only; frontend (main process) applies GPU transfer.
 
 ### MTP Tier 1/Tier 2 Retry
 
@@ -154,7 +154,7 @@ Build the entire pipeline (demux → decode_packets_nvdec → to_torch) in the m
 When the pipeline uses GPU NVDEC decode and you want to switch to CPU FFmpeg decode (e.g., to bypass the NVDEC hardware decoder slot limit), replace the NVDEC decode chain with CPU FFmpeg decode + GPU transfer.
 
 **GPU decode pipeline (current):** `demux_video → decode_packets_nvdec → to_torch` (output on GPU)
-**CPU decode pipeline (replacement):** `demux_video → decode_packets → convert_frames → to_torch → transfer_tensor` (output on CPU, then transferred to GPU)
+**CPU decode pipeline (replacement):** `demux_video → decode_packets → convert_frames → to_torch → transfer_tensor_h2d` (output on CPU, then transferred to GPU)
 
 #### Key APIs and their exact signatures
 
@@ -201,9 +201,9 @@ This is a critical difference. When replacing NVDEC (`[N, C, H, W]`) with CPU FF
 tensor = spdl.io.to_torch(buffer)  # CPU tensor, shape matches buffer layout
 ```
 
-**`spdl.io.transfer_tensor`** — transfer CPU tensors to GPU:
+**`spdl.io.transfer_tensor_h2d`** — transfer CPU tensors to GPU:
 ```python
-spdl.io.transfer_tensor(batch, /, *, num_caches: int = 4)
+spdl.io.transfer_tensor_h2d(batch, /, *, num_caches: int = 4)
 ```
 
 Handles nested structures (dict, list, tuple, dataclass). Uses `LOCAL_RANK` env var to determine target GPU device. Creates a dedicated CUDA stream per thread for overlapping transfer with compute.
@@ -230,11 +230,11 @@ tensor = spdl.io.to_torch(buffer)  # [T, H, W, C] on CPU (rgb24 is channel-last!
 tensor = tensor.permute(0, 3, 1, 2)  # [T, H, W, C] -> [T, C, H, W] to match NVDEC layout
 ```
 
-After the decode callable, add GPU transfer. Since CPU decode produces CPU tensors, add `transfer_tensor` as a pipeline stage **after collate but before the sink**:
+After the decode callable, add GPU transfer. Since CPU decode produces CPU tensors, add `transfer_tensor_h2d` as a pipeline stage **after collate but before the sink**:
 
 ```python
 .pipe(collate)
-.pipe(spdl.io.transfer_tensor, executor=ThreadPoolExecutor(max_workers=1))
+.pipe(spdl.io.transfer_tensor_h2d, executor=ThreadPoolExecutor(max_workers=1))
 .add_sink(buffer_size=3)
 ```
 
@@ -243,7 +243,7 @@ Remove `cuda_config` setup code that was only used for NVDEC. Keep the `device` 
 #### Common mistakes to avoid
 
 1. **Do NOT pass `filter_desc` to `convert_frames()`** — it only accepts `(frames, storage=None)`.
-2. **Do NOT forget GPU transfer** — CPU decode produces CPU tensors; add `transfer_tensor` stage.
+2. **Do NOT forget GPU transfer** — CPU decode produces CPU tensors; add `transfer_tensor_h2d` stage.
 3. **Do NOT forget the channel-last → channel-first permute** — `rgb24` produces `[N, H, W, C]` but the rest of the pipeline expects `[N, C, H, W]`. Add `tensor = tensor.permute(0, 3, 1, 2)` immediately after `to_torch`. Without this, the downstream frame sampling and permute logic operates on the wrong dimensions, raising shape errors.
 4. **Do NOT use bare `except` to swallow errors** — `except RuntimeError: return None` or `except Exception: return None` hides bugs like shape mismatches, making debugging impossible. Always log the exception: `except RuntimeError as e: logging.getLogger(__name__).warning("Decode failed: %s", e); return None`. This way, if every sample fails, the pipeline stats show 100% failure rate and the analysis agent can diagnose the root cause from logs.
 5. **Do NOT modify the wrong file** — if the decode callable is in a utility module (e.g., `utils/pipeline.py`) and the engine modifies the training script, define a new decode callable in the training script and override the pipeline construction call.

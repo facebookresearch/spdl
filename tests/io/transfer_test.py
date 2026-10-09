@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import spdl.io._transfer
 import torch
-from spdl.io import transfer_tensor
+from spdl.io import transfer_tensor, transfer_tensor_h2d
 from spdl.io._transfer import _recursive_apply
 
 
@@ -126,7 +126,7 @@ class TestGpuTransfer(unittest.TestCase):
     ) -> None:
         """The data is transferred to CUDA asynchronously.
 
-        transfer_tensor() does the following 5 things.
+        transfer_tensor_h2d() does the following 5 things.
 
         1. Create CUDA stream. (call torch.cuda.Stream with cuda device)
         2. Activate the stream. (call torch.cuda.stream with 1)
@@ -148,7 +148,7 @@ class TestGpuTransfer(unittest.TestCase):
                 patch.object(data, "pin_memory", return_value=data) as mock_pin_memory,
                 patch.object(data, "to", return_value=data) as mock_to,
             ):
-                _ = transfer_tensor({"foo": data})
+                _ = transfer_tensor_h2d({"foo": data})
                 # Check 3
                 mock_pin_memory.assert_called_once()
                 # Check 4
@@ -165,3 +165,17 @@ class TestGpuTransfer(unittest.TestCase):
 
         with ThreadPoolExecutor(max_workers=1) as exec:
             exec.submit(_test).result()
+
+    def test_deprecated_name_forwards_to_h2d(self) -> None:
+        """The deprecated API warns and forwards its arguments to H2D."""
+        batch = {"value": object()}
+        expected = {"result": object()}
+        with patch(
+            "spdl.io._transfer.transfer_tensor_h2d",
+            return_value=expected,
+        ) as mock_transfer:
+            with self.assertWarnsRegex(FutureWarning, "transfer_tensor_h2d"):
+                actual = transfer_tensor(batch, num_caches=7)
+
+        self.assertIs(actual, expected)
+        mock_transfer.assert_called_once_with(batch, num_caches=7)

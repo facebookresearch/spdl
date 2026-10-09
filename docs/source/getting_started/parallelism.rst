@@ -143,7 +143,8 @@ in a thread-local storage.
 
 .. note::
 
-   The following code is now available as :py:func:`spdl.io.transfer_tensor`.
+   The following code is now available as
+   :py:func:`spdl.io.transfer_tensor_h2d`.
 
 .. code-block:: python
 

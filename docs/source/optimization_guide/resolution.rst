@@ -66,7 +66,7 @@ redundant event loops.
 
 The PyTorch Profiler also annotates GPU and Tensor metadata, so it is useful to
 verify GPU-related activities. For example, inspect the CUDA stream timeline to
-verify that host-to-device transfer with :py:func:`spdl.io.transfer_tensor`
+verify that host-to-device transfer with :py:func:`spdl.io.transfer_tensor_h2d`
 overlaps independent model computation instead of delaying it. The following
 trace illustrates host-to-device transfer on a dedicated stream.
 

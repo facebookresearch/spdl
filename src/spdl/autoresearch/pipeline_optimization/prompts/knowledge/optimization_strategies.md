@@ -131,7 +131,7 @@ in the main process.
 ```python
 import spdl.pipeline
 import spdl.source.utils
-from spdl.io import transfer_tensor
+from spdl.io import transfer_tensor_h2d
 from spdl.pipeline import PipelineBuilder
 from spdl.source import DistributedRandomSampler
 
@@ -167,11 +167,11 @@ def build_spdl_pipeline(
     frontend = (
         PipelineBuilder()
         .add_source(source2, continuous=True)
-        .pipe(transfer_tensor)
+        .pipe(transfer_tensor_h2d)
         .add_sink(buffer_size=3)
     )
     return frontend.build(num_threads=1)
-    # NOTE: num_threads=1 is sufficient here because transfer_tensor is the
+    # NOTE: num_threads=1 is sufficient here because transfer_tensor_h2d is the
     # only stage and runs without concurrency.  When the frontend has
     # concurrent stages (e.g. NVDEC decode at concurrency=7), set
     # num_threads >= max stage concurrency (see the Key Parameters table).
@@ -199,7 +199,7 @@ for epoch in range(num_epochs):
 
 1. **`continuous=True`** on `.add_source()` — always use it. Eliminates pipeline teardown/rebuild between epochs. Harmless even when not strictly needed.
 2. **`spdl.source.utils.embed_shuffle()`** — wrap `DistributedRandomSampler` with this for correct sampling behavior across iterations.
-3. **`spdl.io.transfer_tensor`** — use for GPU transfer in the frontend pipeline. Use a dedicated thread (ThreadPoolExecutor with 1 worker) so that it uses own CUDA stream which allows overlapping data transfer and compute.
+3. **`spdl.io.transfer_tensor_h2d`** — use for GPU transfer in the frontend pipeline. Use a dedicated thread (ThreadPoolExecutor with 1 worker) so that it uses own CUDA stream which allows overlapping data transfer and compute.
 4. **`aggregate(batch_size, drop_last=True)`** — `drop_last=True` avoids partial batches that cause shape mismatches in DDP.
 5. **Do not force an `mp_context`.** Omit it to use SPDL's default, or preserve
    the baseline's explicit choice when one already exists. Change the context
@@ -250,7 +250,7 @@ source2 = run_pipeline_in_subprocess(
 pipeline = (
     PipelineBuilder()
     .add_source(source2, continuous=True)
-    .pipe(transfer_tensor)
+    .pipe(transfer_tensor_h2d)
     .add_sink(buffer_size=3)
     .build(num_threads=1)
 )
