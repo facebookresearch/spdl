@@ -6,6 +6,9 @@
 
 
 import io
+import math
+import struct
+import sys
 import unittest
 import wave
 
@@ -104,6 +107,89 @@ class WAVUtilsTest(unittest.TestCase):
 
         # Validate against reference waveform
         np.testing.assert_array_equal(samples, expected_reference)
+
+    def test_rejects_inconsistent_sample_layout(self) -> None:
+        """Malformed format metadata cannot describe samples past the buffer."""
+        wav_data, _ = create_wav_data(num_samples=100)
+        cases = [
+            ("unsupported_format", 20, 6, "Unsupported WAV audio format"),
+            ("unsupported_pcm_depth", 34, 24, "Unsupported PCM bits"),
+            ("invalid_block_align", 32, 1, "Invalid block align"),
+        ]
+
+        for name, offset, value, error in cases:
+            with self.subTest(name=name):
+                malformed = bytearray(wav_data)
+                struct.pack_into("<H", malformed, offset, value)
+                with self.assertRaisesRegex(ValueError, error):
+                    spdl.io.load_wav(bytes(malformed))
+
+    def test_rejects_incompatible_float_depth(self) -> None:
+        """IEEE-float metadata is accepted only for supported float widths."""
+        wav_data, _ = create_wav_data(num_samples=100)
+        malformed = bytearray(wav_data)
+        struct.pack_into("<H", malformed, 20, 3)
+
+        with self.assertRaisesRegex(ValueError, "Unsupported IEEE float bits"):
+            spdl.io.load_wav(bytes(malformed))
+
+    def test_rejects_inconsistent_byte_rate(self) -> None:
+        """The byte rate must agree with sample rate and frame size."""
+        wav_data, _ = create_wav_data(num_samples=100)
+        malformed = bytearray(wav_data)
+        struct.pack_into("<I", malformed, 28, 1)
+
+        with self.assertRaisesRegex(ValueError, "Invalid byte rate"):
+            spdl.io.load_wav(bytes(malformed))
+
+    def test_rejects_truncated_or_partial_sample_data(self) -> None:
+        """The declared data chunk must contain complete in-bounds frames."""
+        wav_data, _ = create_wav_data(num_samples=100)
+
+        with self.subTest(case="truncated"):
+            with self.assertRaisesRegex(ValueError, "extends beyond"):
+                spdl.io.load_wav(wav_data[:-1])
+
+        with self.subTest(case="partial_frame"):
+            malformed = bytearray(wav_data)
+            struct.pack_into("<I", malformed, 40, 3)
+            with self.assertRaisesRegex(ValueError, "whole number of sample frames"):
+                spdl.io.load_wav(bytes(malformed))
+
+    def test_rejects_nonfinite_time_windows(self) -> None:
+        """NaN and infinite windows are rejected before integer conversion."""
+        wav_data, _ = create_wav_data(num_samples=100)
+        cases: list[tuple[str, float | None, float | None]] = [
+            ("nan_offset", math.nan, None),
+            ("infinite_offset", math.inf, None),
+            ("nan_duration", None, math.nan),
+            ("infinite_duration", None, math.inf),
+        ]
+        for name, offset, duration in cases:
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(ValueError, "finite"):
+                    spdl.io.load_wav(
+                        wav_data,
+                        time_offset_seconds=offset,
+                        duration_seconds=duration,
+                    )
+
+    def test_large_finite_duration_is_clamped(self) -> None:
+        """A huge finite duration safely selects the remaining complete frames."""
+        sample_rate = 8000
+        wav_data, reference = create_wav_data(
+            sample_rate=sample_rate, num_samples=sample_rate
+        )
+
+        result = spdl.io.to_numpy(
+            spdl.io.load_wav(
+                wav_data,
+                time_offset_seconds=0.5,
+                duration_seconds=sys.float_info.max,
+            )
+        )
+
+        np.testing.assert_array_equal(result, reference[sample_rate // 2 :])
 
 
 class ParseWAVTest(unittest.TestCase):
