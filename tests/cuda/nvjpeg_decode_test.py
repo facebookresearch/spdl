@@ -21,6 +21,41 @@ if not spdl.io.utils.built_with_nvjpeg():
 
 
 class TestNvjpegDecode(unittest.TestCase):
+    def test_decode_memoryview(self) -> None:
+        """A memoryview is decoded as one image rather than a batch of integers."""
+        cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
+        sample = get_sample(cmd)
+
+        with open(sample.path, "rb") as file:
+            data = memoryview(file.read())
+
+        buffer = spdl.io.decode_image_nvjpeg(
+            data,
+            device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+        )
+        tensor = spdl.io.to_torch(buffer)
+
+        self.assertEqual(tensor.shape, torch.Size([3, 240, 320]))
+
+    def test_rejects_unsupported_memoryview_layouts(self) -> None:
+        """The CUDA extension validates the layout of borrowed byte buffers."""
+        views = {
+            "positive_stride": memoryview(bytearray(8))[::2],
+            "negative_stride": memoryview(bytearray(8))[::-1],
+            "multidimensional": memoryview(bytearray(8)).cast("B", (2, 4)),
+            "multi_byte": memoryview(bytearray(8)).cast("H"),
+        }
+
+        for layout, data in views.items():
+            with self.subTest(layout=layout):
+                with self.assertRaisesRegex(
+                    ValueError, "one-dimensional, C-contiguous byte buffer"
+                ):
+                    spdl.io.decode_image_nvjpeg(
+                        data,
+                        device_config=spdl.io.cuda_config(device_index=DEFAULT_CUDA),
+                    )
+
     def test_decode_pix_fmt(self) -> None:
         """"""
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
