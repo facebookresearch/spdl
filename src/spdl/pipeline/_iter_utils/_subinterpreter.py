@@ -85,7 +85,7 @@ else:
             self._finalizer = weakref.finalize(self, interface.terminate)
 
         def __iter__(self) -> Iterator[T]:
-            """Instruct the subinterpreter to enter iteration mode and iterate on the results."""
+            """Enter iteration mode and yield results from the subinterpreter."""
             if (if_ := self._if) is None:
                 raise RuntimeError(
                     "The subinterpreter is shutdown. Cannot iterate again."
@@ -93,9 +93,18 @@ else:
 
             try:
                 _enter_iteration_mode(
-                    if_.cmd_q, if_.data_q, if_.timeout, "subinterpreter"
+                    if_.cmd_q,
+                    if_.data_q,
+                    if_.timeout,
+                    "subinterpreter",
+                    is_alive=if_.thread.is_alive,
                 )
-                yield from _iterate_results(if_.data_q, if_.timeout, "subinterpreter")
+                yield from _iterate_results(
+                    if_.data_q,
+                    if_.timeout,
+                    "subinterpreter",
+                    is_alive=if_.thread.is_alive,
+                )
             except (Exception, KeyboardInterrupt):
                 self._terminate()
                 raise
@@ -132,7 +141,12 @@ else:
         timeout_ = float("inf") if timeout is None else timeout
         interface = _iic(thread, interp, cmd_q, data_q, timeout_)
 
-        _wait_for_init(interface.data_q, interface.timeout, "subinterpreter")
+        _wait_for_init(
+            interface.data_q,
+            interface.timeout,
+            "subinterpreter",
+            interface.thread.is_alive,
+        )
 
         return _SubinterpreterIterable(interface)
 
