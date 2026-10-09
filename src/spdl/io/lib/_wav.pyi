@@ -50,7 +50,7 @@ def load_wav(data: memoryview, *, time_offset_seconds: float | None = None, dura
     Extract audio samples from WAV data.
 
     Args:
-        wav_data: Binary WAV data as bytes or string
+        data: Buffer containing binary WAV data
         time_offset_seconds: Optional starting time in seconds (default: 0.0)
         duration_seconds: Optional duration in seconds (default: until end)
 
@@ -71,7 +71,7 @@ def parse_wav(data: memoryview) -> WAVHeader:
     Parse WAV file header and extract metadata.
 
     Args:
-        data: Binary WAV data as bytes
+        data: Buffer containing binary WAV data
 
     Returns:
         WAVHeader: Object containing WAV header information with attributes:
