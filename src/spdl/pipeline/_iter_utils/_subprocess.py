@@ -221,6 +221,7 @@ def _iterate_results_until_closed(
             interface.timeout,
             "subprocess",
             interface.closed.is_set,
+            interface.process.is_alive,
         )
     except ValueError as error:
         if not (interface.closed.is_set() and _is_queue_closed_error(error, data_q)):
@@ -267,6 +268,7 @@ class _SubprocessIterable(Iterable[T]):
                     "subprocess",
                     None if arena is None else arena.discard,
                     if_.closed.is_set,
+                    if_.process.is_alive,
                 )
             except ValueError as error:
                 if if_.closed.is_set() and _is_queue_closed_error(error, cmd_q, data_q):
@@ -395,7 +397,12 @@ def iterate_in_subprocess(
 
     try:
         process.start()
-        _wait_for_init(data_q, if_.timeout, "subprocess")
+        _wait_for_init(
+            data_q,
+            if_.timeout,
+            "subprocess",
+            if_.process.is_alive,
+        )
     except BaseException:
         # No iterable/finalizer has been returned yet, so setup owns cleanup.
         # Force termination because a blocked initializer cannot consume ABORT.
