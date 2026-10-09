@@ -471,9 +471,9 @@ def load_image_batch(
 
 
 def _get_bytes(
-    srcs: "Sequence[str | bytes | memoryview[bytes]]",
-) -> "list[memoryview[bytes]]":
-    ret: "list[memoryview[bytes]]" = []
+    srcs: "Sequence[str | bytes | memoryview]",
+) -> "list[memoryview]":
+    ret: "list[memoryview]" = []
     for src in srcs:
         if isinstance(src, (bytes, memoryview)):
             ret.append(memoryview(src))
@@ -489,7 +489,7 @@ def _get_bytes(
 
 
 def load_image_batch_nvjpeg(
-    srcs: "Sequence[str | bytes | memoryview[bytes]]",
+    srcs: "Sequence[str | bytes | memoryview]",
     *,
     device_config: "CUDAConfig",
     width: int,

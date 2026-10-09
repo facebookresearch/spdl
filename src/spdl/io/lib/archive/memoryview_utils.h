@@ -16,6 +16,11 @@ namespace spdl::detail {
 
 inline std::string_view memoryview_to_sv(const nanobind::memoryview& mv) {
   Py_buffer* buf = PyMemoryView_GET_BUFFER(mv.ptr());
+  if (buf->ndim != 1 || buf->itemsize != 1 ||
+      !PyBuffer_IsContiguous(buf, 'C')) {
+    throw nanobind::value_error(
+        "Expected a one-dimensional, C-contiguous byte buffer.");
+  }
   return {static_cast<const char*>(buf->buf), static_cast<size_t>(buf->len)};
 }
 
