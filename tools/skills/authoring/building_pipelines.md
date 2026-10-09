@@ -19,7 +19,7 @@ The core idea for efficiency: **classify every operation by its nature and give 
 | CPU, GIL-free | media decode (`spdl.io`), tiktoken, NumPy/Torch ops | `.pipe(fn, concurrency=4-8)` |
 | CPU, GIL-holding | pure-Python transforms | `.pipe(fn, concurrency=1)` — minimize or replace |
 | Batching | collation / stacking | `.aggregate(batch_size)` then `.pipe(collate_fn)` |
-| GPU transfer | move batch to device | `spdl.io.transfer_tensor` in a dedicated 1-worker executor |
+| GPU transfer | move batch to device | `spdl.io.transfer_tensor_h2d` in a dedicated 1-worker executor |
 
 ## Build From Primitives
 
@@ -69,7 +69,7 @@ for epoch in range(num_epochs):
    ```
 
    **Do not** wrap it as `asyncio.run(fetch(x))`: that spins up and tears down a brand-new event loop on every single item — pure per-item overhead — and forces the work onto pipeline worker threads instead of running as cheap cooperative coroutines on SPDL's shared event loop.
-5. **`transfer_tensor` for GPU.** Use `spdl.io.transfer_tensor` in a dedicated `ThreadPoolExecutor(max_workers=1)` so it gets its own CUDA stream and overlaps transfer with compute.
+5. **`transfer_tensor_h2d` for GPU.** Use `spdl.io.transfer_tensor_h2d` in a dedicated `ThreadPoolExecutor(max_workers=1)` so it gets its own CUDA stream and overlaps transfer with compute.
 6. **Batching is two steps.** `.aggregate(batch_size, drop_last=True)` then a `.pipe(collate)` stage. `drop_last=True` avoids partial-batch shape mismatches under DDP.
 7. **Iterate with a timeout.** Prefer `pipeline.get_iterator(timeout=<seconds>)` over `for batch in pipeline` / manual `next()` — it prevents jobs from hanging forever on a stall.
 

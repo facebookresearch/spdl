@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import spdl.pipeline
 import spdl.source.utils
 import torch
-from spdl.io import transfer_tensor
+from spdl.io import transfer_tensor_h2d
 from spdl.pipeline import PipelineBuilder
 from spdl.source import DistributedRandomSampler
 
@@ -111,7 +111,7 @@ def build_spdl_dataloader(
 
     **Outer pipeline** (runs in the main process):
       Receives CPU batches from the subprocess via IPC queue and transfers
-      them to GPU using ``transfer_tensor`` with a dedicated single-thread
+      them to GPU using ``transfer_tensor_h2d`` with a dedicated single-thread
       executor. This ensures GPU transfer uses a consistent CUDA stream
       and overlaps with training computation.
 
@@ -148,6 +148,6 @@ def build_spdl_dataloader(
 
     frontend = PipelineBuilder().add_source(source2, continuous=True)
     if torch.cuda.is_available():
-        frontend = frontend.pipe(transfer_tensor)
+        frontend = frontend.pipe(transfer_tensor_h2d)
     frontend = frontend.add_sink(buffer_size=3)
     return frontend.build(num_threads=1)

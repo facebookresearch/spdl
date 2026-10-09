@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 import torch
-from spdl.io import transfer_tensor, transfer_tensor_d2h
+from spdl.io import transfer_tensor_d2h, transfer_tensor_h2d
 from spdl.io._transfer import _THREAD_LOCAL
 
 
@@ -503,7 +503,7 @@ class RoundTripTransferD2HTest(unittest.TestCase):
         original = torch.randn(16, 3, 224, 224)
 
         # CPU -> GPU
-        cuda = transfer_tensor(original)
+        cuda = transfer_tensor_h2d(original)
         self.assertEqual(cuda.device.type, "cuda")
 
         # GPU -> CPU
@@ -526,7 +526,7 @@ class RoundTripTransferD2HTest(unittest.TestCase):
         )
 
         # CPU -> GPU
-        cuda_batch = transfer_tensor(original)
+        cuda_batch = transfer_tensor_h2d(original)
         self.assertIsInstance(cuda_batch, Batch)
         for img in cuda_batch.images:
             self.assertEqual(img.device.type, "cuda")
@@ -574,7 +574,7 @@ class RoundTripTransferD2HTest(unittest.TestCase):
         original_scores_copy = original.metadata["scores"].clone()
 
         # CPU -> GPU
-        cuda_batch = transfer_tensor(original)
+        cuda_batch = transfer_tensor_h2d(original)
         self.assertIsInstance(cuda_batch, ImageBatch)
         self.assertEqual(cuda_batch.images.device.type, "cuda")
         self.assertEqual(cuda_batch.labels.device.type, "cuda")
