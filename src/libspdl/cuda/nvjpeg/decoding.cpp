@@ -18,6 +18,7 @@
 
 #ifdef SPDL_USE_NPPI
 #include "libspdl/cuda/npp/detail/resize.h"
+#include "libspdl/cuda/npp/detail/utils.h"
 #endif
 
 #include <fmt/format.h>
@@ -46,14 +47,7 @@ std::tuple<size_t, bool> get_shape(nvjpegOutputFormat_t out_fmt) {
   }
 }
 
-struct SizeMeta {
-  size_t width;
-  size_t height;
-  size_t num_channels;
-  bool interleaved;
-};
-
-std::tuple<CUDABufferPtr, SizeMeta> get_output(
+std::tuple<CUDABufferPtr, detail::NVJPEGImageLayout> get_output(
     nvjpegOutputFormat_t out_fmt,
     size_t height,
     size_t width,
@@ -72,29 +66,14 @@ std::tuple<CUDABufferPtr, SizeMeta> get_output(
 
   return {
       std::move(buffer),
-      SizeMeta{
+      detail::NVJPEGImageLayout{
           .width = width,
           .height = height,
           .num_channels = num_channels,
           .interleaved = interleaved}};
 }
 
-void wrap_buffer(
-    CUDABufferPtr& buffer,
-    SizeMeta meta,
-    nvjpegImage_t& image,
-    size_t batch = 0) {
-  auto ptr = static_cast<uint8_t*>(buffer->data());
-  ptr += batch * meta.height * meta.width * meta.num_channels;
-  auto pitch = meta.interleaved ? meta.width * meta.num_channels : meta.width;
-  for (int c = 0; c < (int)meta.num_channels; c++) {
-    image.channel[c] = ptr;
-    image.pitch[c] = pitch;
-    ptr += pitch * meta.height;
-  }
-}
-
-std::tuple<CUDABufferPtr, SizeMeta, nvjpegImage_t> decode(
+std::tuple<CUDABufferPtr, detail::NVJPEGImageLayout, nvjpegImage_t> decode(
     std::string_view data,
     nvjpegOutputFormat_t fmt,
     const CUDAConfig& cuda_config) {
@@ -125,8 +104,8 @@ std::tuple<CUDABufferPtr, SizeMeta, nvjpegImage_t> decode(
   }
 
   auto [buffer, meta] = get_output(fmt, heights[0], widths[0], cuda_config);
-  nvjpegImage_t image;
-  wrap_buffer(buffer, meta, image);
+  nvjpegImage_t image{};
+  detail::wrap_nvjpeg_image(buffer->data(), meta, image);
 
   // Note: backend is not used by NVJPEG API when using nvjpegDecode().
   //
@@ -163,7 +142,7 @@ CUDABufferPtr decode_image_nvjpeg(
     bool sync) {
   auto fmt = detail::get_nvjpeg_output_format(pix_fmt);
 
-  detail::set_cuda_primary_context(cuda_config.device_index);
+  detail::CUDAContextPushGuard context_guard{cuda_config.device_index};
 
   auto [buffer, src_meta, decoded] = decode(data, fmt, cuda_config);
 
@@ -174,8 +153,8 @@ CUDABufferPtr decode_image_nvjpeg(
 #else
     auto [buffer2, meta2] =
         get_output(fmt, scale_height, scale_width, cuda_config);
-    nvjpegImage_t resized;
-    wrap_buffer(buffer2, meta2, resized);
+    nvjpegImage_t resized{};
+    detail::wrap_nvjpeg_image(buffer2->data(), meta2, resized);
 
     detail::resize_npp(
         fmt,
@@ -186,6 +165,7 @@ CUDABufferPtr decode_image_nvjpeg(
         scale_width,
         scale_height,
         cuda_config.stream,
+        cuda_config.device_index,
         sync);
 
     return std::move(buffer2);
@@ -222,16 +202,18 @@ CUDABufferPtr decode_image_nvjpeg(
 
   auto fmt = detail::get_nvjpeg_output_format(pix_fmt);
 
-  detail::set_cuda_primary_context(cuda_config.device_index);
+  detail::CUDAContextPushGuard context_guard{cuda_config.device_index};
+  const NppStreamContext npp_context = detail::get_npp_stream_context(
+      cuda_config.stream, cuda_config.device_index);
 
   auto [out_buffer, out_meta] =
       get_output(fmt, scale_height, scale_width, cuda_config, batch_size);
-  nvjpegImage_t out_wrapper;
+  nvjpegImage_t out_wrapper{};
 
   for (size_t i = 0; i < batch_size; ++i) {
     auto [src_buffer, src_meta, decoded] = decode(dataset[i], fmt, cuda_config);
 
-    wrap_buffer(out_buffer, out_meta, out_wrapper, i);
+    detail::wrap_nvjpeg_image(out_buffer->data(), out_meta, out_wrapper, i);
     detail::resize_npp(
         fmt,
         decoded,
@@ -240,7 +222,7 @@ CUDABufferPtr decode_image_nvjpeg(
         out_wrapper,
         scale_width,
         scale_height,
-        cuda_config.stream,
+        npp_context,
         false);
   }
 
