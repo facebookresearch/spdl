@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, TypeVar, override
 
 from spdl.pipeline._common._misc import _get_env_bool
 from spdl.pipeline.defs import (
@@ -140,10 +140,12 @@ class ProfileHook(ABC):
 
 
 class _NoOpHook(ProfileHook):
+    @override
     @contextmanager
-    def stage_profile_hook(self, stage: str, concurrency: int) -> Iterator[None]:  # noqa: ARG002
+    def stage_profile_hook(self, stage: str, concurrency: int) -> Iterator[None]:
         yield
 
+    @override
     @contextmanager
     def pipeline_profile_hook(self) -> Iterator[None]:
         yield
@@ -429,7 +431,8 @@ class _ProfilePipeline(Pipeline[U]):
     def stop(self, *, timeout: float | None = None, **kwargs: Any) -> None:
         pass
 
-    def get_item(self, *, timeout: float | None = None) -> U:  # noqa: ARG002
+    @override
+    def get_item(self, *, timeout: float | None = None) -> U:
         profile_pipeline(self._pipeline_cfg, self._num_items)
         _LG.info("Profiling completed. Exiting.")
         raise SystemExit(0)
