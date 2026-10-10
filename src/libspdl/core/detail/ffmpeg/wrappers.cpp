@@ -27,7 +27,20 @@ void AVFormatInputContextDeleter::operator()(AVFormatContext* p) {
   avformat_close_input(&p);
 }
 
+int close_output_io(AVFormatContext* format_ctx) noexcept {
+  if (!format_ctx || !format_ctx->pb || !format_ctx->oformat ||
+      (format_ctx->oformat->flags & AVFMT_NOFILE) ||
+      (format_ctx->flags & AVFMT_FLAG_CUSTOM_IO)) {
+    return 0;
+  }
+  return avio_closep(&format_ctx->pb);
+}
+
 void AVFormatOutputContextDeleter::operator()(AVFormatContext* p) {
+  if (const int error = close_output_io(p); error < 0) [[unlikely]] {
+    LOG(WARNING) << av_error(
+        error, "Failed to close output I/O during cleanup.");
+  }
   avformat_free_context(p);
 }
 
