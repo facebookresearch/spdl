@@ -13,7 +13,9 @@ import logging
 import math
 import random
 import time
+from bisect import bisect_right
 from collections.abc import Iterable, Iterator, Sequence, Sized
+from itertools import accumulate
 from typing import overload, TypeVar
 
 from ._type import IterableWithShuffle, SizedIterable, SizedIterableWithShuffle
@@ -30,6 +32,7 @@ _LG: logging.Logger = logging.getLogger(__name__)
 ################################################################################
 
 _FIRST_EXHAUSTION = -1
+_MAX_RANDRANGE_BITS = 256
 
 
 def _ordered_iter(iterators: list[Iterator[T]], stop_after: float) -> Iterable[T]:
@@ -56,6 +59,56 @@ def _ordered_iter(iterators: list[Iterator[T]], stop_after: float) -> Iterable[T
                 iterators.pop(i)
 
 
+def _exact_integer_weights(weights: Sequence[float]) -> list[int]:
+    """Build proportional integers from validated binary-float weights."""
+    # The constructor converts runtime numeric values to float, matching the
+    # annotated API. Their denominators are powers of two, so the largest
+    # denominator is a common denominator for every binary-float ratio.
+    ratios = [weight.as_integer_ratio() for weight in weights]
+    common_denominator = max(denominator for _, denominator in ratios)
+    integer_weights = [
+        numerator * (common_denominator // denominator)
+        for numerator, denominator in ratios
+    ]
+    common_factor = math.gcd(*integer_weights)
+    return [weight // common_factor for weight in integer_weights]
+
+
+def _bernoulli_ratio(rng: random.Random, numerator: int, denominator: int) -> bool:
+    """Draw an exact Bernoulli ratio without a denominator-sized random int."""
+    remainder = numerator
+    while True:
+        remainder *= 2
+        threshold_bit = remainder >= denominator
+        if threshold_bit:
+            remainder -= denominator
+        random_bit = rng.getrandbits(1)
+        if random_bit != threshold_bit:
+            return random_bit < threshold_bit
+
+
+def _weighted_index(
+    rng: random.Random,
+    weights: Sequence[int],
+    cumulative_weights: Sequence[int],
+) -> int:
+    """Choose an index exactly while bounding typical per-draw RNG work."""
+    total_weight = cumulative_weights[-1]
+    if total_weight.bit_length() <= _MAX_RANDRANGE_BITS:
+        return bisect_right(cumulative_weights, rng.randrange(total_weight))
+
+    # Extremely different float exponents can produce thousand-bit totals.
+    # Compare a uniform binary fraction lazily in that case. Each Bernoulli
+    # comparison consumes two random bits on average, independent of the
+    # integer weights' bit width.
+    remaining_weight = total_weight
+    for i, weight in enumerate(weights[:-1]):
+        if _bernoulli_ratio(rng, weight, remaining_weight):
+            return i
+        remaining_weight -= weight
+    return len(weights) - 1
+
+
 def _stochastic_iter(
     iterators: list[Iterator[T]],
     weights: Sequence[float],
@@ -66,25 +119,34 @@ def _stochastic_iter(
     assert len(iterators) == len(weights)
     assert all(math.isfinite(w) and w > 0 for w in weights)
 
-    active_weights = list(weights)
+    # Convert each validated binary float to proportional exact integers once.
+    # Removing an exhausted source preserves every surviving weight ratio, so
+    # there is no need to repeat the potentially expensive bigint conversion.
+    integer_weights = _exact_integer_weights(weights)
     rng = random.Random(seed)
     num_items = 0
 
     while iterators:
-        # ``random.choices`` accumulates weights in float precision. Scale the
-        # original weights after each removal so weights that underflowed while
-        # a much larger source was active regain their relative magnitudes.
-        scale = max(active_weights)
-        normalized_weights = [weight / scale for weight in active_weights]
-        population = range(len(iterators))
-        for i in rng.choices(population, normalized_weights, k=100):
+        if len(iterators) == 1:
+            # Selection is deterministic once only one source remains. Avoid
+            # bigint RNG work and leave the caller's RNG sequence untouched.
+            for item in iterators[0]:
+                yield item
+                num_items += 1
+                if stop_after > 0 and num_items >= stop_after:
+                    return
+            return
+
+        cumulative_weights = list(accumulate(integer_weights))
+        while True:
+            i = _weighted_index(rng, integer_weights, cumulative_weights)
             try:
                 yield next(iterators[i])
             except StopIteration:
                 if stop_after == _FIRST_EXHAUSTION:
                     return
                 iterators.pop(i)
-                active_weights.pop(i)
+                integer_weights.pop(i)
                 break
 
             num_items += 1
@@ -99,6 +161,9 @@ class MergeIterator(Iterable[T]):
     Args:
         iterables: The source iterables
         weights: The sampling weight used to choose the next iterable.
+            Values are interpreted with binary-float semantics, and selection
+            remains exact with respect to those converted values.
+            Sources with zero weight are skipped.
             If not provided, the given iterables are visited in the given order
             repeatedly.
         stop_after: Determines the stop criteria or the behavior when one of
@@ -143,12 +208,18 @@ class MergeIterator(Iterable[T]):
         [0, 10, 20, 1, 11, 21, 2, 22]
         >>>
         >>> # Providing weights will pick up the iterable stocastically.
+        >>> iterables = [
+        ...     [0, 1, 2],
+        ...     [10, 11, 12],
+        ...     [20, 21, 22],
+        ... ]
         >>> print(sorted(MergeIterator(iterables, stop_after=9, weights=[1, 1, 1])))
-        [0, 1, 2, 10, 11, 20, 21, 22]
+        [0, 1, 2, 10, 11, 12, 20, 21, 22]
 
     .. versionchanged:: 0.7.0
        Exhausted weighted sources are removed from future draws, and invalid
-       weight totals now raise :class:`ValueError`.
+       weight totals now raise :class:`ValueError`. Weighted selection preserves
+       the exact ratios of the converted binary-float weights.
     """
 
     def __init__(
@@ -178,16 +249,26 @@ class MergeIterator(Iterable[T]):
                     f"The number of probabilities ({len(self.weights)}) and "
                     f"iterables ({len(iterables)}) must match."
                 )
-            if any(not math.isfinite(w) or w < 0 for w in self.weights):
-                raise ValueError("Weights must be finite and non-negative.")
+            try:
+                float_weights = [float(weight) for weight in self.weights]
+            except (OverflowError, TypeError, ValueError) as exc:
+                raise ValueError(
+                    "Weights must be finite and non-negative; NaN, infinity, "
+                    "and negative values are not supported."
+                ) from exc
+            if any(not math.isfinite(w) or w < 0 for w in float_weights):
+                raise ValueError(
+                    "Weights must be finite and non-negative; NaN, infinity, "
+                    "and negative values are not supported."
+                )
 
-            total_weight = sum(self.weights)
+            total_weight = sum(float_weights)
             if not math.isfinite(total_weight) or total_weight <= 0:
                 raise ValueError("The sum of weights must be positive and finite.")
 
-            nnz_indices = [i for i, w in enumerate(self.weights) if w != 0]
-            self.iterables = [self.iterables[i] for i in nnz_indices]
-            self.weights = [self.weights[i] for i in nnz_indices]
+            nnz_indices = [i for i, w in enumerate(float_weights) if w != 0]
+            self.iterables = [iterables[i] for i in nnz_indices]
+            self.weights = [float_weights[i] for i in nnz_indices]
 
         self.stop_after = stop_after
         self.seed = seed

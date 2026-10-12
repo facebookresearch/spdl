@@ -188,6 +188,21 @@ class TestMergeIterator(unittest.TestCase):
         self.assertEqual(first.num_next_calls, 2)
         self.assertEqual(second.num_next_calls, 2)
 
+    def test_mergeiterator_stochastic_draws_lazily_through_exhaustion(self) -> None:
+        """Exhaustion does not discard a batch of precomputed RNG draws."""
+        with patch.object(random.Random, "randrange", return_value=0) as draw:
+            result = list(MergeIterator([[0], [10]], weights=[1, 1], seed=0))
+
+        self.assertEqual(result, [0, 10])
+        self.assertEqual(draw.call_count, 2)
+
+    def test_mergeiterator_stochastic_rejects_unrepresentable_integer_weight(
+        self,
+    ) -> None:
+        """An integer outside float range fails validation with a clear error."""
+        with self.assertRaisesRegex(ValueError, "finite and non-negative"):
+            MergeIterator([[1], [2]], weights=[10**400, 1])
+
     def test_mergeiterator_stochastic_rejects_invalid_weight_sum(self) -> None:
         """Weighted merging requires a positive finite total weight."""
         for weights in ([0.0, 0.0], [1e308, 1e308]):
@@ -210,8 +225,8 @@ class TestMergeIterator(unittest.TestCase):
         self.assertGreater(count, 4_500)
         self.assertLess(count, 5_500)
 
-    def test_mergeiterator_stochastic_renormalizes_after_exhaustion(self) -> None:
-        """Surviving tiny weights are rescaled after a dominant source ends."""
+    def test_mergeiterator_stochastic_preserves_ratio_after_exhaustion(self) -> None:
+        """Surviving tiny weights preserve their ratio after a source ends."""
         result = list(
             MergeIterator(
                 [[0], itertools.repeat(1), itertools.repeat(2)],
@@ -226,17 +241,22 @@ class TestMergeIterator(unittest.TestCase):
         self.assertGreater(count, 4_500)
         self.assertLess(count, 5_500)
 
-    def test_mergeiterator_stochastic_rejects_zero(self) -> None:
-        """weight=0 is rejected."""
-        weights = [1, 0]
+    def test_mergeiterator_stochastic_preserves_tiny_positive_weight(self) -> None:
+        """A tiny positive weight retains an exact selectable bucket."""
+        with patch.object(
+            random.Random,
+            "getrandbits",
+            return_value=1,
+        ):
+            result = list(
+                MergeIterator(
+                    [itertools.repeat(0), [1]],
+                    weights=[1e308, 5e-324],
+                    stop_after=1,
+                )
+            )
 
-        with self.assertRaises(ValueError):
-            MergeIterator([[1]], weights=weights)
-
-        weights = [1, 0.0]
-
-        with self.assertRaises(ValueError):
-            MergeIterator([[1]], weights=weights)
+        self.assertEqual(result, [1])
 
     def test_mergeiterator_skip_zero_weight(self) -> None:
         """Iterables with zero weight are skipped."""
