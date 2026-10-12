@@ -7,12 +7,14 @@
 
 """Main-process-owned worker pools that run a fused sub-pipeline inside each worker.
 
-This is the streaming counterpart of :py:mod:`spdl.pipeline._subprocess_worker_pool`. Where that
-module runs one submitted ``fn(*args)`` per task, here each worker process runs a nested
+This is the streaming counterpart of
+:py:mod:`spdl.pipeline._subprocess_worker_pool`. Where that module runs one
+submitted ``fn(*args)`` per task, here each worker process runs a nested
 :py:class:`~spdl.pipeline.Pipeline` (built from the fused stages by
-:py:func:`~spdl.pipeline._build.build_pipeline`). Items stream in over a queue and results stream
-back over a shared queue, so the op→op handoff between fused stages stays inside one worker
-process — no inter-stage IPC, and intermediate values need not be picklable.
+:py:func:`~spdl.pipeline._build.build_pipeline`). Items stream in over a queue
+and results stream back over a shared queue, so the op→op handoff between fused
+stages stays inside one worker process — no inter-stage IPC, and intermediate
+values need not be picklable.
 
 Each worker has its own input queue in both layouts (chosen by ``continuous``):
 
@@ -27,9 +29,10 @@ Each worker has its own input queue in both layouts (chosen by ``continuous``):
 
 Like :py:class:`spdl.pipeline._subprocess_worker_pool._WorkerPool`, the worker processes are
 owned by the main process (spawned here, reaped in :py:meth:`_SubprocessPipelinePool.shutdown`).
-The submit side is a small picklable :py:class:`_SubprocessPipelineHandle` carrying only the
-queues, so the fused stage can drive the pool whether its node runs in the main process (a normal
-``build``) or in a pipeline subprocess (``run_pipeline_in_subprocess``).
+The submit side is a small picklable :py:class:`_SubprocessPipelineHandle`
+carrying only the queues, so the fused stage can drive the pool whether its
+node runs in the main process (a normal ``build``) or in a pipeline subprocess
+(``run_pipeline_in_subprocess``).
 
 Messages are tagged with small integer kinds rather than sentinel objects: a sentinel pickled
 onto a queue is a *different* object on the other side, so identity (``is``) comparison would
@@ -43,7 +46,9 @@ import logging
 import queue as _queue
 import traceback
 from collections.abc import AsyncIterator, Callable, Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
+from functools import partial
+from multiprocessing.reduction import ForkingPickler
 from typing import Any
 
 from spdl.pipeline._components import (
@@ -51,6 +56,7 @@ from spdl.pipeline._components import (
     _EPOCH,
     _EPOCH_DONE,
     _ERROR,
+    _fused_queue_capacity,
     _ITEM,
     _POOL_SHUTDOWN,
     _RESULT,
@@ -75,14 +81,253 @@ _LG: logging.Logger = logging.getLogger(__name__)
 _DRAIN_POLL_TIMEOUT: float = 0.5
 
 # How long to wait for a subinterpreter worker thread to observe ``_POOL_SHUTDOWN`` and exit.
-# Longer than the process backend's join bound because a subinterpreter cannot be force-killed --
-# there is no ``terminate``/``kill`` escalation, so cooperative shutdown is the only lever.
+# Longer than the process backend's join bound because a subinterpreter cannot
+# be force-killed -- there is no ``terminate``/``kill`` escalation, so
+# cooperative shutdown is the only lever.
 _INTERPRETER_JOIN_TIMEOUT: float = 10.0
 
 # Bounded blocking-put timeout for the shutdown marker on a subinterpreter worker's queue. See
-# ``_InterpreterBackend.try_put_shutdown`` -- a subinterpreter worker cannot be force-killed, so
-# try a little harder than a non-blocking put to deliver the marker, while still capping teardown.
+# ``_InterpreterBackend.try_put_shutdown`` -- a subinterpreter worker cannot be
+# force-killed, so try a little harder than a non-blocking put to deliver the
+# marker, while still capping teardown.
 _INTERPRETER_SHUTDOWN_PUT_TIMEOUT: float = 1.0
+
+# Keep queue-feeder diagnostics bounded: exception text is user-controlled and
+# this error must itself remain cheap to pickle and relay through a bounded queue.
+_SERIALIZATION_ERROR_DETAIL_LIMIT: int = 1024
+
+
+@dataclass(frozen=True)
+class _SerializationFailureState:
+    """Cross-process state for one asynchronous queue-serialization boundary."""
+
+    failed: Any
+    relay_failed: Any
+    non_payload_failed: Any
+
+
+def _serialization_error(boundary: str, err: BaseException) -> RuntimeError:
+    """Return a picklable description of a queue-feeder serialization failure."""
+    try:
+        error_type = type(err).__name__
+        if not isinstance(error_type, str):
+            error_type = "<exception type unavailable>"
+    except BaseException:  # noqa: B036 - a hostile metaclass may intercept __name__
+        error_type = "<exception type unavailable>"
+    try:
+        detail = str(err)
+        if len(detail) > _SERIALIZATION_ERROR_DETAIL_LIMIT:
+            detail = detail[:_SERIALIZATION_ERROR_DETAIL_LIMIT] + "... <truncated>"
+    # User-defined exception formatting can itself raise any BaseException. The
+    # queue feeder must still emit a serializable fallback instead of dying.
+    except BaseException:  # noqa: B036
+        detail = "<error message unavailable>"
+    try:
+        message = (
+            f"Fused subprocess {boundary} could not be serialized: "
+            f"{error_type}: {detail}"
+        )
+    except BaseException:  # noqa: B036 - formatting must not kill the feeder thread
+        message = "Fused subprocess serialization failed; error details unavailable."
+    return RuntimeError(message)
+
+
+def _restore_serialized_queue_message(payload: bytes) -> Any:
+    """Reconstruct one pre-serialized fallback queue message."""
+    return ForkingPickler.loads(payload)
+
+
+@dataclass(frozen=True)
+class _SerializedQueueMessage:
+    """Carry pre-serialized bytes through a queue without rerunning reducers."""
+
+    payload: bytes
+
+    def __reduce__(self) -> tuple[Callable[[bytes], Any], tuple[bytes]]:
+        return _restore_serialized_queue_message, (self.payload,)
+
+
+class _SynchronousSerializationQueue:
+    """Preflight queue serialization when CPython's feeder hook is unavailable."""
+
+    def __init__(
+        self,
+        q: Any,
+        out_q: Any,
+        serialization_failure: _SerializationFailureState,
+        boundary: str,
+        message_kind: int,
+    ) -> None:
+        self._q = q
+        self._out_q = out_q
+        self._serialization_failure = serialization_failure
+        self._boundary = boundary
+        self._message_kind = message_kind
+        self._pending: dict[int, tuple[Any, _SerializedQueueMessage]] = {}
+
+    def _serialize(self, obj: Any) -> _SerializedQueueMessage | None:
+        try:
+            payload = bytes(ForkingPickler.dumps(obj))
+        except Exception as err:
+            _handle_queue_feeder_error(
+                self._out_q,
+                self._serialization_failure,
+                self._boundary,
+                self._message_kind,
+                err,
+                obj,
+            )
+            return None
+        return _SerializedQueueMessage(payload)
+
+    def _serialize_once(self, obj: Any) -> _SerializedQueueMessage | None:
+        key = id(obj)
+        if (pending := self._pending.get(key)) is not None and pending[0] is obj:
+            return pending[1]
+        if (serialized := self._serialize(obj)) is not None:
+            # Keep the original object alive with its envelope until the bounded
+            # queue accepts it. ``_put`` retries after ``Full``; serializing on
+            # every retry would rerun arbitrary user reducers.
+            self._pending[key] = (obj, serialized)
+        return serialized
+
+    def _put_serialized(
+        self,
+        obj: Any,
+        serialized: _SerializedQueueMessage,
+        block: bool,
+        timeout: float | None,
+    ) -> None:
+        try:
+            self._q.put(serialized, block=block, timeout=timeout)
+        except _queue.Full:
+            raise
+        except BaseException:
+            self._pending.pop(id(obj), None)
+            raise
+        else:
+            self._pending.pop(id(obj), None)
+
+    def _discard_pending(self, obj: Any) -> None:
+        """Release a serialized retry that teardown will not submit again."""
+        key = id(obj)
+        if (pending := self._pending.get(key)) is not None and pending[0] is obj:
+            self._pending.pop(key)
+
+    def put(self, obj: Any, block: bool = True, timeout: float | None = None) -> None:
+        if (serialized := self._serialize_once(obj)) is not None:
+            self._put_serialized(obj, serialized, block, timeout)
+
+    def put_nowait(self, obj: Any) -> None:
+        if (serialized := self._serialize_once(obj)) is not None:
+            self._put_serialized(obj, serialized, False, None)
+
+
+def _handle_queue_feeder_error(
+    out_q: Any,
+    serialization_failure: _SerializationFailureState,
+    boundary: str,
+    message_kind: int,
+    err: BaseException,
+    obj: Any,
+) -> None:
+    """Convert an expected boundary-payload pickle failure into the fused protocol.
+
+    ``multiprocessing.Queue`` serializes the entire ``(_ITEM/_RESULT, chunk)``
+    message as one object. If any element is unpicklable, the feeder drops that
+    whole chunk; relaying ``_ERROR`` makes the loss terminal instead of silently
+    continuing. ``message_kind`` is bound to one queue: input controls never use
+    ``_ITEM`` and output controls never use ``_RESULT``, even though those payload
+    kinds share the same numeric value across the two independent protocols.
+    """
+    try:
+        is_boundary_payload = (
+            type(obj) is tuple
+            and len(obj) == 2
+            and type(obj[0]) is int
+            and obj[0] == message_kind
+        )
+    except BaseException:  # noqa: B036 - hostile protocol objects are terminal
+        is_boundary_payload = False
+    if is_boundary_payload:
+        try:
+            # Set the flag before enqueueing the fallback. The producer may already have
+            # enqueued its _DONE/_EPOCH_DONE marker behind the bad payload; the collector uses
+            # this flag to keep draining until the error arrives rather than returning success.
+            serialization_failure.failed.set()
+            # This callback can run on ``out_q``'s own feeder thread. Never block that thread
+            # waiting for capacity on the queue it is responsible for draining; if the queue
+            # is full, the flag above lets the collector synthesize a bounded generic error.
+            out_q.put_nowait((_ERROR, _serialization_error(boundary, err)))
+        except _queue.Full:
+            serialization_failure.relay_failed.set()
+            _LG.warning(
+                "Fused subprocess %s serialization error could not be relayed "
+                "because the output queue is full.",
+                boundary,
+            )
+        # This callback runs on multiprocessing's feeder thread, where allowing
+        # any exception to escape would silently strand the corresponding item.
+        except BaseException:  # noqa: B036
+            serialization_failure.relay_failed.set()
+            traceback.print_exc()
+        return
+    try:
+        # A control message or serialized pipe write can fail without matching the
+        # user-payload kind above. No safe detailed fallback is guaranteed on that
+        # path, but the dropped protocol message must still make collection terminal.
+        serialization_failure.non_payload_failed.set()
+        serialization_failure.failed.set()
+        serialization_failure.relay_failed.set()
+    except BaseException:  # noqa: B036 - diagnostics must not kill the feeder thread
+        pass
+    try:
+        traceback.print_exception(type(err), err, err.__traceback__)
+    except BaseException:  # noqa: B036 - diagnostics must not kill the feeder thread
+        pass
+
+
+def _install_queue_feeder_error_handler(
+    q: Any,
+    out_q: Any,
+    serialization_failure: _SerializationFailureState,
+    boundary: str,
+    message_kind: int,
+) -> Any:
+    """Install a producer-local multiprocessing queue serialization-error hook."""
+    # Queue captures this callback when its feeder thread starts on the first put. Installing it
+    # before that put preserves Queue's normal one-pass asynchronous serialization and adds no
+    # envelope or preliminary pickle on the hot path.
+    if isinstance(q, _SynchronousSerializationQueue):
+        return q
+    if not callable(getattr(q, "_on_queue_feeder_error", None)):
+        _LG.warning(
+            "Queue does not expose _on_queue_feeder_error; falling back to "
+            "synchronous serialization checks for the fused subprocess %s boundary.",
+            boundary,
+        )
+        return _SynchronousSerializationQueue(
+            q, out_q, serialization_failure, boundary, message_kind
+        )
+    try:
+        q._on_queue_feeder_error = partial(
+            _handle_queue_feeder_error,
+            out_q,
+            serialization_failure,
+            boundary,
+            message_kind,
+        )
+    except (AttributeError, TypeError) as error:
+        _LG.warning(
+            "Could not install _on_queue_feeder_error; falling back to synchronous "
+            "serialization checks for the fused subprocess %s boundary.",
+            boundary,
+            exc_info=error,
+        )
+        return _SynchronousSerializationQueue(
+            q, out_q, serialization_failure, boundary, message_kind
+        )
+    return q
 
 
 def _get_input_message(in_q: Any) -> tuple[int, Any]:
@@ -114,7 +359,8 @@ class _DrainSource:
     pool once per ``_ITEM`` message; the generator then yields every item in that message on
     the event loop. Keeping the payload expansion async is important: adapting a synchronous
     iterator would dispatch ``next()`` to the thread pool once per *item*, undoing the
-    process-boundary batching that ``buffer_size`` is meant to provide.
+    process-boundary batching that ``buffer_size`` is meant to provide. Each pass ends at an
+    ``_EPOCH`` boundary or ``_POOL_SHUTDOWN`` teardown message.
 
     ``exiting`` latches once ``_POOL_SHUTDOWN`` is seen; the worker loop reads it to stop after
     the current epoch. The blocking read uses a timeout so the drain thread wakes periodically
@@ -124,6 +370,7 @@ class _DrainSource:
     def __init__(self, in_q: Any) -> None:
         self._in_q = in_q
         self.exiting = False
+        self.completed_epoch: int | None = None
 
     def __aiter__(self) -> AsyncIterator[Any]:
         return self._iterate()
@@ -146,6 +393,11 @@ class _DrainSource:
                 for item in payload:
                     yield item
             elif kind == _EPOCH:
+                if type(payload) is not int:
+                    raise RuntimeError(
+                        "A fused subprocess worker received an invalid epoch marker."
+                    )
+                self.completed_epoch = payload
                 return
             else:  # _POOL_SHUTDOWN
                 self.exiting = True
@@ -187,7 +439,11 @@ def _drain_chunk(pipeline: Any, out: list[Any], output_buffer_size: int) -> bool
     return False
 
 
-def _stream_results(pipeline: Any, out_q: Any, output_buffer_size: int) -> None:
+def _stream_results(
+    pipeline: Any,
+    out_q: Any,
+    output_buffer_size: int,
+) -> None:
     """Forward one stream's (epoch's / session's) results to ``out_q`` in chunks.
 
     Returns when the stream ends. Any results already collected are flushed even if a read
@@ -266,6 +522,7 @@ def _run_sessions(
 def _run_continuous(
     in_q: Any,
     out_q: Any,
+    worker_id: int,
     sub_config: PipelineConfig[Any],
     build_kwargs: dict[str, Any],
     output_buffer_size: int,
@@ -294,11 +551,18 @@ def _run_continuous(
                 _stream_results(pipeline, out_q, output_buffer_size)
                 if source.exiting:
                     break
-                out_q.put((_EPOCH_DONE, None))
+                if source.completed_epoch is None:
+                    raise RuntimeError(
+                        "A fused subprocess worker ended an unnumbered epoch."
+                    )
+                completed_epoch = source.completed_epoch
+                source.completed_epoch = None
+                out_q.put((_EPOCH_DONE, (completed_epoch, worker_id)))
     except Exception as err:
         # Catch ``Exception`` (not ``BaseException``) so ``KeyboardInterrupt`` / ``SystemExit``
         # propagate and actually tear the worker down, rather than being relayed as a
-        # ``RuntimeError``. Matches :py:func:`_run_sessions` and the worker-loop initializer path.
+        # ``RuntimeError``. Matches :py:func:`_run_sessions` and the worker-loop
+        # initializer path.
         out_q.put((_ERROR, _to_picklable_error(err, traceback.format_exc())))
     out_q.put((_DONE, None))
 
@@ -306,14 +570,20 @@ def _run_continuous(
 def _pipeline_worker_loop(
     in_q: Any,
     out_q: Any,
+    worker_id: int,
     sub_config: PipelineConfig[Any],
     build_kwargs: dict[str, Any],
     continuous: bool,
     initializer: Callable[..., object] | None,
     initargs: tuple[Any, ...],
+    output_serialization_failed: Any,
     output_buffer_size: int,
 ) -> None:
     """Worker entry point: run the initializer, then dispatch to the matching body."""
+    if output_serialization_failed is not None:
+        out_q = _install_queue_feeder_error_handler(
+            out_q, out_q, output_serialization_failed, "output", _RESULT
+        )
     if initializer is not None:
         try:
             initializer(*initargs)
@@ -327,9 +597,22 @@ def _pipeline_worker_loop(
             out_q.put((_DONE, None))
             return
     if continuous:
-        _run_continuous(in_q, out_q, sub_config, build_kwargs, output_buffer_size)
+        _run_continuous(
+            in_q,
+            out_q,
+            worker_id,
+            sub_config,
+            build_kwargs,
+            output_buffer_size,
+        )
     else:
-        _run_sessions(in_q, out_q, sub_config, build_kwargs, output_buffer_size)
+        _run_sessions(
+            in_q,
+            out_q,
+            sub_config,
+            build_kwargs,
+            output_buffer_size,
+        )
 
 
 class _SubprocessPipelineHandle:
@@ -349,6 +632,8 @@ class _SubprocessPipelineHandle:
         out_q: Any,
         max_workers: int,
         continuous: bool,
+        input_serialization_failed: Any,
+        output_serialization_failed: Any,
         input_buffer_size: int = 1,
         output_buffer_size: int = 1,
     ) -> None:
@@ -356,10 +641,26 @@ class _SubprocessPipelineHandle:
         self.out_q = out_q
         self.max_workers = max_workers
         self.continuous = continuous
+        self.input_serialization_failed = input_serialization_failed
+        self.output_serialization_failed = output_serialization_failed
         # Sized separately: the two directions rarely carry comparable items (a region ending
         # in ``aggregate`` takes rows in and returns whole batches).
         self.input_buffer_size = input_buffer_size
         self.output_buffer_size = output_buffer_size
+
+    def prepare_bridge(self) -> None:
+        """Install feeder-error hooks on the bridge's multiprocessing input queues."""
+        if self.input_serialization_failed is not None:
+            self.in_qs = [
+                _install_queue_feeder_error_handler(
+                    q,
+                    self.out_q,
+                    self.input_serialization_failed,
+                    "input",
+                    _ITEM,
+                )
+                for q in self.in_qs
+            ]
 
 
 class _Worker:
@@ -378,6 +679,10 @@ class _PoolBackend:
     """
 
     def make_queue(self, maxsize: int) -> Any:
+        raise NotImplementedError
+
+    def make_serialization_failure_flag(self) -> Any:
+        """Return async failure state, or ``None`` when queue puts fail synchronously."""
         raise NotImplementedError
 
     def spawn(self, target: Callable[..., object], args: tuple[Any, ...]) -> _Worker:
@@ -419,6 +724,11 @@ class _ProcessBackend(_PoolBackend):
 
     def make_queue(self, maxsize: int) -> Any:
         return self._ctx.Queue(maxsize=maxsize)
+
+    def make_serialization_failure_flag(self) -> _SerializationFailureState:
+        return _SerializationFailureState(
+            self._ctx.Event(), self._ctx.Event(), self._ctx.Event()
+        )
 
     def spawn(self, target: Callable[..., object], args: tuple[Any, ...]) -> _Worker:
         proc = self._ctx.Process(target=target, args=args, daemon=True)
@@ -477,12 +787,21 @@ class _InterpreterBackend(_PoolBackend):
     def __init__(self) -> None:
         import concurrent.interpreters as interpreters  # pyre-ignore[21]
 
-        # Typed ``Any``: ``concurrent.interpreters`` is Python 3.14+ only, so pyre (running under
-        # an older config) cannot resolve its ``create``/``create_queue`` members.
+        # Typed ``Any``: ``concurrent.interpreters`` is Python 3.14+ only, so
+        # pyre (running under an older config) cannot resolve its
+        # ``create``/``create_queue`` members.
         self._interpreters: Any = interpreters
 
     def make_queue(self, maxsize: int) -> Any:
         return self._interpreters.create_queue(maxsize=maxsize)
+
+    def make_serialization_failure_flag(self) -> None:
+        # ``interpreters.Queue.put`` serializes synchronously and raises in its caller, so its
+        # original exception already reaches the pipeline directly. The process backend needs
+        # the state + feeder hook only because ``mp.Queue`` serializes later on a background
+        # thread, where an error would otherwise be dropped. This intentional difference keeps
+        # the subinterpreter path synchronous instead of translating it through ``_ERROR``.
+        return None
 
     def spawn(self, target: Callable[..., object], args: tuple[Any, ...]) -> _Worker:
         interp = self._interpreters.create()
@@ -541,12 +860,14 @@ class _SubprocessPipelinePool:
         # The bound counts *messages*, so with a buffer size above 1 the in-flight item
         # bound is this times that. Left as-is deliberately: the depth is what keeps workers
         # pipelined, and shrinking it in proportion would stall the pool at large sizes.
-        size = max(4, max_workers * 2)
+        size = _fused_queue_capacity(max_workers)
         self._backend = backend
         self._continuous = continuous
         self._input_buffer_size = input_buffer_size
         self._output_buffer_size = output_buffer_size
         self._closed = False
+        self._input_serialization_failed = backend.make_serialization_failure_flag()
+        self._output_serialization_failed = backend.make_serialization_failure_flag()
         self._out_q: Any = backend.make_queue(size)
         # One input queue per worker in both modes. Continuous mode needs it to broadcast epoch
         # boundaries cleanly; non-continuous mode needs it so each worker receives exactly one
@@ -567,11 +888,13 @@ class _SubprocessPipelinePool:
                         (
                             self._in_qs[i],
                             self._out_q,
+                            i,
                             sub_config,
                             build_kwargs,
                             continuous,
                             initializer,
                             initargs,
+                            self._output_serialization_failed,
                             output_buffer_size,
                         ),
                     )
@@ -595,9 +918,9 @@ class _SubprocessPipelinePool:
     def _reap(workers: list[_Worker]) -> None:
         """Reap the given workers (join, escalating to terminate/kill where the backend can).
 
-        Each worker is reaped independently: a failure stopping one (e.g. a subinterpreter that
-        will not close) must not prevent the rest from being reaped, or the remaining workers and
-        their pipe fds would leak.
+        Each worker is reaped independently: a failure stopping one (e.g. a
+        subinterpreter that will not close) must not prevent the rest from
+        being reaped, or the remaining workers and their pipe fds would leak.
         """
         for w in workers:
             try:
@@ -612,6 +935,8 @@ class _SubprocessPipelinePool:
             self._out_q,
             self._max_workers,
             self._continuous,
+            self._input_serialization_failed,
+            self._output_serialization_failed,
             self._input_buffer_size,
             self._output_buffer_size,
         )
