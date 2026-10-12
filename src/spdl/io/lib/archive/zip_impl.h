@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <tuple>
@@ -20,15 +21,18 @@ using ZipMetaData = std::tuple<
     uint64_t, // offset
     uint64_t, // compressed_size
     uint64_t, // uncompressed_size
-    uint16_t // compression_method
+    uint16_t, // compression_method
+    uint32_t // CRC-32
     >;
 
 std::vector<ZipMetaData> parse_zip(const char* root, const size_t len);
 
+void verify_crc32(const char* data, size_t size, uint32_t expected);
+
 void inflate(
     const char* root,
-    uint32_t compressed_size,
+    size_t compressed_size,
     void* dst,
-    uint32_t uncompressed_size);
+    size_t uncompressed_size);
 
 } // namespace spdl::archive::zip
