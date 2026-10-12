@@ -748,9 +748,10 @@ class TestPipelineHook(unittest.TestCase):
             .build(num_threads=1, task_hook_factory=lambda _: [_enter_stage_fail()])
         )
 
+        vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(vals, [])
 
@@ -777,9 +778,10 @@ class TestPipelineHook(unittest.TestCase):
             # pyre-ignore[6]
             .build(num_threads=1, task_hook_factory=lambda _: [_exit_stage_fail()])
         )
+        vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
         self.assertEqual(vals, list(range(10)))
 
     @_ignore_warnings({"category": RuntimeWarning})
@@ -1586,9 +1588,10 @@ class TestPipelineSource(unittest.TestCase):
             .build(num_threads=1)
         )
 
+        results = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                results = list(pipeline.get_iterator(timeout=30))
+                results.extend(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(results, [1 + 2 * i for i in range(10)])
 
@@ -1609,9 +1612,10 @@ class TestPipelineType(unittest.TestCase):
             .build(num_threads=1)
         )
 
+        vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
 
         self.assertEqual(vals, [])
 
@@ -1703,17 +1707,17 @@ class TestPipelineFail(unittest.TestCase):
             .build(num_threads=1)
         )
 
-        with self.assertRaises(PipelineFailure):
-            with apl.auto_stop():
-                with self.assertRaises(EOFError):
-                    apl.get_item(timeout=30)
+        with apl.auto_stop():
+            with self.assertRaises(PipelineFailure) as first_failure:
+                apl.get_item(timeout=30)
 
         self.assertEqual(pwc.cache, [])
 
-        # The background thread is stopped, and the output queue is empty.
+        # The background thread is stopped, and its terminal failure remains sticky.
         for _ in range(3):
-            with self.assertRaises(EOFError):
+            with self.assertRaises(PipelineFailure) as repeated_failure:
                 apl.get_item(timeout=30)
+            self.assertIs(repeated_failure.exception, first_failure.exception)
 
 
 class TestPipelineEof(unittest.TestCase):
@@ -2501,9 +2505,10 @@ class TestPipelineMax(unittest.TestCase):
         self.assertEqual([0, 2, 4, 6, 8], vals)
 
         pipeline = builder.build(num_threads=1, max_failures=3)
+        vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
 
         self.assertEqual([0, 2, 4, 6], vals)
 
@@ -2539,15 +2544,17 @@ class TestPipelineMax(unittest.TestCase):
         pipeline1 = builder.build(num_threads=1, max_failures=2)
         pipeline2 = builder.build(num_threads=1, max_failures=3)
 
+        vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline2.auto_stop():
-                vals = list(pipeline2.get_iterator(timeout=30))
+                vals.extend(pipeline2.get_iterator(timeout=30))
 
         self.assertEqual([0, 2, 4, 6], vals)
 
+        vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline1.auto_stop():
-                vals = list(pipeline1.get_iterator(timeout=30))
+                vals.extend(pipeline1.get_iterator(timeout=30))
 
         self.assertEqual([0, 2, 4], vals)
 
@@ -2575,9 +2582,10 @@ class TestPipelineMax(unittest.TestCase):
         )
 
         pipeline = builder.build(num_threads=1, max_failures=-1)
+        vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
         self.assertEqual([0, 2, 4], vals)
 
     @parameterized.expand(
@@ -2645,9 +2653,10 @@ class TestPipelineMax(unittest.TestCase):
         # it should shutdown the pipeline.
 
         pipeline = builder.build(num_threads=1, max_failures=2)
+        vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
         self.assertEqual([2, 4, 8, 10, 14, 16], vals)
 
 

@@ -100,7 +100,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
 
         all_expected = {x for x in range(1000) if x % 100 != 0}
         self.assertTrue(len(vals) > 0)
@@ -208,7 +208,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
 
         # Should get values 0-89 (90 successful items)
         self.assertEqual(list(range(90)), vals)
@@ -285,7 +285,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
 
         # Should get all non-multiples of 7
         expected = [x for x in range(100) if x % 7 != 0]
@@ -384,7 +384,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
 
         # Pipeline stops early after 5 failures; vals is a subset of expected
         all_expected = {x for x in range(100) if x % 10 != 0}
@@ -416,7 +416,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
 
         # Should get all non-multiples of 7
         expected = [x for x in range(100) if x % 7 != 0]
@@ -644,7 +644,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
 
         all_expected = {x for x in range(1000) if x % 100 != 0}
         self.assertTrue(len(vals) > 0)
@@ -796,7 +796,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         vals = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
-                vals = list(pipeline.get_iterator(timeout=30))
+                vals.extend(pipeline.get_iterator(timeout=30))
 
         # Should get all non-multiples of 5
         expected = [x for x in range(100) if x % 5 != 0]
