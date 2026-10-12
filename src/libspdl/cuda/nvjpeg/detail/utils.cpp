@@ -14,6 +14,7 @@
 #include <fmt/ranges.h>
 #include <glog/logging.h>
 
+#include <exception>
 #include <mutex>
 #include <set>
 
@@ -38,10 +39,10 @@ nvjpegHandle_t get_nvjpeg() {
 ////////////////////////////////////////////////////////////////////////////////
 // nvjpegJpegState_t
 ////////////////////////////////////////////////////////////////////////////////
-void nvjpeg_state_deleter::operator()(nvjpegJpegState* p) {
+void nvjpeg_state_deleter::operator()(nvjpegJpegState* p) const noexcept {
   TRACE_EVENT("decoding", "nvjpegJpegStateDestroy");
-  if (!p) {
-    auto status = nvjpegJpegStateDestroy(p);
+  if (p) {
+    const auto status = destroy(p);
     if (status != NVJPEG_STATUS_SUCCESS) {
       LOG(WARNING) << "Failed to destroy nvjpeg state: "
                    << detail::to_string(status);
@@ -182,6 +183,73 @@ std::string to_string(nvjpegOutputFormat_t f) {
 #endif
     default:
       return fmt::format("Unknown nvjpegOutputFormat_t value: {}", int(f));
+  }
+}
+
+void wrap_nvjpeg_image(
+    void* data,
+    const NVJPEGImageLayout& layout,
+    nvjpegImage_t& image,
+    size_t batch) {
+  image = {};
+  auto* ptr = static_cast<uint8_t*>(data);
+  ptr += batch * layout.height * layout.width * layout.num_channels;
+  const size_t pitch =
+      layout.interleaved ? layout.width * layout.num_channels : layout.width;
+  const size_t num_planes = layout.interleaved ? 1 : layout.num_channels;
+  for (size_t c = 0; c < num_planes; ++c) {
+    image.channel[c] = ptr;
+    image.pitch[c] = pitch;
+    ptr += pitch * layout.height;
+  }
+}
+
+namespace {
+struct StorageWithDependencies {
+  std::vector<CUDAStoragePtr> dependencies;
+  CUDAStoragePtr storage;
+};
+} // namespace
+
+void retain_cuda_storage_dependencies(
+    CUDAStoragePtr& storage,
+    std::vector<CUDAStoragePtr> dependencies) {
+  auto* const ptr = storage.get();
+  auto owner = std::make_shared<StorageWithDependencies>(
+      std::move(dependencies), CUDAStoragePtr{});
+  owner->storage = std::move(storage);
+  storage = CUDAStoragePtr{std::move(owner), ptr};
+}
+
+CUDAStreamSyncOnExceptionGuard::CUDAStreamSyncOnExceptionGuard(
+    uintptr_t stream,
+    SynchronizeFn synchronize) noexcept
+    : stream_{stream},
+      synchronize_{synchronize},
+      uncaught_exceptions_{std::uncaught_exceptions()} {}
+
+CUDAStreamSyncOnExceptionGuard::~CUDAStreamSyncOnExceptionGuard() noexcept {
+  if (std::uncaught_exceptions() <= uncaught_exceptions_) {
+    return;
+  }
+
+  try {
+    // NOLINTNEXTLINE(performance-no-int-to-ptr)
+    const auto stream = reinterpret_cast<cudaStream_t>(stream_);
+    // cudaStreamSynchronize blocks until all preceding work finishes. Its
+    // return value may report a delayed asynchronous failure, but that does not
+    // mean the work remains in flight. Preserve the original exception and
+    // report this secondary cleanup failure without terminating the process.
+    if (const cudaError_t status = synchronize_(stream);
+        status != cudaSuccess) {
+      LOG(ERROR)
+          << "Failed to synchronize CUDA stream during exception cleanup ("
+          << cudaGetErrorName(status) << ": " << cudaGetErrorString(status)
+          << ").";
+    }
+  } catch (...) {
+    // Destructors cannot safely surface a secondary cleanup failure while
+    // another exception is already unwinding.
   }
 }
 
