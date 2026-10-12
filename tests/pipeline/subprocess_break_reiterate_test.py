@@ -133,7 +133,7 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
             iterate_in_subprocess(
                 StalledSourceIterable,
                 timeout=30,
-                mp_context="fork",
+                mp_context="spawn",
             ),
         )
         iterator = iter(src)
@@ -163,10 +163,13 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
             _SubprocessIterable[int],
             iterate_in_subprocess(
                 StalledSourceIterable,
-                timeout=0.3,
-                mp_context="fork",
+                timeout=30,
+                mp_context="spawn",
             ),
         )
+        interface = src._interface
+        self.assertIsNotNone(interface)
+        interface.timeout = 0.3
         iterator = iter(src)
         self.assertEqual(next(iterator), 0)
 
@@ -195,7 +198,7 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
             iterate_in_subprocess(
                 StalledSourceIterable,
                 timeout=30,
-                mp_context="fork",
+                mp_context="spawn",
             ),
         )
         iterator = iter(src)
@@ -244,7 +247,7 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
             iterate_in_subprocess(
                 StalledSourceIterable,
                 timeout=30,
-                mp_context="fork",
+                mp_context="spawn",
             ),
         )
         iterator = iter(src)
