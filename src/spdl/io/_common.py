@@ -17,9 +17,14 @@ def _resolve_src(obj: object) -> "str | memoryview[bytes]":
         obj = obj.numpy()  # pyre-ignore: [16]
 
     match obj:
-        case str() | memoryview():
+        case str():
             # pyrefly: ignore [bad-return]
             return obj
+        case memoryview():
+            # Keep an independent export alive. Returning the caller's memoryview directly
+            # would let them release it while native code still holds the borrowed pointer,
+            # after which a mutable exporter could be resized and invalidate that pointer.
+            return memoryview(obj)
         case _ if hasattr(obj, "__fspath__"):
             # pyrefly: ignore [no-matching-overload]
             return os.fspath(obj)
