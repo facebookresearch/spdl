@@ -25,7 +25,7 @@ if (NOT SPDL_IS_GIL_ENABLED)
 endif()
 
 nanobind_add_module(${name} ${nb_options} ${srcs})
-target_link_libraries(${name} PRIVATE "${deps}")
+target_link_libraries(${name} PRIVATE ${deps})
 target_include_directories(${name} PRIVATE "${Python_INCLUDE_DIR}")
 target_compile_options(${name} PRIVATE "${SPDL_CXX_CPU_COMPILE_FLAGS}")
 
