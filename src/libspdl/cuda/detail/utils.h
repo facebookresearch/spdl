@@ -11,6 +11,7 @@
 #include "libspdl/core/detail/logging.h"
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 // Make sure CUDA_API_PER_THREAD_DEFAULT_STREAM is defined by compiler
 // so that it is applied globally
