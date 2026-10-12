@@ -204,18 +204,22 @@ shows host-to-device transfer using this pattern.
 
 The same pattern applies when moving model outputs from the GPU back to the
 CPU. :py:func:`spdl.io.transfer_tensor_d2h` uses a dedicated CUDA stream and a
-cached page-locked staging buffer. Run it on a persistent single-worker
-executor so that consecutive calls reuse both resources while the foreground
-thread continues to submit independent work to its compute stream.
+direct non-blocking transfer into page-locked CPU tensors. Run it on a
+persistent single-worker executor so that consecutive calls reuse the cached
+stream while the foreground thread continues to submit independent work to its
+compute stream.
 
 .. code-block:: python
 
    d2h_executor = ThreadPoolExecutor(max_workers=1)
 
    with d2h_executor:
+       ready = torch.cuda.Event()
+       ready.record()
        future = d2h_executor.submit(
            spdl.io.transfer_tensor_d2h,
            model_output,
+           producer_event=ready,
        )
 
        # Independent work submitted to the foreground CUDA stream can overlap
@@ -223,12 +227,13 @@ thread continues to submit independent work to its compute stream.
        next_output = model(next_batch)
        cpu_output = future.result()
 
-The inputs must be ready on the current CUDA stream when
-:py:func:`~spdl.io.transfer_tensor_d2h` is called. The function establishes the
-required ordering between that producer stream and its transfer stream before
-returning CPU tensors. See :py:mod:`benchmark_transfer_overlap` for a
-reproducible benchmark of serialized and concurrent transfer-plus-compute
-makespans.
+The event is recorded on the producer thread before dispatch, so the transfer
+stream waits for exactly the work that produces ``model_output`` without also
+waiting for later foreground submissions. When
+:py:func:`~spdl.io.transfer_tensor_d2h` is called directly, it records this
+event automatically on the calling thread's current stream. See
+:py:mod:`benchmark_transfer_overlap` for a reproducible benchmark of serialized
+and concurrent transfer-plus-compute makespans.
 
 The following Perfetto view shows the corresponding device-to-host pattern.
 Four ``Memcpy DtoH`` operations on stream 13 overlap the foreground SGEMM

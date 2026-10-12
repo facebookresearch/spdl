@@ -11,8 +11,9 @@ The intended use of :func:`spdl.io.transfer_tensor_d2h` is to call it from a
 background CPU thread while the foreground thread submits independent CUDA
 work. Raw transfer latency alone does not measure that benefit, so this
 benchmark compares serialized and concurrent transfer-plus-compute makespans.
-The ``PyTorch to(cpu)`` method is a simple reference path, not a staging- and
-allocation-matched replacement for SPDL.
+The ``PyTorch to(cpu)`` method is a direct-transfer reference. SPDL uses the
+same transfer primitive while adding nested-batch traversal and cached stream
+management.
 
 The source tensors are made ready before timing. The transfer worker owns its
 copy stream, while the foreground thread owns a separate compute stream. Each
@@ -30,21 +31,23 @@ Use ``--samples-output`` to retain paired per-trial measurements.
 Measured steady-state result
 ----------------------------
 
-One run used a 64 MiB uint8 payload on an NVIDIA A100 MIG 1g.10gb with
-CUDA 13.3. After five warmup blocks, 30 paired randomized blocks produced the
+One run used a 64 MiB uint8 payload on an NVIDIA A100 MIG 3g.20gb with
+CUDA 13.3. After three warmup blocks, 20 paired randomized blocks produced the
 following SPDL medians. The foreground workload was a 2048-square ``torch.mm``.
 
 ::
 
     Tensors  Compute   Transfer  Serialized  Concurrent  Paired speedup (95% CI)
-          1  7.262 ms  9.800 ms   17.012 ms    11.852 ms  1.471x [1.266, 1.670]
-         32  7.310 ms 11.443 ms   17.757 ms    11.626 ms  1.625x [1.428, 1.693]
+          1  7.611 ms  5.700 ms   13.325 ms     7.754 ms  1.716x [1.706, 1.725]
+         32  7.568 ms  5.854 ms   13.404 ms     7.749 ms  1.730x [1.726, 1.737]
+        256  7.565 ms  6.617 ms   14.241 ms     7.760 ms  1.835x [1.823, 1.842]
 
 These are steady-state results: validation and warmup prime the pinned-memory
-and allocator caches before timing. They show that background SPDL execution
-reduced transfer-plus-compute makespan on this system. They do not show that
-SPDL is faster than the naive PyTorch reference, which also overlaps, or
-characterize first-call and cache-growth latency.
+and allocator caches before timing. Direct PyTorch transfer medians were
+5.628, 5.807, and 6.599 ms for the same three cases, respectively. The SPDL
+wrapper therefore remained within 1.3% of the underlying transfer primitive
+while preserving nested-batch handling and stream reuse. These measurements do
+not characterize first-call or allocator-cache growth latency.
 """
 
 import argparse
@@ -198,7 +201,7 @@ class _MutableTrial:
 def _native_d2h(
     tensors: list[torch.Tensor], stream: torch.cuda.Stream
 ) -> list[torch.Tensor]:
-    """Transfer tensors to pageable CPU outputs on a dedicated stream."""
+    """Transfer tensors directly to CPU on a dedicated stream."""
     producer_stream = torch.cuda.current_stream(tensors[0].device)
     if producer_stream != stream:
         stream.wait_stream(producer_stream)
