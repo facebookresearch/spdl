@@ -15,7 +15,7 @@ import os
 import threading
 import warnings
 from collections import defaultdict
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import fields, is_dataclass
 from functools import partial
 from types import ModuleType
@@ -222,134 +222,6 @@ def transfer_tensor(batch: T, /, *, num_caches: int = 4) -> T:
 ###############################################################################
 
 
-def _iter_leaves(obj: Any) -> Iterator[Any]:
-    """Iterate over leaves without rebuilding the input containers."""
-    match obj:
-        case list() | tuple():
-            for value in obj:
-                yield from _iter_leaves(value)
-        case Mapping():
-            for value in obj.values():
-                yield from _iter_leaves(value)
-        case value if is_dataclass(value) and not isinstance(value, type):
-            for field in fields(value):
-                if field.init:
-                    yield from _iter_leaves(getattr(value, field.name))
-            for field in fields(value):
-                if not field.init:
-                    yield from _iter_leaves(getattr(value, field.name))
-        case _:
-            yield obj
-
-
-def _gather_tensors(batch: T, device: "TDevice") -> "list[Tensor]":
-    """Gather tensors from a batch.
-
-    Args:
-        batch: A Tensor or a composition of tensors with container types.
-        device: The device to which the tensors are transferred.
-
-    Returns:
-        A list of all tensors in the batch.
-    """
-    return [
-        obj
-        for obj in _iter_leaves(batch)
-        if isinstance(obj, torch.Tensor) and obj.device == device
-    ]
-
-
-def _get_tensor_offsets(tensors: "list[Tensor]") -> tuple[list[int], int]:
-    """Return byte-aligned offsets and the total packed-buffer size."""
-    offsets = []
-    size = 0
-    for tensor in tensors:
-        alignment = tensor.element_size()
-        size = (size + alignment - 1) // alignment * alignment
-        offsets.append(size)
-        size += tensor.nbytes
-    return offsets, size
-
-
-def _get_pinned_memory(size: int) -> "Tensor":
-    """Allocate page-locked memory or fetch a cache.
-
-    Args:
-        size: Minimum size in bytes required.
-
-    Returns:
-        Pinned memory tensor (uint8).
-    """
-    if (
-        not hasattr(_THREAD_LOCAL, "d2h_pinned_memory")
-        or _THREAD_LOCAL.d2h_pinned_memory.numel() < size
-    ):
-        _THREAD_LOCAL.d2h_pinned_memory = torch.empty(
-            size, dtype=torch.uint8
-        ).pin_memory()
-    return _THREAD_LOCAL.d2h_pinned_memory[:size]
-
-
-def _transfer_with_autograd(
-    batch: T,
-    source_device: "TDevice",
-    destination_device: "TDevice",
-) -> T:
-    """Transfer tensors individually so that PyTorch preserves autograd edges."""
-
-    def _copy(obj: S) -> S:
-        if isinstance(obj, torch.Tensor) and obj.device == source_device:
-            return cast(S, obj.to(destination_device))
-        return obj
-
-    return _recursive_apply(_copy, batch)
-
-
-def _rebuild_batch(
-    batch: T,
-    source_device: "TDevice",
-    buffer: "Tensor",
-    offsets: list[int],
-) -> T:
-    """Rebuild a batch with tensors represented by views into a packed buffer.
-
-    Args:
-        batch: Original batch structure.
-        source_device: Device identifying tensors to replace.
-        buffer: Packed destination buffer.
-        offsets: Byte-aligned offset for each replaced tensor.
-
-    Returns:
-        New batch with tensors that share ``buffer`` storage but have independent
-        TensorImpls and version counters.
-    """
-    index = 0
-
-    def _rebuild(obj: S) -> S:
-        if isinstance(obj, torch.Tensor) and obj.device == source_device:
-            nonlocal index
-            offset = offsets[index]
-            index += 1
-            strides = []
-            stride = 1
-            for dimension in reversed(obj.shape):
-                strides.append(stride)
-                stride *= max(dimension, 1)
-            view = torch.empty(0, dtype=obj.dtype, device=buffer.device)
-            return cast(
-                S,
-                view.set_(
-                    buffer.untyped_storage(),
-                    offset // obj.element_size(),
-                    obj.shape,
-                    tuple(reversed(strides)),
-                ),
-            )
-        return obj
-
-    return _recursive_apply(_rebuild, batch)
-
-
 class _AsyncD2HTransfer:
     """Async Device to Host transfer handler."""
 
@@ -357,52 +229,42 @@ class _AsyncD2HTransfer:
         self._device = device
         self._stream = stream
 
-    def __call__(self, batch: T) -> T:
+    def __call__(self, batch: T, producer_event: "torch.cuda.Event") -> T:
         """Transfer batch from GPU to CPU asynchronously.
 
         Args:
             batch: A Tensor or composition of tensors to transfer.
+            producer_event: Event marking when the batch is ready to copy.
 
         Returns:
             Batch with tensors on CPU.
         """
-        tensors = _gather_tensors(batch, self._device)
-        if not tensors:
+        transferred = False
+
+        def _copy(obj: S) -> S:
+            nonlocal transferred
+            if not isinstance(obj, torch.Tensor) or obj.device != self._device:
+                return obj
+            if not transferred:
+                self._stream.wait_event(producer_event)
+            transferred = True
+            return cast(S, obj.to("cpu", non_blocking=True))
+
+        try:
+            with torch.cuda.stream(self._stream):
+                result = _recursive_apply(_copy, batch)
+        except BaseException as traversal_error:
+            if transferred:
+                try:
+                    self._stream.synchronize()
+                except Exception as synchronize_error:
+                    raise synchronize_error from traversal_error
+            raise
+        if not transferred:
             return batch
 
-        if any(tensor.requires_grad for tensor in tensors):
-            return _transfer_with_autograd(
-                batch,
-                self._device,
-                torch.device("cpu"),
-            )
-
-        offsets, size = _get_tensor_offsets(tensors)
-        if size > 0:
-            pinned = _get_pinned_memory(size)
-            producer_stream = torch.cuda.current_stream(self._device)
-            if producer_stream != self._stream:
-                self._stream.wait_stream(producer_stream)
-            with torch.cuda.stream(self._stream):
-                for tensor, offset in zip(tensors, offsets, strict=True):
-                    if tensor.nbytes > 0:
-                        destination = (
-                            pinned[offset : offset + tensor.nbytes]
-                            .view(tensor.dtype)
-                            .view(tensor.shape)
-                        )
-                        destination.copy_(tensor, non_blocking=True)
-            self._stream.synchronize()
-            cpu_buffer = pinned.clone()
-        else:
-            cpu_buffer = torch.empty(0, dtype=torch.uint8)
-
-        return _rebuild_batch(
-            batch,
-            self._device,
-            cpu_buffer,
-            offsets,
-        )
+        self._stream.synchronize()
+        return result
 
 
 def _normalize_cuda_device(device: "TDevice | str | None") -> "TDevice":
@@ -458,33 +320,30 @@ def transfer_tensor_d2h(
     *,
     device: "TDevice | str | None" = None,
     stream: "torch.cuda.Stream | None" = None,
+    producer_event: "torch.cuda.Event | None" = None,
 ) -> T:
     """Transfer PyTorch CUDA tensors to CPU through a dedicated stream.
 
     .. versionadded:: 0.7.0
 
-    This function performs efficient GPU to CPU data transfer using
-    page-locked (pinned) memory and a dedicated CUDA stream. The page-locked
-    memory is cached and reused across calls.
+    This function transfers tensors directly to CPU with
+    :py:meth:`torch.Tensor.to` on a dedicated CUDA stream. Non-blocking D2H
+    transfers produce page-locked (pinned) CPU tensors.
 
     The transfer process:
-    1. Gathers all tensors from the batch.
-    2. Allocates (or reuses cached) page-locked memory.
-    3. Asynchronously transfers data from GPU to page-locked memory.
-    4. Copies data from page-locked memory to new CPU tensors.
-    5. Rebuilds the batch structure with CPU tensors.
+    1. Traverses the batch recursively.
+    2. Asynchronously transfers each matching tensor directly to CPU.
+    3. Synchronizes the transfer stream before returning the rebuilt batch.
 
-    The copy stream waits for work already submitted to the caller's current
-    stream, and this function waits for the copy stream before returning. If a
-    tensor was produced on another non-current stream, the caller must first
-    establish an ordering dependency with the current stream. When called from
-    a background CPU thread, the transfer can overlap with later GPU work
-    submitted independently by a foreground thread. It is intended for
-    offloading nested results before CPU post-processing or serialization.
+    The returned CPU tensors remain page-locked. Retaining many transferred
+    batches therefore retains the corresponding amount of pinned host memory.
 
-    If any transferred tensor requires gradients, the function uses a
-    synchronous per-tensor transfer on the caller's current stream to preserve
-    autograd.
+    By default, the function records an event on the calling thread's current
+    stream and makes the copy stream wait for that event. When dispatching the
+    function to another CPU thread, record the event on the producer thread
+    before dispatch and pass it as ``producer_event``. This captures the exact
+    readiness boundary without waiting for later foreground work. The function
+    waits for the copy stream before returning.
 
     Example:
         .. code-block:: python
@@ -512,6 +371,11 @@ def transfer_tensor_d2h(
             When stream is not ``None``, the ``device`` argument must be provided.
             The stream must be on the same device.
 
+        producer_event: **Optional** Event marking when the input tensors are
+            ready. If ``None``, an event is recorded on the calling thread's
+            current stream. Callers that dispatch this function to another CPU
+            thread must record and pass an event from the producer thread.
+
     Returns:
         An object of the same type as the input, but the PyTorch CUDA tensors
         on the specified device are transferred to CPU.
@@ -536,5 +400,8 @@ def transfer_tensor_d2h(
         raise ValueError(
             f"The transfer stream is on {stream.device}, not the requested {device}."
         )
+    if producer_event is None:
+        producer_event = torch.cuda.Event()
+        producer_event.record(torch.cuda.current_stream(device))
     transfer = _get_d2h_transfer(device, stream)
-    return transfer(batch)
+    return transfer(batch, producer_event)

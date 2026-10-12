@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, cast
 
@@ -13,9 +14,16 @@ from spdl.io import transfer_tensor_d2h, transfer_tensor_h2d
 from spdl.io._transfer import _THREAD_LOCAL
 
 
+class _FailingMapping(dict[str, Any]):
+    """Mapping whose reconstruction fails after its values are visited."""
+
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("reconstruction failed")
+
+
 def _clear_transfer_cache() -> None:
     """Clear all thread-local transfer caches."""
-    for name in ("transfer", "d2h_transfer", "d2h_pinned_memory"):
+    for name in ("transfer", "d2h_transfer"):
         if hasattr(_THREAD_LOCAL, name):
             delattr(_THREAD_LOCAL, name)
 
@@ -41,6 +49,12 @@ class AsyncTransferD2HTest(unittest.TestCase):
 
         # Verify input tensor is not modified
         self.assertTrue(torch.equal(ref_cuda, ref_cuda_copy))
+
+    def test_returns_pinned_tensor(self) -> None:
+        """Test non-blocking D2H transfer returns page-locked memory."""
+        result = transfer_tensor_d2h(torch.randn(8, device="cuda"))
+
+        self.assertTrue(result.is_pinned())
 
     def test_large_tensor(self) -> None:
         """Test D2H transfer of a large tensor."""
@@ -233,7 +247,6 @@ class AsyncTransferD2HTest(unittest.TestCase):
         for cpu, ref in zip(cpus, refs, strict=True):
             self.assertEqual(cpu.device.type, "cpu")
             self.assertEqual(cpu.shape, ref.shape)
-        self.assertFalse(hasattr(_THREAD_LOCAL, "d2h_pinned_memory"))
 
     def test_mixed_device_tensors(self) -> None:
         """Test D2H transfer with tensors on different devices.
@@ -298,22 +311,8 @@ class AsyncTransferD2HTest(unittest.TestCase):
         self.assertEqual(metadata_result["scores"].device.type, "cpu")
         torch.testing.assert_close(metadata_result["scores"], cuda_tensor2.cpu())
 
-    def test_mixed_dtypes_use_aligned_offsets(self) -> None:
-        """Test that each packed tensor starts at a dtype-aligned offset."""
-        refs = [
-            torch.tensor([1], dtype=torch.uint8, device="cuda"),
-            torch.tensor([2.5], dtype=torch.float32, device="cuda"),
-            torch.tensor([3.5], dtype=torch.float64, device="cuda"),
-        ]
-
-        result = transfer_tensor_d2h(refs)
-
-        for actual, expected in zip(result, refs, strict=True):
-            self.assertEqual(actual.dtype, expected.dtype)
-            torch.testing.assert_close(actual, expected.cpu())
-
-    def test_dataclass_init_false_field_preserves_tensor_order(self) -> None:
-        """Test dataclass fields use one traversal order for packing and rebuilding."""
+    def test_dataclass_init_false_field_is_transferred(self) -> None:
+        """Test tensors in non-init dataclass fields are transferred."""
 
         @dataclass
         class Batch:
@@ -335,7 +334,7 @@ class AsyncTransferD2HTest(unittest.TestCase):
 
         result = transfer_tensor_d2h(ref)
 
-        self.assertTrue(result.is_contiguous())
+        self.assertEqual(result.device.type, "cpu")
         torch.testing.assert_close(result, ref.cpu())
 
     def test_preserves_autograd(self) -> None:
@@ -345,12 +344,13 @@ class AsyncTransferD2HTest(unittest.TestCase):
         result = transfer_tensor_d2h(ref)
         result.square().sum().backward()
 
+        self.assertIsNotNone(result.grad_fn)
         self.assertIsNotNone(ref.grad)
         assert ref.grad is not None
         torch.testing.assert_close(ref.grad.cpu(), 2 * ref.detach().cpu())
 
-    def test_packed_tensors_have_independent_version_counters(self) -> None:
-        """Test mutating one packed tensor does not invalidate another in autograd."""
+    def test_transferred_tensors_have_independent_version_counters(self) -> None:
+        """Test mutating one result does not invalidate another in autograd."""
         refs = [
             torch.zeros(8, device="cuda"),
             torch.arange(8.0, device="cuda"),
@@ -379,6 +379,37 @@ class AsyncTransferD2HTest(unittest.TestCase):
             result = transfer_tensor_d2h(ref)
 
         torch.testing.assert_close(result, torch.full_like(result, 42))
+
+    def test_background_transfer_waits_for_producer_event(self) -> None:
+        """Test a worker waits for the producer thread's readiness event."""
+        producer = torch.cuda.Stream()
+        ready = torch.cuda.Event()
+        ref = torch.zeros(1024, device="cuda")
+
+        with torch.cuda.stream(producer):
+            torch.cuda._sleep(10_000_000)
+            ref.fill_(42)
+            ready.record()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            result = executor.submit(
+                transfer_tensor_d2h,
+                ref,
+                producer_event=ready,
+            ).result()
+
+        torch.testing.assert_close(result, torch.full_like(result, 42))
+
+    def test_synchronizes_transfer_stream_when_rebuild_raises(self) -> None:
+        """Test an exception cannot leave an enqueued D2H copy running."""
+        batch = _FailingMapping.__new__(_FailingMapping)
+        dict.__init__(batch, {"tensor": torch.randn(1024, device="cuda")})
+        stream = torch.cuda.Stream()
+
+        with self.assertRaisesRegex(RuntimeError, "reconstruction failed"):
+            transfer_tensor_d2h(batch, device="cuda:0", stream=stream)
+
+        self.assertTrue(stream.query())
 
     def test_unindexed_cuda_device(self) -> None:
         """Test that an unindexed CUDA device resolves successfully."""
@@ -434,61 +465,6 @@ class AsyncTransferD2HTest(unittest.TestCase):
 
         self.assertEqual(result.device.type, "cpu")
         torch.testing.assert_close(result, ref)
-
-
-class PinnedMemoryCacheD2HTest(unittest.TestCase):
-    """Tests for pinned-memory cache behavior for D2H transfers."""
-
-    def setUp(self) -> None:
-        """Clear transfer cache before each test."""
-        _clear_transfer_cache()
-
-    def test_d2h_cache_reuse_when_sufficient(self) -> None:
-        """Test that PinnedMemory is reused when capacity is sufficient for D2H."""
-        # First transfer - creates cached memory
-        small_tensor = torch.randn(8, 8, device="cuda")
-        transfer_tensor_d2h(small_tensor)
-
-        self.assertTrue(hasattr(_THREAD_LOCAL, "d2h_pinned_memory"))
-        initial_mem = _THREAD_LOCAL.d2h_pinned_memory
-        initial_capacity = initial_mem.numel()
-
-        # Second transfer with same or smaller size - should reuse
-        same_size_tensor = torch.randn(8, 8, device="cuda")
-        transfer_tensor_d2h(same_size_tensor)
-
-        # The cached object should be the same (same id)
-        self.assertIs(_THREAD_LOCAL.d2h_pinned_memory, initial_mem)
-        self.assertEqual(_THREAD_LOCAL.d2h_pinned_memory.numel(), initial_capacity)
-
-    def test_d2h_cache_reallocation_when_insufficient(self) -> None:
-        """Test that new PinnedMemory is allocated when cached one is too small for D2H."""
-        # First transfer with small tensor - creates small cached memory
-        small_tensor = torch.randn(8, 8, device="cuda")
-        small_size = small_tensor.numel() * small_tensor.element_size()
-        transfer_tensor_d2h(small_tensor)
-
-        self.assertTrue(hasattr(_THREAD_LOCAL, "d2h_pinned_memory"))
-        initial_mem = _THREAD_LOCAL.d2h_pinned_memory
-        initial_capacity = initial_mem.numel()
-        self.assertGreaterEqual(initial_capacity, small_size)
-
-        # Second transfer with much larger tensor - should reallocate
-        large_tensor = torch.randn(256, 256, 64, device="cuda")
-        large_size = large_tensor.numel() * large_tensor.element_size()
-        self.assertGreater(large_size, initial_capacity)
-
-        cpu_large = transfer_tensor_d2h(large_tensor)
-
-        # Verify transfer worked
-        self.assertEqual(cpu_large.device.type, "cpu")
-        torch.testing.assert_close(cpu_large, large_tensor.cpu())
-
-        # Verify cache was updated with new larger memory
-        new_capacity = _THREAD_LOCAL.d2h_pinned_memory.numel()
-        self.assertGreaterEqual(new_capacity, large_size)
-        # The capacity should be larger than before
-        self.assertGreater(new_capacity, initial_capacity)
 
 
 class RoundTripTransferD2HTest(unittest.TestCase):
