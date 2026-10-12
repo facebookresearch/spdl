@@ -17,6 +17,8 @@ namespace spdl::archive {
 
 struct NPYArray {
   std::string descr{};
+  std::string typestr{};
+  size_t item_size = 0;
   bool fortran_order = false;
   std::vector<size_t> shape{};
 
