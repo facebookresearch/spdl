@@ -13,6 +13,7 @@ from typing import Any, cast, TYPE_CHECKING, TypeVar
 from unittest.mock import MagicMock, patch
 
 from spdl.pipeline import (
+    AsyncQueue,
     config,
     profile_pipeline,
     ProfileHook,
@@ -178,6 +179,23 @@ class ProfilePipelineTest(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].name, "simple_op")
         self.assertGreater(len(results[0].stats), 0)
+
+    def test_profile_pipeline_uses_stats_queue_with_plain_default(self) -> None:
+        """Profiling collects queue stats even when the default queue does not."""
+        config.set_default_queue_class(AsyncQueue)
+        self.addCleanup(config.set_default_queue_class)
+        cfg = PipelineConfig(
+            src=SourceConfig(range(5)),
+            pipes=[Pipe(lambda value: value + 1)],
+            sink=SinkConfig(1),
+        )
+
+        results = profile_pipeline(cfg, num_inputs=3)
+
+        self.assertEqual(len(results), 1)
+        self.assertTrue(
+            all(0 <= stats.occupancy_rate <= 1 for stats in results[0].stats)
+        )
 
 
 class ProfileHookTest(unittest.TestCase):
