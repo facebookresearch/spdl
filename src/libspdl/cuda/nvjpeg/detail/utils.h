@@ -9,12 +9,17 @@
 #pragma once
 
 #include "libspdl/core/detail/logging.h"
+#include "libspdl/cuda/storage.h"
 
 #include <fmt/format.h>
 
+#include <cuda_runtime_api.h>
+
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include <nvjpeg.h>
 
@@ -31,7 +36,11 @@ nvjpegHandle_t get_nvjpeg();
 // nvjpeg Jpeg state
 //////////////////////////////////////////////////////////////////////////////
 struct nvjpeg_state_deleter {
-  void operator()(nvjpegJpegState*);
+  using DestroyFn = decltype(&nvjpegJpegStateDestroy);
+
+  DestroyFn destroy = nvjpegJpegStateDestroy;
+
+  void operator()(nvjpegJpegState*) const noexcept;
 };
 
 using nvjpegStatePtr = std::unique_ptr<nvjpegJpegState, nvjpeg_state_deleter>;
@@ -47,6 +56,46 @@ std::string to_string(nvjpegOutputFormat_t);
 
 nvjpegBackend_t get_nvjpeg_backend(const std::optional<std::string>&);
 nvjpegOutputFormat_t get_nvjpeg_output_format(const std::string&);
+
+struct NVJPEGImageLayout {
+  size_t width;
+  size_t height;
+  size_t num_channels;
+  bool interleaved;
+};
+
+void wrap_nvjpeg_image(
+    void* data,
+    const NVJPEGImageLayout& layout,
+    nvjpegImage_t& image,
+    size_t batch = 0);
+
+void retain_cuda_storage_dependencies(
+    CUDAStoragePtr& storage,
+    std::vector<CUDAStoragePtr> dependencies);
+
+class CUDAStreamSyncOnExceptionGuard {
+ public:
+  using SynchronizeFn = cudaError_t (*)(cudaStream_t);
+
+  explicit CUDAStreamSyncOnExceptionGuard(
+      uintptr_t stream,
+      SynchronizeFn synchronize = cudaStreamSynchronize) noexcept;
+  ~CUDAStreamSyncOnExceptionGuard() noexcept;
+
+  CUDAStreamSyncOnExceptionGuard(const CUDAStreamSyncOnExceptionGuard&) =
+      delete;
+  CUDAStreamSyncOnExceptionGuard& operator=(
+      const CUDAStreamSyncOnExceptionGuard&) = delete;
+  CUDAStreamSyncOnExceptionGuard(CUDAStreamSyncOnExceptionGuard&&) = delete;
+  CUDAStreamSyncOnExceptionGuard& operator=(CUDAStreamSyncOnExceptionGuard&&) =
+      delete;
+
+ private:
+  uintptr_t stream_;
+  SynchronizeFn synchronize_;
+  int uncaught_exceptions_;
+};
 
 } // namespace spdl::cuda::detail
 

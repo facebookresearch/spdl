@@ -32,13 +32,7 @@ namespace spdl::core {
 PacketSeries::PacketSeries() {}
 
 PacketSeries::PacketSeries(const PacketSeries& other) {
-  PacketSeries tmp;
-  tmp.container_.reserve(other.container_.size());
-  for (const AVPacket* pkt : other.container_) {
-    detail::AVPacketPtr clone{CHECK_AVALLOCATE(av_packet_clone(pkt))};
-    tmp.container_.push_back(clone.get());
-    (void)clone.release();
-  }
+  PacketSeries tmp = other.clone_range(0, other.container_.size());
   *this = std::move(tmp);
 }
 
@@ -55,6 +49,7 @@ PacketSeries& PacketSeries::operator=(const PacketSeries& other) {
 PacketSeries& PacketSeries::operator=(PacketSeries&& other) noexcept {
   using std::swap;
   swap(container_, other.container_);
+  swap(packet_time_bases_, other.packet_time_bases_);
   return *this;
 }
 
@@ -71,7 +66,45 @@ void PacketSeries::push(AVPacket* p) {
   if (!p) {
     SPDL_FAIL_INTERNAL("Packet is NULL.");
   }
-  container_.push_back(p);
+  if (packet_time_bases_.empty()) {
+    container_.push_back(p);
+    return;
+  }
+  push(p, std::nullopt);
+}
+
+void PacketSeries::push(AVPacket* p, std::optional<Rational> time_base) {
+  if (!p) {
+    SPDL_FAIL_INTERNAL("Packet is NULL.");
+  }
+  if (packet_time_bases_.empty()) {
+    packet_time_bases_.resize(container_.size());
+  }
+  packet_time_bases_.push_back(time_base);
+  try {
+    container_.push_back(p);
+  } catch (...) {
+    packet_time_bases_.pop_back();
+    throw;
+  }
+}
+
+Rational PacketSeries::get_packet_time_base(
+    size_t index,
+    const Rational& fallback) const {
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  (void)fallback;
+  const auto* pkt = container_.at(index);
+  if (!pkt) {
+    throw std::runtime_error("PacketSeries contains a NULL packet");
+  }
+  return Rational{pkt->time_base.num, pkt->time_base.den};
+#else
+  if (packet_time_bases_.empty()) {
+    return fallback;
+  }
+  return packet_time_bases_.at(index).value_or(fallback);
+#endif
 }
 
 template <MediaType media>
@@ -155,6 +188,28 @@ Packets<media>& Packets<media>::operator=(Packets<media>&& other) noexcept {
 
 const std::vector<AVPacket*>& PacketSeries::get_packets() const {
   return container_;
+}
+
+PacketSeries PacketSeries::clone_range(size_t start, size_t end) const {
+  if (start > end || end > container_.size()) {
+    throw std::out_of_range("Invalid PacketSeries clone range");
+  }
+
+  PacketSeries result;
+  result.container_.reserve(end - start);
+  if (!packet_time_bases_.empty()) {
+    result.packet_time_bases_.reserve(end - start);
+  }
+  for (size_t i = start; i < end; ++i) {
+    detail::AVPacketPtr clone{CHECK_AVALLOCATE(av_packet_clone(container_[i]))};
+    if (packet_time_bases_.empty()) {
+      result.push(clone.get());
+    } else {
+      result.push(clone.get(), packet_time_bases_[i]);
+    }
+    (void)clone.release();
+  }
+  return result;
 }
 
 Generator<RawPacketData> PacketSeries::iter_data() const {
@@ -257,7 +312,6 @@ std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
 
 VideoPacketsPtr
 extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
-  auto& src_packets = src->pkts.get_packets();
   auto ret = std::make_unique<VideoPackets>();
   ret->id = src->id;
   ret->src = src->src;
@@ -266,9 +320,7 @@ extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
   ret->codec = src->codec;
   // Do not preserve timestamp as indices are already adjusted
   ret->timestamp = std::nullopt;
-  for (size_t t = start; t < end; ++t) {
-    ret->pkts.push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
-  }
+  ret->pkts = src->pkts.clone_range(start, end);
   return ret;
 }
 
@@ -358,7 +410,9 @@ template std::vector<double> get_timestamps(const ImagePackets&, bool);
 namespace {
 
 constexpr uint32_t SERIALIZATION_MAGIC = 0x53504B54; // "SPKT"
-constexpr uint8_t SERIALIZATION_VERSION = 1;
+// This same-build sanity marker is not a cross-build ABI or persistence
+// contract. Bump it when changing the shared layout so stale blobs fail fast.
+constexpr uint8_t SERIALIZATION_VERSION = 2;
 
 // Each serialized packet payload is followed by this many zeroed bytes. FFmpeg
 // decoders may over-read up to AV_INPUT_BUFFER_PADDING_SIZE past the end of
@@ -532,7 +586,10 @@ class ByteReader {
   }
 };
 
-void serialize_packet(ByteWriter& w, const AVPacket* pkt) {
+void serialize_packet(
+    ByteWriter& w,
+    const AVPacket* pkt,
+    const Rational& time_base) {
 #if LIBAVCODEC_VERSION_MAJOR >= 59
   if (pkt->opaque) {
     throw std::runtime_error(
@@ -546,8 +603,12 @@ void serialize_packet(ByteWriter& w, const AVPacket* pkt) {
 
   w.write<int64_t>(pkt->pts);
   w.write<int64_t>(pkt->dts);
+  w.write<int32_t>(pkt->stream_index);
   w.write<int32_t>(pkt->flags);
   w.write<int64_t>(pkt->duration);
+  w.write<int64_t>(pkt->pos);
+  w.write<int32_t>(time_base.num);
+  w.write<int32_t>(time_base.den);
   w.write_payload(pkt->data, pkt->size);
 
   w.write<int32_t>(pkt->side_data_elems);
@@ -557,7 +618,11 @@ void serialize_packet(ByteWriter& w, const AVPacket* pkt) {
   }
 }
 
-AVPacket* deserialize_packet(ByteReader& r) {
+Rational read_packet_time_base(ByteReader& r) {
+  return Rational{r.read<int32_t>(), r.read<int32_t>()};
+}
+
+AVPacket* deserialize_packet(ByteReader& r, Rational& packet_time_base) {
   detail::AVPacketPtr pkt(av_packet_alloc());
   if (!pkt) {
     throw std::runtime_error("Failed to allocate AVPacket");
@@ -565,8 +630,11 @@ AVPacket* deserialize_packet(ByteReader& r) {
 
   auto pts = r.read<int64_t>();
   auto dts = r.read<int64_t>();
+  auto stream_index = r.read<int32_t>();
   auto flags = r.read<int32_t>();
   auto duration = r.read<int64_t>();
+  auto pos = r.read<int64_t>();
+  packet_time_base = read_packet_time_base(r);
 
   auto data = r.read_payload();
   if (!data.empty()) {
@@ -578,8 +646,13 @@ AVPacket* deserialize_packet(ByteReader& r) {
 
   pkt->pts = pts;
   pkt->dts = dts;
+  pkt->stream_index = stream_index;
   pkt->flags = flags;
   pkt->duration = duration;
+  pkt->pos = pos;
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  pkt->time_base = {packet_time_base.num, packet_time_base.den};
+#endif
 
   auto num_side_data = r.read<int32_t>();
   for (int32_t i = 0; i < num_side_data; ++i) {
@@ -600,7 +673,7 @@ AVPacket* deserialize_packet(ByteReader& r) {
 // reader's buffer: pkt->data points into it and pkt->buf stays NULL. Side data
 // is still copied (owned). The caller must keep the buffer alive for the
 // packet's life.
-AVPacket* deserialize_view_packet(ByteReader& r) {
+AVPacket* deserialize_view_packet(ByteReader& r, Rational& packet_time_base) {
   detail::AVPacketPtr pkt(av_packet_alloc());
   if (!pkt) {
     throw std::runtime_error("Failed to allocate AVPacket");
@@ -608,8 +681,11 @@ AVPacket* deserialize_view_packet(ByteReader& r) {
 
   auto pts = r.read<int64_t>();
   auto dts = r.read<int64_t>();
+  auto stream_index = r.read<int32_t>();
   auto flags = r.read<int32_t>();
   auto duration = r.read<int64_t>();
+  auto pos = r.read<int64_t>();
+  packet_time_base = read_packet_time_base(r);
 
   auto [data_ptr, size] = r.view_payload();
   if (size > 0) {
@@ -621,8 +697,13 @@ AVPacket* deserialize_view_packet(ByteReader& r) {
 
   pkt->pts = pts;
   pkt->dts = dts;
+  pkt->stream_index = stream_index;
   pkt->flags = flags;
   pkt->duration = duration;
+  pkt->pos = pos;
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  pkt->time_base = {packet_time_base.num, packet_time_base.den};
+#endif
 
   auto num_side_data = r.read<int32_t>();
   for (int32_t i = 0; i < num_side_data; ++i) {
@@ -873,8 +954,9 @@ std::vector<uint8_t> serialize_packets(const Packets<media>& packets) {
   // Packets
   const auto& pkts = packets.pkts.get_packets();
   w.write<int32_t>(static_cast<int32_t>(pkts.size()));
-  for (const auto* pkt : pkts) {
-    serialize_packet(w, pkt);
+  for (size_t i = 0; i < pkts.size(); ++i) {
+    serialize_packet(
+        w, pkts[i], packets.pkts.get_packet_time_base(i, packets.time_base));
   }
 
   return buf;
@@ -943,7 +1025,14 @@ std::unique_ptr<Packets<media>> deserialize_packets(
 
   auto num_packets = r.read<int32_t>();
   for (int32_t i = 0; i < num_packets; ++i) {
-    result->pkts.push(deserialize_packet(r));
+    Rational packet_time_base;
+    detail::AVPacketPtr packet{deserialize_packet(r, packet_time_base)};
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+    result->pkts.push(packet.get());
+#else
+    result->pkts.push(packet.get(), packet_time_base);
+#endif
+    (void)packet.release();
   }
 
   return result;
@@ -958,7 +1047,14 @@ std::unique_ptr<Packets<media>> deserialize_packets_view(
 
   auto num_packets = r.read<int32_t>();
   for (int32_t i = 0; i < num_packets; ++i) {
-    result->pkts.push(deserialize_view_packet(r));
+    Rational packet_time_base;
+    detail::AVPacketPtr packet{deserialize_view_packet(r, packet_time_base)};
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+    result->pkts.push(packet.get());
+#else
+    result->pkts.push(packet.get(), packet_time_base);
+#endif
+    (void)packet.release();
   }
   result->is_view = true;
 

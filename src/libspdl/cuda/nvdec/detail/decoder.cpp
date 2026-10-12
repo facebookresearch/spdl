@@ -22,6 +22,8 @@
 
 #include <sys/types.h>
 
+#include <utility>
+
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define CLOCKRATE 1
 
@@ -31,6 +33,22 @@ using spdl::core::to_rational;
 
 namespace spdl::cuda::detail {
 namespace {
+class BoolRestorer {
+  bool& target_;
+  bool value_;
+
+ public:
+  BoolRestorer(bool& target, bool value) : target_{target}, value_{value} {}
+  ~BoolRestorer() {
+    target_ = value_;
+  }
+
+  BoolRestorer(const BoolRestorer&) = delete;
+  BoolRestorer& operator=(const BoolRestorer&) = delete;
+  BoolRestorer(BoolRestorer&&) = delete;
+  BoolRestorer& operator=(BoolRestorer&&) = delete;
+};
+
 CUvideoctxlock get_lock(CUcontext ctx) {
   CUvideoctxlock lock;
   CHECK_CU(cuvidCtxLockCreate(&lock, ctx), "Failed to create context lock.");
@@ -488,9 +506,9 @@ void NvDecDecoderCore::decode_packet(
 
 void NvDecDecoderCore::reset() {
   if (parser_) {
-    cb_disabled_ = true;
+    const bool callbacks_were_disabled = std::exchange(cb_disabled_, true);
+    const BoolRestorer restore_callbacks{cb_disabled_, callbacks_were_disabled};
     flush();
-    cb_disabled_ = false;
   }
 }
 
