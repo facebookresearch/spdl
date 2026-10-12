@@ -294,6 +294,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         self.assertIsNone(interface.cmd_q)
         self.assertIsNone(interface.data_q)
 
+    @unittest.skipUnless("fork" in mp.get_all_start_methods(), "requires fork")
     def test_killed_result_writer_does_not_block_queue_cleanup(self) -> None:
         """A worker killed during a result write cannot wedge parent teardown."""
         ctx = mp.get_context("fork")
