@@ -8,21 +8,26 @@
 
 import errno
 import multiprocessing as mp
+import os
 import queue
 import threading
 import unittest
 from concurrent.futures import BrokenExecutor, Future
-from typing import Any
-from unittest.mock import MagicMock, patch
+from typing import Any, cast
+from unittest.mock import call, MagicMock, patch
 
 from spdl.pipeline._subprocess_worker_pool import (
     _handle_queue_feeder_error,
+    _POOL_SHUTDOWN_REASON,
+    _QUEUE_SHUTDOWN_TIMEOUT,
     _RemoteExecutor,
     _Result,
+    _SHUTDOWN,
     _shutdown_pools,
     _WorkerPool,
 )
 
+_PROCESS_READY_TIMEOUT: float = 30.0
 _FUTURE_COMPLETION_TIMEOUT: float = 30.0
 
 
@@ -90,6 +95,58 @@ def _return_serialization_probe(payload: bytes) -> Any:
     return _SerializationProbe(threading.get_ident(), payload)
 
 
+def _block_initializer(started: Any) -> None:
+    started.set()
+    threading.Event().wait()
+
+
+def _signal_initializer(started: Any) -> None:
+    started.set()
+
+
+def _wait_initializer(started: Any, release: Any) -> None:
+    started.set()
+    release.wait()
+
+
+def _exit_during_shutdown_initializer(started: Any, release: Any) -> None:
+    started.set()
+    release.wait()
+    os._exit(17)
+
+
+def _observe_remote_router_shutdown(
+    executor: _RemoteExecutor,
+    router_started: Any,
+    result_sender: Any,
+) -> None:
+    """Report how a spawned executor resolves work after owner shutdown."""
+    pending: Future[Any] = Future()
+    executor._futures[0] = pending
+    executor._ensure_router()
+    router_started.set()
+    try:
+        pending.result(timeout=_FUTURE_COMPLETION_TIMEOUT)
+    except Exception as error:
+        router = cast(threading.Thread, executor._thread)
+        router.join(timeout=_FUTURE_COMPLETION_TIMEOUT)
+        result_sender.send((type(error).__name__, str(error), router.is_alive()))
+    finally:
+        result_sender.close()
+
+
+class _SerializationSignal:
+    """Large payload that signals when the input feeder starts serializing it."""
+
+    def __init__(self, serialized: threading.Event, payload: bytes) -> None:
+        self._serialized = serialized
+        self._payload = payload
+
+    def __reduce__(self) -> Any:
+        self._serialized.set()
+        return bytes, (self._payload,)
+
+
 class WorkerPoolSerializationTest(unittest.TestCase):
     def test_input_transport_failure_fails_all_pending_futures(self) -> None:
         """A partial input frame is never replayed or manually re-accounted."""
@@ -104,18 +161,9 @@ class WorkerPoolSerializationTest(unittest.TestCase):
                 futures = [Future(), Future()]
                 executor._futures.update({3: futures[0], 4: futures[1]})
 
-                def fail_callback(_: Future[Any]) -> None:
-                    raise _PicklingBaseException("callback failed")
-
-                futures[0].add_done_callback(fail_callback)
-                with (
-                    patch(
-                        "spdl.pipeline._subprocess_worker_pool.traceback.print_exception"
-                    ) as print_exception,
-                    patch(
-                        "spdl.pipeline._subprocess_worker_pool.traceback.print_exc"
-                    ) as print_exc,
-                ):
+                with patch(
+                    "spdl.pipeline._subprocess_worker_pool.traceback.print_exception"
+                ) as print_exception:
                     in_q._on_queue_feeder_error(
                         error, memoryview(b"partial serialized submission")
                     )
@@ -128,7 +176,6 @@ class WorkerPoolSerializationTest(unittest.TestCase):
                 print_exception.assert_called_once_with(
                     type(error), error, error.__traceback__
                 )
-                print_exc.assert_called_once_with()
                 self.assertEqual(executor._futures, {})
                 self.assertEqual(
                     executor._broken,
@@ -139,6 +186,268 @@ class WorkerPoolSerializationTest(unittest.TestCase):
                         BrokenExecutor, "input queue transport failed"
                     ):
                         future.result()
+
+    def test_full_output_queue_retries_router_sentinel_with_bound(self) -> None:
+        """A full queue gets one bounded retry and reports persistent failure."""
+        for retry_error, expected_abandon in (
+            (None, False),
+            (queue.Full(), True),
+        ):
+            with self.subTest(retry_error=retry_error):
+                pool = object.__new__(_WorkerPool)
+                pool._closed = False
+                pool._procs = []
+                pool._router_shutdown_requested = mp.get_context("spawn").Value(
+                    "b", 0, lock=False
+                )
+                pool._in_q = MagicMock()
+                pool._out_q = MagicMock()
+                in_q = pool._in_q
+                out_q = pool._out_q
+                out_q.put_nowait.side_effect = queue.Full
+                out_q.put.side_effect = retry_error
+
+                with patch.object(
+                    _WorkerPool,
+                    "_close_queue",
+                    return_value=True,
+                ) as close_queue:
+                    if expected_abandon:
+                        with self.assertLogs(
+                            "spdl.pipeline._subprocess_worker_pool", level="WARNING"
+                        ) as logs:
+                            pool.shutdown()
+                        self.assertIn("remained full", "\n".join(logs.output))
+                    else:
+                        pool.shutdown()
+
+                out_q.put_nowait.assert_called_once_with(_SHUTDOWN)
+                out_q.put.assert_called_once_with(
+                    _SHUTDOWN,
+                    timeout=_QUEUE_SHUTDOWN_TIMEOUT,
+                )
+                self.assertEqual(
+                    close_queue.call_args_list,
+                    [
+                        call(
+                            in_q,
+                            abandon=False,
+                            feeder_join_timeout=_QUEUE_SHUTDOWN_TIMEOUT,
+                        ),
+                        call(
+                            out_q,
+                            abandon=expected_abandon,
+                            feeder_join_timeout=_QUEUE_SHUTDOWN_TIMEOUT,
+                        ),
+                    ],
+                )
+
+    def test_output_sentinel_error_releases_queue_references(self) -> None:
+        """An unexpected sentinel failure cannot retain queue-owned SemLocks."""
+        pool = object.__new__(_WorkerPool)
+        pool._closed = False
+        pool._procs = []
+        pool._router_shutdown_requested = mp.get_context("spawn").Value(
+            "b", 0, lock=False
+        )
+        in_q = pool._in_q = MagicMock()
+        out_q = pool._out_q = MagicMock()
+        out_q.put_nowait.side_effect = RuntimeError("unexpected queue failure")
+
+        with (
+            patch.object(_WorkerPool, "_close_queue", return_value=True) as close_queue,
+            self.assertRaisesRegex(RuntimeError, "unexpected queue failure"),
+        ):
+            pool.shutdown()
+
+        self.assertEqual(
+            close_queue.call_args_list,
+            [
+                call(
+                    in_q,
+                    abandon=False,
+                    feeder_join_timeout=_QUEUE_SHUTDOWN_TIMEOUT,
+                ),
+                call(
+                    out_q,
+                    abandon=False,
+                    feeder_join_timeout=_QUEUE_SHUTDOWN_TIMEOUT,
+                ),
+            ],
+        )
+        self.assertIsNone(pool._in_q)
+        self.assertIsNone(pool._out_q)
+
+    def test_queue_close_error_does_not_skip_remaining_cleanup(self) -> None:
+        """One broken queue handle cannot skip cleanup of the other queue."""
+        pool = object.__new__(_WorkerPool)
+        pool._closed = False
+        pool._procs = []
+        pool._router_shutdown_requested = mp.get_context("spawn").Value(
+            "b", 0, lock=False
+        )
+        in_q = pool._in_q = MagicMock(
+            spec=["cancel_join_thread", "close", "join_thread", "put"]
+        )
+        out_q = pool._out_q = MagicMock(
+            spec=["cancel_join_thread", "close", "join_thread", "put_nowait"]
+        )
+        in_q.close.side_effect = OSError("input queue is already closed")
+
+        with self.assertLogs("spdl.pipeline._subprocess_worker_pool", level="WARNING"):
+            pool.shutdown()
+
+        in_q.close.assert_called_once_with()
+        in_q.join_thread.assert_not_called()
+        out_q.close.assert_called_once_with()
+        out_q.cancel_join_thread.assert_called_once_with()
+        out_q.join_thread.assert_not_called()
+
+    def test_close_queue_without_private_feeder_skips_unbounded_join(self) -> None:
+        """A compatible queue need not expose CPython's private _thread."""
+        queue_without_thread = MagicMock(
+            spec=["cancel_join_thread", "close", "join_thread"]
+        )
+
+        self.assertFalse(
+            _WorkerPool._close_queue(
+                queue_without_thread,
+                abandon=False,
+                feeder_join_timeout=0.01,
+            )
+        )
+
+        queue_without_thread.close.assert_called_once_with()
+        queue_without_thread.cancel_join_thread.assert_called_once_with()
+        queue_without_thread.join_thread.assert_not_called()
+
+    def test_close_queue_with_non_thread_private_feeder_skips_unbounded_join(
+        self,
+    ) -> None:
+        """A compatible queue may expose unrelated private feeder state."""
+        queue_with_other_thread_state = MagicMock(
+            spec=["_thread", "cancel_join_thread", "close", "join_thread"]
+        )
+        queue_with_other_thread_state._thread = object()
+
+        self.assertFalse(
+            _WorkerPool._close_queue(
+                queue_with_other_thread_state,
+                abandon=False,
+                feeder_join_timeout=0.01,
+            )
+        )
+
+        queue_with_other_thread_state.close.assert_called_once_with()
+        queue_with_other_thread_state.cancel_join_thread.assert_called_once_with()
+        queue_with_other_thread_state.join_thread.assert_not_called()
+
+    def test_stalled_feeder_skips_unbounded_public_join(self) -> None:
+        """A failed cancellation cannot fall through to blocking join_thread()."""
+
+        class _StalledFeeder(threading.Thread):
+            def __init__(self) -> None:
+                super().__init__(daemon=True)
+                self.join_timeout: float | None = None
+
+            def join(self, timeout: float | None = None) -> None:
+                self.join_timeout = timeout
+
+            def is_alive(self) -> bool:
+                return True
+
+        stalled_feeder = _StalledFeeder()
+        worker_queue = MagicMock(
+            spec=["_thread", "cancel_join_thread", "close", "join_thread"]
+        )
+        worker_queue._thread = stalled_feeder
+        worker_queue.cancel_join_thread.side_effect = OSError("cancel failed")
+
+        with self.assertLogs("spdl.pipeline._subprocess_worker_pool", level="WARNING"):
+            feeder_stopped = _WorkerPool._close_queue(
+                worker_queue,
+                abandon=False,
+                feeder_join_timeout=0.01,
+            )
+
+        self.assertFalse(feeder_stopped)
+        self.assertEqual(stalled_feeder.join_timeout, 0.01)
+        worker_queue.close.assert_called_once_with()
+        worker_queue.cancel_join_thread.assert_called_once_with()
+        worker_queue.join_thread.assert_not_called()
+
+    def test_fail_pending_contains_callback_base_exception(self) -> None:
+        """A hostile callback cannot stop failure fanout to later futures."""
+        executor = _RemoteExecutor(MagicMock(), MagicMock(), 1)
+        cancelled: Future[Any] = Future()
+        callback_future: Future[Any] = Future()
+        trailing: Future[Any] = Future()
+        self.assertTrue(cancelled.cancel())
+
+        def fail_callback(completed: Future[Any]) -> None:
+            self.assertIs(completed, callback_future)
+            raise _PicklingBaseException("callback failed")
+
+        callback_future.add_done_callback(fail_callback)
+        executor._futures[0] = cancelled
+        executor._futures[1] = callback_future
+        executor._futures[2] = trailing
+
+        with self.assertLogs("spdl.pipeline._subprocess_worker_pool", level="WARNING"):
+            executor._fail_pending("worker failed")
+
+        self.assertTrue(cancelled.cancelled())
+        self.assertIsInstance(callback_future.exception(), BrokenExecutor)
+        with self.assertRaisesRegex(BrokenExecutor, "worker failed"):
+            trailing.result()
+        self.assertEqual(executor._futures, {})
+        self.assertEqual(executor._broken, "worker failed")
+
+    def test_fail_pending_defers_control_flow_error_until_after_fanout(self) -> None:
+        """Process control flow propagates only after every future is failed."""
+        for error in (KeyboardInterrupt("interrupt"), SystemExit(23)):
+            with self.subTest(error=type(error).__name__):
+                executor = _RemoteExecutor(MagicMock(), MagicMock(), 1)
+                callback_future: Future[Any] = Future()
+                trailing: Future[Any] = Future()
+
+                def fail_callback(
+                    completed: Future[Any],
+                    expected: Future[Any] = callback_future,
+                    raised: BaseException = error,
+                ) -> None:
+                    self.assertIs(completed, expected)
+                    raise raised
+
+                callback_future.add_done_callback(fail_callback)
+                executor._futures[0] = callback_future
+                executor._futures[1] = trailing
+
+                with self.assertRaises(type(error)) as raised:
+                    executor._fail_pending("worker failed")
+
+                self.assertIs(raised.exception, error)
+                self.assertIsInstance(callback_future.exception(), BrokenExecutor)
+                with self.assertRaisesRegex(BrokenExecutor, "worker failed"):
+                    trailing.result()
+                self.assertEqual(executor._futures, {})
+
+    def test_malformed_result_reports_router_failure(self) -> None:
+        """A malformed worker payload is not reported as queue teardown."""
+        out_q = MagicMock()
+        out_q.get.return_value = (0, True)
+        executor = _RemoteExecutor(MagicMock(), out_q, 1)
+        future: Future[Any] = Future()
+        executor._futures[0] = future
+
+        executor._route()
+
+        with self.assertRaisesRegex(
+            BrokenExecutor,
+            "Worker pool result router failed: ValueError",
+        ):
+            future.result(timeout=0)
+        self.assertEqual(executor._futures, {})
 
     def test_submission_failure_contains_callback_base_exception(self) -> None:
         """A failing done callback cannot escape the queue-feeder error path."""
@@ -383,6 +692,137 @@ class WorkerPoolSerializationTest(unittest.TestCase):
         print_exc.assert_not_called()
         exit_worker.assert_not_called()
 
+    def test_clean_worker_exit_keeps_graceful_queue_cleanup(self) -> None:
+        """A clean exit flushes both queue feeders before closing them."""
+        ctx = mp.get_context("spawn")
+        pool = _WorkerPool(ctx, 1, None, ())
+        in_q = pool._in_q
+        out_q = pool._out_q
+        try:
+            executor = pool.make_executor()
+            self.assertEqual(
+                executor.submit(_identity, 7).result(
+                    timeout=_FUTURE_COMPLETION_TIMEOUT
+                ),
+                7,
+            )
+        finally:
+            pool.shutdown()
+
+        self.assertEqual([proc.exitcode for proc in pool._procs], [0])
+        self.assertTrue(in_q._closed)
+        self.assertFalse(in_q._joincancelled)
+        self.assertTrue(out_q._closed)
+        self.assertFalse(out_q._joincancelled)
+
+    def test_clean_exit_bounds_post_sentinel_input_feeder(self) -> None:
+        """A late submission cannot wedge cleanup after a clean worker exit."""
+        ctx = mp.get_context("spawn")
+        initializer_started = ctx.Event()
+        release_initializer = ctx.Event()
+        pool = _WorkerPool(
+            ctx,
+            1,
+            _wait_initializer,
+            (initializer_started, release_initializer),
+        )
+        self.assertTrue(initializer_started.wait(timeout=_PROCESS_READY_TIMEOUT))
+        in_q = pool._in_q
+        executor = pool.make_executor()
+        serialization_started = threading.Event()
+        in_q.put(_SHUTDOWN)
+        future = executor.submit(
+            _identity,
+            _SerializationSignal(
+                serialization_started,
+                b"x" * (8 * 1024 * 1024),
+            ),
+        )
+        self.assertTrue(serialization_started.wait(timeout=_PROCESS_READY_TIMEOUT))
+        shutdown_done = threading.Event()
+        shutdown_errors: list[Exception] = []
+
+        def _shutdown() -> None:
+            try:
+                pool.shutdown()
+            except Exception as error:
+                shutdown_errors.append(error)
+            finally:
+                shutdown_done.set()
+
+        shutdown_thread = threading.Thread(target=_shutdown, daemon=True)
+        try:
+            with patch(
+                "spdl.pipeline._subprocess_worker_pool._QUEUE_SHUTDOWN_TIMEOUT",
+                0.01,
+            ):
+                shutdown_thread.start()
+                release_initializer.set()
+                self.assertTrue(
+                    shutdown_done.wait(timeout=5),
+                    "clean shutdown joined a backpressured input feeder",
+                )
+        finally:
+            release_initializer.set()
+            if shutdown_thread.ident is not None:
+                shutdown_thread.join(timeout=_PROCESS_READY_TIMEOUT)
+            if not pool._closed:
+                pool.shutdown()
+
+        if shutdown_errors:
+            raise shutdown_errors[0]
+        self.assertFalse(shutdown_thread.is_alive())
+        self.assertEqual([proc.exitcode for proc in pool._procs], [0])
+        self.assertTrue(in_q._closed)
+        self.assertTrue(in_q._joincancelled)
+        with self.assertRaises(BrokenExecutor):
+            future.result(timeout=_FUTURE_COMPLETION_TIMEOUT)
+
+    def test_worker_exit_after_shutdown_flushes_output_sentinel(self) -> None:
+        """A failed worker abandons input but still wakes the result router."""
+        ctx = mp.get_context("spawn")
+        started = ctx.Event()
+        release = ctx.Event()
+        pool = _WorkerPool(
+            ctx,
+            1,
+            _exit_during_shutdown_initializer,
+            (started, release),
+        )
+        in_q = pool._in_q
+        out_q = pool._out_q
+        sentinel_seen = threading.Event()
+
+        def release_after_sentinel() -> None:
+            if in_q._reader.poll(_PROCESS_READY_TIMEOUT):
+                sentinel_seen.set()
+            release.set()
+
+        release_thread = threading.Thread(
+            target=release_after_sentinel,
+            daemon=True,
+        )
+        shutdown_started = False
+        try:
+            self.assertTrue(started.wait(timeout=_PROCESS_READY_TIMEOUT))
+            release_thread.start()
+            shutdown_started = True
+            pool.shutdown()
+        finally:
+            release.set()
+            if release_thread.ident is not None:
+                release_thread.join(timeout=_PROCESS_READY_TIMEOUT)
+            if not shutdown_started:
+                pool.shutdown()
+
+        self.assertTrue(sentinel_seen.is_set())
+        self.assertFalse(release_thread.is_alive())
+        self.assertEqual([proc.exitcode for proc in pool._procs], [17])
+        self.assertTrue(in_q._closed)
+        self.assertTrue(in_q._joincancelled)
+        self.assertTrue(out_q._closed)
+        self.assertFalse(out_q._joincancelled)
+
     def test_unpicklable_input_fails_its_future_promptly(self) -> None:
         """An invalid submission is reported instead of being dropped by the queue feeder."""
         pool = _WorkerPool(mp.get_context("spawn"), 1, None, ())
@@ -414,6 +854,158 @@ class WorkerPoolSerializationTest(unittest.TestCase):
             self.assertEqual(following.result(timeout=_FUTURE_COMPLETION_TIMEOUT), 9)
         finally:
             _shutdown_pools([pool])
+
+    def test_forced_shutdown_does_not_join_a_backpressured_feeder(self) -> None:
+        """Forced teardown discards a feeder blocked behind an unresponsive worker."""
+        ctx = mp.get_context("spawn")
+        initializer_started = ctx.Event()
+        pool = _WorkerPool(ctx, 1, _block_initializer, (initializer_started,))
+        shutdown_done = threading.Event()
+        shutdown_errors: list[Exception] = []
+        self.assertTrue(initializer_started.wait(timeout=_PROCESS_READY_TIMEOUT))
+
+        executor = pool.make_executor()
+        serialization_started = threading.Event()
+        executor.submit(
+            _identity,
+            _SerializationSignal(serialization_started, b"x" * (8 * 1024 * 1024)),
+        )
+        self.assertTrue(serialization_started.wait(timeout=_PROCESS_READY_TIMEOUT))
+
+        def _shutdown() -> None:
+            try:
+                pool.shutdown()
+            except Exception as error:
+                shutdown_errors.append(error)
+            finally:
+                shutdown_done.set()
+
+        shutdown_thread = threading.Thread(target=_shutdown, daemon=True)
+        shutdown_thread.start()
+        self.assertTrue(
+            shutdown_done.wait(timeout=10),
+            "shutdown hung while joining a backpressured queue feeder",
+        )
+        shutdown_thread.join()
+        if shutdown_errors:
+            raise shutdown_errors[0]
+        self.assertTrue(all(not proc.is_alive() for proc in pool._procs))
+
+    def test_output_sentinel_failure_abandons_feeder_and_cleans_up(self) -> None:
+        """A failed router wakeup degrades to nonblocking cleanup."""
+        ctx = mp.get_context("spawn")
+        worker_started = ctx.Event()
+        pool = _WorkerPool(ctx, 1, _signal_initializer, (worker_started,))
+        self.assertTrue(worker_started.wait(timeout=_PROCESS_READY_TIMEOUT))
+        in_q = pool._in_q
+        out_q = pool._out_q
+        executor = pool.make_executor()
+        self.assertEqual(
+            executor.submit(_identity, 7).result(timeout=_FUTURE_COMPLETION_TIMEOUT),
+            7,
+        )
+        router = cast(threading.Thread, executor._thread)
+        self.assertTrue(router.is_alive())
+
+        with (
+            patch.object(
+                out_q,
+                "put_nowait",
+                side_effect=OSError("output sentinel failed"),
+            ),
+            self.assertLogs("spdl.pipeline._subprocess_worker_pool", level="WARNING"),
+        ):
+            pool.shutdown()
+
+        router.join(timeout=_PROCESS_READY_TIMEOUT)
+        self.assertFalse(router.is_alive())
+        self.assertTrue(all(not proc.is_alive() for proc in pool._procs))
+        self.assertTrue(in_q._closed)
+        self.assertTrue(out_q._closed)
+        self.assertTrue(out_q._joincancelled)
+
+    def test_stalled_output_sentinel_wakes_result_router(self) -> None:
+        """A stalled owner feeder cannot leave the result router polling forever."""
+        ctx = mp.get_context("spawn")
+        pool = _WorkerPool(ctx, 1, None, ())
+        out_q = pool._out_q
+        executor = pool.make_executor()
+        self.assertEqual(
+            executor.submit(_identity, 7).result(timeout=_FUTURE_COMPLETION_TIMEOUT),
+            7,
+        )
+        router = cast(threading.Thread, executor._thread)
+        self.assertTrue(router.is_alive())
+
+        out_q._wlock.acquire()
+        try:
+            with patch(
+                "spdl.pipeline._subprocess_worker_pool._QUEUE_SHUTDOWN_TIMEOUT",
+                0.01,
+            ):
+                pool.shutdown()
+
+            self.assertTrue(out_q._joincancelled)
+            self.assertEqual(pool._router_shutdown_requested.value, 1)
+            router.join(timeout=_PROCESS_READY_TIMEOUT)
+            self.assertFalse(router.is_alive())
+            self.assertIsNotNone(executor._broken)
+        finally:
+            out_q._wlock.release()
+            feeder = out_q._thread
+            if isinstance(feeder, threading.Thread):
+                feeder.join(timeout=_PROCESS_READY_TIMEOUT)
+            if not pool._closed:
+                pool.shutdown()
+
+    def test_output_sentinel_feeder_failure_breaks_spawned_router(self) -> None:
+        """A dropped owner sentinel wakes a router in another process."""
+        ctx = mp.get_context("spawn")
+        pool = _WorkerPool(ctx, 1, None, ())
+        out_q = pool._out_q
+        router_started = ctx.Event()
+        result_receiver, result_sender = ctx.Pipe(duplex=False)
+        client = ctx.Process(
+            target=_observe_remote_router_shutdown,
+            args=(pool.make_executor(), router_started, result_sender),
+        )
+        try:
+            client.start()
+            result_sender.close()
+            self.assertTrue(
+                router_started.wait(timeout=_PROCESS_READY_TIMEOUT),
+                "spawned result router did not start",
+            )
+            with (
+                patch.object(
+                    out_q,
+                    "_send_bytes",
+                    side_effect=OSError("output sentinel transport failed"),
+                ),
+                self.assertLogs(
+                    "spdl.pipeline._subprocess_worker_pool", level="WARNING"
+                ),
+            ):
+                pool.shutdown()
+
+            self.assertTrue(
+                result_receiver.poll(_PROCESS_READY_TIMEOUT),
+                "spawned result router did not observe owner shutdown",
+            )
+            error_type, message, router_alive = result_receiver.recv()
+            self.assertEqual(error_type, BrokenExecutor.__name__)
+            self.assertEqual(message, _POOL_SHUTDOWN_REASON)
+            self.assertFalse(router_alive)
+            client.join(timeout=_PROCESS_READY_TIMEOUT)
+            self.assertFalse(client.is_alive())
+        finally:
+            if client.pid is not None and client.is_alive():
+                client.terminate()
+                client.join(timeout=_PROCESS_READY_TIMEOUT)
+            result_receiver.close()
+            result_sender.close()
+            if not pool._closed:
+                pool.shutdown()
 
     def test_unpicklable_result_fails_its_future(self) -> None:
         """An invalid worker result becomes an error response instead of a pending future."""

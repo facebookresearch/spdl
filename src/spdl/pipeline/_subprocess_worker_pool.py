@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import errno
 import itertools
+import logging
 import multiprocessing as mp
 import os
 import queue
@@ -61,6 +62,7 @@ __all__ = [
 ]
 
 _T = TypeVar("_T")
+_LG: logging.Logger = logging.getLogger(__name__)
 
 _RESULT_QUEUE_RETRY_INITIAL_BACKOFF: float = 0.001
 _RESULT_QUEUE_RETRY_MAX_BACKOFF: float = 0.05
@@ -72,8 +74,16 @@ _RESULT_QUEUE_RETRY_ERRNOS: tuple[int, ...] = (
     errno.EWOULDBLOCK,
 )
 
-# Sentinel placed on the input queue (one per worker) to request shutdown.
+# Sentinel placed on the input queue (one per worker) and output queue (one per router)
+# to request shutdown.
 _SHUTDOWN = None
+
+_POOL_SHUTDOWN_REASON = "The worker pool shut down before the result was received."
+_RESULT_ROUTER_POLL_INTERVAL = 0.1
+
+# Bound queue shutdown so a feeder blocked behind a dead reader cannot turn
+# cleanup into an indefinite wait.
+_QUEUE_SHUTDOWN_TIMEOUT: float = 5.0
 
 
 class _QueueSerializationBaseException(Exception):
@@ -318,9 +328,17 @@ class _RemoteExecutor(Executor):
 
     _pool_executor_class: type[ProcessPoolExecutor] = ProcessPoolExecutor
 
-    def __init__(self, in_q: Any, out_q: Any, max_workers: int) -> None:
+    def __init__(
+        self,
+        in_q: Any,
+        out_q: Any,
+        max_workers: int,
+        *,
+        router_shutdown_requested: Any | None = None,
+    ) -> None:
         self._in_q = in_q
         self._out_q = out_q
+        self._router_shutdown_requested = router_shutdown_requested
         # Mirror ``ProcessPoolExecutor._max_workers`` so consumers that introspect a process
         # pool (e.g. pipeline-stats logging) can read the worker count off this proxy too —
         # it advertises ``_pool_executor_class = ProcessPoolExecutor``, so they expect it.
@@ -371,8 +389,19 @@ class _RemoteExecutor(Executor):
     def _route(self) -> None:
         while True:
             try:
-                task_id, ok, payload = self._out_q.get()
-            except (EOFError, OSError):
+                result = self._out_q.get(timeout=_RESULT_ROUTER_POLL_INTERVAL)
+            except queue.Empty:
+                if (
+                    self._router_shutdown_requested is not None
+                    and self._router_shutdown_requested.value
+                ):
+                    self._fail_pending(_POOL_SHUTDOWN_REASON)
+                    return
+                with self._lock:
+                    if self._broken is not None:
+                        return
+                continue
+            except (EOFError, OSError, ValueError):
                 # The queue was closed (e.g. teardown) before every result arrived. The router
                 # is the sole consumer of ``_out_q`` and never restarts, so mark the executor
                 # broken (failing the still-pending futures and any later ``submit``) instead of
@@ -385,6 +414,14 @@ class _RemoteExecutor(Executor):
                 # Any other failure reading a result (e.g. ``get`` raising while unpickling a
                 # malformed payload) would otherwise kill this sole, non-restarting router
                 # thread silently and hang every pending future. Fail them fast with the cause.
+                self._fail_pending(f"Worker pool result router failed: {e!r}")
+                return
+            if result is _SHUTDOWN:
+                self._fail_pending(_POOL_SHUTDOWN_REASON)
+                return
+            try:
+                task_id, ok, payload = result
+            except BaseException as e:  # noqa: B036 - fail every pending future
                 self._fail_pending(f"Worker pool result router failed: {e!r}")
                 return
             with self._lock:
@@ -408,17 +445,36 @@ class _RemoteExecutor(Executor):
         # yet before ``_broken`` is visible — every future is either failed here or rejected by
         # ``submit``'s ``_broken`` check.
         with self._lock:
-            self._broken = reason
+            if self._broken is None:
+                self._broken = reason
+            broken = self._broken
             pending = list(self._futures.values())
             self._futures.clear()
+        control_flow_error: BaseException | None = None
         for fut in pending:
-            if not fut.done():
-                try:
-                    fut.set_exception(BrokenExecutor(reason))
-                except InvalidStateError:
-                    pass
-                except BaseException:  # noqa: B036 - keep failing later Futures
-                    traceback.print_exc()
+            if fut.done():
+                continue
+            try:
+                fut.set_exception(BrokenExecutor(broken))
+            except InvalidStateError:
+                # The caller may have cancelled a Future after the snapshot. One cancelled
+                # item must not prevent the remaining pending work from being failed.
+                pass
+            except (KeyboardInterrupt, SystemExit) as error:
+                # Complete fanout before propagating process/thread control flow. Otherwise
+                # one callback can strand later futures even though their map was cleared.
+                if control_flow_error is None:
+                    control_flow_error = error
+            except BaseException:  # noqa: B036 - never strand later pending futures
+                # Future invokes callbacks synchronously from set_exception(). A callback
+                # failure outside Exception must not abort this loop and leave later work
+                # unresolved after the futures map has already been cleared.
+                _LG.warning(
+                    "Pending-future callback raised during failure fanout.",
+                    exc_info=True,
+                )
+        if control_flow_error is not None:
+            raise control_flow_error
 
     def _fail_submission(self, task_id: int, err: BaseException) -> None:
         """Resolve one task whose request failed in the queue feeder thread."""
@@ -468,12 +524,14 @@ class _RemoteExecutor(Executor):
             "in_q": self._in_q,
             "out_q": self._out_q,
             "max_workers": self._max_workers,
+            "router_shutdown_requested": self._router_shutdown_requested,
         }
 
     def __setstate__(self, state: dict[str, Any]) -> None:
         self._in_q = state["in_q"]
         self._out_q = state["out_q"]
         self._max_workers = state["max_workers"]
+        self._router_shutdown_requested = state["router_shutdown_requested"]
         self._counter = itertools.count()
         self._lock = threading.Lock()
         self._futures = {}
@@ -511,6 +569,12 @@ class _WorkerPool:
             for p in self._procs:
                 p.start()
                 started.append(p)
+            # This byte is read without a semaphore by the remote router. It changes only
+            # once, from false to true, when the owner's output sentinel cannot be delivered.
+            self._router_shutdown_requested = ctx.Value("b", 0, lock=False)
+            _install_queue_feeder_error_handler(
+                self._out_q, self._handle_output_queue_feeder_error
+            )
         except BaseException:
             # A ``start()`` partway through the loop (e.g. resource exhaustion) leaves the
             # already-started workers running with no owner: this half-constructed pool is
@@ -525,19 +589,93 @@ class _WorkerPool:
 
     def make_executor(self) -> _RemoteExecutor:
         """Create the submit-side executor that rides in the pipeline config."""
-        return _RemoteExecutor(self._in_q, self._out_q, self._max_workers)
+        return _RemoteExecutor(
+            self._in_q,
+            self._out_q,
+            self._max_workers,
+            router_shutdown_requested=self._router_shutdown_requested,
+        )
+
+    def _handle_output_queue_feeder_error(self, err: BaseException, _obj: Any) -> None:
+        """Wake the remote router when the owner feeder drops its sentinel."""
+        self._router_shutdown_requested.value = 1
+        _LG.warning(
+            "Worker-pool output queue feeder failed.",
+            exc_info=(type(err), err, err.__traceback__),
+        )
 
     @staticmethod
-    def _terminate(procs: list[Any]) -> None:
-        """Join the given worker processes, escalating to terminate/kill if they don't exit."""
+    def _close_queue(
+        q: Any,
+        *,
+        abandon: bool,
+        feeder_join_timeout: float | None = None,
+    ) -> bool:
+        """Close a queue and report whether its local feeder fully stopped."""
+        feeder_stopped = not abandon
+        if abandon:
+            try:
+                q.cancel_join_thread()
+            except (EOFError, OSError, ValueError):
+                feeder_stopped = False
+                _LG.warning(
+                    "Failed to cancel the worker-pool queue feeder join.",
+                    exc_info=True,
+                )
+        try:
+            q.close()
+        except (EOFError, OSError, ValueError):
+            feeder_stopped = False
+            _LG.warning("Failed to close a worker-pool queue.", exc_info=True)
+
+        if not abandon and feeder_join_timeout is not None:
+            # ``_thread`` is a CPython multiprocessing.Queue implementation
+            # detail. Without a real Thread there is no way to impose the
+            # requested bound on a compatible queue's join_thread(), so abandon
+            # its implicit join rather than risk blocking teardown indefinitely.
+            feeder = getattr(q, "_thread", None)
+            if isinstance(feeder, threading.Thread):
+                feeder.join(feeder_join_timeout)
+                if feeder.is_alive():
+                    feeder_stopped = False
+                    try:
+                        q.cancel_join_thread()
+                    except (EOFError, OSError, ValueError):
+                        _LG.warning(
+                            "Failed to cancel a stalled worker-pool queue feeder join.",
+                            exc_info=True,
+                        )
+            else:
+                feeder_stopped = False
+                try:
+                    q.cancel_join_thread()
+                except (EOFError, OSError, ValueError):
+                    _LG.warning(
+                        "Failed to cancel an unbounded compatible queue feeder join.",
+                        exc_info=True,
+                    )
+        if feeder_stopped:
+            try:
+                q.join_thread()
+            except (EOFError, OSError, ValueError):
+                feeder_stopped = False
+                _LG.warning("Failed to join a worker-pool queue feeder.", exc_info=True)
+        return feeder_stopped
+
+    @staticmethod
+    def _terminate(procs: list[Any]) -> bool:
+        """Reap workers, returning whether any required forced termination."""
+        forced = False
         for p in procs:
             p.join(3)
             if p.exitcode is None:
+                forced = True
                 p.terminate()
                 p.join(5)
             if p.exitcode is None:
                 p.kill()
                 p.join(5)
+        return forced
 
     def shutdown(self) -> None:
         if self._closed:
@@ -550,17 +688,68 @@ class _WorkerPool:
                 # A failed sentinel for one worker should not prevent the others from
                 # receiving theirs; fall through to the join/terminate/kill escalation below.
                 continue
-        self._terminate(self._procs)
-        # Close this process's queue handles so the feeder thread started when the main
-        # process put the shutdown sentinels exits; otherwise a long-lived main process that
-        # creates and destroys many pipelines leaks feeder threads and pipe fds.
-        for q in (self._in_q, self._out_q):
-            q.close()
-            q.join_thread()
-        # Release the queue-owned SemLocks promptly instead of retaining them on
-        # this finalized pool until interpreter shutdown.
-        self._in_q = None
-        self._out_q = None
+        forced = self._terminate(self._procs)
+        unexpectedly_exited = any(
+            proc.exitcode not in (None, 0) for proc in self._procs
+        )
+        abandon_feeders = forced or unexpectedly_exited
+        # Wake a result router that is blocked on an otherwise-idle output queue. Queue.close()
+        # alone does not close the reader in a process that has never produced onto that queue,
+        # so without an explicit sentinel direct users of ``_WorkerPool`` leak one daemon thread
+        # per executor. Prefer a nonblocking enqueue, then allow one bounded wait
+        # if a compatible queue reports that it is full. The feeder itself is also
+        # joined with a bound below because its pipe write can still block after
+        # this call returns.
+        # Even forced worker teardown still has a live result router to wake.
+        # Give a successfully enqueued output sentinel the bounded flush below;
+        # only abandon this feeder if enqueueing or that bounded flush fails.
+        abandon_output_feeder = False
+        try:
+            try:
+                self._out_q.put_nowait(_SHUTDOWN)
+            except queue.Full:
+                self._out_q.put(
+                    _SHUTDOWN,
+                    timeout=_QUEUE_SHUTDOWN_TIMEOUT,
+                )
+        except queue.Full:
+            abandon_output_feeder = True
+            self._router_shutdown_requested.value = 1
+            _LG.warning(
+                "Worker-pool output queue remained full; abandoning its feeder."
+            )
+        except (EOFError, OSError, ValueError):
+            abandon_output_feeder = True
+            self._router_shutdown_requested.value = 1
+            _LG.warning(
+                "Failed to enqueue the worker-pool output shutdown marker.",
+                exc_info=True,
+            )
+        except BaseException:
+            self._router_shutdown_requested.value = 1
+            raise
+        finally:
+            # A propagated cleanup error must not leave the finalized pool owning SemLocks.
+            in_q, self._in_q = self._in_q, None
+            out_q, self._out_q = self._out_q, None
+            # Close this process's queue handles so the feeder thread started when the main
+            # process put the shutdown sentinels exits; otherwise a long-lived main process
+            # that creates and destroys many pipelines leaks feeder threads and pipe fds.
+            # A feeder can still be blocked writing queued data after its only reader exits.
+            # Forced teardown abandons both queues. Graceful teardown gives each
+            # feeder a bounded opportunity to flush: a concurrent submission can
+            # enter the input queue after workers consume their shutdown sentinels.
+            self._close_queue(
+                in_q,
+                abandon=abandon_feeders,
+                feeder_join_timeout=_QUEUE_SHUTDOWN_TIMEOUT,
+            )
+            if not self._close_queue(
+                out_q,
+                abandon=abandon_output_feeder,
+                feeder_join_timeout=_QUEUE_SHUTDOWN_TIMEOUT,
+            ):
+                self._router_shutdown_requested.value = 1
 
 
 def _hoist_process_pools(
