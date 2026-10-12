@@ -31,6 +31,7 @@ from spdl.pipeline.defs import (
 )
 
 from . import _build
+from ._components import StatsQueue
 from ._pipeline import Pipeline
 
 __all__ = [
@@ -75,6 +76,7 @@ def _fetch_inputs(src: SourceConfig[T], num_items: int) -> list[T]:
             sink=SinkConfig(1),
         ),
         num_threads=1,
+        queue_class=StatsQueue,
     )
 
     ret = []
@@ -167,7 +169,7 @@ class ProfileResult:
 
     stats: Sequence["_ProfileStats"]
     """Dataclass objects for each concurrency level tested.
-    
+
     Each stat includes:
 
       - ``concurrency``: The concurrency level used for this benchmark.
@@ -210,7 +212,13 @@ def _profile_pipe(
     cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
     outputs = []
     for concurrency in concurrencies:
-        pipeline = _build._build_pipeline(cfg_, num_threads=concurrency)
+        # Profiling consumes queue occupancy statistics, so it must not inherit a
+        # process-wide queue class that does not collect them.
+        pipeline = _build._build_pipeline(
+            cfg_,
+            num_threads=concurrency,
+            queue_class=StatsQueue,
+        )
         with hook_.stage_profile_hook(pipe.name, concurrency):
             qps_, outputs = _run(pipeline)
 
