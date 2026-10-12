@@ -1,3 +1,6 @@
+# Install Conda packages first, before pip installs or Python imports.
+# Conda may change the Python version when installing any package, including FFmpeg.
+# Finish all Conda installs before installing or running Python code.
 # This job is not directly related to regular CI pipeline.
 # It is intended to create FFmpeg binaries that we upload on S3,
 # which then will be used during all the build process in CI or local.

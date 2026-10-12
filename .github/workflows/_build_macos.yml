@@ -1,3 +1,6 @@
+# Install Conda packages first, before pip installs or Python imports.
+# Conda may change the Python version when installing any package, including FFmpeg.
+# Finish all Conda installs before installing or running Python code.
 name: " - Wheel (macOS)"
 
 on:
@@ -78,7 +81,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1", "8.0", "9.0"]
+        # FFmpeg 6.1.0's libffi requirements conflict with Python 3.15.
+        ffmpeg-version: ["4.4.2", "5.1", "6.1.2", "7.1", "8.0", "9.0"]
     runs-on:  "${{ inputs.machine }}"
     defaults:
       run:
@@ -96,6 +100,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: ${{ inputs.python-version }}
+          channels: conda-forge
           conda-remove-defaults: "true"
 
       - name: Setup
@@ -107,19 +112,19 @@ jobs:
             conda install -q -c conda-forge python-freethreading
           fi
 
+          # Install FFmpeg before pip installs or imports Python packages.
+          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
+
           # Install SPDL
-          install_wheel_artifacts "${HOME}/package" pip install
+          install_wheel_artifacts "${HOME}/package" python -m pip install
           spdl --help
 
           # Install PyTorch and others
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            pip install torch numpy pytest pytest-timeout pytest-rerunfailures==16.7 parameterized matplotlib
+            python -m pip install torch numpy pytest pytest-xdist pytest-timeout pytest-rerunfailures==16.7 parameterized matplotlib
           else
-            pip install torch numpy numba pytest pytest-timeout pytest-rerunfailures==16.7 parameterized matplotlib
+            python -m pip install torch numpy numba pytest pytest-xdist pytest-timeout pytest-rerunfailures==16.7 parameterized matplotlib
           fi
-
-          # Install FFmpeg
-          conda install -q -c conda-forge "ffmpeg==${{ matrix.ffmpeg-version }}"
 
       - name: Unit test
         # Backstop so a hung test fails the job in minutes instead of stalling

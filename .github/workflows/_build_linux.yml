@@ -1,3 +1,6 @@
+# Install Conda packages first, before pip installs or Python imports.
+# Conda may change the Python version when installing any package, including FFmpeg.
+# Finish all Conda installs before installing or running Python code.
 name: " - Wheel (Linux)"
 
 on:
@@ -145,18 +148,22 @@ jobs:
 
           prepare_conda_test_python "${{ inputs.free-threaded }}" -q -c conda-forge -n test_env
 
+          # Install Conda dependencies and FFmpeg in one transaction, before pip
+          # installs or SPDL imports, so the Python patch release cannot change later.
+          # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
+          # Note: Matplotlib comes from PyPI, matching the other test jobs. The Python 3.15
+          # matplotlib-base build needs ICU >= 78.3, which older FFmpeg builds cannot share.
+          conda install -q numba pytest pytest-xdist pytest-timeout parameterized \
+              "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
+
           # Install SPDL
           install_wheel_artifacts "${HOME}/package" conda run -n test_env python -m pip install
           spdl --help
 
           # Install PyTorch and others
           conda run -n test_env python -m pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
-          conda install -q numba pytest pytest-xdist pytest-timeout parameterized matplotlib
-          conda run -n test_env python -m pip install pytest-rerunfailures==16.7
+          conda run -n test_env python -m pip install matplotlib pytest-rerunfailures==16.7
 
-          # Install FFmpeg
-          # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
-          conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
           # For some reason, the dynamic libraries are not found.
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
 

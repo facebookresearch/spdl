@@ -1,3 +1,6 @@
+# Install Conda packages first, before pip installs or Python imports.
+# Conda may change the Python version when installing any package, including FFmpeg.
+# Finish all Conda installs before installing or running Python code.
 name: "Docs"
 
 on:
