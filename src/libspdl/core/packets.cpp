@@ -32,13 +32,7 @@ namespace spdl::core {
 PacketSeries::PacketSeries() {}
 
 PacketSeries::PacketSeries(const PacketSeries& other) {
-  PacketSeries tmp;
-  tmp.container_.reserve(other.container_.size());
-  for (const AVPacket* pkt : other.container_) {
-    detail::AVPacketPtr clone{CHECK_AVALLOCATE(av_packet_clone(pkt))};
-    tmp.container_.push_back(clone.get());
-    (void)clone.release();
-  }
+  PacketSeries tmp = other.clone_range(0, other.container_.size());
   *this = std::move(tmp);
 }
 
@@ -157,6 +151,21 @@ const std::vector<AVPacket*>& PacketSeries::get_packets() const {
   return container_;
 }
 
+PacketSeries PacketSeries::clone_range(size_t start, size_t end) const {
+  if (start > end || end > container_.size()) {
+    throw std::out_of_range("Invalid PacketSeries clone range");
+  }
+
+  PacketSeries result;
+  result.container_.reserve(end - start);
+  for (size_t i = start; i < end; ++i) {
+    detail::AVPacketPtr clone{CHECK_AVALLOCATE(av_packet_clone(container_[i]))};
+    result.push(clone.get());
+    (void)clone.release();
+  }
+  return result;
+}
+
 Generator<RawPacketData> PacketSeries::iter_data() const {
   for (auto& pkt : container_) {
     co_yield RawPacketData{pkt->data, pkt->size, pkt->pts};
@@ -257,7 +266,6 @@ std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
 
 VideoPacketsPtr
 extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
-  auto& src_packets = src->pkts.get_packets();
   auto ret = std::make_unique<VideoPackets>();
   ret->id = src->id;
   ret->src = src->src;
@@ -266,9 +274,7 @@ extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
   ret->codec = src->codec;
   // Do not preserve timestamp as indices are already adjusted
   ret->timestamp = std::nullopt;
-  for (size_t t = start; t < end; ++t) {
-    ret->pkts.push(CHECK_AVALLOCATE(av_packet_clone(src_packets[t])));
-  }
+  ret->pkts = src->pkts.clone_range(start, end);
   return ret;
 }
 
@@ -358,7 +364,9 @@ template std::vector<double> get_timestamps(const ImagePackets&, bool);
 namespace {
 
 constexpr uint32_t SERIALIZATION_MAGIC = 0x53504B54; // "SPKT"
-constexpr uint8_t SERIALIZATION_VERSION = 1;
+// This same-build sanity marker is not a cross-build ABI or persistence
+// contract. Bump it when changing the shared layout so stale blobs fail fast.
+constexpr uint8_t SERIALIZATION_VERSION = 2;
 
 // Each serialized packet payload is followed by this many zeroed bytes. FFmpeg
 // decoders may over-read up to AV_INPUT_BUFFER_PADDING_SIZE past the end of
@@ -546,8 +554,17 @@ void serialize_packet(ByteWriter& w, const AVPacket* pkt) {
 
   w.write<int64_t>(pkt->pts);
   w.write<int64_t>(pkt->dts);
+  w.write<int32_t>(pkt->stream_index);
   w.write<int32_t>(pkt->flags);
   w.write<int64_t>(pkt->duration);
+  w.write<int64_t>(pkt->pos);
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  w.write<int32_t>(pkt->time_base.num);
+  w.write<int32_t>(pkt->time_base.den);
+#else
+  w.write<int32_t>(0);
+  w.write<int32_t>(1);
+#endif
   w.write_payload(pkt->data, pkt->size);
 
   w.write<int32_t>(pkt->side_data_elems);
@@ -555,6 +572,10 @@ void serialize_packet(ByteWriter& w, const AVPacket* pkt) {
     w.write<int32_t>(static_cast<int32_t>(pkt->side_data[i].type));
     w.write_bytes(pkt->side_data[i].data, pkt->side_data[i].size);
   }
+}
+
+Rational read_packet_time_base(ByteReader& r) {
+  return Rational{r.read<int32_t>(), r.read<int32_t>()};
 }
 
 AVPacket* deserialize_packet(ByteReader& r) {
@@ -565,8 +586,15 @@ AVPacket* deserialize_packet(ByteReader& r) {
 
   auto pts = r.read<int64_t>();
   auto dts = r.read<int64_t>();
+  auto stream_index = r.read<int32_t>();
   auto flags = r.read<int32_t>();
   auto duration = r.read<int64_t>();
+  auto pos = r.read<int64_t>();
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  const auto packet_time_base = read_packet_time_base(r);
+#else
+  (void)read_packet_time_base(r);
+#endif
 
   auto data = r.read_payload();
   if (!data.empty()) {
@@ -578,8 +606,13 @@ AVPacket* deserialize_packet(ByteReader& r) {
 
   pkt->pts = pts;
   pkt->dts = dts;
+  pkt->stream_index = stream_index;
   pkt->flags = flags;
   pkt->duration = duration;
+  pkt->pos = pos;
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  pkt->time_base = {packet_time_base.num, packet_time_base.den};
+#endif
 
   auto num_side_data = r.read<int32_t>();
   for (int32_t i = 0; i < num_side_data; ++i) {
@@ -608,8 +641,15 @@ AVPacket* deserialize_view_packet(ByteReader& r) {
 
   auto pts = r.read<int64_t>();
   auto dts = r.read<int64_t>();
+  auto stream_index = r.read<int32_t>();
   auto flags = r.read<int32_t>();
   auto duration = r.read<int64_t>();
+  auto pos = r.read<int64_t>();
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  const auto packet_time_base = read_packet_time_base(r);
+#else
+  (void)read_packet_time_base(r);
+#endif
 
   auto [data_ptr, size] = r.view_payload();
   if (size > 0) {
@@ -621,8 +661,13 @@ AVPacket* deserialize_view_packet(ByteReader& r) {
 
   pkt->pts = pts;
   pkt->dts = dts;
+  pkt->stream_index = stream_index;
   pkt->flags = flags;
   pkt->duration = duration;
+  pkt->pos = pos;
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  pkt->time_base = {packet_time_base.num, packet_time_base.den};
+#endif
 
   auto num_side_data = r.read<int32_t>();
   for (int32_t i = 0; i < num_side_data; ++i) {
@@ -943,7 +988,9 @@ std::unique_ptr<Packets<media>> deserialize_packets(
 
   auto num_packets = r.read<int32_t>();
   for (int32_t i = 0; i < num_packets; ++i) {
-    result->pkts.push(deserialize_packet(r));
+    detail::AVPacketPtr packet{deserialize_packet(r)};
+    result->pkts.push(packet.get());
+    (void)packet.release();
   }
 
   return result;
@@ -958,7 +1005,9 @@ std::unique_ptr<Packets<media>> deserialize_packets_view(
 
   auto num_packets = r.read<int32_t>();
   for (int32_t i = 0; i < num_packets; ++i) {
-    result->pkts.push(deserialize_view_packet(r));
+    detail::AVPacketPtr packet{deserialize_view_packet(r)};
+    result->pkts.push(packet.get());
+    (void)packet.release();
   }
   result->is_view = true;
 

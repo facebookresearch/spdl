@@ -36,16 +36,27 @@ AVPacket* make_packet(
   std::memcpy(pkt->data, data.data(), data.size());
   pkt->pts = pts;
   pkt->dts = dts;
+  pkt->stream_index = 7;
   pkt->flags = flags;
   pkt->duration = duration;
+  pkt->pos = 123;
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  pkt->time_base = AVRational{1, 90'000};
+#endif
   return pkt;
 }
 
 void expect_packet_eq(const AVPacket* a, const AVPacket* b) {
   EXPECT_EQ(a->pts, b->pts);
   EXPECT_EQ(a->dts, b->dts);
+  EXPECT_EQ(a->stream_index, b->stream_index);
   EXPECT_EQ(a->flags, b->flags);
   EXPECT_EQ(a->duration, b->duration);
+  EXPECT_EQ(a->pos, b->pos);
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+  EXPECT_EQ(a->time_base.num, b->time_base.num);
+  EXPECT_EQ(a->time_base.den, b->time_base.den);
+#endif
   ASSERT_EQ(a->size, b->size);
   EXPECT_EQ(0, std::memcmp(a->data, b->data, a->size));
   ASSERT_EQ(a->side_data_elems, b->side_data_elems);
@@ -101,6 +112,8 @@ TEST(PacketsSerializationTest, RoundTripPreservesMetadataAndPayload) {
   for (size_t i = 0; i < orig.size(); ++i) {
     expect_packet_eq(orig[i], got[i]);
   }
+
+  EXPECT_EQ(serialize_packets(*restored), data);
 }
 
 TEST(PacketsSerializationTest, RoundTripPreservesSideData) {
@@ -154,6 +167,14 @@ TEST(PacketsSerializationTest, MediaTypeMismatchThrows) {
   EXPECT_THROW(deserialize_packets<MediaType::Video>(data), std::runtime_error);
 }
 
+TEST(PacketsSerializationTest, OldSerializationVersionThrows) {
+  Packets<MediaType::Audio> packets;
+  auto data = serialize_packets(packets);
+  data[sizeof(uint32_t)] = 1;
+
+  EXPECT_THROW(deserialize_packets<MediaType::Audio>(data), std::runtime_error);
+}
+
 TEST(PacketsSerializationTest, CodecWithoutParametersThrows) {
   Packets<MediaType::Video> packets;
   packets.codec.emplace();
@@ -193,6 +214,8 @@ TEST(PacketsSerializationTest, ViewAliasesBufferWithPadding) {
   const uint8_t* lo = buf.data();
   const uint8_t* hi = buf.data() + buf.size();
   for (size_t i = 0; i < got.size(); ++i) {
+    expect_packet_eq(orig[i], got[i]);
+
     // Non-owning view pointing inside the serialized buffer.
     EXPECT_EQ(got[i]->buf, nullptr);
     EXPECT_GE(got[i]->data, lo);

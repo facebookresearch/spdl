@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <variant>
@@ -105,6 +106,13 @@ class PacketSeries {
   ///
   /// @return Vector of AVPacket pointers.
   const std::vector<AVPacket*>& get_packets() const;
+
+  /// Deep-copy a range of packets and their transport metadata.
+  ///
+  /// @param start Start index (inclusive).
+  /// @param end End index (exclusive).
+  /// @return New packet series containing the selected range.
+  PacketSeries clone_range(size_t start, size_t end) const;
 
   /// Iterate through packet data.
   ///
