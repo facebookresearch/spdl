@@ -13,9 +13,15 @@
 #include <fmt/core.h>
 #include <glog/logging.h>
 
+#include <cstdint>
+
 namespace spdl::cuda::detail {
 
 const char* to_string(NppStatus);
+
+NppStreamContext get_npp_stream_context(
+    uintptr_t stream_handle,
+    int device_index);
 
 } // namespace spdl::cuda::detail
 

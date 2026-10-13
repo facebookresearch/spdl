@@ -61,7 +61,18 @@ namespace spdl::cuda::detail {
 // TODO: Test if this works if there is a context already created by others
 CUcontext get_cucontext(CUdevice device);
 
-// Set the current context to the primary context of the given device
-void set_cuda_primary_context(int device_index);
+class CUDAContextPushGuard {
+ public:
+  explicit CUDAContextPushGuard(int device_index);
+  ~CUDAContextPushGuard() noexcept;
+
+  CUDAContextPushGuard(const CUDAContextPushGuard&) = delete;
+  CUDAContextPushGuard& operator=(const CUDAContextPushGuard&) = delete;
+  CUDAContextPushGuard(CUDAContextPushGuard&&) = delete;
+  CUDAContextPushGuard& operator=(CUDAContextPushGuard&&) = delete;
+
+ private:
+  CUcontext context_;
+};
 
 } // namespace spdl::cuda::detail

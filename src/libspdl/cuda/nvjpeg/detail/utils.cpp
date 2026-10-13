@@ -38,10 +38,10 @@ nvjpegHandle_t get_nvjpeg() {
 ////////////////////////////////////////////////////////////////////////////////
 // nvjpegJpegState_t
 ////////////////////////////////////////////////////////////////////////////////
-void nvjpeg_state_deleter::operator()(nvjpegJpegState* p) {
+void nvjpeg_state_deleter::operator()(nvjpegJpegState* p) const noexcept {
   TRACE_EVENT("decoding", "nvjpegJpegStateDestroy");
-  if (!p) {
-    auto status = nvjpegJpegStateDestroy(p);
+  if (p) {
+    const auto status = destroy(p);
     if (status != NVJPEG_STATUS_SUCCESS) {
       LOG(WARNING) << "Failed to destroy nvjpeg state: "
                    << detail::to_string(status);
@@ -182,6 +182,24 @@ std::string to_string(nvjpegOutputFormat_t f) {
 #endif
     default:
       return fmt::format("Unknown nvjpegOutputFormat_t value: {}", int(f));
+  }
+}
+
+void wrap_nvjpeg_image(
+    void* data,
+    const NVJPEGImageLayout& layout,
+    nvjpegImage_t& image,
+    size_t batch) {
+  image = {};
+  auto* ptr = static_cast<uint8_t*>(data);
+  ptr += batch * layout.height * layout.width * layout.num_channels;
+  const size_t pitch =
+      layout.interleaved ? layout.width * layout.num_channels : layout.width;
+  const size_t num_planes = layout.interleaved ? 1 : layout.num_channels;
+  for (size_t c = 0; c < num_planes; ++c) {
+    image.channel[c] = ptr;
+    image.pitch[c] = pitch;
+    ptr += pitch * layout.height;
   }
 }
 

@@ -288,29 +288,56 @@ void open_format(
   AVFORMAT_CONST AVOutputFormat* fmt = format_ctx->oformat;
   AVDictionaryDPtr option = get_option_dict(options);
 
-  if (strcmp(fmt->name, "image2") == 0) {
-    // By default, image2 muxer warns about the path not containing sequence
-    // number everytime the codec is initialized. For the case of single image
-    // encoding, this is unnecessary and super annoying. So we set the update
-    // flag to 1.
-    // https://github.com/FFmpeg/FFmpeg/blob/e757726e89ff636e0dc6743f635888639a196e36/libavformat/img2enc.c#L171-L174
-    if (!av_dict_get(option, "update", nullptr, 0)) {
-      av_dict_set(option, "update", "1", 0);
+  try {
+    if (strcmp(fmt->name, "image2") == 0) {
+      // By default, image2 muxer warns about the path not containing sequence
+      // number everytime the codec is initialized. For the case of single image
+      // encoding, this is unnecessary and super annoying. So we set the update
+      // flag to 1.
+      // https://github.com/FFmpeg/FFmpeg/blob/e757726e89ff636e0dc6743f635888639a196e36/libavformat/img2enc.c#L171-L174
+      if (!av_dict_get(option, "update", nullptr, 0)) {
+        av_dict_set(option, "update", "1", 0);
+      }
     }
-  }
 
-  if (!(fmt->flags & AVFMT_NOFILE) &&
-      !(format_ctx->flags & AVFMT_FLAG_CUSTOM_IO)) {
+    if (!(fmt->flags & AVFMT_NOFILE) &&
+        !(format_ctx->flags & AVFMT_FLAG_CUSTOM_IO)) {
+      CHECK_AVERROR(
+          avio_open2(
+              &format_ctx->pb,
+              format_ctx->url,
+              AVIO_FLAG_WRITE,
+              nullptr,
+              option),
+          fmt::format("Failed to open output: {}", format_ctx->url))
+    }
+
     CHECK_AVERROR(
-        avio_open2(
-            &format_ctx->pb, format_ctx->url, AVIO_FLAG_WRITE, nullptr, option),
-        fmt::format("Failed to open output: {}", format_ctx->url))
+        avformat_write_header(format_ctx, option),
+        fmt::format("Failed to write header: {}", format_ctx->url))
+    check_empty(option);
+  } catch (...) {
+    (void)close_output_io(format_ctx);
+    throw;
   }
+}
 
-  CHECK_AVERROR(
-      avformat_write_header(format_ctx, option),
-      fmt::format("Failed to write header: {}", format_ctx->url))
-  check_empty(option);
+void close_format(AVFormatContext* format_ctx, WriteTrailerFn write_trailer) {
+  const int trailer_error = write_trailer(format_ctx);
+  // close_output_io releases only pb. The URL remains owned by format_ctx
+  // until avformat_free_context, so it is available for both diagnostics.
+  const int close_error = close_output_io(format_ctx);
+  if (trailer_error < 0 && close_error < 0) {
+    LOG(ERROR) << av_error(
+        close_error,
+        "Failed to close output after the trailer also failed: {}",
+        format_ctx->url);
+  }
+  CHECK_AVERROR_NUM(
+      trailer_error,
+      fmt::format("Failed to write trailer: {}", format_ctx->url))
+  CHECK_AVERROR_NUM(
+      close_error, fmt::format("Failed to close output: {}", format_ctx->url))
 }
 
 } // namespace spdl::core::detail

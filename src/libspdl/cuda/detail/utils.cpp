@@ -77,9 +77,31 @@ CUcontext get_cucontext(CUdevice device) {
   return CUCONTEXT_CACHE.at(device);
 }
 
-void set_cuda_primary_context(int device_index) {
-  CUcontext ctx = get_cucontext(device_index);
-  CHECK_CU(cuCtxPushCurrent(ctx), "Failed to push the CUDA context.");
+CUDAContextPushGuard::CUDAContextPushGuard(int device_index)
+    : context_{get_cucontext(device_index)} {
+  CHECK_CU(cuCtxPushCurrent(context_), "Failed to push the CUDA context.");
+}
+
+CUDAContextPushGuard::~CUDAContextPushGuard() noexcept {
+  try {
+    CUcontext popped_context = nullptr;
+    const CUresult status = cuCtxPopCurrent(&popped_context);
+    if (status != CUDA_SUCCESS) {
+      LOG(WARNING) << "Failed to pop the CUDA context ("
+                   << get_error_name(status) << ": " << get_error_desc(status)
+                   << ")";
+    } else if (popped_context != context_) {
+      // Runtime APIs can legitimately replace the top context inside this
+      // scope, while an unbalanced nested push has the same observable result.
+      // Popping again could remove a caller-owned context, so leave the
+      // restored stack alone and emit a bounded diagnostic.
+      LOG_FIRST_N(WARNING, 1)
+          << "cuCtxPopCurrent returned an unexpected CUDA context; the "
+             "guarded scope replaced or unbalanced the context stack.";
+    }
+  } catch (...) {
+    // Context cleanup cannot safely replace an exception already in flight.
+  }
 }
 
 } // namespace spdl::cuda::detail

@@ -12,6 +12,7 @@
 
 #include <fmt/format.h>
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
@@ -31,7 +32,11 @@ nvjpegHandle_t get_nvjpeg();
 // nvjpeg Jpeg state
 //////////////////////////////////////////////////////////////////////////////
 struct nvjpeg_state_deleter {
-  void operator()(nvjpegJpegState*);
+  using DestroyFn = decltype(&nvjpegJpegStateDestroy);
+
+  DestroyFn destroy = nvjpegJpegStateDestroy;
+
+  void operator()(nvjpegJpegState*) const noexcept;
 };
 
 using nvjpegStatePtr = std::unique_ptr<nvjpegJpegState, nvjpeg_state_deleter>;
@@ -47,6 +52,19 @@ std::string to_string(nvjpegOutputFormat_t);
 
 nvjpegBackend_t get_nvjpeg_backend(const std::optional<std::string>&);
 nvjpegOutputFormat_t get_nvjpeg_output_format(const std::string&);
+
+struct NVJPEGImageLayout {
+  size_t width;
+  size_t height;
+  size_t num_channels;
+  bool interleaved;
+};
+
+void wrap_nvjpeg_image(
+    void* data,
+    const NVJPEGImageLayout& layout,
+    nvjpegImage_t& image,
+    size_t batch = 0);
 
 } // namespace spdl::cuda::detail
 
