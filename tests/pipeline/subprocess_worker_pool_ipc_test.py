@@ -232,6 +232,21 @@ class _GatedResultQueue:
         return result
 
 
+class _GatedQueueWriter:
+    """Pause a queue feeder while it writes a payload."""
+
+    def __init__(self, send_bytes: Any) -> None:
+        self._send_bytes = send_bytes
+        self.started = threading.Event()
+        self.release = threading.Event()
+
+    def __call__(self, payload: Any) -> None:
+        self.started.set()
+        if not self.release.wait(timeout=_FUTURE_COMPLETION_TIMEOUT):
+            raise TimeoutError("test did not release the queue feeder write")
+        self._send_bytes(payload)
+
+
 class _CorruptWorkerStatusChannel:
     """Status endpoint that reproduces a receive-side deserialization failure."""
 
@@ -1555,21 +1570,28 @@ class WorkerPoolSerializationTest(unittest.TestCase):
         router = cast(threading.Thread, executor._thread)
         self.assertTrue(router.is_alive())
 
-        out_q._wlock.acquire()
+        gated_writer = _GatedQueueWriter(out_q._send_bytes)
         try:
-            with patch(
-                "spdl.pipeline._subprocess_worker_pool._QUEUE_SHUTDOWN_TIMEOUT",
-                0.01,
+            with (
+                patch.object(out_q, "_send_bytes", gated_writer),
+                patch(
+                    "spdl.pipeline._subprocess_worker_pool._QUEUE_SHUTDOWN_TIMEOUT",
+                    0.01,
+                ),
             ):
                 pool.shutdown()
 
+            self.assertTrue(
+                gated_writer.started.wait(timeout=_PROCESS_READY_TIMEOUT),
+                "output queue feeder did not start writing its shutdown marker",
+            )
             self.assertTrue(out_q._joincancelled)
             self.assertEqual(pool._router_shutdown_requested.value, 1)
             router.join(timeout=_PROCESS_READY_TIMEOUT)
             self.assertFalse(router.is_alive())
             self.assertIsNotNone(executor._broken)
         finally:
-            out_q._wlock.release()
+            gated_writer.release.set()
             feeder = out_q._thread
             if isinstance(feeder, threading.Thread):
                 feeder.join(timeout=_PROCESS_READY_TIMEOUT)
@@ -1636,14 +1658,21 @@ class WorkerPoolSerializationTest(unittest.TestCase):
         self.assertTrue(
             gated_queue.result_dequeued.wait(timeout=_FUTURE_COMPLETION_TIMEOUT)
         )
-        out_q._wlock.acquire()
+        gated_writer = _GatedQueueWriter(out_q._send_bytes)
         try:
-            with patch(
-                "spdl.pipeline._subprocess_worker_pool._QUEUE_SHUTDOWN_TIMEOUT",
-                0.01,
+            with (
+                patch.object(out_q, "_send_bytes", gated_writer),
+                patch(
+                    "spdl.pipeline._subprocess_worker_pool._QUEUE_SHUTDOWN_TIMEOUT",
+                    0.01,
+                ),
             ):
                 pool.shutdown()
 
+            self.assertTrue(
+                gated_writer.started.wait(timeout=_PROCESS_READY_TIMEOUT),
+                "output queue feeder did not start writing its shutdown marker",
+            )
             watcher = executor._worker_watcher
             self.assertIsNotNone(watcher)
             if watcher is not None:
@@ -1661,7 +1690,7 @@ class WorkerPoolSerializationTest(unittest.TestCase):
             )
         finally:
             gated_queue.release_result.set()
-            out_q._wlock.release()
+            gated_writer.release.set()
             feeder = out_q._thread
             if feeder is not None:
                 feeder.join(timeout=5)
