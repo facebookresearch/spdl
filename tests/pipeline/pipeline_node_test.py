@@ -34,10 +34,13 @@ def _node(
     name: str,
     deps: list[_TTestNode],
     exc: Exception | None = None,
+    gate: asyncio.Event | None = None,
 ) -> _TTestNode:
     async def coro() -> None:
         if exc:
             raise exc
+        elif gate is not None:
+            await gate.wait()
         else:
             await asyncio.sleep(10)
 
@@ -74,6 +77,58 @@ def _node(
         )
     n._coro = coro()
     return n
+
+
+class PipelineNodeAsyncTest(unittest.IsolatedAsyncioTestCase):
+    async def test_completed_branch_keeps_shared_producer_alive(self) -> None:
+        """A shared producer is cancelled only after every consumer finishes."""
+        left_done, right_done = asyncio.Event(), asyncio.Event()
+        source = _node("source", [])
+        shared = _node("shared", [source])
+        exclusive = _node("exclusive", [shared])
+        left = _node("left", [exclusive], gate=left_done)
+        right = _node("right", [shared], gate=right_done)
+        sink = _node("sink", [left, right])
+        tasks = [
+            n.create_task() for n in (source, shared, exclusive, left, right, sink)
+        ]
+        try:
+            left_done.set()
+            await left.task
+            _cancel_orphaned(sink)
+            await asyncio.sleep(0)
+            self.assertTrue(exclusive.task.cancelled())
+            self.assertFalse(shared.task.done())
+            self.assertFalse(source.task.done())
+            self.assertFalse(right.task.done())
+
+            right_done.set()
+            await right.task
+            _cancel_orphaned(sink)
+            await asyncio.wait([shared.task, source.task])
+            self.assertTrue(shared.task.cancelled())
+            self.assertTrue(source.task.cancelled())
+        finally:
+            _cancel_recursive(sink)
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def test_completed_sink_cancels_exclusive_producer_chain(self) -> None:
+        """An early sink exit cancels its entire unused chain in one traversal."""
+        done = asyncio.Event()
+        source = _node("source", [])
+        middle = _node("middle", [source])
+        sink = _node("sink", [middle], gate=done)
+        tasks = [n.create_task() for n in (source, middle, sink)]
+        try:
+            done.set()
+            await sink.task
+            _cancel_orphaned(sink)
+            await asyncio.wait([middle.task, source.task])
+            self.assertTrue(middle.task.cancelled())
+            self.assertTrue(source.task.cancelled())
+        finally:
+            _cancel_recursive(sink)
+            await asyncio.gather(*tasks, return_exceptions=True)
 
 
 class PipelineNodeTest(unittest.TestCase):

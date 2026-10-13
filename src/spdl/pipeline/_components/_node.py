@@ -805,36 +805,60 @@ def _start_tasks(node: _TNodes) -> set[Task]:
     return ret
 
 
-def _cancel_recursive(node: _TNodes) -> None:
+def _cancel_recursive(node: _TNodes, _visited: set[int] | None = None) -> set[int]:
+    if _visited is None:
+        _visited = set()
+    key = id(node)
+    if key in _visited:
+        return _visited
+    _visited.add(key)
     node.task.cancel()
     for n in node.upstream:
-        _cancel_recursive(n)
+        _cancel_recursive(n, _visited)
+    return _visited
 
 
 def _cancel_orphaned(node: _TNodes) -> None:
+    """Cancel unused producers while retaining producers with live consumers.
+
+    A completed variant path must not cancel its shared router while the
+    router is still broadcasting EOF to other paths. Stage failures retain
+    immediate recursive cancellation so a failed path cannot block routing.
     """
-    Cancel upstream tasks when this node's task completes to avoid leaving producer tasks orphaned.
+    pending = [node]
+    nodes: dict[int, _TNodes] = {}
+    consumers: dict[int, list[_TNodes]] = {}
+    while pending:
+        current = pending.pop()
+        if id(current) in nodes:
+            continue
+        nodes[id(current)] = current
+        for upstream in current.upstream:
+            consumers.setdefault(id(upstream), []).append(current)
+            pending.append(upstream)
 
-    This function traverses the pipeline graph upstream from the given node.
-    If the current node's asyncio Task is done (completed, errored, or cancelled),
-    all upstream tasks are recursively cancelled to avoid deadlocks where upstream
-    producers keep waiting to push data into queues that will no longer be consumed.
-
-    The function then continues traversing upstream regardless of the current node's
-    state to ensure any upstream nodes that have completed also trigger their own
-    upstream cancellations.
-
-    Args:
-        node: The pipeline node whose task and upstream relationship are inspected
-              for potential cancellation.
-    """
-    task = node.task
-    if task.done():  # done includes success, error or cancelled.
-        for n in node.upstream:
-            _cancel_recursive(n)
-
-    for n in node.upstream:
-        _cancel_orphaned(n)
+    stopped = {key for key, current in nodes.items() if current.task.done()}
+    pending = [nodes[key] for key in stopped]
+    while pending:
+        current = pending.pop()
+        if (
+            current.task.done()
+            and not current.task.cancelled()
+            and current.task.exception() is not None
+        ):
+            for upstream in current.upstream:
+                stopped.update(_cancel_recursive(upstream))
+            continue
+        unused = [
+            upstream
+            for upstream in current.upstream
+            if id(upstream) not in stopped
+            and all(id(child) in stopped for child in consumers[id(upstream)])
+        ]
+        for upstream in unused:
+            upstream.task.cancel()
+            stopped.add(id(upstream))
+            pending.append(upstream)
 
 
 def _gather_error(
