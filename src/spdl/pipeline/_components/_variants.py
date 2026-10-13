@@ -26,6 +26,76 @@ from ._queue import AsyncQueue
 _LG: logging.Logger = logging.getLogger(__name__)
 
 
+class _PendingPathPuts:
+    """Bound routing lookahead while preserving each queue's FIFO put order."""
+
+    def __init__(self) -> None:
+        self.pending: set[asyncio.Task[None]] = set()
+        self.tails: dict[AsyncQueue, asyncio.Task[None]] = {}
+
+    async def _put_after(
+        self, previous: asyncio.Task[None] | None, queue: AsyncQueue, item: object
+    ) -> None:
+        if previous is not None:
+            await previous
+        await queue.put(item)
+
+    async def put(self, queue: AsyncQueue, item: object) -> None:
+        previous = self.tails.get(queue)
+        if (previous is None or previous.done()) and not queue.full():
+            if previous is not None:
+                previous.result()
+            await queue.put(item)
+            if self.tails.get(queue) is previous:
+                self.tails.pop(queue, None)
+            return
+        task = asyncio.create_task(self._put_after(previous, queue, item))
+        self.tails[queue] = task
+        self.pending.add(task)
+        if len(self.pending) >= 32:
+            done, self.pending = await asyncio.wait(
+                self.pending, return_when=asyncio.FIRST_COMPLETED
+            )
+            failure: BaseException | None = None
+            for task in done:
+                if task.cancelled():
+                    if failure is None:
+                        failure = asyncio.CancelledError()
+                elif (error := task.exception()) is not None:
+                    _LG.error("Pending path put failed.", exc_info=error)
+                    if failure is None or isinstance(failure, asyncio.CancelledError):
+                        failure = error
+            if failure is not None:
+                raise failure
+
+    async def drain(self) -> None:
+        results = await asyncio.gather(*self.pending, return_exceptions=True)
+        self.pending.clear()
+        self.tails.clear()
+
+        failure: BaseException | None = None
+        for result in results:
+            if not isinstance(result, BaseException):
+                continue
+            if not isinstance(result, asyncio.CancelledError):
+                _LG.error("Pending path put failed.", exc_info=result)
+            if failure is None or (
+                isinstance(failure, asyncio.CancelledError)
+                and not isinstance(result, asyncio.CancelledError)
+            ):
+                failure = result
+        if failure is not None:
+            raise failure
+
+    async def cancel(self) -> None:
+        for task in self.pending:
+            task.cancel()
+        if self.pending:
+            await asyncio.gather(*self.pending, return_exceptions=True)
+            self.pending.clear()
+        self.tails.clear()
+
+
 def _make_async_router(
     router: Callable[[Any], Any] | Callable[[Any], Awaitable[Any]],
 ) -> Callable[[Any], Awaitable[Any]]:
@@ -90,7 +160,8 @@ async def _queue_stage_hook(queues: Sequence[AsyncQueue]) -> AsyncGenerator[None
                     q.put_nowait(_EOF)
                 except Exception:
                     _LG.error(
-                        "Failed to pass EOF to path:%d. The pipeline might not shutdown properly.",
+                        "Failed to pass EOF to path:%d. The pipeline might not "
+                        "shutdown properly.",
                         i,
                     )
             # Don't let a cancellation during the wait mask an exception in flight.
@@ -145,6 +216,7 @@ def _path_variants_router(
     """
     num_paths: int = len(path_queues)
     arouter: Callable[[Any], Awaitable[Any]] = _make_async_router(router)
+    puts = _PendingPathPuts()
 
     async def _route_item(item: Any) -> None:
         idx = await arouter(item)
@@ -153,7 +225,7 @@ def _path_variants_router(
                 f"Router returned index {idx}, but there are only "
                 f"{num_paths} paths (valid range: [0, {num_paths}))."
             )
-        await path_queues[idx].put(item)
+        await puts.put(path_queues[idx], item)
 
     async def _route_batch(batch: Any) -> None:
         indices = await arouter(batch)
@@ -181,17 +253,22 @@ def _path_variants_router(
     # pyrefly: ignore [not-callable]
     @_stage_hooks(task_hooks)
     async def _router() -> None:
-        while True:
-            item = await input_queue.get()
-            if is_eof(item):
-                return
+        try:
+            while True:
+                item = await input_queue.get()
+                if is_eof(item):
+                    await puts.drain()
+                    return
 
-            if is_epoch_end(item):
-                for q in path_queues:
-                    await q.put(_EPOCH_END)
-                continue
+                if is_epoch_end(item):
+                    await puts.drain()
+                    for q in path_queues:
+                        await q.put(_EPOCH_END)
+                    continue
 
-            await _route(item)
+                await _route(item)
+        finally:
+            await puts.cancel()
 
     return _router()
 

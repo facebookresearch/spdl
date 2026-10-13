@@ -455,6 +455,11 @@ class PipelineBuilder(Generic[T, U]):
         .. versionadded:: 0.6.0
            The ``batched`` argument.
 
+        .. versionchanged:: 0.7.0
+           Per-item routing uses bounded lookahead so a full path queue does not
+           immediately prevent dispatch to other paths. Order within each path
+           is preserved. All pending routes drain at epoch and source boundaries.
+
         Args:
             router: A callable that selects the path for each input. In per-item
                 mode (default) it takes an item and returns an int index. In
