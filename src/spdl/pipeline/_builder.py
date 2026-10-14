@@ -184,14 +184,16 @@ class PipelineBuilder(Generic[T, U]):
     ) -> "PipelineBuilder[T, U]":
         """Attach an iterator to the source buffer.
 
+        .. versionchanged:: 0.7.0
+           Synchronous sources are iterated on a dedicated thread instead of
+           dispatching each item through the pipeline's executor.
+
         Args:
-            source: A lightweight iterator that generates data.
-
-                .. warning::
-
-                   The source iterator must be lightweight as it is executed in async
-                   event loop. If the iterator performs a blocking operation,
-                   the entire pipeline will be blocked.
+            source: An iterator that generates data. Synchronous iterators run on a
+                dedicated thread, so blocking iteration does not block the pipeline's
+                event loop. A blocked iterator cannot be interrupted. Pipeline shutdown
+                remains responsive, but the non-daemon source thread keeps the
+                interpreter alive until the iterator returns.
 
             continuous: If ``True``, the source continuously re-iterates,
                 injecting a sentinel object representing an epoch boundary
