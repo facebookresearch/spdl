@@ -53,6 +53,10 @@ struct AVFormatOutputContextDeleter {
 using AVFormatOutputContextPtr =
     std::unique_ptr<AVFormatContext, AVFormatOutputContextDeleter>;
 
+// Close an AVIOContext opened by FFmpeg, while preserving caller-owned custom
+// I/O. This is idempotent because avio_closep clears format_ctx->pb.
+int close_output_io(AVFormatContext* format_ctx) noexcept;
+
 // AVCodecContext
 struct AVCodecContextDeleter {
   void operator()(AVCodecContext* p);
