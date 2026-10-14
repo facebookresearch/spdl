@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <nppdefs.h>
 #include <nvjpeg.h>
 #include <cstdint>
 
@@ -22,6 +23,18 @@ void resize_npp(
     int dst_width,
     int dst_height,
     uintptr_t stream,
+    int device_index,
+    bool sync = true);
+
+void resize_npp(
+    nvjpegOutputFormat_t fmt,
+    nvjpegImage_t src,
+    int src_width,
+    int src_height,
+    nvjpegImage_t dst,
+    int dst_width,
+    int dst_height,
+    const NppStreamContext& stream,
     bool sync = true);
 
 } // namespace spdl::cuda::detail

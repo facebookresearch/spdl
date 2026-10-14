@@ -41,7 +41,7 @@ void resize(
     nvjpegImage_t& dst,
     const NppiSize& dst_size,
     const NppiRect&, // TODO: Support ROI
-    NppStreamContext& stream,
+    const NppStreamContext& stream,
     int index = 0) {
   TRACE_EVENT("decoding", "nppiResize");
   CHECK_NPP(
@@ -70,10 +70,32 @@ void resize_npp(
     int dst_width,
     int dst_height,
     uintptr_t stream_handle,
+    int device_index,
     bool sync) {
-  NppStreamContext stream;
-  stream.hStream = (cudaStream_t)stream_handle;
+  const NppStreamContext stream =
+      get_npp_stream_context(stream_handle, device_index);
+  resize_npp(
+      fmt,
+      src,
+      src_width,
+      src_height,
+      dst,
+      dst_width,
+      dst_height,
+      stream,
+      sync);
+}
 
+void resize_npp(
+    nvjpegOutputFormat_t fmt,
+    nvjpegImage_t src,
+    int src_width,
+    int src_height,
+    nvjpegImage_t dst,
+    int dst_width,
+    int dst_height,
+    const NppStreamContext& stream,
+    bool sync) {
   NppiSize src_size{.width = src_width, .height = src_height};
   NppiSize dst_size{.width = dst_width, .height = dst_height};
 
@@ -110,7 +132,7 @@ void resize_npp(
 
   if (sync) {
     CHECK_CUDA(
-        cudaStreamSynchronize((cudaStream_t)stream_handle),
+        cudaStreamSynchronize(stream.hStream),
         "Failed to synchronize stream after NPP resize.");
   }
 }
