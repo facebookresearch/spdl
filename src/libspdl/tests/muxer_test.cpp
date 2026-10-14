@@ -104,6 +104,35 @@ bool is_file_open(const std::string& path) {
 }
 #endif
 
+struct WriteTracker {
+  int bytes_written{};
+};
+
+#if LIBAVFORMAT_VERSION_MAJOR >= 61
+using WriteBuffer = const uint8_t*;
+#else
+using WriteBuffer = uint8_t*;
+#endif
+
+int track_write(void* opaque, WriteBuffer, int size) {
+  static_cast<WriteTracker*>(opaque)->bytes_written += size;
+  return size;
+}
+
+void expect_io_is_usable(AVIOContext* io_ctx, WriteTracker* tracker) {
+  // Flush any muxer bytes first so the assertion only observes this probe.
+  avio_flush(io_ctx);
+  const int bytes_written = tracker->bytes_written;
+  const uint8_t byte{};
+  avio_write(io_ctx, &byte, 1);
+  avio_flush(io_ctx);
+  EXPECT_EQ(tracker->bytes_written, bytes_written + 1);
+}
+
+int fail_trailer(AVFormatContext*) {
+  return AVERROR(EIO);
+}
+
 TEST(MuxerCleanupTest, OutputContextDestructionClosesOwnedIo) {
 #if defined(__linux__)
   const std::string path = get_temp_output_path("spdl_muxer_destructor.wav");
@@ -141,6 +170,132 @@ TEST(MuxerCleanupTest, OutputContextDestructionLogsIoCloseFailure) {
   format_ctx.reset();
 
   EXPECT_TRUE(logs.contains("Failed to close output I/O during cleanup."));
+#else
+  GTEST_SKIP() << "/dev/full is only available on Linux";
+#endif
+}
+
+TEST(MuxerCleanupTest, OpenAndCloseFormatPreserveCustomIo) {
+  WriteTracker tracker;
+  auto* buffer = static_cast<unsigned char*>(av_malloc(64));
+  ASSERT_NE(buffer, nullptr);
+  AVIOContextPtr custom_io{avio_alloc_context(
+      buffer, 64, 1, &tracker, nullptr, track_write, nullptr)};
+  ASSERT_NE(custom_io, nullptr);
+  AVIOContext* const supplied_io = custom_io.get();
+
+  {
+    auto format_ctx = get_output_format_ctx("unused.wav", "wav");
+    add_pcm_audio_stream(format_ctx.get());
+    format_ctx->pb = supplied_io;
+    format_ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
+
+    ASSERT_NO_THROW(open_format(format_ctx.get()));
+    EXPECT_EQ(format_ctx->pb, supplied_io);
+
+    // Calling the low-level cleanup helper directly must be a no-op for custom
+    // I/O, including leaving the pointer installed on the format context.
+    EXPECT_EQ(close_output_io(format_ctx.get()), 0);
+    EXPECT_EQ(format_ctx->pb, supplied_io);
+    expect_io_is_usable(supplied_io, &tracker);
+
+    ASSERT_NO_THROW(close_format(format_ctx.get()));
+    EXPECT_EQ(format_ctx->pb, supplied_io);
+    expect_io_is_usable(supplied_io, &tracker);
+  }
+
+  // The AVFormatContext deleter must not claim ownership either.
+  expect_io_is_usable(supplied_io, &tracker);
+}
+
+TEST(MuxerCleanupTest, OpenFormatClosesIoWhenHeaderFails) {
+  const std::string path =
+      get_temp_output_path("spdl_muxer_header_failure.wav");
+  auto format_ctx = get_output_format_ctx(path, "wav");
+
+  try {
+    open_format(format_ctx.get());
+    FAIL() << "Expected a muxer without streams to reject its header";
+  } catch (const std::runtime_error& error) {
+    EXPECT_NE(
+        std::string{error.what()}.find("Failed to write header"),
+        std::string::npos);
+  }
+
+  EXPECT_EQ(format_ctx->pb, nullptr);
+  std::filesystem::remove(path);
+}
+
+TEST(MuxerCleanupTest, OpenFormatClosesIoWhenOptionValidationFails) {
+  const std::string path =
+      get_temp_output_path("spdl_muxer_option_failure.wav");
+  auto format_ctx = get_output_format_ctx(path, "wav");
+  add_pcm_audio_stream(format_ctx.get());
+
+  try {
+    open_format(
+        format_ctx.get(), OptionDict{{"spdl_unknown_muxer_option", "1"}});
+    FAIL() << "Expected an unknown muxer option to be rejected";
+  } catch (const std::runtime_error& error) {
+    EXPECT_NE(
+        std::string{error.what()}.find("Unexpected options"),
+        std::string::npos);
+  }
+
+  EXPECT_EQ(format_ctx->pb, nullptr);
+  std::filesystem::remove(path);
+}
+
+TEST(MuxerCleanupTest, CloseFormatClosesIoWhenTrailerFails) {
+  const std::string path =
+      get_temp_output_path("spdl_muxer_trailer_failure.wav");
+  auto format_ctx = get_output_format_ctx(path, "wav");
+  add_pcm_audio_stream(format_ctx.get());
+  open_format(format_ctx.get());
+  ASSERT_NE(format_ctx->pb, nullptr);
+
+  try {
+    close_format(format_ctx.get(), fail_trailer);
+    FAIL() << "Expected the injected output error to fail the trailer";
+  } catch (const std::runtime_error& error) {
+    EXPECT_NE(
+        std::string{error.what()}.find("Failed to write trailer"),
+        std::string::npos);
+  }
+
+  EXPECT_EQ(format_ctx->pb, nullptr);
+  std::filesystem::remove(path);
+}
+
+TEST(MuxerCleanupTest, CloseFormatLogsIoFailureWhenTrailerAlsoFails) {
+#if defined(__linux__)
+  if (!std::filesystem::exists("/dev/full")) {
+    GTEST_SKIP() << "/dev/full is not available";
+  }
+
+  ScopedWarningCapture logs;
+  auto format_ctx = get_output_format_ctx("/dev/full", "wav");
+  ASSERT_GE(
+      avio_open2(
+          &format_ctx->pb, "/dev/full", AVIO_FLAG_WRITE, nullptr, nullptr),
+      0);
+
+  const uint8_t byte{0};
+  avio_write(format_ctx->pb, &byte, 1);
+  ASSERT_EQ(format_ctx->pb->error, 0);
+
+  try {
+    close_format(format_ctx.get(), fail_trailer);
+    FAIL() << "Expected the injected output error to fail the trailer";
+  } catch (const std::runtime_error& error) {
+    EXPECT_NE(
+        std::string{error.what()}.find("Failed to write trailer"),
+        std::string::npos);
+  }
+
+  EXPECT_EQ(format_ctx->pb, nullptr);
+  EXPECT_TRUE(
+      logs.contains("Failed to close output after the trailer also failed"));
 #else
   GTEST_SKIP() << "/dev/full is only available on Linux";
 #endif
