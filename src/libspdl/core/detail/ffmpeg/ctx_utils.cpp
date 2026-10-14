@@ -51,6 +51,34 @@ void check_empty(const AVDictionary* p) {
     SPDL_FAIL(fmt::format("Unexpected options: {}", fmt::join(keys, ", ")));
   }
 }
+
+class OutputIOCloseGuard {
+ public:
+  explicit OutputIOCloseGuard(AVFormatContext* format_ctx) noexcept
+      : format_ctx_{format_ctx} {}
+
+  ~OutputIOCloseGuard() noexcept {
+    (void)close();
+  }
+
+  OutputIOCloseGuard(const OutputIOCloseGuard&) = delete;
+  OutputIOCloseGuard& operator=(const OutputIOCloseGuard&) = delete;
+  OutputIOCloseGuard(OutputIOCloseGuard&&) = delete;
+  OutputIOCloseGuard& operator=(OutputIOCloseGuard&&) = delete;
+
+  [[nodiscard]] int close() noexcept {
+    AVFormatContext* const format_ctx = format_ctx_;
+    format_ctx_ = nullptr;
+    return close_output_io(format_ctx);
+  }
+
+  void release() noexcept {
+    format_ctx_ = nullptr;
+  }
+
+ private:
+  AVFormatContext* format_ctx_;
+};
 } // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -287,6 +315,7 @@ void open_format(
     const std::optional<OptionDict>& options) {
   AVFORMAT_CONST AVOutputFormat* fmt = format_ctx->oformat;
   AVDictionaryDPtr option = get_option_dict(options);
+  OutputIOCloseGuard close_on_error{format_ctx};
 
   if (strcmp(fmt->name, "image2") == 0) {
     // By default, image2 muxer warns about the path not containing sequence
@@ -311,6 +340,26 @@ void open_format(
       avformat_write_header(format_ctx, option),
       fmt::format("Failed to write header: {}", format_ctx->url))
   check_empty(option);
+  close_on_error.release();
+}
+
+void close_format(AVFormatContext* format_ctx, WriteTrailerFn write_trailer) {
+  OutputIOCloseGuard close_guard{format_ctx};
+  const int trailer_error = write_trailer(format_ctx);
+  // close_output_io releases only pb. The URL remains owned by format_ctx
+  // until avformat_free_context, so it is available for both diagnostics.
+  const int close_error = close_guard.close();
+  if (trailer_error < 0 && close_error < 0) {
+    LOG(ERROR) << av_error(
+        close_error,
+        "Failed to close output after the trailer also failed: {}",
+        format_ctx->url);
+  }
+  CHECK_AVERROR_NUM(
+      trailer_error,
+      fmt::format("Failed to write trailer: {}", format_ctx->url))
+  CHECK_AVERROR_NUM(
+      close_error, fmt::format("Failed to close output: {}", format_ctx->url))
 }
 
 } // namespace spdl::core::detail
