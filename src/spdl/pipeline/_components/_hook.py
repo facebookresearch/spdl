@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
@@ -195,6 +197,16 @@ class TaskHook(ABC):
         yield
 
 
+@asynccontextmanager
+async def _enter_hook_contexts(
+    hooks: Sequence[AsyncContextManager[None]],
+) -> AsyncIterator[None]:
+    async with AsyncExitStack() as stack:
+        for hook in hooks:
+            await stack.enter_async_context(hook)
+        yield
+
+
 def _stage_hooks(hooks: Sequence[TaskHook]) -> AsyncContextManager[None]:
     raw: list[AsyncContextManager[None]] = [hook.stage_hook() for hook in hooks]
 
@@ -209,14 +221,7 @@ def _stage_hooks(hooks: Sequence[TaskHook]) -> AsyncContextManager[None]:
     # lost when the pipeline is cancelled during shutdown.
     hs: list[AsyncContextManager[None]] = [_ShieldedHook(h) for h in raw]
 
-    @asynccontextmanager
-    async def stage_hooks() -> AsyncIterator[None]:
-        async with AsyncExitStack() as stack:
-            for h in hs:
-                await stack.enter_async_context(h)
-            yield
-
-    return stage_hooks()
+    return _enter_hook_contexts(hs)
 
 
 def _task_hooks(
@@ -231,14 +236,7 @@ def _task_hooks(
             "Make sure that `task_hook()` is decorated with `asynccontextmanager`."
         )
 
-    @asynccontextmanager
-    async def task_hooks() -> AsyncIterator[None]:
-        async with AsyncExitStack() as stack:
-            for h in hs:
-                await stack.enter_async_context(h)
-            yield
-
-    return task_hooks()
+    return _enter_hook_contexts(hs)
 
 
 @dataclass
