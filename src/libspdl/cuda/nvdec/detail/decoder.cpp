@@ -52,10 +52,33 @@ class BoolRestorer {
   BoolRestorer& operator=(BoolRestorer&&) = delete;
 };
 
-CUvideoctxlock get_lock(CUcontext ctx) {
+template <typename F>
+class ScopeExit {
+  F callback_;
+  bool active_{true};
+
+ public:
+  explicit ScopeExit(F callback) : callback_{std::move(callback)} {}
+  ~ScopeExit() noexcept {
+    if (active_) {
+      callback_();
+    }
+  }
+
+  ScopeExit(const ScopeExit&) = delete;
+  ScopeExit& operator=(const ScopeExit&) = delete;
+  ScopeExit(ScopeExit&&) = delete;
+  ScopeExit& operator=(ScopeExit&&) = delete;
+
+  void release() noexcept {
+    active_ = false;
+  }
+};
+
+CUvideoctxlockPtr get_lock(CUcontext ctx) {
   CUvideoctxlock lock;
   CHECK_CU(cuvidCtxLockCreate(&lock, ctx), "Failed to create context lock.");
-  return lock;
+  return CUvideoctxlockPtr{lock};
 }
 
 int CUDAAPI video_sequence_callback(void* p, CUVIDEOFORMAT* data) noexcept {
@@ -201,6 +224,54 @@ inline void warn_if_error(CUvideodecoder decoder, int picture_index) {
 // NvDecDecoderCore
 ////////////////////////////////////////////////////////////////////////////////
 
+NvDecDecoderCore::~NvDecDecoderCore() noexcept {
+  release_device_resources_in_context();
+}
+
+void NvDecDecoderCore::release_device_resources_in_context() noexcept {
+  if (cu_ctx_) {
+    const CUresult status = push_current_(cu_ctx_);
+    if (status != CUDA_SUCCESS) {
+      LOG(WARNING) << fmt::format(
+          "Failed to make the NVDEC context current during resource cleanup "
+          "({}: {}); abandoning device resources to avoid cleanup under the wrong "
+          "context",
+          get_error_name(status),
+          get_error_desc(status));
+      abandon_device_resources();
+      return;
+    }
+  }
+  release_device_resources();
+  if (cu_ctx_) {
+    CUcontext popped_context = nullptr;
+    const CUresult status = cuCtxPopCurrent(&popped_context);
+    if (status != CUDA_SUCCESS) {
+      LOG(WARNING) << fmt::format(
+          "Failed to restore the CUDA context after NVDEC resource cleanup "
+          "({}: {})",
+          get_error_name(status),
+          get_error_desc(status));
+    }
+  }
+}
+
+void NvDecDecoderCore::abandon_device_resources() noexcept {
+  (void)frame_buffer_.release();
+  (void)parser_.release();
+  (void)decoder_.release();
+  (void)lock_.release();
+  cap_cache_.clear();
+}
+
+void NvDecDecoderCore::release_device_resources() noexcept {
+  frame_buffer_.reset();
+  parser_.reset();
+  decoder_.reset();
+  lock_.reset();
+  cap_cache_.clear();
+}
+
 void NvDecDecoderCore::init_decoder(
     const CUDAConfig& device_config,
     const spdl::core::VideoCodec& codec,
@@ -234,16 +305,75 @@ void NvDecDecoderCore::init_decoder(
   if (tgt_h > 0 && tgt_h % 2) {
     SPDL_FAIL(fmt::format("target_height must be positive. Found: {}", tgt_h));
   }
-  if (device_config_.device_index != device_config.device_index) {
-    cu_ctx_ = get_cucontext(device_config.device_index);
-    lock_ = get_lock(cu_ctx_);
-    CHECK_CU(cuCtxSetCurrent(cu_ctx_), "Failed to set current context.");
-
-    parser_ = nullptr;
-    decoder_ = nullptr; // will be re-initialized in the callback
+  const bool switching_device =
+      device_config_.device_index != device_config.device_index;
+  CUcontext calling_ctx = nullptr;
+  if (switching_device) {
+    CHECK_CU(
+        cuCtxGetCurrent(&calling_ctx), "Failed to get current CUDA context.");
   }
-  device_config_ = device_config;
+  bool new_device_state_installed = false;
+  auto restore_context_on_error =
+      ScopeExit{[this,
+                 switching_device,
+                 calling_ctx,
+                 &new_device_state_installed]() noexcept {
+        // Any failure below can leave cached parser or allocator state partial.
+        initialization_failed_ = true;
+        device_config_.device_index = -1;
+        if (!switching_device) {
+          release_device_resources_in_context();
+          cu_ctx_ = nullptr;
+          return;
+        }
+        if (new_device_state_installed) {
+          const CUresult status = cuCtxSetCurrent(cu_ctx_);
+          if (status == CUDA_SUCCESS) {
+            release_device_resources();
+          } else {
+            LOG(WARNING) << fmt::format(
+                "Failed to make the replacement NVDEC context current during "
+                "initialization rollback ({}: {}); abandoning device resources",
+                get_error_name(status),
+                get_error_desc(status));
+            abandon_device_resources();
+          }
+        } else {
+          release_device_resources_in_context();
+        }
+        cu_ctx_ = nullptr;
+        const CUresult status = cuCtxSetCurrent(calling_ctx);
+        if (status != CUDA_SUCCESS) {
+          LOG(WARNING) << fmt::format(
+              "Failed to restore the CUDA context after NVDEC initialization "
+              "failed ({}: {})",
+              get_error_name(status),
+              get_error_desc(status));
+        }
+      }};
+  if (switching_device) {
+    const CUcontext next_ctx = get_cucontext(device_config.device_index);
 
+    // The parser and decoder retain the context lock, and all device-owned
+    // resources must be released while their original context is current.
+    if (cu_ctx_) {
+      CHECK_CU(cuCtxSetCurrent(cu_ctx_), "Failed to set current context.");
+    }
+    release_device_resources();
+    // From this point onward the previous context no longer owns any live
+    // decoder resources. Invalidate the cached device state before operations
+    // on the replacement context can throw, so a later retry rebuilds both
+    // the context lock and resources instead of treating this partial
+    // transition as an initialized decoder.
+    cu_ctx_ = nullptr;
+    device_config_.device_index = -1;
+
+    CHECK_CU(cuCtxSetCurrent(next_ctx), "Failed to set current context.");
+    auto next_lock = get_lock(next_ctx);
+    cu_ctx_ = next_ctx;
+    lock_ = std::move(next_lock);
+    new_device_state_installed = true;
+  }
   auto cdc = convert_codec_id(codec.get_codec_id());
   if (!parser_ || codec_ != cdc) {
     VLOG(9) << "initializing parser";
@@ -265,6 +395,16 @@ void NvDecDecoderCore::init_decoder(
   // Reset frame buffer for new stream
   frame_buffer_.reset();
   time_window_ = std::nullopt;
+
+  // Commit the cached configuration only after every throwing initialization
+  // step succeeds. A failed device switch must remain retryable.
+  device_config_ = device_config;
+
+  // Later NVDEC calls and their synchronous callbacks use the context
+  // selected here. Preserve that success-path contract, but restore the
+  // caller's context when initialization exits through an exception.
+  initialization_failed_ = false;
+  restore_context_on_error.release();
 }
 
 int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
@@ -319,7 +459,7 @@ int NvDecDecoderCore::handle_video_sequence(CUVIDEOFORMAT* video_fmt) {
 
   // Get parameters for creating decoder.
   auto new_decoder_param = get_create_info(
-      lock_,
+      reinterpret_cast<CUvideoctxlock>(lock_.get()),
       video_fmt,
       output_fmt,
       max_width,
@@ -536,6 +676,9 @@ void NvDecDecoderCore::rethrow_callback_error() {
 }
 
 void NvDecDecoderCore::reset() {
+  if (initialization_failed_) {
+    return;
+  }
   if (parser_) {
     const bool callbacks_were_disabled = std::exchange(cb_disabled_, true);
     const BoolRestorer restore_callbacks{cb_disabled_, callbacks_were_disabled};
