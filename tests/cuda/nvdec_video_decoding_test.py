@@ -420,6 +420,57 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
             mock_nvdec_decoder.call_count, 2, "Decoder should be created twice"
         )
 
+    @unittest.skipUnless(torch.cuda.is_available(), "CUDA is not available")
+    def test_cached_decoder_refreshes_cuda_config(self) -> None:
+        """A cached decoder uses the latest allocator and CUDA stream."""
+        sample = _get_h264_sample()
+        packets = spdl.io.demux_video(sample.path)
+        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        codec = packets.codec
+        self.assertIsNotNone(codec)
+
+        first_allocations = []
+        second_allocations = []
+
+        def make_allocator(allocations):
+            def allocate(size, device, stream):
+                allocations.append((device, stream))
+                return torch.cuda.caching_allocator_alloc(size, device, stream)
+
+            return allocate, torch.cuda.caching_allocator_delete
+
+        first_stream = torch.cuda.Stream(device=DEFAULT_CUDA)
+        second_stream = torch.cuda.Stream(device=DEFAULT_CUDA)
+        first_config = spdl.io.cuda_config(
+            device_index=DEFAULT_CUDA,
+            stream=first_stream.cuda_stream,
+            allocator=make_allocator(first_allocations),
+        )
+        second_config = spdl.io.cuda_config(
+            device_index=DEFAULT_CUDA,
+            stream=second_stream.cuda_stream,
+            allocator=make_allocator(second_allocations),
+        )
+
+        decoder = spdl.io.nvdec_decoder(first_config, codec, use_cache=True)
+        try:
+            first_buffer = decoder.decode_packets(packets.clone())
+            cached_decoder = spdl.io.nvdec_decoder(second_config, codec, use_cache=True)
+            second_buffer = cached_decoder.decode_packets(packets.clone())
+        except RuntimeError as error:
+            if "CUDA_ERROR_NO_DEVICE" in str(error):
+                self.skipTest("NVDEC device is not available")
+            raise
+
+        self.assertIs(cached_decoder, decoder)
+        self.assertGreater(len(first_allocations), 0)
+        self.assertGreater(len(second_allocations), 0)
+        for _, stream in first_allocations:
+            self.assertEqual(stream, first_stream.cuda_stream)
+        for _, stream in second_allocations:
+            self.assertEqual(stream, second_stream.cuda_stream)
+        del first_buffer, second_buffer
+
     @patch("spdl.io._core._libspdl_cuda.make_nvdec_decoder")
     def test_decoder_caching_different_threads(
         self, mock_nvdec_decoder: MagicMock
