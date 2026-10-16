@@ -82,12 +82,30 @@ CUcontext get_cucontext(CUdevice device) {
   return CUCONTEXT_CACHE.at(device);
 }
 
-static CUcontext get_current_context() {
+#ifndef __has_extension
+#define SPDL_HAS_EXTENSION(x) 0
+#else
+#define SPDL_HAS_EXTENSION(x) __has_extension(x)
+#endif
+
+#if SPDL_HAS_EXTENSION(nullability)
+#define SPDL_NULLABLE                                                                  \
+  _Pragma("GCC diagnostic push")                                                       \
+      _Pragma("GCC diagnostic ignored \"-Wnullability-extension\"") _Nullable _Pragma( \
+          "GCC diagnostic pop")
+#else
+#define SPDL_NULLABLE
+#endif
+
+static CUcontext SPDL_NULLABLE get_current_context() {
   CUcontext context = nullptr;
   CHECK_CU(
       cuCtxGetCurrent(&context), "Failed to get the current CUDA context.");
   return context;
 }
+
+#undef SPDL_NULLABLE
+#undef SPDL_HAS_EXTENSION
 
 CUDAContextPushGuard::CUDAContextPushGuard(int device_index)
     : context_{get_cucontext(device_index)},
