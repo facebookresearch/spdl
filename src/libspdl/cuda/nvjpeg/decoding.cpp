@@ -26,6 +26,11 @@
 namespace spdl::cuda {
 namespace {
 
+cudaStream_t as_cuda_stream(uintptr_t stream) {
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
+  return reinterpret_cast<cudaStream_t>(stream);
+}
+
 std::tuple<size_t, bool> get_shape(nvjpegOutputFormat_t out_fmt) {
   switch (out_fmt) {
     // TODO: Support NVJPEG_OUTPUT_YUV?
@@ -134,7 +139,7 @@ std::tuple<CUDABufferPtr, detail::NVJPEGImageLayout, nvjpegImage_t> decode(
             data.size(),
             fmt,
             &image,
-            (CUstream_st*)cuda_config.stream),
+            as_cuda_stream(cuda_config.stream)),
         "Failed to decode an image.");
   }
   return {std::move(buffer), meta, image};
@@ -161,8 +166,14 @@ CUDABufferPtr decode_image_nvjpeg(
     SPDL_FAIL(
         "Image resizing while decoding with NVJPEG reqreuires SPDL to be compiled with NPPI support.");
 #else
-    auto [buffer2, meta2] =
+    CUDABufferPtr buffer2;
+    detail::NVJPEGImageLayout meta2{};
+    detail::CUDAStreamSyncOnExceptionGuard cleanup_guard{cuda_config.stream};
+    std::tie(buffer2, meta2) =
         get_output(fmt, scale_height, scale_width, cuda_config);
+    if (!buffer2) {
+      SPDL_FAIL_INTERNAL("NVJPEG output allocation returned a null buffer.");
+    }
     nvjpegImage_t resized{};
     detail::wrap_nvjpeg_image(buffer2->data(), meta2, resized);
 
@@ -178,13 +189,18 @@ CUDABufferPtr decode_image_nvjpeg(
         cuda_config.device_index,
         sync);
 
-    return std::move(buffer2);
+    if (!sync) {
+      detail::retain_cuda_storage_dependencies(
+          buffer2->storage, {buffer->storage});
+    }
+
+    return buffer2;
 #endif
   }
 
   if (sync) {
     CHECK_CUDA(
-        cudaStreamSynchronize((cudaStream_t)cuda_config.stream),
+        cudaStreamSynchronize(as_cuda_stream(cuda_config.stream)),
         "Failed to synchronize stream after NVJPEG decoding.");
   }
 
@@ -221,10 +237,17 @@ CUDABufferPtr decode_image_nvjpeg(
 
   auto [out_buffer, out_meta] =
       get_output(fmt, scale_height, scale_width, cuda_config, batch_size);
+  if (!out_buffer) {
+    SPDL_FAIL_INTERNAL("NVJPEG output allocation returned a null buffer.");
+  }
   nvjpegImage_t out_wrapper{};
+  std::vector<CUDAStoragePtr> source_storages;
+  source_storages.reserve(batch_size);
+  detail::CUDAStreamSyncOnExceptionGuard cleanup_guard{cuda_config.stream};
 
   for (size_t i = 0; i < batch_size; ++i) {
     auto [src_buffer, src_meta, decoded] = decode(dataset[i], fmt, cuda_config);
+    source_storages.emplace_back(std::move(src_buffer->storage));
 
     detail::wrap_nvjpeg_image(out_buffer->data(), out_meta, out_wrapper, i);
     detail::resize_npp(
@@ -241,8 +264,14 @@ CUDABufferPtr decode_image_nvjpeg(
 
   if (sync) {
     CHECK_CUDA(
-        cudaStreamSynchronize((cudaStream_t)cuda_config.stream),
+        cudaStreamSynchronize(as_cuda_stream(cuda_config.stream)),
         "Failed to synchronize stream after batch NVJPEG decoding.");
+  } else {
+    // Intentionally copy this vector. If dependency-owner allocation throws,
+    // the caller must retain the sole source-storage references until
+    // cleanup_guard synchronizes the stream during unwinding.
+    detail::retain_cuda_storage_dependencies(
+        out_buffer->storage, source_storages);
   }
 
   return std::move(out_buffer);
