@@ -791,7 +791,9 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
 
         async def exercise_cancellation() -> None:
             read_cancelled = asyncio.Event()
-            release_cancellation = asyncio.Event()
+            cleanup_resumed = asyncio.Event()
+            release_cleanup = asyncio.Event()
+            cleanup_finished = asyncio.Event()
 
             class _SlowCancellationQueue(asyncio.Queue[int]):
                 async def get(self) -> int:
@@ -799,8 +801,14 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
                         return await super().get()
                     except asyncio.CancelledError:
                         read_cancelled.set()
-                        await release_cancellation.wait()
-                        raise
+                        try:
+                            await asyncio.Event().wait()
+                        except asyncio.CancelledError:
+                            cleanup_resumed.set()
+                            await release_cleanup.wait()
+                            cleanup_finished.set()
+                            raise
+                        raise AssertionError("cleanup wait returned unexpectedly")
 
             async def never_run() -> None:
                 await asyncio.Event().wait()
@@ -817,10 +825,15 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
                     pipeline._impl._get_with_timeout_on_loop(0.01)
                 )
                 await asyncio.wait_for(read_cancelled.wait(), timeout=_TIMEOUT)
-                read.cancel()
-                release_cancellation.set()
-                with self.assertRaises(asyncio.CancelledError):
+                read.cancel("external stop")
+                await asyncio.wait_for(cleanup_resumed.wait(), timeout=_TIMEOUT)
+                await asyncio.sleep(0)
+                self.assertFalse(read.done())
+                release_cleanup.set()
+                with self.assertRaises(asyncio.CancelledError) as caught:
                     await read
+                self.assertEqual(caught.exception.args, ("external stop",))
+                self.assertTrue(cleanup_finished.is_set())
             finally:
                 pipeline._impl._event_loop._coro.close()
                 executor.shutdown()
@@ -860,15 +873,45 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
                     pipeline._impl._get_with_timeout_on_loop(0.01)
                 )
                 await asyncio.wait_for(first_cancellation.wait(), timeout=_TIMEOUT)
-                read.cancel()
-                with self.assertRaises(asyncio.CancelledError):
+                read.cancel("external stop")
+                with self.assertRaises(asyncio.CancelledError) as caught:
                     await read
+                self.assertEqual(caught.exception.args, ("external stop",))
                 self.assertEqual(pipeline._impl._take_pending_output_item(), 1)
             finally:
                 pipeline._impl._event_loop._coro.close()
                 executor.shutdown()
 
         asyncio.run(exercise_cancellation())
+
+    def test_handled_cancellation_does_not_change_slice_timeout(self) -> None:
+        """A prior handled cancellation does not escape from an internal read."""
+
+        async def exercise_timeout() -> None:
+            async def never_run() -> None:
+                await asyncio.Event().wait()
+
+            executor = ThreadPoolExecutor(max_workers=1)
+            pipeline = Pipeline(
+                never_run(),
+                asyncio.Queue(1),
+                executor,
+                desc="pipeline stale cancellation test",
+            )
+            try:
+                owner = asyncio.current_task()
+                assert owner is not None
+                owner.cancel("handled stop")
+                with self.assertRaises(asyncio.CancelledError):
+                    await asyncio.sleep(0)
+
+                with self.assertRaises(_QueueReadTimedOut):
+                    await pipeline._impl._get_with_timeout_on_loop(0)
+            finally:
+                pipeline._impl._event_loop._coro.close()
+                executor.shutdown()
+
+        asyncio.run(exercise_timeout())
 
     def test_sink_timeout_error_is_not_an_internal_read_timeout(self) -> None:
         """A custom sink's TimeoutError propagates instead of being retried."""

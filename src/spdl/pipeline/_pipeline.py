@@ -9,6 +9,7 @@ import asyncio
 import concurrent.futures
 import logging
 import queue
+import sys
 import threading
 import time
 import warnings
@@ -38,6 +39,30 @@ _THREAD_DRAIN_BATCH_SIZE: int = 64
 T = TypeVar("T")
 
 _OUTPUT_READ_PUBLICATION_GRACE = 0.01
+
+
+if sys.version_info >= (3, 11):
+
+    async def _join_cancelled_task(task: asyncio.Task[Any]) -> None:
+        """Wait for a cancelled child without masking cancellation of this task."""
+        owner = asyncio.current_task()
+        assert owner is not None
+        cancellation_count = owner.cancelling()
+        try:
+            await asyncio.wait([task])
+        except asyncio.CancelledError:
+            if owner.cancelling() > cancellation_count and not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+            raise
+
+else:
+
+    async def _join_cancelled_task(  # type: ignore[no-redef]
+        task: asyncio.Task[Any],
+    ) -> None:
+        """Wait for a cancelled child without masking cancellation of this task."""
+        await asyncio.gather(task, return_exceptions=True)
 
 
 def _log_late_drain_failure(
@@ -607,15 +632,11 @@ class _PipelineImpl(Generic[T]):
                 return self._publish_output_item(task.result())
 
             task.cancel()
-            # ``gather(..., return_exceptions=True)`` converts cancellation of
-            # the child read into a result, but cancellation of this wrapper
-            # still propagates. This distinction works on Python 3.10, which
-            # predates ``Task.cancelling()``.
-            await asyncio.gather(task, return_exceptions=True)
+            await _join_cancelled_task(task)
         except BaseException:
             if not task.done():
                 task.cancel()
-                await asyncio.gather(task, return_exceptions=True)
+                await _join_cancelled_task(task)
             if not task.cancelled() and task.exception() is None:
                 # A producer may refill a bounded queue as soon as this read
                 # frees a slot. Keep the recovered item outside the queue so
