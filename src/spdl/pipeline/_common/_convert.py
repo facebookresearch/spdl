@@ -21,7 +21,14 @@ import asyncio
 import inspect
 import sys
 import traceback
-from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Iterator
+from collections.abc import (
+    AsyncIterable,
+    Awaitable,
+    Callable,
+    Generator,
+    Iterable,
+    Iterator,
+)
 from concurrent.futures import Executor, ProcessPoolExecutor
 from typing import Any, TypeVar
 
@@ -217,10 +224,58 @@ def _to_async_gen(
             else:
                 return item
 
-        while (val := await loop.run_in_executor(executor, _next)) is not sentinel:
-            yield val
+        try:
+            while (
+                val := await _await_executor_result(
+                    loop.run_in_executor(executor, _next)
+                )
+            ) is not sentinel:
+                yield val
+        finally:
+            if isinstance(gen, Generator):
+                original_error = sys.exc_info()[1]
+                try:
+                    await _await_executor_result(
+                        loop.run_in_executor(executor, gen.close)
+                    )
+                except BaseException:
+                    if original_error is None or isinstance(
+                        original_error, GeneratorExit
+                    ):
+                        raise
 
     return afunc
+
+
+async def _await_executor_result(future: asyncio.Future[U]) -> U:
+    """Finish a thread operation before propagating cancellation to its caller.
+
+    Cancelling an asyncio future cannot interrupt its underlying thread. Waiting
+    for it prevents generator.close() from racing an unfinished next() call.
+    The synchronous operation must terminate for cancellation to complete.
+    """
+    cancelled: asyncio.CancelledError | None = None
+    while True:
+        try:
+            result = await asyncio.shield(future)
+            break
+        except asyncio.CancelledError as error:
+            cancelled = cancelled or error
+            if future.done():
+                try:
+                    result = future.result()
+                except asyncio.CancelledError as future_cancelled:
+                    raise future_cancelled from cancelled
+                except Exception as future_error:
+                    raise future_error from cancelled
+                break
+        except Exception as error:
+            if cancelled is not None:
+                raise error from cancelled
+            raise
+    if cancelled is not None:
+        raise cancelled
+    return result
 
 
 def convert_to_async(

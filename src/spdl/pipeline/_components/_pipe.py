@@ -14,7 +14,15 @@ __all__ = [
 
 import asyncio
 import inspect
-from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine, Sequence
+import sys
+from collections.abc import (
+    AsyncGenerator,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Sequence,
+)
 from contextlib import asynccontextmanager
 from fractions import Fraction
 from typing import Any, TypeVar
@@ -24,7 +32,15 @@ from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._common._types import _TMergeOp
 from spdl.pipeline.defs import _PipeArgs
 
-from ._common import _EOF, _EPOCH_END, _SKIP, is_eof, is_epoch_end, StageInfo
+from ._common import (
+    _drive_to_completion,
+    _EOF,
+    _EPOCH_END,
+    _SKIP,
+    is_eof,
+    is_epoch_end,
+    StageInfo,
+)
 from ._hook import _stage_hooks, _task_hooks, TaskHook
 from ._queue import _queue_stage_hook, AsyncQueue
 
@@ -195,45 +211,74 @@ async def _wrap_agen(
     queue: AsyncQueue,
     item: Any = None,
 ) -> None:
+    try:
+        while await _process_agen_step(coro, hooks, queue, item):
+            pass
+    finally:
+        if isinstance(coro, AsyncGenerator):
+            original_error = sys.exc_info()[0]
+            _, cancelled = await _drive_to_completion(coro.aclose())
+            if cancelled is not None and original_error in (None, StopAsyncIteration):
+                raise cancelled
+
+
+async def _process_agen_step(
+    coro: AsyncIterator[U],
+    hooks: list[TaskHook],
+    queue: AsyncQueue,
+    item: Any,
+) -> bool:
+    """Process one generator step and report whether iteration should continue."""
+    # NOTE:
+    # Nested `except StopAsyncIteration` would look strange.
+    # The following explains why.
+    #
+    # We want to give hooks opportunity to react to StopAsyncIteration,
+    # for example, so that StatsHook will not record the task stats
+    # for StopAsyncIteration case.
+    #
+    # When users implement hook, they might mistakenly absorb the
+    # StopAsyncIteration exception by blanket `except Exception`,
+    # and in this case, the StopAsyncIteration won't propagate to
+    # the outside of `_task_hooks`.
+    # When that happens, the control flow cannot exit the while loop.
+    #
+    # So when `StopAsyncIteration` is raised, we catch it once to set
+    # the exhausted flag to True, then re-raise the exception so as
+    # to give hooks chance to react to it.
+    # If the hooks do not absorb the StopAsyncIteration, and
+    # it propagates them, then we catch it and exit.
     exhausted = False
-    while not exhausted:
-        # NOTE:
-        # Nested `except StopAsyncIteration` would look strange.
-        # The following explains why.
-        #
-        # We want to give hooks opportunity to react to StopAsyncIteration,
-        # for example, so that StatsHook will not record the task stats
-        # for StopAsyncIteration case.
-        #
-        # When users implement hook, they might mistakenly absorb the
-        # StopAsyncIteration exception by blanket `except Exception`,
-        # and in this case, the StopAsyncIteration won't propagate to
-        # the outside of `_task_hooks`.
-        # When that happens, the control flow cannot exit the while loop.
-        #
-        # So when `StopAsyncIteration` is raised, we catch it once to set
-        # the exhausted flag to True, then re-raise the exception so as
-        # to give hooks chance to react to it.
-        # If the hooks do not absorb the StopAsyncIteration, and
-        # it propagates them, then we catch it and exit.
-        try:
-            async with _task_hooks(hooks, item):
-                try:
-                    result = await anext(coro)
-                except StopAsyncIteration:
-                    exhausted = True
-                    raise
+    try:
+        async with _task_hooks(hooks, item):
+            try:
+                result = await anext(coro)
+            except StopAsyncIteration:
+                exhausted = True
+                raise
+    except StopAsyncIteration:
+        return False
 
-            # If task_hooks absorb the `StopAsyncIteration`, we need to exit here.
-            if exhausted:
-                return
+    # A hook can absorb the StopAsyncIteration raised by anext().
+    if exhausted:
+        return False
+    if result is not _SKIP:
+        await queue.put(result)
+    return True
 
-            if result is _SKIP:
-                continue
 
-            await queue.put(result)
-        except StopAsyncIteration:
-            return
+@asynccontextmanager
+async def _cancel_tasks_on_exit(
+    *task_sets: set[asyncio.Task[Any]],
+) -> AsyncIterator[None]:
+    try:
+        yield
+    finally:
+        original_error = sys.exc_info()[1]
+        tasks: set[asyncio.Task[Any]] = set().union(*task_sets)
+        _, cancelled = await _drive_to_completion(_cancel_pipe_tasks(tasks))
+        if cancelled is not None and original_error is None:
+            raise cancelled
 
 
 def _pipe(
@@ -296,44 +341,56 @@ def _pipe(
     # pyrefly: ignore [not-callable]
     @_stage_hooks(hooks)
     async def pipe() -> None:
-        i, tasks = 0, set()
-        while not fail_counter.too_many_failures():
-            item = await input_queue.get()
+        i = 0
+        tasks: set[asyncio.Task[None]] = set()
+        async with _cancel_tasks_on_exit(tasks):
+            while not fail_counter.too_many_failures():
+                item = await input_queue.get()
 
-            if is_epoch_end(item):
-                # Epoch boundary: wait for all in-flight tasks, propagate, continue
-                if tasks:
-                    await asyncio.wait(tasks)
-                    tasks = set()
-                await output_queue.put(_EPOCH_END)
-                continue
+                if is_epoch_end(item):
+                    # Epoch boundary: wait for all in-flight tasks, propagate, continue
+                    if tasks:
+                        await asyncio.wait(tasks)
+                        tasks.clear()
+                    await output_queue.put(_EPOCH_END)
+                    continue
 
-            if is_eof(item) and not op_requires_eof:
-                break
-            # note: Make sure that `afunc` is called directly in this function,
-            # so as to detect user error. (incompatible `afunc` and `iterator` combo)
-            task = create_task(
-                # pyrefly: ignore [bad-argument-type]
-                _wrap(afunc(item), item),
-                name=f"{info}:{(i := i + 1)}",
-            )
-            tasks.add(task)
-
-            if len(tasks) >= args.concurrency:
-                _, tasks = await asyncio.wait(
-                    tasks, return_when=asyncio.FIRST_COMPLETED
+                if is_eof(item) and not op_requires_eof:
+                    break
+                # note: Make sure that `afunc` is called directly in this function,
+                # so as to detect user error. (incompatible `afunc` and `iterator` combo)
+                task = create_task(
+                    # pyrefly: ignore [bad-argument-type]
+                    _wrap(afunc(item), item),
+                    name=f"{info}:{(i := i + 1)}",
                 )
+                tasks.add(task)
 
-            if is_eof(item):
-                break
+                if len(tasks) >= args.concurrency:
+                    done, _ = await asyncio.wait(
+                        tasks, return_when=asyncio.FIRST_COMPLETED
+                    )
+                    tasks.difference_update(done)
 
-        if tasks:
-            await asyncio.wait(tasks)
+                if is_eof(item):
+                    break
 
-        if fail_counter.too_many_failures():
-            fail_counter.raise_for_failures(info)
+            if tasks:
+                await asyncio.wait(tasks)
+                tasks.clear()
+
+            if fail_counter.too_many_failures():
+                fail_counter.raise_for_failures(info)
 
     return pipe()
+
+
+async def _cancel_pipe_tasks(tasks: set[asyncio.Task[Any]]) -> None:
+    """Cancel per-item operations and await their generator cleanup."""
+    for task in tasks:
+        task.cancel()
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def _ordered_pipe(
