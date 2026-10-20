@@ -25,7 +25,7 @@ from collections.abc import (
 )
 from contextlib import asynccontextmanager
 from fractions import Fraction
-from typing import Any, TypeVar
+from typing import Any, NoReturn, TypeVar
 
 from spdl.pipeline._common._convert import convert_to_async
 from spdl.pipeline._common._misc import create_task
@@ -89,6 +89,7 @@ class _FailCounter(TaskHook):
         self._num_stage_failures: int = 0
         self._num_stage_invocations: int = 0
         self._exceeded: bool = False
+        self._failure_handler: Callable[[], None] | None = None
 
     # Fixed probation period for rate-based thresholds.
     # Rate checking only starts after this many invocations.
@@ -107,6 +108,7 @@ class _FailCounter(TaskHook):
         For example, Fraction(3, 10) means "30% failure rate, but only start
         checking after at least 100 invocations".
         """
+        was_exceeded = self._exceeded
         match threshold := self.max_failures:
             case Fraction():
                 num, den = threshold.numerator, threshold.denominator
@@ -117,6 +119,8 @@ class _FailCounter(TaskHook):
             case int():
                 if threshold >= 0 and self.num_failures > threshold:
                     self._exceeded = True
+        if not was_exceeded and self._exceeded and self._failure_handler is not None:
+            self._failure_handler()
 
     @property
     def max_failures(self) -> int | Fraction:
@@ -163,7 +167,7 @@ class _FailCounter(TaskHook):
                 self._num_stage_failures += 1
             self._check_threshold()
 
-    def raise_for_failures(self, info: StageInfo) -> None:
+    def raise_for_failures(self, info: StageInfo) -> NoReturn:
         threshold = self.max_failures
         display = info
         if isinstance(threshold, Fraction):
@@ -188,6 +192,31 @@ def _get_fail_counter() -> type[_FailCounter]:
         pass
 
     return _FC
+
+
+async def _stop_on_failure(
+    coro: Coroutine[Any, Any, U], fail_counter: _FailCounter, info: StageInfo
+) -> U:
+    """Wake a stage waiting for input when an in-flight operation exceeds its limit."""
+    task = create_task(coro, name=f"{info}_failure_wakeup")
+    failure_wakeup = asyncio.get_running_loop().create_future()
+
+    def wake_up() -> None:
+        if not failure_wakeup.done():
+            failure_wakeup.set_result(None)
+
+    fail_counter._failure_handler = wake_up
+    async with _cancel_tasks_on_exit({task}):
+        try:
+            done, _ = await asyncio.wait(
+                {task, failure_wakeup}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if task in done:
+                return await task
+            fail_counter.raise_for_failures(info)
+        finally:
+            fail_counter._failure_handler = None
+            failure_wakeup.cancel()
 
 
 async def _wrap_afunc(
@@ -337,10 +366,7 @@ def _pipe(
     else:
         raise ValueError(f"{afunc=} must be either async function or async generator.")
 
-    @_queue_stage_hook(output_queue)
-    # pyrefly: ignore [not-callable]
-    @_stage_hooks(hooks)
-    async def pipe() -> None:
+    async def _run() -> None:
         i = 0
         tasks: set[asyncio.Task[None]] = set()
         async with _cancel_tasks_on_exit(tasks):
@@ -381,6 +407,12 @@ def _pipe(
 
             if fail_counter.too_many_failures():
                 fail_counter.raise_for_failures(info)
+
+    @_queue_stage_hook(output_queue)
+    # pyrefly: ignore [not-callable]
+    @_stage_hooks(hooks)
+    async def pipe() -> None:
+        await _stop_on_failure(_run(), fail_counter, info)
 
     return pipe()
 
@@ -476,6 +508,7 @@ def _ordered_pipe(
         ),
         buffer_size=args.concurrency,
     )
+    pending_ops: set[asyncio.Task[U]] = set()
 
     async def _run(item: T) -> U:
         async with _task_hooks(task_hooks, item):
@@ -494,8 +527,9 @@ def _ordered_pipe(
                 break
 
             task = create_task(_run(item), name=f"{info}:{(i := i + 1)}")
+            pending_ops.add(task)
+            task.add_done_callback(pending_ops.discard)
             await inter_queue.put((task, item))
-
         await inter_queue.put(_EOF)
 
     async def get_check_put() -> None:
@@ -533,7 +567,13 @@ def _ordered_pipe(
     # pyrefly: ignore [not-callable]
     @_stage_hooks(task_hooks)
     async def ordered_pipe() -> None:
-        await asyncio.wait({create_task(get_run_put()), create_task(get_check_put())})
+        tasks = {create_task(get_run_put()), create_task(get_check_put())}
+
+        async def wait_for_tasks() -> None:
+            await asyncio.gather(*tasks)
+
+        async with _cancel_tasks_on_exit(tasks, pending_ops):
+            await _stop_on_failure(wait_for_tasks(), fail_counter, info)
 
         if fail_counter.too_many_failures():
             fail_counter.raise_for_failures(info)
