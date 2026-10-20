@@ -14,6 +14,18 @@ from spdl.pipeline._components._hook import TaskPerfStats, TaskStatsHook
 from spdl.pipeline._components._queue import QueuePerfStats, StatsQueue
 
 
+class _ReportingQueue(StatsQueue):
+    def __init__(self) -> None:
+        super().__init__(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="occupancy"),
+            interval=0.005,
+        )
+        self.reports: asyncio.Queue[QueuePerfStats] = asyncio.Queue()
+
+    async def interval_stats_callback(self, stats: QueuePerfStats) -> None:
+        await self.reports.put(stats)
+
+
 class P2PercentileTest(unittest.TestCase):
     def test_empty(self) -> None:
         """A fresh _P2Percentile with no observations reports 0.0."""
@@ -364,6 +376,33 @@ class TaskStatsHookPercentileTest(unittest.IsolatedAsyncioTestCase):
 
 
 class StatsQueuePercentileTest(unittest.IsolatedAsyncioTestCase):
+    async def test_occupancy_tracks_empty_periods_without_another_put(self) -> None:
+        """Reports distinguish empty and full intervals before and after draining."""
+        queue = _ReportingQueue()
+        async with queue.stage_hook():
+            for phase, expected in enumerate((0.0, 1.0, 0.0)):
+                reports = [
+                    await asyncio.wait_for(queue.reports.get(), timeout=3)
+                    for _ in range(3)
+                ]
+                # The first report may straddle the transition; the next two do not.
+                for stats in reports[1:]:
+                    self.assertAlmostEqual(stats.occupancy_rate, expected)
+                if phase == 0:
+                    await queue.put(1)
+                elif phase == 1:
+                    self.assertEqual(await queue.get(), 1)
+
+    async def test_final_occupancy_includes_an_unclosed_empty_period(self) -> None:
+        """A queue that never receives data reports zero occupancy on shutdown."""
+        queue = StatsQueue(
+            StageInfo(pipeline_id=0, stage_id="0", stage_name="final_occupancy")
+        )
+        with self.assertLogs("spdl.pipeline._components._queue", level="INFO") as logs:
+            async with queue.stage_hook():
+                await asyncio.sleep(0)
+        self.assertTrue(any("Occupancy rate: 0%" in line for line in logs.output))
+
     async def test_put_get_records_percentiles(self) -> None:
         """After put/get operations, the queue's internal counters have
         non-negative p90 percentile values for both put and get.

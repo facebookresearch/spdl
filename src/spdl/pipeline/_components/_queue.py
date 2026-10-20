@@ -177,6 +177,9 @@ class QueuePerfStats:
     The downstream stage is waiting for the next data and fetches one
     as soon as the upstream stage puts it. This suggests that the pipeline
     is suffering from data starvation.
+
+    .. versionchanged:: 0.7.0
+       Include ongoing empty periods in interval and final occupancy statistics.
     """
 
     @property
@@ -267,8 +270,10 @@ class StatsQueue(AsyncQueue):
                 done.set()
                 await report  # pyre-ignore: [61]
 
-            elapsed = time.monotonic() - t0
-            occupancy_rate = 0.0 if elapsed <= 0 else 1 - self._dur_empty / elapsed
+            now = time.monotonic()
+            elapsed = now - t0
+            dur_empty = self._empty_duration(now)
+            occupancy_rate = 0.0 if elapsed <= 0 else 1 - dur_empty / elapsed
             self._log_stats(
                 QueuePerfStats(
                     elapsed=elapsed,
@@ -283,12 +288,16 @@ class StatsQueue(AsyncQueue):
                 )
             )
 
+    def _empty_duration(self, now: float) -> float:
+        # A put closes an empty period; reports must also count one still open.
+        return self._dur_empty + (now - self._empty_t0 if self.empty() else 0.0)
+
     def _get_lap_stats(self) -> QueuePerfStats:
         # Get the current values
         now = time.monotonic()
         num_put, ave_put_time = self._putc.num_items, self._putc.ave_time
         num_get, ave_get_time = self._getc.num_items, self._getc.ave_time
-        dur_empty = self._dur_empty
+        dur_empty = self._empty_duration(now)
 
         # Compute delta
         elapsed = max(0.0, now - self._lap_t0)
