@@ -163,6 +163,7 @@ def _build_fused_stage_core(
     user_initializer: Any,
     user_initargs: tuple[Any, ...],
     report_stats_interval: float,
+    fail_fast: bool,
     continuous: bool,
     input_buffer_size: int,
     output_buffer_size: int,
@@ -182,6 +183,8 @@ def _build_fused_stage_core(
         "num_threads": num_threads,
         "report_stats_interval": report_stats_interval,
     }
+    if fail_fast:
+        build_kwargs["max_failures"] = 0
     initializer = partial(
         _worker_initializer, _get_global_id(), user_initializer, user_initargs
     )
@@ -215,6 +218,7 @@ def _build_fused_stage_from_spec(
     spec: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig,
     backend: _PoolBackend,
     report_stats_interval: float,
+    fail_fast: bool,
     continuous: bool,
     input_buffer_size: int,
     output_buffer_size: int,
@@ -242,6 +246,7 @@ def _build_fused_stage_from_spec(
         user_initializer=spec.initializer,
         user_initargs=spec.initargs,
         report_stats_interval=report_stats_interval,
+        fail_fast=fail_fast,
         continuous=continuous,
         input_buffer_size=input_buffer_size,
         output_buffer_size=output_buffer_size,
@@ -257,6 +262,7 @@ def _fuse_marked_regions(
     config: PipelineConfig[Any],
     *,
     report_stats_interval: float = -1,
+    fail_fast: bool = False,
     stacklevel: int = 3,
 ) -> tuple[PipelineConfig[Any], list[_SubprocessPipelinePool]]:
     """Fuse each ``.to()`` region into one subprocess-pipeline stage.
@@ -275,6 +281,7 @@ def _fuse_marked_regions(
     Args:
         config: The pipeline configuration to rewrite.
         report_stats_interval: Fallback stats interval for a region whose spec does not set one.
+        fail_fast: Inherit a build-level zero failure limit in the worker pipeline.
         stacklevel: ``warnings.warn`` stack level measured at this function. The fork-with-threads
             warning is raised from the nested ``_flush`` closure (two frames deeper), so it uses
             ``stacklevel + 2``.
@@ -323,6 +330,7 @@ def _fuse_marked_regions(
             target,
             backend,
             report_stats_interval,
+            fail_fast,
             continuous,
             input_buffer_size,
             output_buffer_size,

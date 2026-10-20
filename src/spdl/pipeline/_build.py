@@ -186,7 +186,10 @@ def _build_pipeline(
         # config has no markers. stacklevel=4: _fuse_marked_regions ->
         # _build_pipeline -> build_pipeline -> user.
         pipeline_cfg, pools = _fuse_marked_regions(
-            pipeline_cfg, report_stats_interval=report_stats_interval, stacklevel=4
+            pipeline_cfg,
+            report_stats_interval=report_stats_interval,
+            fail_fast=max_failures == 0,
+            stacklevel=4,
         )
         cleanup.add_pools(pools)
 
@@ -270,6 +273,10 @@ def build_pipeline(
             Setting ``-1`` (default) disables it.
             When a Fraction is provided (e.g., Fraction(1, 10) for 10%), it specifies
             the maximum failure rate (failures / invocations).
+
+            .. versionchanged:: 0.7.0
+
+               A zero limit also applies to stages inside ``.to()`` worker regions.
 
         report_stats_interval: When provided, report the pipeline performance stats
             every given interval. Unit: [sec]
