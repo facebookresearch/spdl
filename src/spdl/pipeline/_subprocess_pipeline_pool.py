@@ -383,8 +383,6 @@ class _DrainSource:
                     None, _get_input_message, self._in_q
                 )
             except _queue.Empty:
-                if self.exiting:
-                    return
                 continue
             if kind == _ITEM:
                 # An ``_ITEM`` payload is always a list (one item when the region is
