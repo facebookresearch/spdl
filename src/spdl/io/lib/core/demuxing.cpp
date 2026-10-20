@@ -105,7 +105,7 @@ PyDemuxerPtr _make_demuxer(
     const std::optional<std::string>& name) {
   nb::gil_scoped_release __g;
   return std::make_unique<PyDemuxer>(
-      make_demuxer(src, std::move(_adaptor), dmx_cfg, name));
+      make_demuxer(src, _adaptor, dmx_cfg, name));
 }
 
 PyDemuxerPtr _make_demuxer_memoryview(
