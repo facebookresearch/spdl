@@ -11,7 +11,7 @@ import threading
 import unittest
 from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 
-from spdl.pipeline._common._convert import _await_executor_result, _to_async_gen
+from spdl.pipeline._common._convert import _await_future, _to_async_gen
 from spdl.pipeline._components._common import _EOF, StageInfo
 from spdl.pipeline._components._pipe import _get_fail_counter, _pipe, _wrap_agen
 from spdl.pipeline._components._queue import AsyncQueue
@@ -118,7 +118,7 @@ class GeneratorCleanupTest(unittest.IsolatedAsyncioTestCase):
 
         async def get_cancellation_cause() -> BaseException | None:
             try:
-                await _await_executor_result(future)
+                await _await_future(future)
             except asyncio.CancelledError as error:
                 return error.__cause__
             self.fail("Executor operation completed without cancellation.")

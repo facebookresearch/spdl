@@ -1015,6 +1015,10 @@ class _PipelineImpl(Generic[T]):
     def get_item_nowait(self) -> T:
         """Get the next item if one is already buffered in the sink, without blocking.
 
+        .. versionchanged:: 0.7.0
+           Terminal pipeline failures raise :py:class:`PipelineFailure` after buffered
+           output is drained.
+
         Raises:
             RuntimeError: The pipeline is not started.
 

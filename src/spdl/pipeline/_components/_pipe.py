@@ -216,9 +216,9 @@ async def _wrap_agen(
             pass
     finally:
         if isinstance(coro, AsyncGenerator):
-            original_error = sys.exc_info()[0]
+            original_error = sys.exc_info()[1]
             _, cancelled = await _drive_to_completion(coro.aclose())
-            if cancelled is not None and original_error in (None, StopAsyncIteration):
+            if cancelled is not None and original_error is None:
                 raise cancelled
 
 

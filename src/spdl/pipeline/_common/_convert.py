@@ -36,6 +36,7 @@ from ._types import _TAsyncCallables, _TCallables
 
 T = TypeVar("T")
 U = TypeVar("U")
+V = TypeVar("V")
 
 
 def _get_call(obj: object) -> Any:
@@ -224,20 +225,17 @@ def _to_async_gen(
             else:
                 return item
 
+        async def _run(op: Callable[[], V]) -> V:
+            return await _await_future(loop.run_in_executor(executor, op))
+
         try:
-            while (
-                val := await _await_executor_result(
-                    loop.run_in_executor(executor, _next)
-                )
-            ) is not sentinel:
+            while (val := await _run(_next)) is not sentinel:
                 yield val
         finally:
             if isinstance(gen, Generator):
                 original_error = sys.exc_info()[1]
                 try:
-                    await _await_executor_result(
-                        loop.run_in_executor(executor, gen.close)
-                    )
+                    await _run(gen.close)
                 except BaseException:
                     if original_error is None or isinstance(
                         original_error, GeneratorExit
@@ -247,7 +245,7 @@ def _to_async_gen(
     return afunc
 
 
-async def _await_executor_result(future: asyncio.Future[U]) -> U:
+async def _await_future(future: asyncio.Future[U]) -> U:
     """Finish a thread operation before propagating cancellation to its caller.
 
     Cancelling an asyncio future cannot interrupt its underlying thread. Waiting
