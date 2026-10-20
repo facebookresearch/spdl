@@ -11,6 +11,7 @@ import threading
 import unittest
 import warnings
 from collections.abc import Iterator
+from fractions import Fraction
 
 from spdl.pipeline import PipelineBuilder, PipelineFailure
 from spdl.pipeline._components import (
@@ -58,6 +59,47 @@ class _ObservedQueue:
 
 
 class ReaderFailureTest(unittest.TestCase):
+    def _check_region_global_failure(
+        self, continuous: bool, max_failures: int | Fraction
+    ) -> None:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            pipeline = (
+                PipelineBuilder()
+                .add_source(
+                    _TaggedSource() if continuous else [0, 100],
+                    continuous=continuous,
+                )
+                .to(ProcessPoolExecutorConfig(max_workers=1, mp_context="fork"))
+                .pipe(_fail_second_epoch, concurrency=1)
+                .to(MAIN_PROCESS)
+                .add_sink(1)
+                .build(num_threads=1, max_failures=max_failures)
+            )
+            pipeline.start()
+        try:
+            if continuous:
+                self.assertEqual(list(pipeline.get_iterator(timeout=10)), [0])
+            with self.assertRaises(PipelineFailure):
+                list(pipeline.get_iterator(timeout=10))
+        finally:
+            try:
+                pipeline.stop(timeout=10)
+            except PipelineFailure:
+                pass  # Shutdown must not mask a missing reader error.
+
+    def test_global_fail_fast_reaches_finite_region(self) -> None:
+        """A build-level zero limit also stops failures inside a finite worker region."""
+        for limit in (0, Fraction(0)):
+            with self.subTest(limit=limit):
+                self._check_region_global_failure(False, limit)
+
+    def test_global_fail_fast_reaches_warm_region(self) -> None:
+        """A build-level zero limit remains effective across warm worker epochs."""
+        for limit in (0, Fraction(0)):
+            with self.subTest(limit=limit):
+                self._check_region_global_failure(True, limit)
+
     def test_warm_failure_with_source_waiting_for_next_epoch(self) -> None:
         """A failed worker stops even when its source is already reading a future epoch."""
         source = _ObservedQueue()

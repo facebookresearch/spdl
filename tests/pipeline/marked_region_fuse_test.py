@@ -589,6 +589,7 @@ class FusedThreadCountTest(unittest.TestCase):
                 ProcessPoolExecutorConfig(max_workers=1),
                 None,  # pyre-ignore[6] -- unused by the fake
                 -1.0,
+                False,
                 True,
                 1,  # input buffer size; irrelevant to the thread count
                 1,  # output buffer size; likewise

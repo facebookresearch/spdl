@@ -543,6 +543,10 @@ class PipelineBuilder(Generic[T, U]):
                 When a Fraction is provided (e.g., Fraction(1, 10) for 10%), it specifies
                 the maximum failure rate (failures / invocations).
 
+                .. versionchanged:: 0.7.0
+
+                   A zero limit also applies to stages inside ``.to()`` worker regions.
+
             report_stats_interval: When provided, report the pipeline performance stats
                 every given interval. Unit: [sec]
 
