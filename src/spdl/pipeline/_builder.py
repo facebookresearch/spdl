@@ -187,6 +187,7 @@ class PipelineBuilder(Generic[T, U]):
         .. versionchanged:: 0.7.0
            Synchronous sources are iterated on a dedicated thread instead of
            dispatching each item through the pipeline's executor.
+           Asynchronous iterators are explicitly closed when their iteration ends.
 
         Args:
             source: An iterator that generates data. Synchronous iterators run on a
@@ -195,12 +196,26 @@ class PipelineBuilder(Generic[T, U]):
                 remains responsive, but the non-daemon source thread keeps the
                 interpreter alive until the iterator returns.
 
+                The pipeline manages each active iterator; a separate source iterable
+                remains owned by the caller. It awaits ``aclose()`` on asynchronous
+                iterators at exhaustion, early termination, or cancellation, and calls
+                ``close()`` on synchronous iterators at early termination. If the source
+                returns itself as its iterator, this closes the source itself.
+
+                Iterator cleanup can finish while downstream stages still process queued
+                items. Yielded items must remain valid after iterator cleanup. Keep any
+                separate owner of their storage open until downstream processing and
+                consumption finish. Asynchronous cleanup must terminate; repeated
+                cancellation waits for it to finish.
+
             continuous: If ``True``, the source continuously re-iterates,
                 injecting a sentinel object representing an epoch boundary
                 between iterations. This enables multi-epoch pipeline reuse
                 without rebuilding. Use :py:func:`is_epoch_end` to detect
                 epoch boundaries in custom merge operations if needed;
                 regular pipe stage functions do not need to handle it.
+                Distinct asynchronous iterators are closed at each epoch boundary.
+                A source that returns itself as its iterator is closed only at shutdown.
         """
         if self._src is not None:
             raise ValueError("Source already set.")

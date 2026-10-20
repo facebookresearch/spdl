@@ -9,11 +9,11 @@ __all__ = ["_source", "_source_continuous"]
 import asyncio
 import sys
 import threading
-from collections.abc import AsyncGenerator, AsyncIterable, Iterable
+from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Iterable
 from contextlib import aclosing
 from typing import cast, Generic, TypeVar
 
-from ._common import _EPOCH_END
+from ._common import _drive_to_completion, _EPOCH_END
 from ._queue import _queue_stage_hook, AsyncQueue
 
 T = TypeVar("T")
@@ -142,6 +142,20 @@ class _SyncSourceThread(Generic[T]):
             self._stop()
 
 
+async def _close_async_source(source: object) -> None:
+    if (close := getattr(source, "aclose", None)) is None:
+        return
+    source_error = sys.exc_info()[1]
+    try:
+        _, cancelled = await _drive_to_completion(close())
+    except BaseException:
+        if source_error is None:
+            raise
+    else:
+        if cancelled is not None and source_error is None:
+            raise cancelled
+
+
 async def _source(
     src: Iterable[T] | AsyncIterable[T],
     queue: AsyncQueue,
@@ -167,11 +181,15 @@ async def _source(
     async with _queue_stage_hook(queue):
         num_items = 0
         if hasattr(src, "__aiter__"):
-            async for item in cast(AsyncIterable[T], src):
-                await queue.put(item)
-                num_items += 1
-                if max_items is not None and num_items >= max_items:
-                    return
+            items = aiter(cast(AsyncIterable[T], src))
+            try:
+                async for item in items:
+                    await queue.put(item)
+                    num_items += 1
+                    if max_items is not None and num_items >= max_items:
+                        return
+            finally:
+                await _close_async_source(items)
             return
 
         runner = _SyncSourceThread(cast(Iterable[T], src), continuous=False)
@@ -199,10 +217,20 @@ async def _source_continuous(
     """
     async with _queue_stage_hook(queue):
         if hasattr(src, "__aiter__"):
-            while True:
-                async for item in cast(AsyncIterable[T], src):
-                    await queue.put(item)
-                await queue.put(_EPOCH_END)
+            async_items: AsyncIterator[T] | None = None
+            try:
+                while True:
+                    async_items = aiter(cast(AsyncIterable[T], src))
+                    try:
+                        async for item in async_items:
+                            await queue.put(item)
+                    finally:
+                        if async_items is not src:
+                            await _close_async_source(async_items)
+                    await queue.put(_EPOCH_END)
+            finally:
+                if async_items is src:
+                    await _close_async_source(async_items)
 
         runner = _SyncSourceThread(cast(Iterable[T], src), continuous=True)
         async with aclosing(runner.iterate()) as items:

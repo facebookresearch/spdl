@@ -86,7 +86,9 @@ class SourceConfig(Generic[T]):
     """
 
     source: Iterable | AsyncIterable
-    """Generates the series of source data."""
+    """Generates the series of source data. See
+    :py:meth:`~spdl.pipeline.PipelineBuilder.add_source` for source ownership and
+    iterator cleanup timing."""
 
     continuous: bool = False
     """If True, the source continuously re-iterates, injecting a sentinel
