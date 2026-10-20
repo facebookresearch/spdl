@@ -51,6 +51,7 @@ U = TypeVar("U")
 class _FailCounter(TaskHook):
     _num_global_failures: int = 0
     _num_global_invocations: int = 0
+    _global_failure_cause: Exception | None = None
 
     def __init__(
         self,
@@ -90,6 +91,7 @@ class _FailCounter(TaskHook):
         self._num_stage_invocations: int = 0
         self._exceeded: bool = False
         self._failure_handler: Callable[[], None] | None = None
+        self._failure_cause: Exception | None = None
 
     # Fixed probation period for rate-based thresholds.
     # Rate checking only starts after this many invocations.
@@ -149,27 +151,52 @@ class _FailCounter(TaskHook):
     def too_many_failures(self) -> bool:
         return self._exceeded
 
+    def _record_failure(self, error: Exception) -> None:
+        """Retain causes only after a count or rate limit is crossed."""
+        if self._exceeded and self._failure_cause is None:
+            self._failure_cause = error
+        if self._global_failure_cause is not None:
+            return
+        threshold = self._max_global_failures
+        if isinstance(threshold, Fraction):
+            exceeded = (
+                self._num_global_invocations >= self._PROBATION_PERIOD
+                and self._num_global_failures * threshold.denominator
+                > threshold.numerator * self._num_global_invocations
+            )
+        else:
+            exceeded = threshold >= 0 and self._num_global_failures > threshold
+        if exceeded:
+            self.__class__._global_failure_cause = error
+
     @asynccontextmanager
     async def task_hook(self, input_item: Any = None) -> AsyncIterator[None]:
-        _failed = False
+        _failed: Exception | None = None
         try:
             yield
         except StopAsyncIteration:
             raise
-        except Exception:
-            _failed = True
+        except Exception as error:
+            _failed = error
             raise
         finally:
             self.__class__._num_global_invocations += 1
             self._num_stage_invocations += 1
-            if _failed:
+            if _failed is not None:
                 self.__class__._num_global_failures += 1
                 self._num_stage_failures += 1
             self._check_threshold()
+            if _failed is not None:
+                self._record_failure(_failed)
 
     def raise_for_failures(self, info: StageInfo) -> NoReturn:
         threshold = self.max_failures
         display = info
+        cause = (
+            self._global_failure_cause
+            if self._max_stage_failures is None
+            else self._failure_cause
+        )
         if isinstance(threshold, Fraction):
             rate = Fraction(self.num_failures, self.num_invocations)
             raise RuntimeError(
@@ -177,12 +204,12 @@ class _FailCounter(TaskHook):
                 f"out of {self.num_invocations} invocations "
                 f"({float(rate):.1%}), which exceeds the threshold "
                 f"({float(threshold):.1%})."
-            )
+            ) from cause
         else:
             raise RuntimeError(
                 f"The pipeline stage ({display}) failed {self.num_failures} times, "
                 f"which exceeds the threshold ({threshold})."
-            )
+            ) from cause
 
 
 # Create a different Counter class variables for each pipeline,
