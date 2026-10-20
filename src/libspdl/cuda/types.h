@@ -31,7 +31,7 @@ using cuda_allocator = std::pair<cuda_allocator_fn, cuda_deleter_fn>;
 /// Configuration for CUDA operations.
 struct CUDAConfig {
   /// CUDA device index to use.
-  int device_index;
+  int device_index{};
   /// CUDA stream handle. Default is per-thread-default stream (0x2).
   uintptr_t stream = 0x2;
   /// Optional custom allocator for GPU memory.
