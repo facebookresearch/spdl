@@ -96,6 +96,13 @@ class ProfilePipelineTest(unittest.TestCase):
             ],
             sink=SinkConfig(3),
         )
+        expected_calls = [
+            (pipe_idx, concurrency)
+            for pipe_idx, pipe in enumerate(plc.pipes)
+            for concurrency in (
+                (32, 16, 8, 4, 1) if isinstance(pipe, PipeConfig) else (1,)
+            )
+        ]
 
         class Intercept_:
             assertEqual: Callable[..., None]
@@ -110,14 +117,16 @@ class ProfilePipelineTest(unittest.TestCase):
                 pipe: PipeConfig[_T, _U] | AggregateConfig[_T] | DisaggregateConfig[_T],
                 concurrency: int,
             ) -> PipelineConfig[_U]:
-                num_inputs = N if self.i < 2 else (N + m - 1) // m
+                pipe_idx, expected_concurrency = expected_calls[self.i]
+                num_inputs = N if pipe_idx < 2 else (N + m - 1) // m
                 self.assertEqual(len(inputs), num_inputs)
-                self.assertEqual(pipe, plc.pipes[self.i])
+                self.assertEqual(pipe, plc.pipes[pipe_idx])
+                self.assertEqual(concurrency, expected_concurrency)
                 ret = _build_pipeline_config(inputs, pipe, concurrency)
                 self.assertEqual(len(ret.pipes), 1)
                 if isinstance(pipe, PipeConfig):
                     ret_pipe = cast("PipeConfig[Any, Any]", ret.pipes[0])
-                    plc_pipe = cast("PipeConfig[Any, Any]", plc.pipes[self.i])
+                    plc_pipe = cast("PipeConfig[Any, Any]", plc.pipes[pipe_idx])
                     self.assertIs(ret_pipe._args.op, plc_pipe._args.op)
                 self.i += 1
                 return ret
@@ -128,7 +137,7 @@ class ProfilePipelineTest(unittest.TestCase):
         with patch("spdl.pipeline._profile._build_pipeline_config", mock):
             profile_pipeline(plc)
 
-        self.assertEqual(mock.i, 5)
+        self.assertEqual(mock.i, len(expected_calls))
 
     def test_profile_pipeline_callback(self) -> None:
         """Test that profile_pipeline calls the callback for each pipe stage."""

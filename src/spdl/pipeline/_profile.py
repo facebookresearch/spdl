@@ -209,9 +209,9 @@ def _profile_pipe(
         concurrencies = [32, 16, 8, 4, 1]
 
     stats = []
-    cfg_ = _build_pipeline_config(inputs, pipe, max(concurrencies))
     outputs = []
     for concurrency in concurrencies:
+        cfg_ = _build_pipeline_config(inputs, pipe, concurrency)
         # Profiling consumes queue occupancy statistics, so it must not inherit a
         # process-wide queue class that does not collect them.
         pipeline = _build._build_pipeline(
