@@ -15,7 +15,7 @@ on:
         default: 'false'
         type: string
       machine:
-        default: "macos-15"
+        default: "macos-26"
         type: string
       test-concurrency:
         required: false
