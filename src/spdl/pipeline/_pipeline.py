@@ -1015,7 +1015,7 @@ class _PipelineImpl(Generic[T]):
     def get_item_nowait(self) -> T:
         """Get the next item if one is already buffered in the sink, without blocking.
 
-        .. versionchanged:: 0.7.0
+        .. versionchanged:: 0.8.0
            Terminal pipeline failures raise :py:class:`PipelineFailure` after buffered
            output is drained.
 
@@ -1374,7 +1374,7 @@ class Pipeline(Generic[T]):
            foreground read; later ``stop`` calls return normally. Terminal reads
            continue raising the task failure after the sink is drained.
 
-        .. versionchanged:: 0.7.0
+        .. versionchanged:: 0.8.0
            Terminal task failures are raised by at most one ``stop`` call and remain
            observable to foreground reads.
         """
@@ -1420,7 +1420,7 @@ class Pipeline(Generic[T]):
             BaseException: A terminal exception raised by a pipeline task, after all buffered
                 items have been returned. Subsequent terminal reads raise the same failure.
 
-        .. versionchanged:: 0.7.0
+        .. versionchanged:: 0.8.0
            Terminal task failures are raised after buffered items have been returned and remain
            observable to foreground reads.
         """
@@ -1481,7 +1481,7 @@ class Pipeline(Generic[T]):
            now stays exhausted, consistent with non-continuous sources. Use one
            iterator per epoch.
 
-        .. versionchanged:: 0.7.0
+        .. versionchanged:: 0.8.0
            Documented that terminal task failures remain observable on subsequent
            reads from the same iterator.
         """

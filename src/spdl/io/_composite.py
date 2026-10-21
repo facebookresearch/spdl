@@ -111,7 +111,7 @@ def load_audio(
     and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
     buffer object from source in one step.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        Removed unused arbitrary keyword arguments.
 
     Args:
@@ -186,7 +186,7 @@ def load_video(
     and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
     buffer object from source in one step.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        Removed unused arbitrary keyword arguments.
 
     Args:
@@ -270,7 +270,7 @@ def load_image(
     and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
     buffer object from source in one step.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        Removed unused arbitrary keyword arguments.
 
     Args:
@@ -378,7 +378,7 @@ def load_image_batch(
     and optionally, :py:func:`~spdl.io.transfer_buffer`, to produce
     buffer object from source in one step.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        Removed unused arbitrary keyword arguments.
 
     Args:

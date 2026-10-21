@@ -216,7 +216,7 @@ class MergeIterator(Iterable[T]):
         >>> print(sorted(MergeIterator(iterables, stop_after=9, weights=[1, 1, 1])))
         [0, 1, 2, 10, 11, 12, 20, 21, 22]
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        Exhausted weighted sources are removed from future draws, and invalid
        weight totals now raise :class:`ValueError`. Weighted selection preserves
        the exact ratios of the converted binary-float weights.
@@ -447,7 +447,7 @@ def repeat_source(
         src: The source to repeat.
         epoch: The epoch number to start with.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        ``epoch`` now also controls the first shuffle seed.
     """
     # Returning object so that it can be passed to a subprocess.

@@ -178,7 +178,7 @@ class QueuePerfStats:
     as soon as the upstream stage puts it. This suggests that the pipeline
     is suffering from data starvation.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        Include ongoing empty periods in interval and final occupancy statistics.
     """
 

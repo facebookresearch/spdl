@@ -883,7 +883,7 @@ def decode_image_nvjpeg(
 
        Unlike FFmpeg-based decoding, nvJPEG returns GPU buffer directly.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        A single ``memoryview`` is decoded as one image instead of a batch.
 
     Args:

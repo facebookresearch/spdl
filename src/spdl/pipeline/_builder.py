@@ -184,7 +184,7 @@ class PipelineBuilder(Generic[T, U]):
     ) -> "PipelineBuilder[T, U]":
         """Attach an iterator to the source buffer.
 
-        .. versionchanged:: 0.7.0
+        .. versionchanged:: 0.8.0
            Synchronous sources are iterated on a dedicated thread instead of
            dispatching each item through the pipeline's executor.
            Asynchronous iterators are explicitly closed when their iteration ends.
@@ -472,7 +472,7 @@ class PipelineBuilder(Generic[T, U]):
         .. versionadded:: 0.6.0
            The ``batched`` argument.
 
-        .. versionchanged:: 0.7.0
+        .. versionchanged:: 0.8.0
            Per-item routing uses bounded lookahead so a full path queue does not
            immediately prevent dispatch to other paths. Order within each path
            is preserved. All pending routes drain at epoch and source boundaries.
@@ -558,7 +558,7 @@ class PipelineBuilder(Generic[T, U]):
                 When a Fraction is provided (e.g., Fraction(1, 10) for 10%), it specifies
                 the maximum failure rate (failures / invocations).
 
-                .. versionchanged:: 0.7.0
+                .. versionchanged:: 0.8.0
 
                    A zero limit also applies to stages inside ``.to()`` worker regions.
 
