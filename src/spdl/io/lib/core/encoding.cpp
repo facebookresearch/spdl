@@ -116,7 +116,7 @@ void register_encoding(nb::module_& m) {
       "video_encode_config",
       [](int height,
          int width,
-         const std::optional<std::tuple<int, int>> frame_rate,
+         const std::optional<std::tuple<int, int>>& frame_rate,
          const std::optional<std::string>& pix_fmt,
          int bit_rate,
          int compression_level,
