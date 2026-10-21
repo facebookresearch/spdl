@@ -392,7 +392,7 @@ def get_pytorch_dataloader(
             contends for a shared resource such as filesystem bandwidth or
             database connections. This does not limit steady-state fetching.
 
-            .. versionadded:: 0.7.0
+            .. versionadded:: 0.8.0
                The ``worker_init_concurrency`` argument.
 
     Returns:
@@ -411,7 +411,7 @@ def get_pytorch_dataloader(
                 worker_init_concurrency=2,
             )
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        Empty custom samplers are now preserved instead of being replaced by the
        default sampler.
     """

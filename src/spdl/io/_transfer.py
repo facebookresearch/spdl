@@ -131,7 +131,7 @@ def _get_transfer_func(num_caches: int) -> _DataTransfer:
 def transfer_tensor_h2d(batch: T, /, *, num_caches: int = 4) -> T:
     """Transfer PyTorch tensors from CPU to CUDA in a dedicated stream.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
 
     This function wraps calls to :py:meth:`torch.Tensor.pin_memory` and
     :py:meth:`torch.Tensor.to`, and executes them in a dedicated CUDA stream.
@@ -195,7 +195,7 @@ def transfer_tensor_h2d(batch: T, /, *, num_caches: int = 4) -> T:
 def transfer_tensor(batch: T, /, *, num_caches: int = 4) -> T:
     """Transfer PyTorch tensors from CPU to CUDA in a dedicated stream.
 
-    .. deprecated:: 0.7.0
+    .. deprecated:: 0.8.0
        Use :py:func:`spdl.io.transfer_tensor_h2d` instead.
 
     Args:
@@ -324,7 +324,7 @@ def transfer_tensor_d2h(
 ) -> T:
     """Transfer PyTorch CUDA tensors to CPU through a dedicated stream.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
 
     This function transfers tensors directly to CPU with
     :py:meth:`torch.Tensor.to` on a dedicated CUDA stream. Non-blocking D2H

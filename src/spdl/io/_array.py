@@ -84,7 +84,7 @@ def load_npy(data: Buffer, *, copy: bool = False) -> NDArray:
     Returns:
         The restored array data.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
 
        Zero-copy arrays now retain their source buffer and are read-only when
        that source is read-only. A resizable source cannot be resized while a
@@ -138,7 +138,7 @@ class NpzFile(Mapping):
         max_uncompressed_bytes: Maximum cumulative declared uncompressed size
             of DEFLATE-compressed entries. Defaults to 1 GiB.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
 
        The ``max_uncompressed_bytes`` argument.
     """
@@ -310,11 +310,11 @@ def load_npz(
             of DEFLATE-compressed entries. Defaults to 1 GiB. Increase this
             explicitly only for trusted archives that require more space.
 
-    .. versionadded:: 0.7.0
+    .. versionadded:: 0.8.0
 
        The ``max_uncompressed_bytes`` argument.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
 
        Arrays backed by stored entries now inherit the source buffer's
        writability. Arrays inflated from compressed entries own writable

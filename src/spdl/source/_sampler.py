@@ -115,7 +115,7 @@ class DistributedDeterministicSampler:
     .. versionadded:: 0.5.0
        The ``ddp_drop_last_distributed_round`` argument.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        Invalid ``rank`` and ``world_size`` values now raise :class:`ValueError`.
     """
 
@@ -412,7 +412,7 @@ class DistributedRandomSampler:
     .. versionadded:: 0.5.0
        The ``ddp_drop_last_distributed_round`` argument.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        Invalid ``rank`` and ``world_size`` values and invalid weight totals now
        raise :class:`ValueError`.
     """

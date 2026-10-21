@@ -58,7 +58,7 @@ def cache_iterator(
     Returns:
         The wrapper iterator.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        ``num_caches`` must be positive, and empty sources now terminate without
        entering cache replay.
     """

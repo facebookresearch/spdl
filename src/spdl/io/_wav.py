@@ -73,7 +73,7 @@ def load_wav(
 ) -> ArrayInterface:
     """Extract audio samples from WAV data.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        Malformed or unsupported sample layouts and non-finite time windows are
        rejected instead of constructing an invalid array view. The ``data``
        argument now accepts mutable ``bytearray`` inputs, and zero-copy views
@@ -116,7 +116,7 @@ def load_wav(
 def parse_wav(data: _Buffer) -> "WAVHeader":
     """Parse WAV file header and extract metadata.
 
-    .. versionchanged:: 0.7.0
+    .. versionchanged:: 0.8.0
        The ``data`` argument now accepts mutable ``bytearray`` inputs without
        copying the input buffer.
 

@@ -274,7 +274,7 @@ def build_pipeline(
             When a Fraction is provided (e.g., Fraction(1, 10) for 10%), it specifies
             the maximum failure rate (failures / invocations).
 
-            .. versionchanged:: 0.7.0
+            .. versionchanged:: 0.8.0
 
                A zero limit also applies to stages inside ``.to()`` worker regions.
 
