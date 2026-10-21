@@ -35,7 +35,7 @@ import threading
 import warnings
 from collections.abc import Sequence
 from dataclasses import replace
-from functools import partial
+from functools import partial, singledispatch
 from typing import Any
 
 from spdl.pipeline._common._convert import (
@@ -64,6 +64,8 @@ from spdl.pipeline.defs._defs import (
 )
 
 __all__ = [
+    "_build_fused_stage_core",
+    "_build_fused_stage_from_spec",
     "_fuse_marked_regions",
 ]
 
@@ -213,9 +215,10 @@ def _build_fused_stage_core(
     return _SubprocessPipelineConfig(name=name, handle=pool.make_handle()), pool
 
 
+@singledispatch
 def _build_fused_stage_from_spec(
-    stages: Sequence[object],
     spec: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig,
+    stages: Sequence[object],
     backend: _PoolBackend,
     report_stats_interval: float,
     fail_fast: bool,
@@ -326,8 +329,8 @@ def _fuse_marked_regions(
         else:  # pragma: no cover -- a main-process target never accumulates a region
             raise AssertionError(f"Unexpected region target: {target!r}")
         fused, pool = _build_fused_stage_from_spec(
-            region,
             target,
+            region,
             backend,
             report_stats_interval,
             fail_fast,
