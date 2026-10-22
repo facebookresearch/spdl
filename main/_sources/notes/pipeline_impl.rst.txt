@@ -419,6 +419,37 @@ The :py:class:`~spdl.pipeline.Pipeline` object manages the lifecycle of the back
 event loop as described in the previous sections.
 
 
+Retryable execution-region cleanup
+---------------------------------
+
+Ending the pipeline coroutine and physically retiring a worker are different
+operations. A process can survive a bounded join/terminate/kill attempt; a
+subinterpreter thread cannot be force-killed at all. SPDL therefore retains an
+execution-region pool until its workers have retired and its queue handles and
+local feeders have finished closing. A shutdown request stops new handles; it
+does not authorize closing queues still used by a live worker.
+
+If a shutdown step fails, successful worker stops and queue closes are removed
+from the pending work, while failed steps retain their owners for retry. The
+same rule applies to partial construction: already-acquired queues, workers and
+orphaned interpreters remain discoverable after rollback fails. Cleanup failure
+does not replace the primary construction exception. No additional thread or
+per-item data-path work is introduced to drive retries.
+
+A later :py:meth:`~spdl.pipeline.Pipeline.stop` retries the pools it still owns.
+The process-local cleanup registry also retains unfinished execution-region
+owners after the original pipeline is dropped. Inspect or retry them with
+:py:func:`~spdl.pipeline.config.get_pending_pipeline_pool_cleanup_count` and
+:py:func:`~spdl.pipeline.config.retry_pending_pipeline_pool_cleanup`. Each retry
+attempts a snapshot once, using bounded worker/feeder joins; it is not an
+automatic retry loop. A permanently stuck resource may remain retained.
+
+This mechanism covers SPDL execution-region pools and orphaned region
+interpreters, not caller-owned executors, standalone iterator workers or all
+hoisted process pools. It is not durable recovery after the owning process
+exits, nor permission to reclaim uncertain arena storage. Forked children do
+not retry their parent's cleanup obligations.
+
 API reference
 -------------
 

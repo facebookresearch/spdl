@@ -26,5 +26,6 @@ Examples
    benchmark_video
    benchmark_thread_output_queue
    benchmark_arena_transport
+   benchmark_pinned_arena
    benchmark_ipc_dataloader
    benchmark_transfer_overlap

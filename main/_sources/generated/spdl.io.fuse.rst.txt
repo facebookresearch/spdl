@@ -1,0 +1,6 @@
+spdl.io.fuse
+============
+
+.. currentmodule:: spdl.io
+
+.. autofunction:: fuse

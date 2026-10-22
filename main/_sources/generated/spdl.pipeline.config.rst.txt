@@ -99,6 +99,26 @@ get\_default\_queue\_class
    get_default_queue_class
 
 
+get\_default\_thread\_output\_queue\_config
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   get_default_thread_output_queue_config
+
+
+set\_default\_thread\_output\_queue\_config
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   set_default_thread_output_queue_config
+
+
 set\_default\_profile\_hook
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autosummary::
@@ -189,6 +209,26 @@ set\_compact\_log
    set_compact_log
 
 
+get\_pending\_pipeline\_pool\_cleanup\_count
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   get_pending_pipeline_pool_cleanup_count
+
+
+retry\_pending\_pipeline\_pool\_cleanup
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   retry_pending_pipeline_pool_cleanup
+
+
 
 
 
@@ -205,6 +245,21 @@ set\_compact\_log
    ############################################################################
    Classes
    ############################################################################
+
+
+
+.. rubric:: Classes
+
+
+ThreadOutputQueueConfig
+^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+   :template: _custom_autosummary_class.rst
+
+   ThreadOutputQueueConfig
 
 
 
@@ -232,6 +287,11 @@ set\_compact\_log
    ############################################################################
    Others
    ############################################################################
+
+
+
+
+
 
 
 

@@ -62,6 +62,10 @@ API Reference
 
 
 
+.. autofunction:: benchmark_thread_output_queue.run_benchmark
+
+
+
 .. autofunction:: benchmark_thread_output_queue.main
 
 

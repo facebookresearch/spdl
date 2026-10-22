@@ -1,0 +1,19 @@
+spdl.pipeline.ArenaReaderProtocol
+=================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: ArenaReaderProtocol
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~ArenaReaderProtocol.end_unit
+      ~ArenaReaderProtocol.read_binary
+      ~ArenaReaderProtocol.reset
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~ArenaReaderProtocol.zero_copy

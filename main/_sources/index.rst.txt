@@ -47,12 +47,14 @@ Please use the following BibTex for citing our project if you find it useful.
    async/index
    io/index
    optimization_guide/index
+   knowledge_base/index
    case_studies/index
    autoresearch/index
    migration/index
    best_practice
    examples
    fb/examples
+   fb/knowledge_base
 
 .. toctree::
    :maxdepth: 2
