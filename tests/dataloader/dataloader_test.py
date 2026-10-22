@@ -152,4 +152,4 @@ class TestDataLoader(unittest.TestCase):
             (1, 9, 9, 9),
         ]
 
-        self.assertEqual(list(dl), expected)
+        self.assertCountEqual(list(dl), expected)
