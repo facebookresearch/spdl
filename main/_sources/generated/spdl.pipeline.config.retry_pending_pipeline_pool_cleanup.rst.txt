@@ -1,0 +1,6 @@
+spdl.pipeline.config.retry\_pending\_pipeline\_pool\_cleanup
+============================================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: retry_pending_pipeline_pool_cleanup

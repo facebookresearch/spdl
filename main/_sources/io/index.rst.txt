@@ -46,6 +46,7 @@ This section provides detailed documentation on how to use these implementations
    color_space
    advanced_filtering
    streaming_decoding
+   fusion
    gpu_decoding
    numpy_arrays
    encoding

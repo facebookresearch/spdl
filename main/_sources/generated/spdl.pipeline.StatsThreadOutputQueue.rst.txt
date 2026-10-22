@@ -1,0 +1,28 @@
+spdl.pipeline.StatsThreadOutputQueue
+====================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: StatsThreadOutputQueue
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~StatsThreadOutputQueue.empty
+      ~StatsThreadOutputQueue.final_stats_callback
+      ~StatsThreadOutputQueue.full
+      ~StatsThreadOutputQueue.get
+      ~StatsThreadOutputQueue.get_nowait
+      ~StatsThreadOutputQueue.interval_stats_callback
+      ~StatsThreadOutputQueue.join
+      ~StatsThreadOutputQueue.put
+      ~StatsThreadOutputQueue.put_nowait
+      ~StatsThreadOutputQueue.qsize
+      ~StatsThreadOutputQueue.stage_hook
+      ~StatsThreadOutputQueue.task_done
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~StatsThreadOutputQueue.maxsize

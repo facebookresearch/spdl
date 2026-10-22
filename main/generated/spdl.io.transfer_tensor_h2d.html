@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.io.transfer_tensor_h2d - SPDL 0.8.0 documentation</title>
+        <title>spdl.io.transfer_tensor_h2d - SPDL 0.9.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.8.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.9.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.8.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.9.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -243,6 +243,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../io/color_space.html">Video Color Space</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/fusion.html">Fusing IO Calls</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/encoding.html">Media Encoding</a></li>
@@ -258,9 +259,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/shared_memory_arenas.html">Shared-memory arenas</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../knowledge_base/index.html">Knowledge Base</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Knowledge Base</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/_categories/technique-catalog.html">Technique catalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/techniques/_categories/techniques-by-area.html">Techniques by area</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/_categories/optimization-guidance.html">Optimization guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/migration/_categories/migration-guidance.html">Migration guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/authoring/_categories/pipeline-authoring.html">Pipeline authoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/_categories/startup-audit.html">Startup audit</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
@@ -268,14 +279,14 @@
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch.html">How It Works</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example.html">Example: Video Classification</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example_v2.html">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_architecture.html">Architecture</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
@@ -283,7 +294,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_dataloading.html">Video dataloading</a></li>
@@ -303,6 +314,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_pinned_arena.html">Benchmark pinned arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
@@ -310,7 +322,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.html">spdl.pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.config.html">spdl.pipeline.config</a></li>
@@ -322,10 +334,10 @@
 <li class="toctree-l2"><a class="reference internal" href="spdl.source.html">spdl.source</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_class.html">Class List</a></li>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_file.html">File List</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl.html">Namespace spdl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
@@ -371,7 +383,7 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe.html">Template Function spdl::core::deserialize_packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a17e80346c554363a3ca0f92f23f35d61.html">Template Function spdl::core::deserialize_packets_view</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a0d3adfab8851b38d60a666b31ca766f5.html">Function spdl::core::extract_packets_at_indices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
@@ -439,11 +451,12 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/shared_memory_ownership.html">Why shared arena outputs keep storage alive</a></li>
 </ul>
 </li>
 </ul>
@@ -466,6 +479,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.9.0">0.9.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.8.0">0.8.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
@@ -531,13 +546,19 @@
 <h1>spdl.io.transfer_tensor_h2d<a class="headerlink" href="#spdl-io-transfer-tensor-h2d" title="Link to this heading">¶</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="spdl.io.transfer_tensor_h2d">
-<span class="sig-name descname"><span class="pre">transfer_tensor_h2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">batch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_caches</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/io/_transfer.py?#L131-L192"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.io.transfer_tensor_h2d" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">transfer_tensor_h2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">batch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_caches</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/io/_transfer.py?#L185-L256"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.io.transfer_tensor_h2d" title="Link to this definition">¶</a></dt>
 <dd><p>Transfer PyTorch tensors from CPU to CUDA in a dedicated stream.</p>
 <div class="versionadded">
 <p><span class="versionmodified added">Added in version 0.8.0.</span></p>
 </div>
-<p>This function wraps calls to <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.Tensor.pin_memory.html#torch.Tensor.pin_memory" title="(in PyTorch v2.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">torch.Tensor.pin_memory()</span></code></a> and
-<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.Tensor.to.html#torch.Tensor.to" title="(in PyTorch v2.14)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">torch.Tensor.to()</span></code></a>, and executes them in a dedicated CUDA stream.</p>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 0.9.0: </span>Recursive failures drain submitted copies before unwinding. Failed drains
+retain source/destination owners until completion is proved. Returned GPU
+destinations are recorded on the selected device’s default consumer stream;
+callers using other streams retain normal readiness/recording responsibilities.</p>
+</div>
+<p>This function wraps calls to <a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.Tensor.pin_memory.html#torch.Tensor.pin_memory" title="(in PyTorch v2.15)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">torch.Tensor.pin_memory()</span></code></a> and
+<a class="reference external" href="https://docs.pytorch.org/docs/stable/generated/torch.Tensor.to.html#torch.Tensor.to" title="(in PyTorch v2.15)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">torch.Tensor.to()</span></code></a>, and executes them in a dedicated CUDA stream.</p>
 <p>When called in a background thread, the data transfer overlaps with
 the GPU computation happening in the foreground thread (such as training
 and inference).</p>
@@ -545,6 +566,9 @@ and inference).</p>
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="../getting_started/parallelism.html#pipeline-parallelism-custom-mt"><span class="std std-ref">Multi-threading (custom)</span></a> - An intended way to use
 this function in <a class="reference internal" href="spdl.pipeline.Pipeline.html#spdl.pipeline.Pipeline" title="spdl.pipeline.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a>.</p>
+<p><a class="reference internal" href="benchmark_pinned_arena.html#module-benchmark_pinned_arena" title="benchmark_pinned_arena"><code class="xref py py-mod docutils literal notranslate"><span class="pre">benchmark_pinned_arena</span></code></a> - Matched public pool/ring pinning
+comparisons through subprocess iteration and synchronized H2D wall time,
+with archival earlier measurements.</p>
 </div>
 <img alt="../_static/data/parallelism_transfer.png" src="../_static/data/parallelism_transfer.png" />
 <p>Concretely, it performs the following operations.</p>
@@ -555,8 +579,8 @@ in thread-local storage, creates and caches one.
 variable.)</p></li>
 <li><p>Activates the CUDA stream.</p></li>
 <li><p>Traverses the given object recursively and transfers CPU tensors to CUDA.
-Data is first copied to page-locked memory by calling <code class="docutils literal notranslate"><span class="pre">pin_memory</span></code>,
-then transferred to CUDA asynchronously with
+<code class="docutils literal notranslate"><span class="pre">pin_memory</span></code> reuses source storage when Torch recognizes it as pinned;
+otherwise it creates a page-locked copy. CUDA transfer is submitted with
 <code class="docutils literal notranslate"><span class="pre">.to(non_blocking=True)</span></code>.</p></li>
 <li><p>Synchronizes the stream, to ensure that all the data transfers are
 completed.</p></li>
@@ -564,7 +588,7 @@ completed.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>batch</strong> – A <a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code></a> or a composition of tensors
+<li><p><strong>batch</strong> – A <a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code></a> or a composition of tensors
 with container types such as <code class="docutils literal notranslate"><span class="pre">list</span></code>, <code class="docutils literal notranslate"><span class="pre">tuple</span></code>, <code class="docutils literal notranslate"><span class="pre">dict</span></code>
 and <code class="docutils literal notranslate"><span class="pre">dataclass</span></code>.</p></li>
 <li><p><strong>num_caches</strong> – <p>Number of batch caches to maintain the reference to.
@@ -645,7 +669,7 @@ tensors are transferred to CUDA device.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=cce5339e"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=a82ae3da"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

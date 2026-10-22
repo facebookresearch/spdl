@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Benchmark arena transport" href="benchmark_arena_transport.html" /><link rel="prev" title="Benchmark video" href="benchmark_video.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Benchmark thread output queue - SPDL 0.8.0 documentation</title>
+        <title>Benchmark thread output queue - SPDL 0.9.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.8.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.9.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.8.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.9.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -243,6 +243,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../io/color_space.html">Video Color Space</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/fusion.html">Fusing IO Calls</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/encoding.html">Media Encoding</a></li>
@@ -258,9 +259,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/shared_memory_arenas.html">Shared-memory arenas</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../knowledge_base/index.html">Knowledge Base</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Knowledge Base</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/_categories/technique-catalog.html">Technique catalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/techniques/_categories/techniques-by-area.html">Techniques by area</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/_categories/optimization-guidance.html">Optimization guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/migration/_categories/migration-guidance.html">Migration guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/authoring/_categories/pipeline-authoring.html">Pipeline authoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/_categories/startup-audit.html">Startup audit</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
@@ -268,14 +279,14 @@
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch.html">How It Works</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example.html">Example: Video Classification</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example_v2.html">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_architecture.html">Architecture</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
@@ -283,7 +294,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
-<li class="toctree-l1 current has-children"><a class="reference internal" href="../examples.html">Examples</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../examples.html">Examples</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_dataloading.html">Video dataloading</a></li>
@@ -303,6 +314,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_pinned_arena.html">Benchmark pinned arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
@@ -310,7 +322,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.html">spdl.pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.config.html">spdl.pipeline.config</a></li>
@@ -322,10 +334,10 @@
 <li class="toctree-l2"><a class="reference internal" href="spdl.source.html">spdl.source</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_class.html">Class List</a></li>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_file.html">File List</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl.html">Namespace spdl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
@@ -371,7 +383,7 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe.html">Template Function spdl::core::deserialize_packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a17e80346c554363a3ca0f92f23f35d61.html">Template Function spdl::core::deserialize_packets_view</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a0d3adfab8851b38d60a666b31ca766f5.html">Function spdl::core::extract_packets_at_indices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
@@ -439,11 +451,12 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/shared_memory_ownership.html">Why shared arena outputs keep storage alive</a></li>
 </ul>
 </li>
 </ul>
@@ -466,6 +479,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.9.0">0.9.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.8.0">0.8.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
@@ -529,41 +544,25 @@
         <article role="main" id="furo-main-content">
           <div class="custom_autosummary"><section id="module-benchmark_thread_output_queue">
 <span id="benchmark-thread-output-queue"></span><span id="example-benchmark-thread-output-queue"></span><h1>Benchmark thread output queue<a class="headerlink" href="#module-benchmark_thread_output_queue" title="Link to this heading">¶</a></h1>
-<p>Benchmark: SPDL pipeline handoff latency with and without thread output queue.</p>
-<p>Compares main-thread <code class="docutils literal notranslate"><span class="pre">get_item</span></code> latency between the default asyncio-based
-handoff (<code class="docutils literal notranslate"><span class="pre">run_coroutine_threadsafe</span></code> + <code class="docutils literal notranslate"><span class="pre">Future.result</span></code> polling) and the
-<code class="docutils literal notranslate"><span class="pre">queue.Queue</span></code>-based handoff (direct <code class="docutils literal notranslate"><span class="pre">queue.Queue.get</span></code>).</p>
-<p>The benchmark emulates a realistic training loop: each iteration the
-foreground thread receives a batch, does simulated work (busy-wait to
-mimic a GPU forward/backward pass), and then times how long the <em>next</em>
-<code class="docutils literal notranslate"><span class="pre">get_item</span></code> call takes.  When the simulated work is long enough the
-producer has time to pre-fill the queue, so the handoff latency
-isolates the cross-thread scheduling overhead.</p>
-<p>Foreground work is swept from 0ms to 30ms in 3ms steps.</p>
+<p>Compare handoff with False, ThreadOutputQueue and StatsThreadOutputQueue.</p>
+<p>Runs a source-to-sink pipeline with 500 integer items, buffer capacity 8 and two
+configured executor workers. Foreground CPU busy-work is swept from 0 to 30 ms
+in 3 ms steps. After 20 warmup items, timed and untimed iterator reads alternate,
+producing 240 latency observations per variant and work setting.</p>
+<p>The busy loop creates CPU/GIL contention rather than real GPU work. Results
+measure iterator handoff, not sustained-load, training or GPU-overlap performance.
+The False control uses the configured async sink (a synchronous mirror for the
+built-in StatsQueue); both thread variants are explicitly selected classes.
+StatsThreadOutputQueue collects with its default final reporting callback;
+periodic reporting is disabled. Existing internal queues and task hooks retain
+normal defaults in every variant.</p>
 <p>Usage:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">buck2</span> <span class="n">run</span> <span class="o">//</span><span class="n">spdl</span><span class="o">/</span><span class="n">examples</span><span class="p">:</span><span class="n">benchmark_thread_output_queue</span>
 </pre></div>
 </div>
-<p>Example results (devserver, no GPU, 500 lightweight int items):</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">FG</span> <span class="n">work</span>   <span class="n">default</span> <span class="p">(</span><span class="n">p50</span><span class="p">)</span>   <span class="n">default</span> <span class="p">(</span><span class="n">p99</span><span class="p">)</span>   <span class="n">thread_q</span> <span class="p">(</span><span class="n">p50</span><span class="p">)</span>   <span class="n">thread_q</span> <span class="p">(</span><span class="n">p99</span><span class="p">)</span>
-<span class="o">-------</span>   <span class="o">-------------</span>   <span class="o">-------------</span>   <span class="o">--------------</span>   <span class="o">--------------</span>
-  <span class="mi">0</span><span class="n">ms</span>         <span class="mi">199</span><span class="n">us</span>           <span class="mi">625</span><span class="n">us</span>           <span class="mi">116</span><span class="n">us</span>            <span class="mi">313</span><span class="n">us</span>
-  <span class="mi">3</span><span class="n">ms</span>         <span class="mi">246</span><span class="n">us</span>           <span class="mi">642</span><span class="n">us</span>           <span class="mi">223</span><span class="n">us</span>            <span class="mi">646</span><span class="n">us</span>
-  <span class="mi">6</span><span class="n">ms</span>         <span class="mi">232</span><span class="n">us</span>           <span class="mi">532</span><span class="n">us</span>           <span class="mi">190</span><span class="n">us</span>            <span class="mi">555</span><span class="n">us</span>
-  <span class="mi">9</span><span class="n">ms</span>         <span class="mi">287</span><span class="n">us</span>           <span class="mi">485</span><span class="n">us</span>           <span class="mi">153</span><span class="n">us</span>            <span class="mi">549</span><span class="n">us</span>
- <span class="mi">12</span><span class="n">ms</span>         <span class="mi">280</span><span class="n">us</span>           <span class="mi">822</span><span class="n">us</span>            <span class="mi">14</span><span class="n">us</span>            <span class="mi">464</span><span class="n">us</span>
- <span class="mi">15</span><span class="n">ms</span>         <span class="mi">221</span><span class="n">us</span>           <span class="mi">396</span><span class="n">us</span>             <span class="mi">8</span><span class="n">us</span>            <span class="mi">385</span><span class="n">us</span>
- <span class="mi">18</span><span class="n">ms</span>         <span class="mi">227</span><span class="n">us</span>           <span class="mi">431</span><span class="n">us</span>             <span class="mi">9</span><span class="n">us</span>             <span class="mi">70</span><span class="n">us</span>
- <span class="mi">21</span><span class="n">ms</span>         <span class="mi">224</span><span class="n">us</span>           <span class="mi">450</span><span class="n">us</span>            <span class="mi">11</span><span class="n">us</span>             <span class="mi">41</span><span class="n">us</span>
- <span class="mi">24</span><span class="n">ms</span>         <span class="mi">240</span><span class="n">us</span>           <span class="mi">533</span><span class="n">us</span>            <span class="mi">12</span><span class="n">us</span>             <span class="mi">34</span><span class="n">us</span>
- <span class="mi">27</span><span class="n">ms</span>         <span class="mi">227</span><span class="n">us</span>           <span class="mi">470</span><span class="n">us</span>            <span class="mi">12</span><span class="n">us</span>             <span class="mi">27</span><span class="n">us</span>
- <span class="mi">30</span><span class="n">ms</span>         <span class="mi">242</span><span class="n">us</span>           <span class="mi">512</span><span class="n">us</span>            <span class="mi">12</span><span class="n">us</span>             <span class="mi">26</span><span class="n">us</span>
-</pre></div>
-</div>
-<p>The default asyncio path stays flat at ~220-280us regardless of overlap
-time — that is the fixed <code class="docutils literal notranslate"><span class="pre">run_coroutine_threadsafe</span></code> scheduling tax.
-The thread output queue drops to ~8-14us once the foreground work is
-long enough (&gt;= ~12ms on this machine) for the producer to pre-fill it.</p>
+<p>The complete measured comparison is documented on
+<a class="reference internal" href="spdl.pipeline.ThreadOutputQueue.html#spdl.pipeline.ThreadOutputQueue" title="spdl.pipeline.ThreadOutputQueue"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.pipeline.ThreadOutputQueue</span></code></a> and
+<a class="reference internal" href="spdl.pipeline.StatsThreadOutputQueue.html#spdl.pipeline.StatsThreadOutputQueue" title="spdl.pipeline.StatsThreadOutputQueue"><code class="xref py py-class docutils literal notranslate"><span class="pre">spdl.pipeline.StatsThreadOutputQueue</span></code></a>.</p>
 <section id="source">
 <h2>Source<a class="headerlink" href="#source" title="Link to this heading">¶</a></h2>
 <p class="rubric">Source</p>
@@ -575,204 +574,182 @@ long enough (&gt;= ~12ms on this machine) for the producer to pre-fill it.</p>
 <span class="linenos">  5</span><span class="c1"># LICENSE file in the root directory of this source tree.</span>
 <span class="linenos">  6</span>
 <span class="linenos">  7</span>
-<span class="linenos">  8</span><span class="sd">"""Benchmark: SPDL pipeline handoff latency with and without thread output queue.</span>
+<span class="linenos">  8</span><span class="sd">"""Compare handoff with False, ThreadOutputQueue and StatsThreadOutputQueue.</span>
 <span class="linenos">  9</span>
-<span class="linenos"> 10</span><span class="sd">Compares main-thread ``get_item`` latency between the default asyncio-based</span>
-<span class="linenos"> 11</span><span class="sd">handoff (``run_coroutine_threadsafe`` + ``Future.result`` polling) and the</span>
-<span class="linenos"> 12</span><span class="sd">``queue.Queue``-based handoff (direct ``queue.Queue.get``).</span>
-<span class="linenos"> 13</span>
-<span class="linenos"> 14</span><span class="sd">The benchmark emulates a realistic training loop: each iteration the</span>
-<span class="linenos"> 15</span><span class="sd">foreground thread receives a batch, does simulated work (busy-wait to</span>
-<span class="linenos"> 16</span><span class="sd">mimic a GPU forward/backward pass), and then times how long the *next*</span>
-<span class="linenos"> 17</span><span class="sd">``get_item`` call takes.  When the simulated work is long enough the</span>
-<span class="linenos"> 18</span><span class="sd">producer has time to pre-fill the queue, so the handoff latency</span>
-<span class="linenos"> 19</span><span class="sd">isolates the cross-thread scheduling overhead.</span>
-<span class="linenos"> 20</span>
-<span class="linenos"> 21</span><span class="sd">Foreground work is swept from 0ms to 30ms in 3ms steps.</span>
+<span class="linenos"> 10</span><span class="sd">Runs a source-to-sink pipeline with 500 integer items, buffer capacity 8 and two</span>
+<span class="linenos"> 11</span><span class="sd">configured executor workers. Foreground CPU busy-work is swept from 0 to 30 ms</span>
+<span class="linenos"> 12</span><span class="sd">in 3 ms steps. After 20 warmup items, timed and untimed iterator reads alternate,</span>
+<span class="linenos"> 13</span><span class="sd">producing 240 latency observations per variant and work setting.</span>
+<span class="linenos"> 14</span>
+<span class="linenos"> 15</span><span class="sd">The busy loop creates CPU/GIL contention rather than real GPU work. Results</span>
+<span class="linenos"> 16</span><span class="sd">measure iterator handoff, not sustained-load, training or GPU-overlap performance.</span>
+<span class="linenos"> 17</span><span class="sd">The False control uses the configured async sink (a synchronous mirror for the</span>
+<span class="linenos"> 18</span><span class="sd">built-in StatsQueue); both thread variants are explicitly selected classes.</span>
+<span class="linenos"> 19</span><span class="sd">StatsThreadOutputQueue collects with its default final reporting callback;</span>
+<span class="linenos"> 20</span><span class="sd">periodic reporting is disabled. Existing internal queues and task hooks retain</span>
+<span class="linenos"> 21</span><span class="sd">normal defaults in every variant.</span>
 <span class="linenos"> 22</span>
 <span class="linenos"> 23</span><span class="sd">Usage::</span>
 <span class="linenos"> 24</span>
 <span class="linenos"> 25</span><span class="sd">    buck2 run //spdl/examples:benchmark_thread_output_queue</span>
 <span class="linenos"> 26</span>
-<span class="linenos"> 27</span><span class="sd">Example results (devserver, no GPU, 500 lightweight int items)::</span>
-<span class="linenos"> 28</span>
-<span class="linenos"> 29</span><span class="sd">    FG work   default (p50)   default (p99)   thread_q (p50)   thread_q (p99)</span>
-<span class="linenos"> 30</span><span class="sd">    -------   -------------   -------------   --------------   --------------</span>
-<span class="linenos"> 31</span><span class="sd">      0ms         199us           625us           116us            313us</span>
-<span class="linenos"> 32</span><span class="sd">      3ms         246us           642us           223us            646us</span>
-<span class="linenos"> 33</span><span class="sd">      6ms         232us           532us           190us            555us</span>
-<span class="linenos"> 34</span><span class="sd">      9ms         287us           485us           153us            549us</span>
-<span class="linenos"> 35</span><span class="sd">     12ms         280us           822us            14us            464us</span>
-<span class="linenos"> 36</span><span class="sd">     15ms         221us           396us             8us            385us</span>
-<span class="linenos"> 37</span><span class="sd">     18ms         227us           431us             9us             70us</span>
-<span class="linenos"> 38</span><span class="sd">     21ms         224us           450us            11us             41us</span>
-<span class="linenos"> 39</span><span class="sd">     24ms         240us           533us            12us             34us</span>
-<span class="linenos"> 40</span><span class="sd">     27ms         227us           470us            12us             27us</span>
-<span class="linenos"> 41</span><span class="sd">     30ms         242us           512us            12us             26us</span>
+<span class="linenos"> 27</span><span class="sd">The complete measured comparison is documented on</span>
+<span class="linenos"> 28</span><span class="sd">:py:class:`spdl.pipeline.ThreadOutputQueue` and</span>
+<span class="linenos"> 29</span><span class="sd">:py:class:`spdl.pipeline.StatsThreadOutputQueue`.</span>
+<span class="linenos"> 30</span><span class="sd">"""</span>
+<span class="linenos"> 31</span>
+<span class="linenos"> 32</span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="linenos"> 33</span>
+<span class="linenos"> 34</span><span class="kn">import</span><span class="w"> </span><span class="nn">statistics</span>
+<span class="linenos"> 35</span><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="linenos"> 36</span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="linenos"> 37</span>
+<span class="linenos"> 38</span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineBuilder</span><span class="p">,</span> <span class="n">StatsThreadOutputQueue</span><span class="p">,</span> <span class="n">ThreadOutputQueue</span>
+<span class="linenos"> 39</span>
+<span class="linenos"> 40</span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"BenchResult"</span><span class="p">,</span> <span class="s2">"run_benchmark"</span><span class="p">,</span> <span class="s2">"main"</span><span class="p">]</span>
+<span class="linenos"> 41</span>
 <span class="linenos"> 42</span>
-<span class="linenos"> 43</span><span class="sd">The default asyncio path stays flat at ~220-280us regardless of overlap</span>
-<span class="linenos"> 44</span><span class="sd">time — that is the fixed ``run_coroutine_threadsafe`` scheduling tax.</span>
-<span class="linenos"> 45</span><span class="sd">The thread output queue drops to ~8-14us once the foreground work is</span>
-<span class="linenos"> 46</span><span class="sd">long enough (&gt;= ~12ms on this machine) for the producer to pre-fill it.</span>
-<span class="linenos"> 47</span><span class="sd">"""</span>
-<span class="linenos"> 48</span>
-<span class="linenos"> 49</span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-<span class="linenos"> 50</span>
-<span class="linenos"> 51</span><span class="kn">import</span><span class="w"> </span><span class="nn">statistics</span>
-<span class="linenos"> 52</span><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
-<span class="linenos"> 53</span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="linenos"> 43</span><span class="nd">@dataclass</span>
+<span class="linenos"> 44</span><span class="k">class</span><span class="w"> </span><span class="nc">BenchResult</span><span class="p">:</span>
+<span class="linenos"> 45</span><span class="w">    </span><span class="sd">"""Collected latency measurements for a single benchmark run."""</span>
+<span class="linenos"> 46</span>
+<span class="linenos"> 47</span>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+<span class="linenos"> 48</span>    <span class="n">latencies_us</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+<span class="linenos"> 49</span>
+<span class="linenos"> 50</span>    <span class="nd">@property</span>
+<span class="linenos"> 51</span>    <span class="k">def</span><span class="w"> </span><span class="nf">p50</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="linenos"> 52</span>        <span class="n">s</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">)</span>
+<span class="linenos"> 53</span>        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span>
 <span class="linenos"> 54</span>
-<span class="linenos"> 55</span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineBuilder</span>
-<span class="linenos"> 56</span>
-<span class="linenos"> 57</span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"BenchResult"</span><span class="p">,</span> <span class="s2">"main"</span><span class="p">]</span>
-<span class="linenos"> 58</span>
+<span class="linenos"> 55</span>    <span class="nd">@property</span>
+<span class="linenos"> 56</span>    <span class="k">def</span><span class="w"> </span><span class="nf">p95</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="linenos"> 57</span>        <span class="n">s</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">)</span>
+<span class="linenos"> 58</span>        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.95</span><span class="p">)]</span>
 <span class="linenos"> 59</span>
-<span class="linenos"> 60</span><span class="nd">@dataclass</span>
-<span class="linenos"> 61</span><span class="k">class</span><span class="w"> </span><span class="nc">BenchResult</span><span class="p">:</span>
-<span class="linenos"> 62</span><span class="w">    </span><span class="sd">"""Collected latency measurements for a single benchmark run."""</span>
-<span class="linenos"> 63</span>
-<span class="linenos"> 64</span>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-<span class="linenos"> 65</span>    <span class="n">latencies_us</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
-<span class="linenos"> 66</span>
-<span class="linenos"> 67</span>    <span class="nd">@property</span>
-<span class="linenos"> 68</span>    <span class="k">def</span><span class="w"> </span><span class="nf">p50</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="linenos"> 69</span>        <span class="n">s</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">)</span>
-<span class="linenos"> 70</span>        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span>
-<span class="linenos"> 71</span>
-<span class="linenos"> 72</span>    <span class="nd">@property</span>
-<span class="linenos"> 73</span>    <span class="k">def</span><span class="w"> </span><span class="nf">p95</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="linenos"> 74</span>        <span class="n">s</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">)</span>
-<span class="linenos"> 75</span>        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.95</span><span class="p">)]</span>
-<span class="linenos"> 76</span>
-<span class="linenos"> 77</span>    <span class="nd">@property</span>
-<span class="linenos"> 78</span>    <span class="k">def</span><span class="w"> </span><span class="nf">p99</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="linenos"> 79</span>        <span class="n">s</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">)</span>
-<span class="linenos"> 80</span>        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.99</span><span class="p">)]</span>
-<span class="linenos"> 81</span>
-<span class="linenos"> 82</span>    <span class="nd">@property</span>
-<span class="linenos"> 83</span>    <span class="k">def</span><span class="w"> </span><span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="linenos"> 84</span>        <span class="k">return</span> <span class="n">statistics</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">)</span>
-<span class="linenos"> 85</span>
-<span class="linenos"> 86</span>    <span class="k">def</span><span class="w"> </span><span class="nf">summary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="linenos"> 87</span><span class="w">        </span><span class="sd">"""Return a one-line summary string with mean/p50/p95/p99."""</span>
-<span class="linenos"> 88</span>        <span class="k">return</span> <span class="p">(</span>
-<span class="linenos"> 89</span>            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">:</span><span class="s2">&lt;50s</span><span class="si">}</span><span class="s2">  "</span>
-<span class="linenos"> 90</span>            <span class="sa">f</span><span class="s2">"mean=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">us  "</span>
-<span class="linenos"> 91</span>            <span class="sa">f</span><span class="s2">"p50=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">p50</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">us  "</span>
-<span class="linenos"> 92</span>            <span class="sa">f</span><span class="s2">"p95=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">p95</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">us  "</span>
-<span class="linenos"> 93</span>            <span class="sa">f</span><span class="s2">"p99=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">p99</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">us  "</span>
-<span class="linenos"> 94</span>            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">)</span><span class="si">}</span><span class="s2"> meas)"</span>
-<span class="linenos"> 95</span>        <span class="p">)</span>
-<span class="linenos"> 96</span>
+<span class="linenos"> 60</span>    <span class="nd">@property</span>
+<span class="linenos"> 61</span>    <span class="k">def</span><span class="w"> </span><span class="nf">p99</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="linenos"> 62</span>        <span class="n">s</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">)</span>
+<span class="linenos"> 63</span>        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.99</span><span class="p">)]</span>
+<span class="linenos"> 64</span>
+<span class="linenos"> 65</span>    <span class="nd">@property</span>
+<span class="linenos"> 66</span>    <span class="k">def</span><span class="w"> </span><span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="linenos"> 67</span>        <span class="k">return</span> <span class="n">statistics</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">)</span>
+<span class="linenos"> 68</span>
+<span class="linenos"> 69</span>    <span class="k">def</span><span class="w"> </span><span class="nf">summary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="linenos"> 70</span><span class="w">        </span><span class="sd">"""Return a one-line summary string with mean/p50/p95/p99."""</span>
+<span class="linenos"> 71</span>        <span class="k">return</span> <span class="p">(</span>
+<span class="linenos"> 72</span>            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">:</span><span class="s2">&lt;50s</span><span class="si">}</span><span class="s2">  "</span>
+<span class="linenos"> 73</span>            <span class="sa">f</span><span class="s2">"mean=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">us  "</span>
+<span class="linenos"> 74</span>            <span class="sa">f</span><span class="s2">"p50=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">p50</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">us  "</span>
+<span class="linenos"> 75</span>            <span class="sa">f</span><span class="s2">"p95=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">p95</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">us  "</span>
+<span class="linenos"> 76</span>            <span class="sa">f</span><span class="s2">"p99=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">p99</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">us  "</span>
+<span class="linenos"> 77</span>            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">)</span><span class="si">}</span><span class="s2"> meas)"</span>
+<span class="linenos"> 78</span>        <span class="p">)</span>
+<span class="linenos"> 79</span>
+<span class="linenos"> 80</span>
+<span class="linenos"> 81</span><span class="k">def</span><span class="w"> </span><span class="nf">_busy_wait_us</span><span class="p">(</span><span class="n">us</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos"> 82</span><span class="w">    </span><span class="sd">"""Busy-wait for *us* microseconds (spin-loop)."""</span>
+<span class="linenos"> 83</span>    <span class="n">deadline</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">+</span> <span class="n">us</span> <span class="o">/</span> <span class="mf">1e6</span>
+<span class="linenos"> 84</span>    <span class="k">while</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">deadline</span><span class="p">:</span>
+<span class="linenos"> 85</span>        <span class="k">pass</span>
+<span class="linenos"> 86</span>
+<span class="linenos"> 87</span>
+<span class="linenos"> 88</span><span class="k">def</span><span class="w"> </span><span class="nf">run_benchmark</span><span class="p">(</span>
+<span class="linenos"> 89</span>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="linenos"> 90</span>    <span class="n">n_items</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos"> 91</span>    <span class="n">buffer_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos"> 92</span>    <span class="n">use_thread_output_queue</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">type</span><span class="p">[</span><span class="n">ThreadOutputQueue</span><span class="p">],</span>
+<span class="linenos"> 93</span>    <span class="n">work_us</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="linenos"> 94</span>    <span class="n">warmup</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+<span class="linenos"> 95</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BenchResult</span><span class="p">:</span>
+<span class="linenos"> 96</span><span class="w">    </span><span class="sd">"""Run a source-to-sink pipeline with foreground CPU busy-work.</span>
 <span class="linenos"> 97</span>
-<span class="linenos"> 98</span><span class="k">def</span><span class="w"> </span><span class="nf">_busy_wait_us</span><span class="p">(</span><span class="n">us</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos"> 99</span><span class="w">    </span><span class="sd">"""Busy-wait for *us* microseconds (spin-loop)."""</span>
-<span class="linenos">100</span>    <span class="n">deadline</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">+</span> <span class="n">us</span> <span class="o">/</span> <span class="mf">1e6</span>
-<span class="linenos">101</span>    <span class="k">while</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">deadline</span><span class="p">:</span>
-<span class="linenos">102</span>        <span class="k">pass</span>
-<span class="linenos">103</span>
-<span class="linenos">104</span>
-<span class="linenos">105</span><span class="k">def</span><span class="w"> </span><span class="nf">_run_bench</span><span class="p">(</span>
-<span class="linenos">106</span>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<span class="linenos">107</span>    <span class="n">n_items</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-<span class="linenos">108</span>    <span class="n">buffer_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-<span class="linenos">109</span>    <span class="n">use_thread_output_queue</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
-<span class="linenos">110</span>    <span class="n">work_us</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<span class="linenos">111</span>    <span class="n">warmup</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
-<span class="linenos">112</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BenchResult</span><span class="p">:</span>
-<span class="linenos">113</span><span class="w">    </span><span class="sd">"""Run a single benchmark: source -&gt; sink pipeline with foreground work.</span>
-<span class="linenos">114</span>
-<span class="linenos">115</span><span class="sd">    Builds a trivial pipeline (source of *n_items* integers -&gt; sink) and</span>
-<span class="linenos">116</span><span class="sd">    iterates it.  Between each consumed item the foreground thread</span>
-<span class="linenos">117</span><span class="sd">    busy-waits for *work_us* microseconds to simulate consumer-side</span>
-<span class="linenos">118</span><span class="sd">    compute (e.g. a GPU training step).  After warmup, the time spent</span>
-<span class="linenos">119</span><span class="sd">    inside each ``get_item`` call is recorded.</span>
-<span class="linenos">120</span>
-<span class="linenos">121</span><span class="sd">    Args:</span>
-<span class="linenos">122</span><span class="sd">        name: Human-readable label for the result.</span>
-<span class="linenos">123</span><span class="sd">        n_items: Total number of items the source produces.</span>
-<span class="linenos">124</span><span class="sd">        buffer_size: Sink buffer size (number of slots).</span>
-<span class="linenos">125</span><span class="sd">        use_thread_output_queue: Whether to use the thread output queue handoff.</span>
-<span class="linenos">126</span><span class="sd">        work_us: Duration of simulated foreground work in microseconds.</span>
-<span class="linenos">127</span><span class="sd">        warmup: Number of items to consume before recording latencies.</span>
-<span class="linenos">128</span><span class="sd">    """</span>
-<span class="linenos">129</span>    <span class="n">items</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_items</span><span class="p">))</span>
-<span class="linenos">130</span>    <span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
-<span class="linenos">131</span>        <span class="n">PipelineBuilder</span><span class="p">()</span>
-<span class="linenos">132</span>        <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">items</span><span class="p">))</span>
-<span class="linenos">133</span>        <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">)</span>
-<span class="linenos">134</span>        <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">use_thread_output_queue</span><span class="o">=</span><span class="n">use_thread_output_queue</span><span class="p">)</span>
-<span class="linenos">135</span>    <span class="p">)</span>
-<span class="linenos">136</span>
-<span class="linenos">137</span>    <span class="n">result</span> <span class="o">=</span> <span class="n">BenchResult</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
-<span class="linenos">138</span>    <span class="n">consumed</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="linenos">139</span>    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get_iterator</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">):</span>
-<span class="linenos">140</span>        <span class="n">consumed</span> <span class="o">+=</span> <span class="mi">1</span>
-<span class="linenos">141</span>
-<span class="linenos">142</span>        <span class="c1"># Simulate foreground work (e.g. GPU fwd+bwd).</span>
-<span class="linenos">143</span>        <span class="c1"># This gives the producer time to pre-fill the queue</span>
-<span class="linenos">144</span>        <span class="c1"># so the next get_item measures pure handoff overhead.</span>
-<span class="linenos">145</span>        <span class="n">_busy_wait_us</span><span class="p">(</span><span class="n">work_us</span><span class="p">)</span>
+<span class="linenos"> 98</span><span class="sd">    After warmup, every other iterator advance is timed. The public build option</span>
+<span class="linenos"> 99</span><span class="sd">    selects the configured async sink or an explicit thread-output class.</span>
+<span class="linenos">100</span>
+<span class="linenos">101</span><span class="sd">    Args:</span>
+<span class="linenos">102</span><span class="sd">        name: Human-readable label for the result.</span>
+<span class="linenos">103</span><span class="sd">        n_items: Total number of integer items the source produces.</span>
+<span class="linenos">104</span><span class="sd">        buffer_size: Sink buffer size in items; zero means unbounded.</span>
+<span class="linenos">105</span><span class="sd">        use_thread_output_queue: ``False``, ``True``, or a thread-output queue class.</span>
+<span class="linenos">106</span><span class="sd">        work_us: Duration of foreground CPU busy-work in microseconds.</span>
+<span class="linenos">107</span><span class="sd">        warmup: Number of items to consume before recording latencies.</span>
+<span class="linenos">108</span>
+<span class="linenos">109</span><span class="sd">    Returns:</span>
+<span class="linenos">110</span><span class="sd">        Latencies of timed iterator advances, in microseconds. The workload</span>
+<span class="linenos">111</span><span class="sd">        alternates timed and untimed reads after warmup; it is CPU-only and does</span>
+<span class="linenos">112</span><span class="sd">        not establish sustained-load or GPU-overlap performance.</span>
+<span class="linenos">113</span><span class="sd">    """</span>
+<span class="linenos">114</span>    <span class="k">if</span> <span class="n">n_items</span> <span class="o">&lt;=</span> <span class="n">warmup</span> <span class="o">+</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">warmup</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+<span class="linenos">115</span>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"n_items must exceed warmup by at least two"</span><span class="p">)</span>
+<span class="linenos">116</span>    <span class="k">if</span> <span class="n">buffer_size</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">work_us</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+<span class="linenos">117</span>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"buffer_size and work_us must be nonnegative"</span><span class="p">)</span>
+<span class="linenos">118</span>    <span class="n">items</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_items</span><span class="p">))</span>
+<span class="linenos">119</span>    <span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+<span class="linenos">120</span>        <span class="n">PipelineBuilder</span><span class="p">()</span>
+<span class="linenos">121</span>        <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">items</span><span class="p">))</span>
+<span class="linenos">122</span>        <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">)</span>
+<span class="linenos">123</span>        <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">use_thread_output_queue</span><span class="o">=</span><span class="n">use_thread_output_queue</span><span class="p">)</span>
+<span class="linenos">124</span>    <span class="p">)</span>
+<span class="linenos">125</span>
+<span class="linenos">126</span>    <span class="n">result</span> <span class="o">=</span> <span class="n">BenchResult</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+<span class="linenos">127</span>    <span class="n">consumed</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="linenos">128</span>    <span class="k">try</span><span class="p">:</span>
+<span class="linenos">129</span>        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get_iterator</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">):</span>
+<span class="linenos">130</span>            <span class="n">consumed</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="linenos">131</span>            <span class="n">_busy_wait_us</span><span class="p">(</span><span class="n">work_us</span><span class="p">)</span>
+<span class="linenos">132</span>            <span class="k">if</span> <span class="n">consumed</span> <span class="o">&lt;=</span> <span class="n">warmup</span><span class="p">:</span>
+<span class="linenos">133</span>                <span class="k">continue</span>
+<span class="linenos">134</span>
+<span class="linenos">135</span>            <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="linenos">136</span>            <span class="k">try</span><span class="p">:</span>
+<span class="linenos">137</span>                <span class="nb">next</span><span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_iterator</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">))</span>
+<span class="linenos">138</span>            <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+<span class="linenos">139</span>                <span class="k">break</span>
+<span class="linenos">140</span>            <span class="n">result</span><span class="o">.</span><span class="n">latencies_us</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">)</span>
+<span class="linenos">141</span>            <span class="n">consumed</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="linenos">142</span>            <span class="n">_busy_wait_us</span><span class="p">(</span><span class="n">work_us</span><span class="p">)</span>
+<span class="linenos">143</span>    <span class="k">finally</span><span class="p">:</span>
+<span class="linenos">144</span>        <span class="n">pipeline</span><span class="o">.</span><span class="n">stop</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
+<span class="linenos">145</span>    <span class="k">return</span> <span class="n">result</span>
 <span class="linenos">146</span>
-<span class="linenos">147</span>        <span class="k">if</span> <span class="n">consumed</span> <span class="o">&lt;=</span> <span class="n">warmup</span><span class="p">:</span>
-<span class="linenos">148</span>            <span class="k">continue</span>
-<span class="linenos">149</span>
-<span class="linenos">150</span>        <span class="c1"># Time the next get_item call — this is what we're measuring.</span>
-<span class="linenos">151</span>        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
-<span class="linenos">152</span>        <span class="k">try</span><span class="p">:</span>
-<span class="linenos">153</span>            <span class="nb">next</span><span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_iterator</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">))</span>
-<span class="linenos">154</span>        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
-<span class="linenos">155</span>            <span class="k">break</span>
-<span class="linenos">156</span>        <span class="n">result</span><span class="o">.</span><span class="n">latencies_us</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">)</span>
-<span class="linenos">157</span>        <span class="n">consumed</span> <span class="o">+=</span> <span class="mi">1</span>
-<span class="linenos">158</span>
-<span class="linenos">159</span>        <span class="c1"># Do work after the timed item too, so the *next* iteration's</span>
-<span class="linenos">160</span>        <span class="c1"># measurement also has overlap time.</span>
-<span class="linenos">161</span>        <span class="n">_busy_wait_us</span><span class="p">(</span><span class="n">work_us</span><span class="p">)</span>
-<span class="linenos">162</span>
-<span class="linenos">163</span>    <span class="k">return</span> <span class="n">result</span>
-<span class="linenos">164</span>
-<span class="linenos">165</span>
-<span class="linenos">166</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">167</span><span class="w">    </span><span class="sd">"""Run the full benchmark sweep and print results."""</span>
-<span class="linenos">168</span>    <span class="n">n_items</span> <span class="o">=</span> <span class="mi">500</span>
-<span class="linenos">169</span>    <span class="n">buffer_size</span> <span class="o">=</span> <span class="mi">8</span>
-<span class="linenos">170</span>
-<span class="linenos">171</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">"SPDL Pipeline Thread Output Queue Handoff Benchmark"</span><span class="p">)</span>
-<span class="linenos">172</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">90</span><span class="p">)</span>
-<span class="linenos">173</span>
-<span class="linenos">174</span>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="linenos">175</span>
-<span class="linenos">176</span>    <span class="n">work_ms_values</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">31</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
-<span class="linenos">177</span>    <span class="k">for</span> <span class="n">work_ms</span> <span class="ow">in</span> <span class="n">work_ms_values</span><span class="p">:</span>
-<span class="linenos">178</span>        <span class="n">work_us</span> <span class="o">=</span> <span class="n">work_ms</span> <span class="o">*</span> <span class="mf">1000.0</span>
-<span class="linenos">179</span>        <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">work_ms</span><span class="si">}</span><span class="s2">ms foreground work"</span>
-<span class="linenos">180</span>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">--- </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">n_items</span><span class="si">}</span><span class="s2"> items, buffer_size=</span><span class="si">{</span><span class="n">buffer_size</span><span class="si">}</span><span class="s2">) ---"</span><span class="p">)</span>
+<span class="linenos">147</span>
+<span class="linenos">148</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">149</span><span class="w">    </span><span class="sd">"""Run the three-way sweep and print every mean/p50/p95/p99 result."""</span>
+<span class="linenos">150</span>    <span class="n">n_items</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="linenos">151</span>    <span class="n">buffer_size</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="linenos">152</span>
+<span class="linenos">153</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">"SPDL Pipeline Thread Output Queue Handoff Benchmark"</span><span class="p">)</span>
+<span class="linenos">154</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">90</span><span class="p">)</span>
+<span class="linenos">155</span>
+<span class="linenos">156</span>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BenchResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="linenos">157</span>    <span class="k">for</span> <span class="n">work_ms</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">31</span><span class="p">,</span> <span class="mi">3</span><span class="p">):</span>
+<span class="linenos">158</span>        <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">work_ms</span><span class="si">}</span><span class="s2">ms foreground work"</span>
+<span class="linenos">159</span>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">--- </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">n_items</span><span class="si">}</span><span class="s2"> items, buffer_size=</span><span class="si">{</span><span class="n">buffer_size</span><span class="si">}</span><span class="s2">) ---"</span><span class="p">)</span>
+<span class="linenos">160</span>        <span class="k">for</span> <span class="n">selection</span><span class="p">,</span> <span class="n">tag</span> <span class="ow">in</span> <span class="p">[</span>
+<span class="linenos">161</span>            <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">"False"</span><span class="p">),</span>
+<span class="linenos">162</span>            <span class="p">(</span><span class="n">ThreadOutputQueue</span><span class="p">,</span> <span class="s2">"ThreadOutputQueue"</span><span class="p">),</span>
+<span class="linenos">163</span>            <span class="p">(</span><span class="n">StatsThreadOutputQueue</span><span class="p">,</span> <span class="s2">"StatsThreadOutputQueue"</span><span class="p">),</span>
+<span class="linenos">164</span>        <span class="p">]:</span>
+<span class="linenos">165</span>            <span class="n">result</span> <span class="o">=</span> <span class="n">run_benchmark</span><span class="p">(</span>
+<span class="linenos">166</span>                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+<span class="linenos">167</span>                <span class="n">n_items</span><span class="p">,</span>
+<span class="linenos">168</span>                <span class="n">buffer_size</span><span class="p">,</span>
+<span class="linenos">169</span>                <span class="n">use_thread_output_queue</span><span class="o">=</span><span class="n">selection</span><span class="p">,</span>
+<span class="linenos">170</span>                <span class="n">work_us</span><span class="o">=</span><span class="n">work_ms</span> <span class="o">*</span> <span class="mf">1000.0</span><span class="p">,</span>
+<span class="linenos">171</span>            <span class="p">)</span>
+<span class="linenos">172</span>            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="linenos">173</span>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos">174</span>
+<span class="linenos">175</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="si">{</span><span class="s1">'='</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">90</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos">176</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">"SUMMARY — foreground iterator handoff latency (lower is better)"</span><span class="p">)</span>
+<span class="linenos">177</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'='</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">90</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos">178</span>    <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+<span class="linenos">179</span>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="linenos">180</span>
 <span class="linenos">181</span>
-<span class="linenos">182</span>        <span class="k">for</span> <span class="n">use_toq</span><span class="p">,</span> <span class="n">tag</span> <span class="ow">in</span> <span class="p">[</span>
-<span class="linenos">183</span>            <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">"default asyncio"</span><span class="p">),</span>
-<span class="linenos">184</span>            <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="s2">"thread output queue"</span><span class="p">),</span>
-<span class="linenos">185</span>        <span class="p">]:</span>
-<span class="linenos">186</span>            <span class="n">r</span> <span class="o">=</span> <span class="n">_run_bench</span><span class="p">(</span>
-<span class="linenos">187</span>                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-<span class="linenos">188</span>                <span class="n">n_items</span><span class="p">,</span>
-<span class="linenos">189</span>                <span class="n">buffer_size</span><span class="p">,</span>
-<span class="linenos">190</span>                <span class="n">use_thread_output_queue</span><span class="o">=</span><span class="n">use_toq</span><span class="p">,</span>
-<span class="linenos">191</span>                <span class="n">work_us</span><span class="o">=</span><span class="n">work_us</span><span class="p">,</span>
-<span class="linenos">192</span>            <span class="p">)</span>
-<span class="linenos">193</span>            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
-<span class="linenos">194</span>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="linenos">195</span>
-<span class="linenos">196</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="si">{</span><span class="s1">'='</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">90</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="linenos">197</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">"SUMMARY — main thread get_item() latency (lower is better)"</span><span class="p">)</span>
-<span class="linenos">198</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'='</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">90</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="linenos">199</span>    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-<span class="linenos">200</span>        <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">latencies_us</span><span class="p">:</span>
-<span class="linenos">201</span>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="linenos">202</span>
-<span class="linenos">203</span>
-<span class="linenos">204</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-<span class="linenos">205</span>    <span class="n">main</span><span class="p">()</span>
+<span class="linenos">182</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+<span class="linenos">183</span>    <span class="n">main</span><span class="p">()</span>
 </pre></div>
 </div>
 </details></section>
@@ -780,15 +757,40 @@ long enough (&gt;= ~12ms on this machine) for the producer to pre-fill it.</p>
 <h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h2>
 <p class="rubric">Functions</p>
 <dl class="py function">
+<dt class="sig sig-object py" id="benchmark_thread_output_queue.run_benchmark">
+<span class="sig-name descname"><span class="pre">run_benchmark</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_thread_output_queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#type" title="(in Python v3.15)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="spdl.pipeline.ThreadOutputQueue.html#spdl.pipeline.ThreadOutputQueue" title="spdl.pipeline._components._thread_queue.ThreadOutputQueue"><span class="pre">ThreadOutputQueue</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_us</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#benchmark_thread_output_queue.BenchResult" title="benchmark_thread_output_queue.BenchResult"><span class="pre">BenchResult</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_thread_output_queue.py?#L88-L145"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_thread_output_queue.run_benchmark" title="Link to this definition">¶</a></dt>
+<dd><p>Run a source-to-sink pipeline with foreground CPU busy-work.</p>
+<p>After warmup, every other iterator advance is timed. The public build option
+selects the configured async sink or an explicit thread-output class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> – Human-readable label for the result.</p></li>
+<li><p><strong>n_items</strong> – Total number of integer items the source produces.</p></li>
+<li><p><strong>buffer_size</strong> – Sink buffer size in items; zero means unbounded.</p></li>
+<li><p><strong>use_thread_output_queue</strong> – <code class="docutils literal notranslate"><span class="pre">False</span></code>, <code class="docutils literal notranslate"><span class="pre">True</span></code>, or a thread-output queue class.</p></li>
+<li><p><strong>work_us</strong> – Duration of foreground CPU busy-work in microseconds.</p></li>
+<li><p><strong>warmup</strong> – Number of items to consume before recording latencies.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Latencies of timed iterator advances, in microseconds. The workload
+alternates timed and untimed reads after warmup; it is CPU-only and does
+not establish sustained-load or GPU-overlap performance.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="benchmark_thread_output_queue.main">
-<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_thread_output_queue.py?#L166-L201"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_thread_output_queue.main" title="Link to this definition">¶</a></dt>
-<dd><p>Run the full benchmark sweep and print results.</p>
+<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_thread_output_queue.py?#L148-L179"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_thread_output_queue.main" title="Link to this definition">¶</a></dt>
+<dd><p>Run the three-way sweep and print every mean/p50/p95/p99 result.</p>
 </dd></dl>
 
 <p class="rubric">Classes</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="benchmark_thread_output_queue.BenchResult">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BenchResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latencies_us:</span> <span class="pre">list[float]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_thread_output_queue.py?#L60-L95"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_thread_output_queue.BenchResult" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BenchResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latencies_us:</span> <span class="pre">list[float]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/benchmark_thread_output_queue.py?#L43-L78"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchmark_thread_output_queue.BenchResult" title="Link to this definition">¶</a></dt>
 <dd><p>Collected latency measurements for a single benchmark run.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="benchmark_thread_output_queue.BenchResult.latencies_us">
@@ -889,6 +891,7 @@ long enough (&gt;= ~12ms on this machine) for the producer to pre-fill it.</p>
 <li><a class="reference internal" href="#">Benchmark thread output queue</a><ul>
 <li><a class="reference internal" href="#source">Source</a></li>
 <li><a class="reference internal" href="#api-reference">API Reference</a><ul>
+<li><a class="reference internal" href="#benchmark_thread_output_queue.run_benchmark"><code class="docutils literal notranslate"><span class="pre">run_benchmark()</span></code></a></li>
 <li><a class="reference internal" href="#benchmark_thread_output_queue.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
 <li><a class="reference internal" href="#benchmark_thread_output_queue.BenchResult"><code class="docutils literal notranslate"><span class="pre">BenchResult</span></code></a><ul>
 <li><a class="reference internal" href="#benchmark_thread_output_queue.BenchResult.latencies_us"><code class="docutils literal notranslate"><span class="pre">BenchResult.latencies_us</span></code></a></li>
@@ -914,7 +917,7 @@ long enough (&gt;= ~12ms on this machine) for the producer to pre-fill it.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=cce5339e"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=a82ae3da"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

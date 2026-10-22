@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.io.transfer_tensor - SPDL 0.8.0 documentation</title>
+        <title>spdl.pipeline.ThreadOutputQueue - SPDL 0.9.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.8.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.9.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.8.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.9.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -243,6 +243,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../io/color_space.html">Video Color Space</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/fusion.html">Fusing IO Calls</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/encoding.html">Media Encoding</a></li>
@@ -258,9 +259,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/shared_memory_arenas.html">Shared-memory arenas</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../knowledge_base/index.html">Knowledge Base</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Knowledge Base</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/_categories/technique-catalog.html">Technique catalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/techniques/_categories/techniques-by-area.html">Techniques by area</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/_categories/optimization-guidance.html">Optimization guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/migration/_categories/migration-guidance.html">Migration guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/authoring/_categories/pipeline-authoring.html">Pipeline authoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/_categories/startup-audit.html">Startup audit</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
@@ -268,14 +279,14 @@
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch.html">How It Works</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example.html">Example: Video Classification</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example_v2.html">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_architecture.html">Architecture</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
@@ -283,7 +294,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_dataloading.html">Video dataloading</a></li>
@@ -303,6 +314,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_pinned_arena.html">Benchmark pinned arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
@@ -310,7 +322,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.html">spdl.pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.config.html">spdl.pipeline.config</a></li>
@@ -322,10 +334,10 @@
 <li class="toctree-l2"><a class="reference internal" href="spdl.source.html">spdl.source</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_class.html">Class List</a></li>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_file.html">File List</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl.html">Namespace spdl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
@@ -371,7 +383,7 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe.html">Template Function spdl::core::deserialize_packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a17e80346c554363a3ca0f92f23f35d61.html">Template Function spdl::core::deserialize_packets_view</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a0d3adfab8851b38d60a666b31ca766f5.html">Function spdl::core::extract_packets_at_indices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
@@ -439,11 +451,12 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/shared_memory_ownership.html">Why shared arena outputs keep storage alive</a></li>
 </ul>
 </li>
 </ul>
@@ -466,6 +479,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.9.0">0.9.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.8.0">0.8.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
@@ -507,7 +522,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/generated/spdl.io.transfer_tensor.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/generated/spdl.pipeline.ThreadOutputQueue.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -527,30 +542,283 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="spdl-io-transfer-tensor">
-<h1>spdl.io.transfer_tensor<a class="headerlink" href="#spdl-io-transfer-tensor" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="spdl.io.transfer_tensor">
-<span class="sig-name descname"><span class="pre">transfer_tensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">batch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_caches</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/io/_transfer.py?#L195-L217"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.io.transfer_tensor" title="Link to this definition">¶</a></dt>
-<dd><p>Transfer PyTorch tensors from CPU to CUDA in a dedicated stream.</p>
-<div class="deprecated">
-<p><span class="versionmodified deprecated">Deprecated since version 0.8.0: </span>Use <a class="reference internal" href="spdl.io.transfer_tensor_h2d.html#spdl.io.transfer_tensor_h2d" title="spdl.io.transfer_tensor_h2d"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.transfer_tensor_h2d()</span></code></a> instead.</p>
-</div>
+          <section id="spdl-pipeline-threadoutputqueue">
+<h1>spdl.pipeline.ThreadOutputQueue<a class="headerlink" href="#spdl-pipeline-threadoutputqueue" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ThreadOutputQueue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.pipeline.StageInfo.html#spdl.pipeline.StageInfo" title="spdl.pipeline._common._types.StageInfo"><span class="pre">StageInfo</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L35-L231"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue" title="Link to this definition">¶</a></dt>
+<dd><p>A thread-backed sink with direct foreground reads and no statistics.</p>
+<p>Pass this class, or a subclass, as <code class="docutils literal notranslate"><span class="pre">use_thread_output_queue</span></code> to
+<a class="reference internal" href="spdl.pipeline.PipelineBuilder.html#spdl.pipeline.PipelineBuilder.build" title="spdl.pipeline.PipelineBuilder.build"><code class="xref py py-meth docutils literal notranslate"><span class="pre">build()</span></code></a> or
+<a class="reference internal" href="spdl.pipeline.build_pipeline.html#spdl.pipeline.build_pipeline" title="spdl.pipeline.build_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">build_pipeline()</span></code></a>. An omitted or <code class="docutils literal notranslate"><span class="pre">None</span></code> selector
+uses <a class="reference internal" href="spdl.pipeline.config.ThreadOutputQueueConfig.html#spdl.pipeline.config.ThreadOutputQueueConfig" title="spdl.pipeline.config.ThreadOutputQueueConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">ThreadOutputQueueConfig</span></code></a>; its initial
+configuration selects the stats-enabled thread sink. <code class="docutils literal notranslate"><span class="pre">False</span></code> explicitly
+keeps the async sink, and <code class="docutils literal notranslate"><span class="pre">True</span></code> selects the configured thread-output
+class. An explicit class takes priority over the configuration.
+Pass a class, not a prebuilt instance; the builder constructs the sink.</p>
+<p>Internal stage queues still use <code class="docutils literal notranslate"><span class="pre">queue_class</span></code>. This plain sink does not
+collect statistics, require logging, or persist data. For optional
+background measurements and custom reporting, use
+<a class="reference internal" href="spdl.pipeline.StatsThreadOutputQueue.html#spdl.pipeline.StatsThreadOutputQueue" title="spdl.pipeline.StatsThreadOutputQueue"><code class="xref py py-class docutils literal notranslate"><span class="pre">StatsThreadOutputQueue</span></code></a>.</p>
+<p>Subclasses must accept the constructor keywords below and preserve bounded
+queue and lifecycle semantics. Override <code class="docutils literal notranslate"><span class="pre">stage_hook</span></code> to customize
+initialization/finalization. Classes passed through subprocess configuration
+must be importable and picklable, like other pipeline configuration classes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>batch</strong> – A <a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code></a> or a composition of tensors with
-container types such as <code class="docutils literal notranslate"><span class="pre">list</span></code>, <code class="docutils literal notranslate"><span class="pre">tuple</span></code>, <code class="docutils literal notranslate"><span class="pre">dict</span></code> and
-<code class="docutils literal notranslate"><span class="pre">dataclass</span></code>.</p></li>
-<li><p><strong>num_caches</strong> – Number of recent output batches retained to mitigate
-allocator races across CUDA streams.</p></li>
+<li><p><strong>info</strong> – Stage identity assigned by the builder.</p></li>
+<li><p><strong>buffer_size</strong> – Maximum queued items; zero permits unbounded buffering.</p></li>
+<li><p><strong>interval</strong> – Reporting interval supplied by the builder. This plain base
+ignores it; statistics-enabled subclasses may use it.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>An object of the same type as the input, with CPU tensors transferred
-to CUDA.</p>
+</dl>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineBuilder</span><span class="p">,</span> <span class="n">ThreadOutputQueue</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">PipelineBuilder</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">add_sink</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">use_thread_output_queue</span><span class="o">=</span><span class="n">ThreadOutputQueue</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="k">with</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">auto_stop</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="benchmark-comparison">
+<h2>Benchmark comparison<a class="headerlink" href="#benchmark-comparison" title="Link to this heading">¶</a></h2>
+<p>The complete three-way comparison below measures foreground iterator
+handoff latency on a Linux CPU host with CPython 3.12.16. Lower is better.
+It compares <code class="docutils literal notranslate"><span class="pre">use_thread_output_queue=False</span></code>, <code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue</span></code> and
+<code class="docutils literal notranslate"><span class="pre">StatsThreadOutputQueue</span></code> using the same source-to-sink workload: 500
+integer items, buffer capacity 8, two configured executor workers and 20
+warmup items. Timed and untimed reads alternate, giving 240 observations
+per cell. Each cell lists <strong>mean / p50 / p95 / p99</strong>, all in microseconds.</p>
+<div class="table-wrapper colwidths-given docutils container" id="id1">
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Foreground handoff latency (mean / p50 / p95 / p99, us)</span><a class="headerlink" href="#id1" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 8.0%" />
+<col style="width: 30.0%" />
+<col style="width: 30.0%" />
+<col style="width: 32.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Foreground work (ms)</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">StatsThreadOutputQueue</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>142.6 / 142.2 / 290.7 / 340.8</p></td>
+<td><p>87.5 / 95.7 / 190.1 / 251.2</p></td>
+<td><p>106.3 / 102.7 / 220.2 / 286.5</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>152.2 / 170.3 / 352.5 / 472.1</p></td>
+<td><p>119.9 / 128.5 / 303.1 / 368.3</p></td>
+<td><p>133.9 / 128.1 / 328.9 / 478.0</p></td>
+</tr>
+<tr class="row-even"><td><p>6</p></td>
+<td><p>53.4 / 11.9 / 242.2 / 357.9</p></td>
+<td><p>91.3 / 102.4 / 251.6 / 375.8</p></td>
+<td><p>89.7 / 13.8 / 314.6 / 380.3</p></td>
+</tr>
+<tr class="row-odd"><td><p>9</p></td>
+<td><p>51.5 / 19.1 / 288.1 / 340.5</p></td>
+<td><p>62.8 / 10.2 / 208.5 / 308.6</p></td>
+<td><p>42.1 / 11.3 / 261.8 / 402.8</p></td>
+</tr>
+<tr class="row-even"><td><p>12</p></td>
+<td><p>23.4 / 21.2 / 42.6 / 87.9</p></td>
+<td><p>14.8 / 9.6 / 22.3 / 175.3</p></td>
+<td><p>22.7 / 9.9 / 177.2 / 248.5</p></td>
+</tr>
+<tr class="row-odd"><td><p>15</p></td>
+<td><p>22.6 / 20.6 / 34.6 / 46.4</p></td>
+<td><p>12.7 / 11.8 / 21.0 / 28.7</p></td>
+<td><p>16.5 / 14.9 / 33.8 / 39.9</p></td>
+</tr>
+<tr class="row-even"><td><p>18</p></td>
+<td><p>23.4 / 20.5 / 39.1 / 87.6</p></td>
+<td><p>14.5 / 12.9 / 22.6 / 58.9</p></td>
+<td><p>19.6 / 17.6 / 34.3 / 59.9</p></td>
+</tr>
+<tr class="row-odd"><td><p>21</p></td>
+<td><p>24.3 / 21.9 / 40.8 / 57.0</p></td>
+<td><p>14.5 / 14.0 / 22.1 / 33.1</p></td>
+<td><p>19.1 / 17.5 / 34.4 / 49.6</p></td>
+</tr>
+<tr class="row-even"><td><p>24</p></td>
+<td><p>25.7 / 22.9 / 49.5 / 63.1</p></td>
+<td><p>17.2 / 15.4 / 32.7 / 41.6</p></td>
+<td><p>17.7 / 17.1 / 28.2 / 40.0</p></td>
+</tr>
+<tr class="row-odd"><td><p>27</p></td>
+<td><p>25.7 / 22.2 / 55.2 / 73.1</p></td>
+<td><p>15.2 / 14.3 / 26.5 / 39.9</p></td>
+<td><p>19.7 / 17.6 / 39.1 / 64.6</p></td>
+</tr>
+<tr class="row-even"><td><p>30</p></td>
+<td><p>36.9 / 31.3 / 64.7 / 91.1</p></td>
+<td><p>32.3 / 29.2 / 64.4 / 86.6</p></td>
+<td><p>33.0 / 30.5 / 58.3 / 69.7</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Results are one full sweep, in the listed variant order at each work
+setting, not interleaved repeated trials. The foreground work is a CPU
+busy loop that contends for the GIL, not GPU work. The timed operation is
+advancing a newly created pipeline iterator, not a bare queue call.
+The <code class="docutils literal notranslate"><span class="pre">False</span></code> control uses the built-in <code class="docutils literal notranslate"><span class="pre">StatsQueue</span></code>/sync-mirror sink;
+both thread classes are selected explicitly. Internal queues/task hooks
+use ordinary defaults in all variants. The statistics class retains
+collection and its default final reporting callback; periodic reporting
+is disabled. P99 has few tail samples, and these lightweight results do
+not establish sustained-load, GPU-overlap or training performance.</p>
+<p>Reproduce the sweep with
+<code class="xref py py-mod docutils literal notranslate"><span class="pre">spdl.examples.benchmark_thread_output_queue</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">spdl</span><span class="o">.</span><span class="n">examples</span><span class="o">.</span><span class="n">benchmark_thread_output_queue</span>
+</pre></div>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 0.9.0.</span></p>
+</div>
+<p class="rubric">Methods</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.empty" title="spdl.pipeline.ThreadOutputQueue.empty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">empty</span></code></a>()</p></td>
+<td><p>Return whether the underlying thread buffer is empty.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.full" title="spdl.pipeline.ThreadOutputQueue.full"><code class="xref py py-obj docutils literal notranslate"><span class="pre">full</span></code></a>()</p></td>
+<td><p>Return whether the underlying thread buffer is full.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.get" title="spdl.pipeline.ThreadOutputQueue.get"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get</span></code></a>()</p></td>
+<td><p>Wait for an item through an executor without blocking the event loop.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.get_nowait" title="spdl.pipeline.ThreadOutputQueue.get_nowait"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_nowait</span></code></a>()</p></td>
+<td><p>Return a queued value without waiting, raising queue.Empty if unavailable.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.join" title="spdl.pipeline.ThreadOutputQueue.join"><code class="xref py py-obj docutils literal notranslate"><span class="pre">join</span></code></a>()</p></td>
+<td><p>Wait for every queued item to be acknowledged with task_done.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.put" title="spdl.pipeline.ThreadOutputQueue.put"><code class="xref py py-obj docutils literal notranslate"><span class="pre">put</span></code></a>(item)</p></td>
+<td><p>Enqueue an item, delegating full or unbounded queues to an executor.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.put_nowait" title="spdl.pipeline.ThreadOutputQueue.put_nowait"><code class="xref py py-obj docutils literal notranslate"><span class="pre">put_nowait</span></code></a>(item)</p></td>
+<td><p>Enqueue without waiting, raising queue.Full when capacity is exhausted.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.qsize" title="spdl.pipeline.ThreadOutputQueue.qsize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qsize</span></code></a>()</p></td>
+<td><p>Return the number of queued items.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">stage_hook</span></code>()</p></td>
+<td><p>Context manager, which handles init/final logic for the stage.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.task_done" title="spdl.pipeline.ThreadOutputQueue.task_done"><code class="xref py py-obj docutils literal notranslate"><span class="pre">task_done</span></code></a>()</p></td>
+<td><p>Acknowledge one previously enqueued item for join accounting.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Attributes</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.maxsize" title="spdl.pipeline.ThreadOutputQueue.maxsize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">maxsize</span></code></a></p></td>
+<td><p>The configured item-capacity limit; zero means unbounded.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue.empty">
+<span class="sig-name descname"><span class="pre">empty</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L200-L202"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue.empty" title="Link to this definition">¶</a></dt>
+<dd><p>Return whether the underlying thread buffer is empty.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue.full">
+<span class="sig-name descname"><span class="pre">full</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L213-L215"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue.full" title="Link to this definition">¶</a></dt>
+<dd><p>Return whether the underlying thread buffer is full.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue.get">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><span class="pre">object</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L183-L190"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue.get" title="Link to this definition">¶</a></dt>
+<dd><p>Wait for an item through an executor without blocking the event loop.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The next queued value.</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue.get_nowait">
+<span class="sig-name descname"><span class="pre">get_nowait</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><span class="pre">object</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L192-L198"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue.get_nowait" title="Link to this definition">¶</a></dt>
+<dd><p>Return a queued value without waiting, raising queue.Empty if unavailable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The next queued value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue.join">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">join</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L229-L231"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue.join" title="Link to this definition">¶</a></dt>
+<dd><p>Wait for every queued item to be acknowledged with task_done.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue.maxsize">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">maxsize</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L208-L211"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue.maxsize" title="Link to this definition">¶</a></dt>
+<dd><p>The configured item-capacity limit; zero means unbounded.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue.put">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">put</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><span class="pre">object</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L167-L181"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue.put" title="Link to this definition">¶</a></dt>
+<dd><p>Enqueue an item, delegating full or unbounded queues to an executor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>item</strong> – The value to enqueue. A bounded queue with available capacity
+accepts it directly without an executor round trip.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue.put_nowait">
+<span class="sig-name descname"><span class="pre">put_nowait</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><span class="pre">object</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L217-L223"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue.put_nowait" title="Link to this definition">¶</a></dt>
+<dd><p>Enqueue without waiting, raising queue.Full when capacity is exhausted.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>item</strong> – The value to enqueue.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue.qsize">
+<span class="sig-name descname"><span class="pre">qsize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L204-L206"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue.qsize" title="Link to this definition">¶</a></dt>
+<dd><p>Return the number of queued items.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ThreadOutputQueue.task_done">
+<span class="sig-name descname"><span class="pre">task_done</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_components/_thread_queue.py?#L225-L227"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ThreadOutputQueue.task_done" title="Link to this definition">¶</a></dt>
+<dd><p>Acknowledge one previously enqueued item for join accounting.</p>
+</dd></dl>
+
+</section>
 </dd></dl>
 
 </section>
@@ -592,8 +860,20 @@ to CUDA.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">spdl.io.transfer_tensor</a><ul>
-<li><a class="reference internal" href="#spdl.io.transfer_tensor"><code class="docutils literal notranslate"><span class="pre">transfer_tensor()</span></code></a></li>
+<li><a class="reference internal" href="#">spdl.pipeline.ThreadOutputQueue</a><ul>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue</span></code></a><ul>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.empty"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue.empty()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.full"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue.full()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.get"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue.get()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.get_nowait"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue.get_nowait()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.join"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue.join()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.maxsize"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue.maxsize</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.put"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue.put()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.put_nowait"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue.put_nowait()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.qsize"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue.qsize()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ThreadOutputQueue.task_done"><code class="docutils literal notranslate"><span class="pre">ThreadOutputQueue.task_done()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -606,7 +886,7 @@ to CUDA.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=cce5339e"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=a82ae3da"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

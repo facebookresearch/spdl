@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.pipeline.SharedMemorySegmentPool - SPDL 0.8.0 documentation</title>
+        <title>spdl.pipeline.SharedMemorySegmentPool - SPDL 0.9.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.8.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.9.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.8.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.9.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -243,6 +243,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../io/color_space.html">Video Color Space</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/fusion.html">Fusing IO Calls</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/encoding.html">Media Encoding</a></li>
@@ -258,9 +259,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/shared_memory_arenas.html">Shared-memory arenas</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../knowledge_base/index.html">Knowledge Base</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Knowledge Base</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/_categories/technique-catalog.html">Technique catalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/techniques/_categories/techniques-by-area.html">Techniques by area</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/_categories/optimization-guidance.html">Optimization guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/migration/_categories/migration-guidance.html">Migration guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/authoring/_categories/pipeline-authoring.html">Pipeline authoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/_categories/startup-audit.html">Startup audit</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
@@ -268,14 +279,14 @@
 <li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch.html">How It Works</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example.html">Example: Video Classification</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example_v2.html">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_architecture.html">Architecture</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
@@ -283,7 +294,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="video_dataloading.html">Video dataloading</a></li>
@@ -303,6 +314,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_pinned_arena.html">Benchmark pinned arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
@@ -310,7 +322,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.html">spdl.pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.config.html">spdl.pipeline.config</a></li>
@@ -322,10 +334,10 @@
 <li class="toctree-l2"><a class="reference internal" href="spdl.source.html">spdl.source</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_class.html">Class List</a></li>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_file.html">File List</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl.html">Namespace spdl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
@@ -371,7 +383,7 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe.html">Template Function spdl::core::deserialize_packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a17e80346c554363a3ca0f92f23f35d61.html">Template Function spdl::core::deserialize_packets_view</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a0d3adfab8851b38d60a666b31ca766f5.html">Function spdl::core::extract_packets_at_indices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
@@ -439,11 +451,12 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/shared_memory_ownership.html">Why shared arena outputs keep storage alive</a></li>
 </ul>
 </li>
 </ul>
@@ -466,6 +479,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.9.0">0.9.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.8.0">0.8.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
@@ -531,7 +546,7 @@
 <h1>spdl.pipeline.SharedMemorySegmentPool<a class="headerlink" href="#spdl-pipeline-sharedmemorysegmentpool" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="spdl.pipeline.SharedMemorySegmentPool">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SharedMemorySegmentPool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">segment_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acquire_timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60.0</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L83-L347"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SharedMemorySegmentPool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">segment_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acquire_timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_memory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_mp_context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BaseContext</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L128-L689"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool" title="Link to this definition">¶</a></dt>
 <dd><p><strong>[Experimental]</strong> A rotating pool of shared-memory segments, one per unit.</p>
 <p>Construct it in the parent process and pass it to
 <a class="reference internal" href="spdl.pipeline.iterate_in_subprocess.html#spdl.pipeline.iterate_in_subprocess" title="spdl.pipeline.iterate_in_subprocess"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.pipeline.iterate_in_subprocess()</span></code></a> via the <code class="docutils literal notranslate"><span class="pre">arena</span></code> argument;
@@ -572,6 +587,9 @@ optimization and measure your own pipeline before relying on it.</p>
 <dt><a class="reference internal" href="benchmark_arena_transport.html#module-benchmark_arena_transport" title="benchmark_arena_transport"><code class="xref py py-mod docutils literal notranslate"><span class="pre">benchmark_arena_transport</span></code></a></dt><dd><p>Benchmarks this pool against a plain pickle/queue transfer and the
 ring buffer, across payload types and sizes.</p>
 </dd>
+<dt><a class="reference internal" href="benchmark_pinned_arena.html#module-benchmark_pinned_arena" title="benchmark_pinned_arena"><code class="xref py py-mod docutils literal notranslate"><span class="pre">benchmark_pinned_arena</span></code></a></dt><dd><p>Matched public pool/ring <code class="docutils literal notranslate"><span class="pre">pin_memory=False/True</span></code> comparisons through
+subprocess iteration and synchronized H2D, with archival earlier results.</p>
+</dd>
 <dt><a class="reference internal" href="../case_studies/shared_memory_arena.html#shared-memory-arena"><span class="std std-ref">Shared-Memory Arena</span></a></dt><dd><p>Case study with the measured CPU, throughput, and memory numbers.</p>
 </dd>
 </dl>
@@ -589,15 +607,30 @@ the consumer fed (<code class="docutils literal notranslate"><span class="pre">b
 <li><p><strong>acquire_timeout</strong> – Seconds <code class="docutils literal notranslate"><span class="pre">begin_unit</span></code> waits for a free segment before
 raising <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#BufferError" title="(in Python v3.15)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">BufferError</span></code></a>. Guards against a stalled/dead
 consumer; set to <code class="docutils literal notranslate"><span class="pre">0</span></code> for non-blocking (Mode A) behavior.</p></li>
+<li><p><strong>pin_memory</strong> – Register the consumer’s complete data mappings once on the
+CUDA device selected by <code class="docutils literal notranslate"><span class="pre">LOCAL_RANK</span></code>. Supported restored CPU
+tensor/array/memoryview views then have page-locked backing. CUDA
+initializes lazily in the consumer, never the writer. Defaults to
+<code class="docutils literal notranslate"><span class="pre">False</span></code>. Budget <code class="docutils literal notranslate"><span class="pre">count</span> <span class="pre">*</span> <span class="pre">segment_size</span></code> per pool and local rank;
+retained aliases and synchronized H2D sources prevent reuse/unmap.</p></li>
 </ul>
 </dd>
 </dl>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 0.9.0: </span>Public endpoint methods conform to <code class="docutils literal notranslate"><span class="pre">ArenaProtocol</span></code>. Storage sizing,
+counters and lifecycle helpers used only by SPDL are private; constructor
+configuration remains public. Native exports retain storage independently
+of the reader anchor list.</p>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 0.9.0: </span>The <code class="docutils literal notranslate"><span class="pre">pin_memory</span></code> argument.</p>
+</div>
 <p class="rubric">Methods</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.close" title="spdl.pipeline.SharedMemorySegmentPool.close"><code class="xref py py-obj docutils literal notranslate"><span class="pre">close</span></code></a>()</p></td>
-<td><p>Release this process's mappings of the segments.</p></td>
+<td><p>Close this handle, cancelling global work only for its original creator.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.open_reader" title="spdl.pipeline.SharedMemorySegmentPool.open_reader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">open_reader</span></code></a>()</p></td>
 <td><p>Return the reader endpoint (call in the parent process).</p></td>
@@ -606,95 +639,85 @@ consumer; set to <code class="docutils literal notranslate"><span class="pre">0<
 <td><p>Return the writer endpoint (call in the worker process).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.shutdown_arena" title="spdl.pipeline.SharedMemorySegmentPool.shutdown_arena"><code class="xref py py-obj docutils literal notranslate"><span class="pre">shutdown_arena</span></code></a>()</p></td>
-<td><p>Wake any producer blocked in <code class="xref py py-meth docutils literal notranslate"><span class="pre">_PoolWriter.begin_unit()</span></code>.</p></td>
+<td><p>Request shutdown and wake a producer blocked on arena capacity.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.unlink" title="spdl.pipeline.SharedMemorySegmentPool.unlink"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unlink</span></code></a>()</p></td>
-<td><p>Remove all segments from the system (call once, by the owner).</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p class="rubric">Attributes</p>
-<div class="table-wrapper autosummary longtable docutils container">
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.count" title="spdl.pipeline.SharedMemorySegmentPool.count"><code class="xref py py-obj docutils literal notranslate"><span class="pre">count</span></code></a></p></td>
-<td><p>Number of segments in the pool.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.published" title="spdl.pipeline.SharedMemorySegmentPool.published"><code class="xref py py-obj docutils literal notranslate"><span class="pre">published</span></code></a></p></td>
-<td><p>Number of units published by the writer.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.reclaimed" title="spdl.pipeline.SharedMemorySegmentPool.reclaimed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reclaimed</span></code></a></p></td>
-<td><p>Number of units whose segments have been returned to the pool.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.segment_size" title="spdl.pipeline.SharedMemorySegmentPool.segment_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">segment_size</span></code></a></p></td>
-<td><p>Size of each segment in bytes.</p></td>
+<td><p>Remove creator names only after physical retirement completes.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.pipeline.SharedMemorySegmentPool.close">
-<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L284-L330"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.close" title="Link to this definition">¶</a></dt>
-<dd><p>Release this process’s mappings of the segments.</p>
-<p>Restored zero-copy views (Packets / NumPy / Torch) may still alias a
-segment at teardown — their slices keep the underlying mmap exported, so
-unmapping it raises <code class="docutils literal notranslate"><span class="pre">BufferError</span></code>. We release what we can and <em>retain</em>
-the segments that are still mapped; their shared memory is freed once the
-views are garbage-collected, and <a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.unlink" title="spdl.pipeline.SharedMemorySegmentPool.unlink"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unlink()</span></code></a> removes the names
-regardless. Raising here would crash an otherwise-successful run.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="spdl.pipeline.SharedMemorySegmentPool.count">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">count</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L208-L211"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.count" title="Link to this definition">¶</a></dt>
-<dd><p>Number of segments in the pool.</p>
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L554-L617"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close this handle, cancelling global work only for its original creator.</p>
+<p>The constructor-created handle owns names and terminal cancellation.
+Deserialized handles, including same-process copies, only retire their
+local mappings; closing a worker handle never consumes an in-transit
+allocation or cancels the creator. Only the creator may unlink names.</p>
+<p>Call the creator’s <code class="docutils literal notranslate"><span class="pre">close()</span></code> in its <code class="docutils literal notranslate"><span class="pre">finally</span></code> block before stopping
+a pipeline whose producer may be blocked. The terminal signal wakes
+reservations but never invalidates existing storage aliases or H2D
+source owners. A known-live or uncertain remote endpoint, native export
+or active claim keeps control and data mappings durably retained.</p>
+<p>After workers are actually reaped and local aliases/claims are gone,
+call <code class="docutils literal notranslate"><span class="pre">close()</span></code> again to finish retirement, then <code class="docutils literal notranslate"><span class="pre">unlink()</span></code>. Repeated
+calls do not reopen mappings, reset counters or permit future reuse.
+A normal return may mean deferred physical retirement; <code class="docutils literal notranslate"><span class="pre">unlink()</span></code>
+reports <code class="docutils literal notranslate"><span class="pre">BufferError</span></code> until all retained mappings are closed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError" title="(in Python v3.15)"><strong>RuntimeError</strong></a> – Control acquisition is unavailable or the handle was
+    inherited across fork. Uncertain storage remains retained.</p>
+</dd>
+</dl>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 0.9.0: </span>Creator close is terminal cancellation with deferred retirement;
+deserialized holder close only retires its process-local mappings.</p>
+</div>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.pipeline.SharedMemorySegmentPool.open_reader">
-<span class="sig-name descname"><span class="pre">open_reader</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_PoolReader</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L280-L282"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.open_reader" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">open_reader</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_PoolReader</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L545-L552"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.open_reader" title="Link to this definition">¶</a></dt>
 <dd><p>Return the reader endpoint (call in the parent process).</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.pipeline.SharedMemorySegmentPool.open_writer">
-<span class="sig-name descname"><span class="pre">open_writer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_PoolWriter</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L276-L278"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.open_writer" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">open_writer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_PoolWriter</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L539-L543"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.open_writer" title="Link to this definition">¶</a></dt>
 <dd><p>Return the writer endpoint (call in the worker process).</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="spdl.pipeline.SharedMemorySegmentPool.published">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">published</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L229-L232"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.published" title="Link to this definition">¶</a></dt>
-<dd><p>Number of units published by the writer.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="spdl.pipeline.SharedMemorySegmentPool.reclaimed">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">reclaimed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L238-L241"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.reclaimed" title="Link to this definition">¶</a></dt>
-<dd><p>Number of units whose segments have been returned to the pool.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="spdl.pipeline.SharedMemorySegmentPool.segment_size">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">segment_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L203-L206"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.segment_size" title="Link to this definition">¶</a></dt>
-<dd><p>Size of each segment in bytes.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.pipeline.SharedMemorySegmentPool.shutdown_arena">
-<span class="sig-name descname"><span class="pre">shutdown_arena</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L261-L274"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.shutdown_arena" title="Link to this definition">¶</a></dt>
-<dd><p>Wake any producer blocked in <code class="xref py py-meth docutils literal notranslate"><span class="pre">_PoolWriter.begin_unit()</span></code>.</p>
-<p>Sets a sticky shutdown flag in the control segment and broadcasts on the
-space condition variable so a producer that is currently waiting for a
-free segment exits the wait promptly with a <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#BufferError" title="(in Python v3.15)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">BufferError</span></code></a>. Safe
-to call multiple times and from either process.</p>
+<span class="sig-name descname"><span class="pre">shutdown_arena</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L407-L425"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.shutdown_arena" title="Link to this definition">¶</a></dt>
+<dd><p>Request shutdown and wake a producer blocked on arena capacity.</p>
+<p>Call before worker join; this requests shutdown without closing mappings,
+unregistering live storage or unlinking names. Existing exports remain
+valid. Complete physical retirement separately through <code class="docutils literal notranslate"><span class="pre">close()</span></code> once
+actual worker and storage quiescence is established.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError" title="(in Python v3.15)"><strong>RuntimeError</strong></a> – Control state is unavailable or retired. Owned backing
+    remains retained; this failure is not proof of safe retirement.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spdl.pipeline.SharedMemorySegmentPool.unlink">
-<span class="sig-name descname"><span class="pre">unlink</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L332-L347"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.unlink" title="Link to this definition">¶</a></dt>
-<dd><p>Remove all segments from the system (call once, by the owner).</p>
+<span class="sig-name descname"><span class="pre">unlink</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_pool.py?#L664-L689"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.SharedMemorySegmentPool.unlink" title="Link to this definition">¶</a></dt>
+<dd><p>Remove creator names only after physical retirement completes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#BufferError" title="(in Python v3.15)"><strong>BufferError</strong></a> – Mappings or registrations are retained. Release live
+    owners, confirm worker reap and retry <code class="docutils literal notranslate"><span class="pre">close()</span></code> before unlink.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError" title="(in Python v3.15)"><strong>RuntimeError</strong></a> – This is not the original creator handle.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -741,12 +764,8 @@ to call multiple times and from either process.</p>
 <li><a class="reference internal" href="#">spdl.pipeline.SharedMemorySegmentPool</a><ul>
 <li><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool"><code class="docutils literal notranslate"><span class="pre">SharedMemorySegmentPool</span></code></a><ul>
 <li><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.close"><code class="docutils literal notranslate"><span class="pre">SharedMemorySegmentPool.close()</span></code></a></li>
-<li><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.count"><code class="docutils literal notranslate"><span class="pre">SharedMemorySegmentPool.count</span></code></a></li>
 <li><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.open_reader"><code class="docutils literal notranslate"><span class="pre">SharedMemorySegmentPool.open_reader()</span></code></a></li>
 <li><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.open_writer"><code class="docutils literal notranslate"><span class="pre">SharedMemorySegmentPool.open_writer()</span></code></a></li>
-<li><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.published"><code class="docutils literal notranslate"><span class="pre">SharedMemorySegmentPool.published</span></code></a></li>
-<li><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.reclaimed"><code class="docutils literal notranslate"><span class="pre">SharedMemorySegmentPool.reclaimed</span></code></a></li>
-<li><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.segment_size"><code class="docutils literal notranslate"><span class="pre">SharedMemorySegmentPool.segment_size</span></code></a></li>
 <li><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.shutdown_arena"><code class="docutils literal notranslate"><span class="pre">SharedMemorySegmentPool.shutdown_arena()</span></code></a></li>
 <li><a class="reference internal" href="#spdl.pipeline.SharedMemorySegmentPool.unlink"><code class="docutils literal notranslate"><span class="pre">SharedMemorySegmentPool.unlink()</span></code></a></li>
 </ul>
@@ -763,7 +782,7 @@ to call multiple times and from either process.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=cce5339e"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=a82ae3da"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

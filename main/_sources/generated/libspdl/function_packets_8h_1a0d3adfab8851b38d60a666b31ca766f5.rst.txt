@@ -1,4 +1,4 @@
-.. _exhale_function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857:
+.. _exhale_function_packets_8h_1a0d3adfab8851b38d60a666b31ca766f5:
 
 Function spdl::core::extract_packets_at_indices
 ===============================================
@@ -10,5 +10,5 @@ Function Documentation
 ----------------------
 
 
-.. doxygenfunction:: spdl::core::extract_packets_at_indices(const VideoPacketsPtr&, std::vector<size_t>)
+.. doxygenfunction:: spdl::core::extract_packets_at_indices(const VideoPacketsPtr&, std::vector<size_t>, bool)
    :project: libspdl
