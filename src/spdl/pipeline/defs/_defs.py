@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from fractions import Fraction
 from functools import partial
+from importlib import import_module
 from typing import (
     Any,
     Generic,
@@ -475,6 +476,51 @@ class ExecutorConfig:
     initargs: tuple[Any, ...] = ()
     """Positional arguments passed to ``initializer``."""
 
+    def _build(
+        self,
+        stages: Sequence[object],
+        backend: Any,
+        report_stats_interval: float,
+        fail_fast: bool,
+        continuous: bool,
+        input_buffer_size: int,
+        output_buffer_size: int,
+    ) -> tuple[_SubprocessPipelineConfig, Any]:
+        """Internal hook for building a fused worker region for this executor.
+
+        Override this method in a subclass to customize region construction.
+        The base implementation raises ``NotImplementedError``. Process and
+        interpreter pool configurations implement their own builders; subclasses
+        can call ``super()._build(...)`` to reuse those implementations.
+
+        Args:
+            stages (Sequence): Stage configs inside the worker region.
+            backend (Any): Worker backend selected for the placement.
+            report_stats_interval (float): Worker statistics reporting interval.
+            fail_fast (bool): Whether to stop on the first worker failure.
+            continuous (bool): Whether workers persist across source epochs.
+            input_buffer_size (int): Items transferred into the region at once.
+            output_buffer_size (int): Items transferred out of the region at once.
+
+        Returns:
+            tuple: Replacement stage config and its worker pool. The pipeline
+            owns the pool and calls its ``shutdown()`` method during cleanup.
+
+        Raises:
+            NotImplementedError: The configuration has no pool implementation.
+
+        .. versionadded:: 0.8.0
+
+        Example:
+            Append ``transform`` to each worker region::
+
+                class CustomExecutorConfig(ProcessPoolExecutorConfig):
+                    def _build(self, stages, *args, **kwargs):
+                        stages = [*stages, Pipe(transform)]
+                        return super()._build(stages, *args, **kwargs)
+        """
+        raise NotImplementedError(f"Unsupported executor config: {type(self).__name__}")
+
 
 @dataclass(frozen=True)
 class ProcessPoolExecutorConfig(ExecutorConfig):
@@ -493,6 +539,27 @@ class ProcessPoolExecutorConfig(ExecutorConfig):
     as accepted by :py:func:`multiprocessing.get_context`. ``None`` uses the default
     context."""
 
+    def _build(
+        self,
+        stages: Sequence[object],
+        backend: Any,
+        report_stats_interval: float,
+        fail_fast: bool,
+        continuous: bool,
+        input_buffer_size: int,
+        output_buffer_size: int,
+    ) -> tuple[_SubprocessPipelineConfig, Any]:
+        return import_module("spdl.pipeline._fuse")._build_fused_stage_core(
+            stages,
+            spec=self,
+            backend=backend,
+            report_stats_interval=report_stats_interval,
+            fail_fast=fail_fast,
+            continuous=continuous,
+            input_buffer_size=input_buffer_size,
+            output_buffer_size=output_buffer_size,
+        )
+
 
 @dataclass(frozen=True)
 class InterpreterPoolExecutorConfig(ExecutorConfig):
@@ -510,6 +577,27 @@ class InterpreterPoolExecutorConfig(ExecutorConfig):
 
     .. versionadded:: 0.6.0
     """
+
+    def _build(
+        self,
+        stages: Sequence[object],
+        backend: Any,
+        report_stats_interval: float,
+        fail_fast: bool,
+        continuous: bool,
+        input_buffer_size: int,
+        output_buffer_size: int,
+    ) -> tuple[_SubprocessPipelineConfig, Any]:
+        return import_module("spdl.pipeline._fuse")._build_fused_stage_core(
+            stages,
+            spec=self,
+            backend=backend,
+            report_stats_interval=report_stats_interval,
+            fail_fast=fail_fast,
+            continuous=continuous,
+            input_buffer_size=input_buffer_size,
+            output_buffer_size=output_buffer_size,
+        )
 
 
 @dataclass(frozen=True)

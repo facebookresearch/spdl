@@ -25,6 +25,10 @@ from spdl.pipeline import (
     run_pipeline_in_subprocess,
 )
 from spdl.pipeline._fuse import _fuse_marked_regions
+from spdl.pipeline._subprocess_pipeline_pool import (
+    _ProcessBackend,
+    _SubprocessPipelinePool,
+)
 from spdl.pipeline.config import set_default_queue_class
 from spdl.pipeline.defs import (
     Aggregate,
@@ -138,6 +142,37 @@ def _run(pipeline: Pipeline[Any], timeout: float = _TIMEOUT) -> list[Any]:
 
 
 class MarkedRegionFuseTest(unittest.TestCase):
+    def test_custom_executor_builder_is_inherited(self) -> None:
+        """An inherited executor override customizes the actual worker region."""
+
+        class CustomPoolConfig(ProcessPoolExecutorConfig):
+            def _build(
+                self, stages: Sequence[object], *args: Any, **kwargs: Any
+            ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
+                return super()._build([*stages, Pipe(_stamp_branch)], *args, **kwargs)
+
+        class DerivedPoolConfig(CustomPoolConfig):
+            pass
+
+        for config in (CustomPoolConfig, DerivedPoolConfig):
+            with self.subTest(config=config.__name__):
+                pipeline = (
+                    PipelineBuilder()
+                    .add_source([_PidStamp(i) for i in range(3)])
+                    .to(config(max_workers=1, mp_context="spawn"))
+                    .pipe(stamp_region)
+                    .to(MAIN_PROCESS)
+                    .pipe(stamp_main)
+                    .add_sink(3)
+                    .build(num_threads=2)
+                )
+                results = _run(pipeline)
+                self.assertCountEqual([item.value for item in results], range(3))
+                for item in results:
+                    self.assertEqual(item.pids["region"], item.pids["branch"])
+                    self.assertNotEqual(item.pids["region"], os.getpid())
+                    self.assertEqual(item.pids["main"], os.getpid())
+
     def test_region_of_two_pipes(self) -> None:
         """Two pipes inside a subprocess region produce the same result as running inline."""
         n = 16
@@ -577,24 +612,18 @@ class FusedThreadCountTest(unittest.TestCase):
     """
 
     def _num_threads_for(self, stages: Sequence[Any]) -> int:
-        captured: dict[str, Any] = {}
-
-        def _fake_core(stages: Sequence[Any], **kwargs: Any) -> tuple[Any, Any]:
-            captured.update(kwargs)
-            return None, None
-
-        with patch.object(_fuse_mod, "_build_fused_stage_core", _fake_core):
-            _fuse_mod._build_fused_stage_from_spec(
+        with patch.object(_fuse_mod, "_SubprocessPipelinePool") as pool:
+            _fuse_mod._build_fused_stage_core(
                 stages,
-                ProcessPoolExecutorConfig(max_workers=1),
-                None,  # pyre-ignore[6] -- unused by the fake
-                -1.0,
-                False,
-                True,
-                1,  # input buffer size; irrelevant to the thread count
-                1,  # output buffer size; likewise
+                spec=ProcessPoolExecutorConfig(max_workers=1),
+                backend=_ProcessBackend(mp.get_context("spawn")),
+                report_stats_interval=-1.0,
+                fail_fast=False,
+                continuous=True,
+                input_buffer_size=1,
+                output_buffer_size=1,
             )
-        return captured["num_threads"]
+        return pool.call_args.args[3]["num_threads"]
 
     def test_single_serial_stage_gets_two_threads(self) -> None:
         """One concurrency=1 op still leaves a thread free for the source."""
