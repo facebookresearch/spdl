@@ -76,6 +76,7 @@ class _SyncSourceThread(Generic[T]):
                         return True
                 if not self._send(item):
                     return False
+                del item
         finally:
             if (
                 not exhausted
@@ -137,6 +138,7 @@ class _SyncSourceThread(Generic[T]):
                     self._stop()
                     raise
                 else:
+                    del message
                     self._acknowledge()
         finally:
             self._stop()
@@ -185,6 +187,7 @@ async def _source(
             try:
                 async for item in items:
                     await queue.put(item)
+                    del item
                     num_items += 1
                     if max_items is not None and num_items >= max_items:
                         return
@@ -196,6 +199,7 @@ async def _source(
         async with aclosing(runner.iterate()) as items:
             async for item in items:
                 await queue.put(item)
+                del item
                 num_items += 1
                 if max_items is not None and num_items >= max_items:
                     return
@@ -224,6 +228,7 @@ async def _source_continuous(
                     try:
                         async for item in async_items:
                             await queue.put(item)
+                            del item
                     finally:
                         if async_items is not src:
                             await _close_async_source(async_items)
@@ -236,3 +241,4 @@ async def _source_continuous(
         async with aclosing(runner.iterate()) as items:
             async for item in items:
                 await queue.put(item)
+                del item

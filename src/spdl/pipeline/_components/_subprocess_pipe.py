@@ -568,10 +568,12 @@ async def _feed(
             finally:
                 get_task.cancel()
                 feeder_idle.clear()
+            del get_task
             if is_eof(item):
                 reached_eof = True
                 break
             buf.append(item)
+            del item
             if len(buf) >= buffer_size:
                 await _flush()
     finally:
@@ -667,6 +669,7 @@ async def _collect(
             )
             continue
         kind, payload = res
+        del res
         failure_pending = False
         failures = serialization_failures if error is None else ()
         if kind != _ERROR and (
@@ -693,6 +696,7 @@ async def _collect(
             failure_pending,
         )
         done += done_delta
+        del payload
         if _collection_is_complete(done, num_workers, serialization_failures, error):
             break
     if error is not None:
@@ -795,6 +799,7 @@ async def _feed_continuous(
             epoch += 1
             continue
         buf.append(item)
+        del item
         if len(buf) >= buffer_size:
             await _flush()
 
@@ -862,6 +867,7 @@ async def _collect_continuous(
             )
             continue
         kind, payload = res
+        del res
         failure_pending = False
         if kind != _ERROR and (
             serialization_error_deadline is not None
@@ -879,6 +885,7 @@ async def _collect_continuous(
         if kind == _RESULT and not failure_pending:
             for item in payload:
                 await output_queue.put(item)
+                del item
         elif kind == _EPOCH_DONE:
             # A failed result can be followed by its already-buffered boundary marker before
             # the fallback _ERROR. Keep the feeder blocked and drain for that terminal detail.
@@ -906,6 +913,7 @@ async def _collect_continuous(
             raise payload
         elif kind == _DONE:
             done += 1
+        del payload
         if _collection_is_complete(done, num_workers, serialization_failures):
             break
 

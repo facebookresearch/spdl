@@ -254,6 +254,7 @@ async def _wrap_afunc(
 ) -> None:
     async with _task_hooks(hooks, item):
         result = await coro
+    del coro, item
 
     if result is _SKIP:
         return
@@ -408,7 +409,8 @@ def _pipe(
                     await output_queue.put(_EPOCH_END)
                     continue
 
-                if is_eof(item) and not op_requires_eof:
+                at_eof = is_eof(item)
+                if at_eof and not op_requires_eof:
                     break
                 # note: Make sure that `afunc` is called directly in this function,
                 # so as to detect user error. (incompatible `afunc` and `iterator` combo)
@@ -417,6 +419,7 @@ def _pipe(
                     _wrap(afunc(item), item),
                     name=f"{info}:{(i := i + 1)}",
                 )
+                del item
                 tasks.add(task)
 
                 if len(tasks) >= args.concurrency:
@@ -425,7 +428,7 @@ def _pipe(
                     )
                     tasks.difference_update(done)
 
-                if is_eof(item):
+                if at_eof:
                     break
 
             if tasks:
@@ -557,6 +560,7 @@ def _ordered_pipe(
             pending_ops.add(task)
             task.add_done_callback(pending_ops.discard)
             await inter_queue.put((task, item))
+            del task, item
         await inter_queue.put(_EOF)
 
     async def get_check_put() -> None:
@@ -572,6 +576,7 @@ def _ordered_pipe(
                 return
 
             task, item = entry
+            del entry
 
             await asyncio.wait([task])
 
@@ -581,10 +586,11 @@ def _ordered_pipe(
             except Exception:
                 pass
             else:
-                if result is _SKIP:
-                    continue
-
-                await output_queue.put(result)
+                if result is not _SKIP:
+                    await output_queue.put(result)
+                del result
+            finally:
+                del task, item
 
         # Drain until EOF
         while not is_eof(await inter_queue.get()):
@@ -638,6 +644,7 @@ async def _default_merge(
                     await epoch_end_barrier.wait()
                 continue
             await output_queue.put(item)
+            del item
 
     tasks = [
         create_task(_pass(in_q), name=f"{info}:{i}")
