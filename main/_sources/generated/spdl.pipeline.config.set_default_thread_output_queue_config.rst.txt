@@ -1,0 +1,6 @@
+spdl.pipeline.config.set\_default\_thread\_output\_queue\_config
+================================================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: set_default_thread_output_queue_config

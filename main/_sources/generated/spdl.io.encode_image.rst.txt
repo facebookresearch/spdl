@@ -1,6 +1,0 @@
-spdl.io.encode\_image
-=====================
-
-.. currentmodule:: spdl.io
-
-.. autofunction:: encode_image

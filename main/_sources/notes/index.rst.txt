@@ -7,3 +7,4 @@ Development Notes
    remote_iterable_protocol
    pytorch_cuda_race_condition
    packets_and_frames_lifecycle
+   shared_memory_ownership

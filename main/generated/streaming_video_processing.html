@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Performance analysis" href="performance_analysis.html" /><link rel="prev" title="Streaming nvdec decoding" href="streaming_nvdec_decoding.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Streaming video processing - SPDL 0.8.0 documentation</title>
+        <title>Streaming video processing - SPDL 0.9.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.8.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.9.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.8.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.9.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -217,6 +217,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agents.html">Working with Agents</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../getting_started/index.html">Getting Started</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Getting Started</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/intro.html">Building and Running Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/stages.html">Pipeline Stages</a></li>
@@ -228,14 +229,32 @@
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/pytorch.html">Building High-Performance DataLoaders</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../async/index.html">Introduction to Async I/O</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Introduction to Async I/O</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../pipeline_guides/index.html">Pipeline Guides</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Pipeline Guides</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../pipeline_guides/best_practice.html">Design and best practices</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../pipeline_guides/memory_and_transport/index.html">Memory and transport</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Memory and transport</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../pipeline_guides/memory_and_transport/shared_memory_arenas.html">Shared-memory arenas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pipeline_guides/memory_and_transport/transparent_region_arenas.html">Explicit caller-owned process-region arenas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pipeline_guides/memory_and_transport/direct_allocations.html">Direct allocations for collation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../pipeline_guides/case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../pipeline_guides/case_studies/parallelism.html">Parallelism and Performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pipeline_guides/case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pipeline_guides/case_studies/shared_memory_arena.html">Shared-memory arena transport benchmark</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pipeline_guides/case_studies/data_format.html">Data Format and Performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pipeline_guides/case_studies/inference.html">Building an inference pipeline</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../async/index.html">Introduction to Async I/O</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Introduction to Async I/O</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../async/problem.html">Implementing an Orchestration Mechanism</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/event_loop.html">The Event Loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/unit.html">The <code class="docutils literal notranslate"><span class="pre">async</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../async/sync.html">Running Synchronous Functions</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../io/index.html">IO Module</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of IO Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../io/index.html">IO Module</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of IO Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../io/basic.html">High-Level Loading Functions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/decoding_overview.html">Decoding Process Overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/packets_frames_concepts.html">Packets and Frames</a></li>
@@ -243,46 +262,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../io/color_space.html">Video Color Space</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../io/fusion.html">Fusing IO Calls</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/encoding.html">Media Encoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../io/ffmpeg_cheatsheet.html">FFmpeg CLI Cheat Sheet</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/headspace_analysis.html">Headspace Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/noisy_neighbour.html">Noisy Neighbour</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/setup.html">Composition of Pipeline</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/analysis.html">Analyzing the Performance</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/stats.html">Understanding the performance statistics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
-</ul>
-</li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../case_studies/parallelism.html">Parallelism and Performance</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../case_studies/data_format.html">Data Format and Performance</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../case_studies/inference.html">Building Inference Pipeline</a></li>
-</ul>
-</li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch.html">How It Works</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example.html">Example: Video Classification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example_v2.html">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_architecture.html">Architecture</a></li>
-</ul>
-</li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../best_practice.html">Best Practices</a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../examples.html">Examples</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="image_dataloading.html">Image dataloading</a></li>
@@ -303,14 +295,48 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_region_arena.html">Benchmark region arena</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_direct_output.html">Benchmark direct output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_pinned_arena.html">Benchmark pinned arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
 </li>
 </ul>
+<p class="caption" role="heading"><span class="caption-text">Optimization</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/headspace_analysis.html">Headspace Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/noisy_neighbour.html">Noisy Neighbour</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/setup.html">Composition of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/analysis.html">Analyzing the Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/stats.html">Understanding the performance statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../knowledge_base/index.html">Knowledge Base</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of Knowledge Base</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/_categories/technique-catalog.html">Technique catalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/techniques/_categories/techniques-by-area.html">Techniques by area</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/_categories/optimization-guidance.html">Optimization guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/optimization/model_techniques/_categories/model-optimization.html">Model optimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/migration/_categories/migration-guidance.html">Migration guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/authoring/_categories/pipeline-authoring.html">Pipeline authoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knowledge_base/_generated/_categories/startup-audit.html">Startup audit</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch.html">How It Works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example.html">Example: Video Classification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_example_v2.html">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../autoresearch/autoresearch_architecture.html">Architecture</a></li>
+</ul>
+</li>
+</ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.html">spdl.pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="spdl.pipeline.config.html">spdl.pipeline.config</a></li>
@@ -322,10 +348,10 @@
 <li class="toctree-l2"><a class="reference internal" href="spdl.source.html">spdl.source</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_class.html">Class List</a></li>
 <li class="toctree-l2"><a class="reference internal" href="libspdl/libspdl_file.html">File List</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl/libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl.html">Namespace spdl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core.html">Namespace spdl::core</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
@@ -371,7 +397,7 @@
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe.html">Template Function spdl::core::deserialize_packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a17e80346c554363a3ca0f92f23f35d61.html">Template Function spdl::core::deserialize_packets_view</a></li>
-<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="libspdl/function_packets_8h_1a0d3adfab8851b38d60a666b31ca766f5.html">Function spdl::core::extract_packets_at_indices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="libspdl/function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
@@ -439,11 +465,12 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-15" name="toctree-checkbox-15" role="switch" type="checkbox"/><label for="toctree-checkbox-15"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/shared_memory_ownership.html">Why shared arena outputs keep storage alive</a></li>
 </ul>
 </li>
 </ul>
@@ -466,6 +493,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.9.0">0.9.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.8.0">0.8.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
@@ -659,230 +688,242 @@ match, and you need to call <code class="docutils literal notranslate"><span cla
 <span class="linenos"> 68</span>
 <span class="linenos"> 69</span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
 <span class="linenos"> 70</span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="linenos"> 71</span>
-<span class="linenos"> 72</span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
-<span class="linenos"> 73</span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.io</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-<span class="linenos"> 74</span>    <span class="n">Demuxer</span><span class="p">,</span>
-<span class="linenos"> 75</span>    <span class="n">FilterGraph</span><span class="p">,</span>
-<span class="linenos"> 76</span>    <span class="n">Muxer</span><span class="p">,</span>
-<span class="linenos"> 77</span>    <span class="n">VideoDecoder</span><span class="p">,</span>
-<span class="linenos"> 78</span>    <span class="n">VideoEncoder</span><span class="p">,</span>
-<span class="linenos"> 79</span>    <span class="n">VideoPackets</span><span class="p">,</span>
-<span class="linenos"> 80</span><span class="p">)</span>
-<span class="linenos"> 81</span>
+<span class="linenos"> 71</span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+<span class="linenos"> 72</span>
+<span class="linenos"> 73</span><span class="kn">import</span><span class="w"> </span><span class="nn">spdl.io</span>
+<span class="linenos"> 74</span><span class="kn">from</span><span class="w"> </span><span class="nn">spdl.io</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="linenos"> 75</span>    <span class="n">Demuxer</span><span class="p">,</span>
+<span class="linenos"> 76</span>    <span class="n">FilterGraph</span><span class="p">,</span>
+<span class="linenos"> 77</span>    <span class="n">Muxer</span><span class="p">,</span>
+<span class="linenos"> 78</span>    <span class="n">VideoDecoder</span><span class="p">,</span>
+<span class="linenos"> 79</span>    <span class="n">VideoEncoder</span><span class="p">,</span>
+<span class="linenos"> 80</span>    <span class="n">VideoPackets</span><span class="p">,</span>
+<span class="linenos"> 81</span><span class="p">)</span>
 <span class="linenos"> 82</span>
-<span class="linenos"> 83</span><span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">:</span>
-<span class="linenos"> 84</span><span class="w">    </span><span class="sd">"""Parse the command line arguments."""</span>
+<span class="linenos"> 83</span><span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+<span class="linenos"> 84</span>    <span class="kn">from</span><span class="w"> </span><span class="nn">spdl.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioPackets</span><span class="p">,</span> <span class="n">ImagePackets</span>
 <span class="linenos"> 85</span>
-<span class="linenos"> 86</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
-<span class="linenos"> 87</span>        <span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">,</span>
-<span class="linenos"> 88</span>    <span class="p">)</span>
-<span class="linenos"> 89</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"--input-path"</span><span class="p">,</span> <span class="s2">"-i"</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">)</span>
-<span class="linenos"> 90</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"--output-path"</span><span class="p">,</span> <span class="s2">"-o"</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">)</span>
-<span class="linenos"> 91</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-<span class="linenos"> 92</span>
-<span class="linenos"> 93</span>
-<span class="linenos"> 94</span><span class="k">def</span><span class="w"> </span><span class="nf">get_filter_desc</span><span class="p">(</span>
-<span class="linenos"> 95</span>    <span class="n">input_pix_fmt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<span class="linenos"> 96</span>    <span class="n">input_width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-<span class="linenos"> 97</span>    <span class="n">input_height</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-<span class="linenos"> 98</span>    <span class="n">frame_rate</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
-<span class="linenos"> 99</span>    <span class="n">output_pix_fmt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<span class="linenos">100</span>    <span class="n">output_width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="linenos">101</span>    <span class="n">output_height</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="linenos">102</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="linenos">103</span><span class="w">    </span><span class="sd">"""Build a filter description that performs format conversion and optional scaling</span>
-<span class="linenos">104</span>
-<span class="linenos">105</span><span class="sd">    Args:</span>
-<span class="linenos">106</span><span class="sd">        input_pix_fmt: The input pixel format. Usually ``"rgb24"``.</span>
-<span class="linenos">107</span><span class="sd">        input_width,input_height: The input frame resolution.</span>
-<span class="linenos">108</span><span class="sd">        frame_rate: The frame rate of the video.</span>
-<span class="linenos">109</span><span class="sd">        output_pix_fmt: The output pixel format. It is the pixel format used by</span>
-<span class="linenos">110</span><span class="sd">            the encoder.</span>
-<span class="linenos">111</span><span class="sd">        output_width,output_height: The output frame resolution.</span>
-<span class="linenos">112</span>
-<span class="linenos">113</span><span class="sd">    Returns:</span>
-<span class="linenos">114</span><span class="sd">        The filter description.</span>
-<span class="linenos">115</span><span class="sd">    """</span>
-<span class="linenos">116</span>    <span class="c1"># filter graph for converting RGB into YUV420p</span>
-<span class="linenos">117</span>    <span class="n">buffer_arg</span> <span class="o">=</span> <span class="s2">":"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-<span class="linenos">118</span>        <span class="p">[</span>
-<span class="linenos">119</span>            <span class="sa">f</span><span class="s2">"video_size=</span><span class="si">{</span><span class="n">input_width</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="n">input_height</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-<span class="linenos">120</span>            <span class="sa">f</span><span class="s2">"pix_fmt=</span><span class="si">{</span><span class="n">input_pix_fmt</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-<span class="linenos">121</span>            <span class="sa">f</span><span class="s2">"time_base=</span><span class="si">{</span><span class="n">frame_rate</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">frame_rate</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-<span class="linenos">122</span>            <span class="s2">"pixel_aspect=1/1"</span><span class="p">,</span>
-<span class="linenos">123</span>        <span class="p">]</span>
-<span class="linenos">124</span>    <span class="p">)</span>
-<span class="linenos">125</span>    <span class="n">filter_arg</span> <span class="o">=</span> <span class="s2">","</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-<span class="linenos">126</span>        <span class="p">[</span>
-<span class="linenos">127</span>            <span class="sa">f</span><span class="s2">"format=pix_fmts=</span><span class="si">{</span><span class="n">output_pix_fmt</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-<span class="linenos">128</span>            <span class="sa">f</span><span class="s2">"scale=w=</span><span class="si">{</span><span class="n">output_width</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'iw'</span><span class="si">}</span><span class="s2">:h=</span><span class="si">{</span><span class="n">output_height</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'ih'</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-<span class="linenos">129</span>        <span class="p">]</span>
-<span class="linenos">130</span>    <span class="p">)</span>
-<span class="linenos">131</span>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"buffer=</span><span class="si">{</span><span class="n">buffer_arg</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">filter_arg</span><span class="si">}</span><span class="s2">,buffersink"</span>
-<span class="linenos">132</span>
-<span class="linenos">133</span>
-<span class="linenos">134</span><span class="k">def</span><span class="w"> </span><span class="nf">process</span><span class="p">(</span>
-<span class="linenos">135</span>    <span class="n">demuxer</span><span class="p">:</span> <span class="n">Demuxer</span><span class="p">,</span>
-<span class="linenos">136</span>    <span class="n">video_decoder</span><span class="p">:</span> <span class="n">VideoDecoder</span><span class="p">,</span>
-<span class="linenos">137</span>    <span class="n">filter_graph</span><span class="p">:</span> <span class="n">FilterGraph</span><span class="p">,</span>
-<span class="linenos">138</span>    <span class="n">video_encoder</span><span class="p">:</span> <span class="n">VideoEncoder</span><span class="p">,</span>
-<span class="linenos">139</span>    <span class="n">muxer</span><span class="p">:</span> <span class="n">Muxer</span><span class="p">,</span>
-<span class="linenos">140</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">141</span><span class="w">    </span><span class="sd">"""The main processing logic.</span>
-<span class="linenos">142</span>
-<span class="linenos">143</span><span class="sd">    Args:</span>
-<span class="linenos">144</span><span class="sd">        demuxer: Demux audio/video streams from the source.</span>
-<span class="linenos">145</span><span class="sd">        video_decoder: Decode the video packets.</span>
-<span class="linenos">146</span><span class="sd">        filter_graph: Transform applied to the array data before encoding.</span>
-<span class="linenos">147</span><span class="sd">        video_encoder: Encode the processed video array.</span>
-<span class="linenos">148</span><span class="sd">        muxer: Multiplexer for remuxing audio packets and processed video packets.</span>
-<span class="linenos">149</span><span class="sd">    """</span>
-<span class="linenos">150</span>    <span class="n">src_pix_fmt</span> <span class="o">=</span> <span class="s2">"rgb24"</span>
-<span class="linenos">151</span>    <span class="n">frame_rate</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">video_codec</span><span class="o">.</span><span class="n">frame_rate</span>
-<span class="linenos">152</span>    <span class="n">video_index</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">video_stream_index</span>
-<span class="linenos">153</span>    <span class="n">audio_index</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">audio_stream_index</span>
-<span class="linenos">154</span>
-<span class="linenos">155</span>    <span class="n">streaming_demuxing</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">streaming_demux</span><span class="p">([</span><span class="n">video_index</span><span class="p">,</span> <span class="n">audio_index</span><span class="p">],</span> <span class="n">duration</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="linenos">156</span>    <span class="k">with</span> <span class="n">muxer</span><span class="o">.</span><span class="n">open</span><span class="p">():</span>
-<span class="linenos">157</span>        <span class="n">num_video_frames</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="linenos">158</span>        <span class="k">for</span> <span class="n">packets</span> <span class="ow">in</span> <span class="n">streaming_demuxing</span><span class="p">:</span>
-<span class="linenos">159</span>            <span class="k">if</span> <span class="p">(</span><span class="n">audio_packets</span> <span class="o">:=</span> <span class="n">packets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">audio_index</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">160</span>                <span class="n">muxer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">audio_packets</span><span class="p">)</span>
-<span class="linenos">161</span>
-<span class="linenos">162</span>            <span class="k">if</span> <span class="p">(</span><span class="n">video_packets</span> <span class="o">:=</span> <span class="n">packets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">video_index</span><span class="p">))</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">163</span>                <span class="k">continue</span>
-<span class="linenos">164</span>
-<span class="linenos">165</span>            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">video_packets</span><span class="p">,</span> <span class="n">VideoPackets</span><span class="p">)</span>
-<span class="linenos">166</span>            <span class="k">for</span> <span class="n">frames</span> <span class="ow">in</span> <span class="n">video_decoder</span><span class="o">.</span><span class="n">streaming_decode_packets</span><span class="p">(</span><span class="n">video_packets</span><span class="p">):</span>
-<span class="linenos">167</span>                <span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">convert_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
-<span class="linenos">168</span>                <span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+<span class="linenos"> 86</span>
+<span class="linenos"> 87</span><span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">:</span>
+<span class="linenos"> 88</span><span class="w">    </span><span class="sd">"""Parse the command line arguments."""</span>
+<span class="linenos"> 89</span>
+<span class="linenos"> 90</span>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+<span class="linenos"> 91</span>        <span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">,</span>
+<span class="linenos"> 92</span>    <span class="p">)</span>
+<span class="linenos"> 93</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"--input-path"</span><span class="p">,</span> <span class="s2">"-i"</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">)</span>
+<span class="linenos"> 94</span>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"--output-path"</span><span class="p">,</span> <span class="s2">"-o"</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">)</span>
+<span class="linenos"> 95</span>    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="linenos"> 96</span>
+<span class="linenos"> 97</span>
+<span class="linenos"> 98</span><span class="k">def</span><span class="w"> </span><span class="nf">get_filter_desc</span><span class="p">(</span>
+<span class="linenos"> 99</span>    <span class="n">input_pix_fmt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="linenos">100</span>    <span class="n">input_width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">101</span>    <span class="n">input_height</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="linenos">102</span>    <span class="n">frame_rate</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+<span class="linenos">103</span>    <span class="n">output_pix_fmt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="linenos">104</span>    <span class="n">output_width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="linenos">105</span>    <span class="n">output_height</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="linenos">106</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="linenos">107</span><span class="w">    </span><span class="sd">"""Build a filter description that performs format conversion and optional scaling</span>
+<span class="linenos">108</span>
+<span class="linenos">109</span><span class="sd">    Args:</span>
+<span class="linenos">110</span><span class="sd">        input_pix_fmt: The input pixel format. Usually ``"rgb24"``.</span>
+<span class="linenos">111</span><span class="sd">        input_width,input_height: The input frame resolution.</span>
+<span class="linenos">112</span><span class="sd">        frame_rate: The frame rate of the video.</span>
+<span class="linenos">113</span><span class="sd">        output_pix_fmt: The output pixel format. It is the pixel format used by</span>
+<span class="linenos">114</span><span class="sd">            the encoder.</span>
+<span class="linenos">115</span><span class="sd">        output_width,output_height: The output frame resolution.</span>
+<span class="linenos">116</span>
+<span class="linenos">117</span><span class="sd">    Returns:</span>
+<span class="linenos">118</span><span class="sd">        The filter description.</span>
+<span class="linenos">119</span><span class="sd">    """</span>
+<span class="linenos">120</span>    <span class="c1"># filter graph for converting RGB into YUV420p</span>
+<span class="linenos">121</span>    <span class="n">buffer_arg</span> <span class="o">=</span> <span class="s2">":"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+<span class="linenos">122</span>        <span class="p">[</span>
+<span class="linenos">123</span>            <span class="sa">f</span><span class="s2">"video_size=</span><span class="si">{</span><span class="n">input_width</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="n">input_height</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+<span class="linenos">124</span>            <span class="sa">f</span><span class="s2">"pix_fmt=</span><span class="si">{</span><span class="n">input_pix_fmt</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+<span class="linenos">125</span>            <span class="sa">f</span><span class="s2">"time_base=</span><span class="si">{</span><span class="n">frame_rate</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">frame_rate</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+<span class="linenos">126</span>            <span class="s2">"pixel_aspect=1/1"</span><span class="p">,</span>
+<span class="linenos">127</span>        <span class="p">]</span>
+<span class="linenos">128</span>    <span class="p">)</span>
+<span class="linenos">129</span>    <span class="n">filter_arg</span> <span class="o">=</span> <span class="s2">","</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+<span class="linenos">130</span>        <span class="p">[</span>
+<span class="linenos">131</span>            <span class="sa">f</span><span class="s2">"format=pix_fmts=</span><span class="si">{</span><span class="n">output_pix_fmt</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+<span class="linenos">132</span>            <span class="sa">f</span><span class="s2">"scale=w=</span><span class="si">{</span><span class="n">output_width</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'iw'</span><span class="si">}</span><span class="s2">:h=</span><span class="si">{</span><span class="n">output_height</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'ih'</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+<span class="linenos">133</span>        <span class="p">]</span>
+<span class="linenos">134</span>    <span class="p">)</span>
+<span class="linenos">135</span>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"buffer=</span><span class="si">{</span><span class="n">buffer_arg</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">filter_arg</span><span class="si">}</span><span class="s2">,buffersink"</span>
+<span class="linenos">136</span>
+<span class="linenos">137</span>
+<span class="linenos">138</span><span class="k">def</span><span class="w"> </span><span class="nf">process</span><span class="p">(</span>
+<span class="linenos">139</span>    <span class="n">demuxer</span><span class="p">:</span> <span class="n">Demuxer</span><span class="p">,</span>
+<span class="linenos">140</span>    <span class="n">video_decoder</span><span class="p">:</span> <span class="n">VideoDecoder</span><span class="p">,</span>
+<span class="linenos">141</span>    <span class="n">filter_graph</span><span class="p">:</span> <span class="n">FilterGraph</span><span class="p">,</span>
+<span class="linenos">142</span>    <span class="n">video_encoder</span><span class="p">:</span> <span class="n">VideoEncoder</span><span class="p">,</span>
+<span class="linenos">143</span>    <span class="n">muxer</span><span class="p">:</span> <span class="n">Muxer</span><span class="p">,</span>
+<span class="linenos">144</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">145</span><span class="w">    </span><span class="sd">"""The main processing logic.</span>
+<span class="linenos">146</span>
+<span class="linenos">147</span><span class="sd">    Args:</span>
+<span class="linenos">148</span><span class="sd">        demuxer: Demux audio/video streams from the source.</span>
+<span class="linenos">149</span><span class="sd">        video_decoder: Decode the video packets.</span>
+<span class="linenos">150</span><span class="sd">        filter_graph: Transform applied to the array data before encoding.</span>
+<span class="linenos">151</span><span class="sd">        video_encoder: Encode the processed video array.</span>
+<span class="linenos">152</span><span class="sd">        muxer: Multiplexer for remuxing audio packets and processed video packets.</span>
+<span class="linenos">153</span><span class="sd">    """</span>
+<span class="linenos">154</span>    <span class="n">frames</span><span class="p">:</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">AudioFrames</span> <span class="o">|</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">VideoFrames</span> <span class="o">|</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">ImageFrames</span> <span class="o">|</span> <span class="kc">None</span>
+<span class="linenos">155</span>    <span class="n">packets</span><span class="p">:</span> <span class="p">(</span>
+<span class="linenos">156</span>        <span class="s2">"dict[int, AudioPackets | VideoPackets | ImagePackets] | VideoPackets | None"</span>
+<span class="linenos">157</span>    <span class="p">)</span>
+<span class="linenos">158</span>    <span class="n">src_pix_fmt</span> <span class="o">=</span> <span class="s2">"rgb24"</span>
+<span class="linenos">159</span>    <span class="n">frame_rate</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">video_codec</span><span class="o">.</span><span class="n">frame_rate</span>
+<span class="linenos">160</span>    <span class="n">video_index</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">video_stream_index</span>
+<span class="linenos">161</span>    <span class="n">audio_index</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">audio_stream_index</span>
+<span class="linenos">162</span>
+<span class="linenos">163</span>    <span class="n">streaming_demuxing</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">streaming_demux</span><span class="p">([</span><span class="n">video_index</span><span class="p">,</span> <span class="n">audio_index</span><span class="p">],</span> <span class="n">duration</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="linenos">164</span>    <span class="k">with</span> <span class="n">muxer</span><span class="o">.</span><span class="n">open</span><span class="p">():</span>
+<span class="linenos">165</span>        <span class="n">num_video_frames</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="linenos">166</span>        <span class="k">for</span> <span class="n">packets</span> <span class="ow">in</span> <span class="n">streaming_demuxing</span><span class="p">:</span>
+<span class="linenos">167</span>            <span class="k">if</span> <span class="p">(</span><span class="n">audio_packets</span> <span class="o">:=</span> <span class="n">packets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">audio_index</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">168</span>                <span class="n">muxer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">audio_packets</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
 <span class="linenos">169</span>
-<span class="linenos">170</span>                <span class="c1">##############################################################</span>
-<span class="linenos">171</span>                <span class="c1"># &lt;ADD FRAME PROCESSING HERE&gt;</span>
-<span class="linenos">172</span>                <span class="c1">##############################################################</span>
-<span class="linenos">173</span>
-<span class="linenos">174</span>                <span class="n">frames</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">create_reference_video_frame</span><span class="p">(</span>
-<span class="linenos">175</span>                    <span class="n">array</span><span class="p">,</span>
-<span class="linenos">176</span>                    <span class="n">pix_fmt</span><span class="o">=</span><span class="n">src_pix_fmt</span><span class="p">,</span>
-<span class="linenos">177</span>                    <span class="n">frame_rate</span><span class="o">=</span><span class="n">frame_rate</span><span class="p">,</span>
-<span class="linenos">178</span>                    <span class="n">pts</span><span class="o">=</span><span class="n">num_video_frames</span><span class="p">,</span>
-<span class="linenos">179</span>                <span class="p">)</span>
-<span class="linenos">180</span>                <span class="n">num_video_frames</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
+<span class="linenos">170</span>            <span class="k">if</span> <span class="p">(</span><span class="n">video_packets</span> <span class="o">:=</span> <span class="n">packets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">video_index</span><span class="p">))</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">171</span>                <span class="k">continue</span>
+<span class="linenos">172</span>
+<span class="linenos">173</span>            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">video_packets</span><span class="p">,</span> <span class="n">VideoPackets</span><span class="p">)</span>
+<span class="linenos">174</span>            <span class="k">for</span> <span class="n">frames</span> <span class="ow">in</span> <span class="n">video_decoder</span><span class="o">.</span><span class="n">streaming_decode_packets</span><span class="p">(</span><span class="n">video_packets</span><span class="p">):</span>
+<span class="linenos">175</span>                <span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">convert_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+<span class="linenos">176</span>                <span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+<span class="linenos">177</span>
+<span class="linenos">178</span>                <span class="c1">##############################################################</span>
+<span class="linenos">179</span>                <span class="c1"># &lt;ADD FRAME PROCESSING HERE&gt;</span>
+<span class="linenos">180</span>                <span class="c1">##############################################################</span>
 <span class="linenos">181</span>
-<span class="linenos">182</span>                <span class="n">filter_graph</span><span class="o">.</span><span class="n">add_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
-<span class="linenos">183</span>
-<span class="linenos">184</span>                <span class="k">if</span> <span class="p">(</span><span class="n">frames</span> <span class="o">:=</span> <span class="n">filter_graph</span><span class="o">.</span><span class="n">get_frames</span><span class="p">())</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">185</span>                    <span class="k">if</span> <span class="p">(</span>
-<span class="linenos">186</span>                        <span class="n">packets</span> <span class="o">:=</span> <span class="n">video_encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>  <span class="c1"># pyre-ignore</span>
-<span class="linenos">187</span>                    <span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">188</span>                        <span class="n">muxer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">packets</span><span class="p">)</span>
+<span class="linenos">182</span>                <span class="n">frames</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">create_reference_video_frame</span><span class="p">(</span>
+<span class="linenos">183</span>                    <span class="n">array</span><span class="p">,</span>
+<span class="linenos">184</span>                    <span class="n">pix_fmt</span><span class="o">=</span><span class="n">src_pix_fmt</span><span class="p">,</span>
+<span class="linenos">185</span>                    <span class="n">frame_rate</span><span class="o">=</span><span class="n">frame_rate</span><span class="p">,</span>
+<span class="linenos">186</span>                    <span class="n">pts</span><span class="o">=</span><span class="n">num_video_frames</span><span class="p">,</span>
+<span class="linenos">187</span>                <span class="p">)</span>
+<span class="linenos">188</span>                <span class="n">num_video_frames</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
 <span class="linenos">189</span>
-<span class="linenos">190</span>        <span class="c1"># -------------------------------------------------------------</span>
-<span class="linenos">191</span>        <span class="c1"># Drain mode</span>
-<span class="linenos">192</span>        <span class="c1"># -------------------------------------------------------------</span>
-<span class="linenos">193</span>
-<span class="linenos">194</span>        <span class="c1"># Flush decoder</span>
-<span class="linenos">195</span>        <span class="k">for</span> <span class="n">frames</span> <span class="ow">in</span> <span class="n">video_decoder</span><span class="o">.</span><span class="n">flush</span><span class="p">():</span>
-<span class="linenos">196</span>            <span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">convert_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
-<span class="linenos">197</span>            <span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
-<span class="linenos">198</span>
-<span class="linenos">199</span>            <span class="c1">##############################################################</span>
-<span class="linenos">200</span>            <span class="c1"># &lt;ADD FRAME PROCESSING HERE&gt;</span>
-<span class="linenos">201</span>            <span class="c1">##############################################################</span>
-<span class="linenos">202</span>
-<span class="linenos">203</span>            <span class="n">frames</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">create_reference_video_frame</span><span class="p">(</span>
-<span class="linenos">204</span>                <span class="n">array</span><span class="p">,</span>
-<span class="linenos">205</span>                <span class="n">pix_fmt</span><span class="o">=</span><span class="n">src_pix_fmt</span><span class="p">,</span>
-<span class="linenos">206</span>                <span class="n">frame_rate</span><span class="o">=</span><span class="n">frame_rate</span><span class="p">,</span>
-<span class="linenos">207</span>                <span class="n">pts</span><span class="o">=</span><span class="n">num_video_frames</span><span class="p">,</span>
-<span class="linenos">208</span>            <span class="p">)</span>
-<span class="linenos">209</span>            <span class="n">num_video_frames</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
-<span class="linenos">210</span>
-<span class="linenos">211</span>            <span class="n">filter_graph</span><span class="o">.</span><span class="n">add_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
-<span class="linenos">212</span>            <span class="k">if</span> <span class="p">(</span><span class="n">frames</span> <span class="o">:=</span> <span class="n">filter_graph</span><span class="o">.</span><span class="n">get_frames</span><span class="p">())</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">213</span>                <span class="k">if</span> <span class="p">(</span><span class="n">packets</span> <span class="o">:=</span> <span class="n">video_encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">frames</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pyre-ignore</span>
-<span class="linenos">214</span>                    <span class="n">muxer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">packets</span><span class="p">)</span>
-<span class="linenos">215</span>
-<span class="linenos">216</span>        <span class="c1"># Flush filter graph</span>
-<span class="linenos">217</span>        <span class="k">if</span> <span class="p">(</span><span class="n">frames</span> <span class="o">:=</span> <span class="n">filter_graph</span><span class="o">.</span><span class="n">flush</span><span class="p">())</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">218</span>            <span class="k">if</span> <span class="p">(</span><span class="n">packets</span> <span class="o">:=</span> <span class="n">video_encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">frames</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">219</span>                <span class="n">muxer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">packets</span><span class="p">)</span>
+<span class="linenos">190</span>                <span class="n">filter_graph</span><span class="o">.</span><span class="n">add_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+<span class="linenos">191</span>
+<span class="linenos">192</span>                <span class="k">if</span> <span class="p">(</span><span class="n">frames</span> <span class="o">:=</span> <span class="n">filter_graph</span><span class="o">.</span><span class="n">get_frames</span><span class="p">())</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">193</span>                    <span class="k">if</span> <span class="p">(</span>
+<span class="linenos">194</span>                        <span class="n">packets</span> <span class="o">:=</span> <span class="n">video_encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span>
+<span class="linenos">195</span>                            <span class="n">frames</span>  <span class="c1"># type: ignore[arg-type]</span>
+<span class="linenos">196</span>                        <span class="p">)</span>
+<span class="linenos">197</span>                    <span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">198</span>                        <span class="n">muxer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">packets</span><span class="p">)</span>
+<span class="linenos">199</span>
+<span class="linenos">200</span>        <span class="c1"># -------------------------------------------------------------</span>
+<span class="linenos">201</span>        <span class="c1"># Drain mode</span>
+<span class="linenos">202</span>        <span class="c1"># -------------------------------------------------------------</span>
+<span class="linenos">203</span>
+<span class="linenos">204</span>        <span class="c1"># Flush decoder</span>
+<span class="linenos">205</span>        <span class="k">for</span> <span class="n">frames</span> <span class="ow">in</span> <span class="n">video_decoder</span><span class="o">.</span><span class="n">flush</span><span class="p">():</span>
+<span class="linenos">206</span>            <span class="n">buffer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">convert_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+<span class="linenos">207</span>            <span class="n">array</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+<span class="linenos">208</span>
+<span class="linenos">209</span>            <span class="c1">##############################################################</span>
+<span class="linenos">210</span>            <span class="c1"># &lt;ADD FRAME PROCESSING HERE&gt;</span>
+<span class="linenos">211</span>            <span class="c1">##############################################################</span>
+<span class="linenos">212</span>
+<span class="linenos">213</span>            <span class="n">frames</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">create_reference_video_frame</span><span class="p">(</span>
+<span class="linenos">214</span>                <span class="n">array</span><span class="p">,</span>
+<span class="linenos">215</span>                <span class="n">pix_fmt</span><span class="o">=</span><span class="n">src_pix_fmt</span><span class="p">,</span>
+<span class="linenos">216</span>                <span class="n">frame_rate</span><span class="o">=</span><span class="n">frame_rate</span><span class="p">,</span>
+<span class="linenos">217</span>                <span class="n">pts</span><span class="o">=</span><span class="n">num_video_frames</span><span class="p">,</span>
+<span class="linenos">218</span>            <span class="p">)</span>
+<span class="linenos">219</span>            <span class="n">num_video_frames</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
 <span class="linenos">220</span>
-<span class="linenos">221</span>        <span class="c1"># Flush encoder</span>
-<span class="linenos">222</span>        <span class="k">if</span> <span class="p">(</span><span class="n">packets</span> <span class="o">:=</span> <span class="n">video_encoder</span><span class="o">.</span><span class="n">flush</span><span class="p">())</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">223</span>            <span class="n">muxer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">packets</span><span class="p">)</span>
-<span class="linenos">224</span>
-<span class="linenos">225</span>
-<span class="linenos">226</span><span class="k">def</span><span class="w"> </span><span class="nf">build_components</span><span class="p">(</span>
-<span class="linenos">227</span>    <span class="n">input_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span>
-<span class="linenos">228</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Demuxer</span><span class="p">,</span> <span class="n">VideoDecoder</span><span class="p">,</span> <span class="n">FilterGraph</span><span class="p">,</span> <span class="n">VideoEncoder</span><span class="p">,</span> <span class="n">Muxer</span><span class="p">]:</span>
-<span class="linenos">229</span><span class="w">    </span><span class="sd">""""""</span>
-<span class="linenos">230</span>    <span class="n">demuxer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">Demuxer</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span>
-<span class="linenos">231</span>    <span class="n">muxer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">Muxer</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+<span class="linenos">221</span>            <span class="n">filter_graph</span><span class="o">.</span><span class="n">add_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+<span class="linenos">222</span>            <span class="k">if</span> <span class="p">(</span><span class="n">frames</span> <span class="o">:=</span> <span class="n">filter_graph</span><span class="o">.</span><span class="n">get_frames</span><span class="p">())</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">223</span>                <span class="k">if</span> <span class="p">(</span>
+<span class="linenos">224</span>                    <span class="n">packets</span> <span class="o">:=</span> <span class="n">video_encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
+<span class="linenos">225</span>                <span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">226</span>                    <span class="n">muxer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">packets</span><span class="p">)</span>
+<span class="linenos">227</span>
+<span class="linenos">228</span>        <span class="c1"># Flush filter graph</span>
+<span class="linenos">229</span>        <span class="k">if</span> <span class="p">(</span><span class="n">frames</span> <span class="o">:=</span> <span class="n">filter_graph</span><span class="o">.</span><span class="n">flush</span><span class="p">())</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># type: ignore[func-returns-value]</span>
+<span class="linenos">230</span>            <span class="k">if</span> <span class="p">(</span><span class="n">packets</span> <span class="o">:=</span> <span class="n">video_encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">frames</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">231</span>                <span class="n">muxer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">packets</span><span class="p">)</span>
 <span class="linenos">232</span>
-<span class="linenos">233</span>    <span class="c1"># Fetch the input config</span>
-<span class="linenos">234</span>    <span class="n">audio_codec</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">audio_codec</span>
-<span class="linenos">235</span>
-<span class="linenos">236</span>    <span class="n">video_codec</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">video_codec</span>
-<span class="linenos">237</span>    <span class="n">frame_rate</span> <span class="o">=</span> <span class="n">video_codec</span><span class="o">.</span><span class="n">frame_rate</span>
-<span class="linenos">238</span>    <span class="n">src_width</span> <span class="o">=</span> <span class="n">video_codec</span><span class="o">.</span><span class="n">width</span>
-<span class="linenos">239</span>    <span class="n">src_height</span> <span class="o">=</span> <span class="n">video_codec</span><span class="o">.</span><span class="n">height</span>
-<span class="linenos">240</span>
-<span class="linenos">241</span>    <span class="c1"># Create decoder</span>
-<span class="linenos">242</span>    <span class="n">video_decoder</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">Decoder</span><span class="p">(</span><span class="n">demuxer</span><span class="o">.</span><span class="n">video_codec</span><span class="p">)</span>
-<span class="linenos">243</span>
-<span class="linenos">244</span>    <span class="c1"># Configure output</span>
-<span class="linenos">245</span>    <span class="n">src_pix_fmt</span> <span class="o">=</span> <span class="s2">"rgb24"</span>
-<span class="linenos">246</span>    <span class="n">enc_pix_fmt</span> <span class="o">=</span> <span class="s2">"yuv420p"</span>
-<span class="linenos">247</span>    <span class="n">enc_height</span> <span class="o">=</span> <span class="n">src_height</span> <span class="o">//</span> <span class="mi">2</span>
-<span class="linenos">248</span>    <span class="n">enc_width</span> <span class="o">=</span> <span class="n">src_width</span> <span class="o">//</span> <span class="mi">2</span>
-<span class="linenos">249</span>    <span class="n">filter_desc</span> <span class="o">=</span> <span class="n">get_filter_desc</span><span class="p">(</span>
-<span class="linenos">250</span>        <span class="n">input_pix_fmt</span><span class="o">=</span><span class="n">src_pix_fmt</span><span class="p">,</span>
-<span class="linenos">251</span>        <span class="n">input_width</span><span class="o">=</span><span class="n">src_width</span><span class="p">,</span>
-<span class="linenos">252</span>        <span class="n">input_height</span><span class="o">=</span><span class="n">src_height</span><span class="p">,</span>
-<span class="linenos">253</span>        <span class="n">frame_rate</span><span class="o">=</span><span class="n">frame_rate</span><span class="p">,</span>
-<span class="linenos">254</span>        <span class="n">output_pix_fmt</span><span class="o">=</span><span class="n">enc_pix_fmt</span><span class="p">,</span>
-<span class="linenos">255</span>        <span class="n">output_width</span><span class="o">=</span><span class="n">enc_width</span><span class="p">,</span>
-<span class="linenos">256</span>        <span class="n">output_height</span><span class="o">=</span><span class="n">enc_height</span><span class="p">,</span>
-<span class="linenos">257</span>    <span class="p">)</span>
-<span class="linenos">258</span>    <span class="nb">print</span><span class="p">(</span><span class="n">filter_desc</span><span class="p">)</span>
-<span class="linenos">259</span>    <span class="n">filter_graph</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">FilterGraph</span><span class="p">(</span><span class="n">filter_desc</span><span class="p">)</span>
-<span class="linenos">260</span>
-<span class="linenos">261</span>    <span class="n">video_encoder</span> <span class="o">=</span> <span class="n">muxer</span><span class="o">.</span><span class="n">add_encode_stream</span><span class="p">(</span>
-<span class="linenos">262</span>        <span class="n">config</span><span class="o">=</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">video_encode_config</span><span class="p">(</span>
-<span class="linenos">263</span>            <span class="n">pix_fmt</span><span class="o">=</span><span class="n">enc_pix_fmt</span><span class="p">,</span>
-<span class="linenos">264</span>            <span class="n">frame_rate</span><span class="o">=</span><span class="n">frame_rate</span><span class="p">,</span>
-<span class="linenos">265</span>            <span class="n">height</span><span class="o">=</span><span class="n">enc_height</span><span class="p">,</span>
-<span class="linenos">266</span>            <span class="n">width</span><span class="o">=</span><span class="n">enc_width</span><span class="p">,</span>
-<span class="linenos">267</span>            <span class="n">colorspace</span><span class="o">=</span><span class="s2">"bt709"</span><span class="p">,</span>
-<span class="linenos">268</span>            <span class="n">color_primaries</span><span class="o">=</span><span class="s2">"bt709"</span><span class="p">,</span>
-<span class="linenos">269</span>            <span class="n">color_trc</span><span class="o">=</span><span class="s2">"bt709"</span><span class="p">,</span>
-<span class="linenos">270</span>        <span class="p">),</span>
-<span class="linenos">271</span>    <span class="p">)</span>
-<span class="linenos">272</span>    <span class="n">muxer</span><span class="o">.</span><span class="n">add_remux_stream</span><span class="p">(</span><span class="n">audio_codec</span><span class="p">)</span>
-<span class="linenos">273</span>    <span class="k">return</span> <span class="n">demuxer</span><span class="p">,</span> <span class="n">video_decoder</span><span class="p">,</span> <span class="n">filter_graph</span><span class="p">,</span> <span class="n">video_encoder</span><span class="p">,</span> <span class="n">muxer</span>
-<span class="linenos">274</span>
-<span class="linenos">275</span>
-<span class="linenos">276</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="linenos">277</span><span class="w">    </span><span class="sd">"""Entrypoint from the command line."""</span>
-<span class="linenos">278</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">parse_args</span><span class="p">()</span>
-<span class="linenos">279</span>
-<span class="linenos">280</span>    <span class="n">demuxer</span><span class="p">,</span> <span class="n">video_decoder</span><span class="p">,</span> <span class="n">filter_graph</span><span class="p">,</span> <span class="n">video_encoder</span><span class="p">,</span> <span class="n">muxer</span> <span class="o">=</span> <span class="n">build_components</span><span class="p">(</span>
-<span class="linenos">281</span>        <span class="n">args</span><span class="o">.</span><span class="n">input_path</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output_path</span>
-<span class="linenos">282</span>    <span class="p">)</span>
-<span class="linenos">283</span>
-<span class="linenos">284</span>    <span class="n">process</span><span class="p">(</span>
-<span class="linenos">285</span>        <span class="n">demuxer</span><span class="p">,</span>
-<span class="linenos">286</span>        <span class="n">video_decoder</span><span class="p">,</span>
-<span class="linenos">287</span>        <span class="n">filter_graph</span><span class="p">,</span>
-<span class="linenos">288</span>        <span class="n">video_encoder</span><span class="p">,</span>
-<span class="linenos">289</span>        <span class="n">muxer</span><span class="p">,</span>
-<span class="linenos">290</span>    <span class="p">)</span>
+<span class="linenos">233</span>        <span class="c1"># Flush encoder</span>
+<span class="linenos">234</span>        <span class="k">if</span> <span class="p">(</span><span class="n">packets</span> <span class="o">:=</span> <span class="n">video_encoder</span><span class="o">.</span><span class="n">flush</span><span class="p">())</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">235</span>            <span class="n">muxer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">packets</span><span class="p">)</span>
+<span class="linenos">236</span>
+<span class="linenos">237</span>
+<span class="linenos">238</span><span class="k">def</span><span class="w"> </span><span class="nf">build_components</span><span class="p">(</span>
+<span class="linenos">239</span>    <span class="n">input_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span>
+<span class="linenos">240</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Demuxer</span><span class="p">,</span> <span class="n">VideoDecoder</span><span class="p">,</span> <span class="n">FilterGraph</span><span class="p">,</span> <span class="n">VideoEncoder</span><span class="p">,</span> <span class="n">Muxer</span><span class="p">]:</span>
+<span class="linenos">241</span><span class="w">    </span><span class="sd">""""""</span>
+<span class="linenos">242</span>    <span class="n">demuxer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">Demuxer</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span>
+<span class="linenos">243</span>    <span class="n">muxer</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">Muxer</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+<span class="linenos">244</span>
+<span class="linenos">245</span>    <span class="c1"># Fetch the input config</span>
+<span class="linenos">246</span>    <span class="n">audio_codec</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">audio_codec</span>
+<span class="linenos">247</span>
+<span class="linenos">248</span>    <span class="n">video_codec</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">video_codec</span>
+<span class="linenos">249</span>    <span class="n">frame_rate</span> <span class="o">=</span> <span class="n">video_codec</span><span class="o">.</span><span class="n">frame_rate</span>
+<span class="linenos">250</span>    <span class="n">src_width</span> <span class="o">=</span> <span class="n">video_codec</span><span class="o">.</span><span class="n">width</span>
+<span class="linenos">251</span>    <span class="n">src_height</span> <span class="o">=</span> <span class="n">video_codec</span><span class="o">.</span><span class="n">height</span>
+<span class="linenos">252</span>
+<span class="linenos">253</span>    <span class="c1"># Create decoder</span>
+<span class="linenos">254</span>    <span class="n">video_decoder</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">Decoder</span><span class="p">(</span><span class="n">demuxer</span><span class="o">.</span><span class="n">video_codec</span><span class="p">)</span>
+<span class="linenos">255</span>
+<span class="linenos">256</span>    <span class="c1"># Configure output</span>
+<span class="linenos">257</span>    <span class="n">src_pix_fmt</span> <span class="o">=</span> <span class="s2">"rgb24"</span>
+<span class="linenos">258</span>    <span class="n">enc_pix_fmt</span> <span class="o">=</span> <span class="s2">"yuv420p"</span>
+<span class="linenos">259</span>    <span class="n">enc_height</span> <span class="o">=</span> <span class="n">src_height</span> <span class="o">//</span> <span class="mi">2</span>
+<span class="linenos">260</span>    <span class="n">enc_width</span> <span class="o">=</span> <span class="n">src_width</span> <span class="o">//</span> <span class="mi">2</span>
+<span class="linenos">261</span>    <span class="n">filter_desc</span> <span class="o">=</span> <span class="n">get_filter_desc</span><span class="p">(</span>
+<span class="linenos">262</span>        <span class="n">input_pix_fmt</span><span class="o">=</span><span class="n">src_pix_fmt</span><span class="p">,</span>
+<span class="linenos">263</span>        <span class="n">input_width</span><span class="o">=</span><span class="n">src_width</span><span class="p">,</span>
+<span class="linenos">264</span>        <span class="n">input_height</span><span class="o">=</span><span class="n">src_height</span><span class="p">,</span>
+<span class="linenos">265</span>        <span class="n">frame_rate</span><span class="o">=</span><span class="n">frame_rate</span><span class="p">,</span>
+<span class="linenos">266</span>        <span class="n">output_pix_fmt</span><span class="o">=</span><span class="n">enc_pix_fmt</span><span class="p">,</span>
+<span class="linenos">267</span>        <span class="n">output_width</span><span class="o">=</span><span class="n">enc_width</span><span class="p">,</span>
+<span class="linenos">268</span>        <span class="n">output_height</span><span class="o">=</span><span class="n">enc_height</span><span class="p">,</span>
+<span class="linenos">269</span>    <span class="p">)</span>
+<span class="linenos">270</span>    <span class="nb">print</span><span class="p">(</span><span class="n">filter_desc</span><span class="p">)</span>
+<span class="linenos">271</span>    <span class="n">filter_graph</span> <span class="o">=</span> <span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">FilterGraph</span><span class="p">(</span><span class="n">filter_desc</span><span class="p">)</span>
+<span class="linenos">272</span>
+<span class="linenos">273</span>    <span class="n">video_encoder</span> <span class="o">=</span> <span class="n">muxer</span><span class="o">.</span><span class="n">add_encode_stream</span><span class="p">(</span>
+<span class="linenos">274</span>        <span class="n">config</span><span class="o">=</span><span class="n">spdl</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">video_encode_config</span><span class="p">(</span>
+<span class="linenos">275</span>            <span class="n">pix_fmt</span><span class="o">=</span><span class="n">enc_pix_fmt</span><span class="p">,</span>
+<span class="linenos">276</span>            <span class="n">frame_rate</span><span class="o">=</span><span class="n">frame_rate</span><span class="p">,</span>
+<span class="linenos">277</span>            <span class="n">height</span><span class="o">=</span><span class="n">enc_height</span><span class="p">,</span>
+<span class="linenos">278</span>            <span class="n">width</span><span class="o">=</span><span class="n">enc_width</span><span class="p">,</span>
+<span class="linenos">279</span>            <span class="n">colorspace</span><span class="o">=</span><span class="s2">"bt709"</span><span class="p">,</span>
+<span class="linenos">280</span>            <span class="n">color_primaries</span><span class="o">=</span><span class="s2">"bt709"</span><span class="p">,</span>
+<span class="linenos">281</span>            <span class="n">color_trc</span><span class="o">=</span><span class="s2">"bt709"</span><span class="p">,</span>
+<span class="linenos">282</span>        <span class="p">),</span>
+<span class="linenos">283</span>    <span class="p">)</span>
+<span class="linenos">284</span>    <span class="n">muxer</span><span class="o">.</span><span class="n">add_remux_stream</span><span class="p">(</span><span class="n">audio_codec</span><span class="p">)</span>
+<span class="linenos">285</span>    <span class="k">return</span> <span class="n">demuxer</span><span class="p">,</span> <span class="n">video_decoder</span><span class="p">,</span> <span class="n">filter_graph</span><span class="p">,</span> <span class="n">video_encoder</span><span class="p">,</span> <span class="n">muxer</span>
+<span class="linenos">286</span>
+<span class="linenos">287</span>
+<span class="linenos">288</span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">289</span><span class="w">    </span><span class="sd">"""Entrypoint from the command line."""</span>
+<span class="linenos">290</span>    <span class="n">args</span> <span class="o">=</span> <span class="n">parse_args</span><span class="p">()</span>
 <span class="linenos">291</span>
-<span class="linenos">292</span>
-<span class="linenos">293</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-<span class="linenos">294</span>    <span class="n">main</span><span class="p">()</span>
+<span class="linenos">292</span>    <span class="n">demuxer</span><span class="p">,</span> <span class="n">video_decoder</span><span class="p">,</span> <span class="n">filter_graph</span><span class="p">,</span> <span class="n">video_encoder</span><span class="p">,</span> <span class="n">muxer</span> <span class="o">=</span> <span class="n">build_components</span><span class="p">(</span>
+<span class="linenos">293</span>        <span class="n">args</span><span class="o">.</span><span class="n">input_path</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output_path</span>
+<span class="linenos">294</span>    <span class="p">)</span>
+<span class="linenos">295</span>
+<span class="linenos">296</span>    <span class="n">process</span><span class="p">(</span>
+<span class="linenos">297</span>        <span class="n">demuxer</span><span class="p">,</span>
+<span class="linenos">298</span>        <span class="n">video_decoder</span><span class="p">,</span>
+<span class="linenos">299</span>        <span class="n">filter_graph</span><span class="p">,</span>
+<span class="linenos">300</span>        <span class="n">video_encoder</span><span class="p">,</span>
+<span class="linenos">301</span>        <span class="n">muxer</span><span class="p">,</span>
+<span class="linenos">302</span>    <span class="p">)</span>
+<span class="linenos">303</span>
+<span class="linenos">304</span>
+<span class="linenos">305</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+<span class="linenos">306</span>    <span class="n">main</span><span class="p">()</span>
 </pre></div>
 </div>
 </details></section>
@@ -891,19 +932,19 @@ match, and you need to call <code class="docutils literal notranslate"><span cla
 <p class="rubric">Functions</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="streaming_video_processing.main">
-<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/streaming_video_processing.py?#L276-L290"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#streaming_video_processing.main" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/streaming_video_processing.py?#L288-L302"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#streaming_video_processing.main" title="Link to this definition">¶</a></dt>
 <dd><p>Entrypoint from the command line.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="streaming_video_processing.parse_args">
-<span class="sig-name descname"><span class="pre">parse_args</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.15)"><span class="pre">Namespace</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/streaming_video_processing.py?#L83-L91"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#streaming_video_processing.parse_args" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">parse_args</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.15)"><span class="pre">Namespace</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/streaming_video_processing.py?#L87-L95"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#streaming_video_processing.parse_args" title="Link to this definition">¶</a></dt>
 <dd><p>Parse the command line arguments.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="streaming_video_processing.get_filter_desc">
-<span class="sig-name descname"><span class="pre">get_filter_desc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_pix_fmt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_pix_fmt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/streaming_video_processing.py?#L94-L131"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#streaming_video_processing.get_filter_desc" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_filter_desc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_pix_fmt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_pix_fmt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/streaming_video_processing.py?#L98-L135"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#streaming_video_processing.get_filter_desc" title="Link to this definition">¶</a></dt>
 <dd><p>Build a filter description that performs format conversion and optional scaling</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -926,7 +967,7 @@ the encoder.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="streaming_video_processing.process">
-<span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">demuxer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.Demuxer.html#spdl.io.Demuxer" title="spdl.io._core.Demuxer"><span class="pre">Demuxer</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">video_decoder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.VideoDecoder.html#spdl.io.VideoDecoder" title="spdl.io.lib._spdl_ffmpeg8.VideoDecoder"><span class="pre">VideoDecoder</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.FilterGraph.html#spdl.io.FilterGraph" title="spdl.io.lib._spdl_ffmpeg8.FilterGraph"><span class="pre">FilterGraph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">video_encoder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.VideoEncoder.html#spdl.io.VideoEncoder" title="spdl.io.lib._spdl_ffmpeg8.VideoEncoder"><span class="pre">VideoEncoder</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">muxer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.Muxer.html#spdl.io.Muxer" title="spdl.io._core.Muxer"><span class="pre">Muxer</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/streaming_video_processing.py?#L134-L223"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#streaming_video_processing.process" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">demuxer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.Demuxer.html#spdl.io.Demuxer" title="spdl.io._core.Demuxer"><span class="pre">Demuxer</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">video_decoder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.VideoDecoder.html#spdl.io.VideoDecoder" title="spdl.io.lib._spdl_ffmpeg8.VideoDecoder"><span class="pre">VideoDecoder</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.FilterGraph.html#spdl.io.FilterGraph" title="spdl.io.lib._spdl_ffmpeg8.FilterGraph"><span class="pre">FilterGraph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">video_encoder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.VideoEncoder.html#spdl.io.VideoEncoder" title="spdl.io.lib._spdl_ffmpeg8.VideoEncoder"><span class="pre">VideoEncoder</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">muxer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="spdl.io.Muxer.html#spdl.io.Muxer" title="spdl.io._core.Muxer"><span class="pre">Muxer</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/streaming_video_processing.py?#L138-L235"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#streaming_video_processing.process" title="Link to this definition">¶</a></dt>
 <dd><p>The main processing logic.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -943,7 +984,7 @@ the encoder.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="streaming_video_processing.build_components">
-<span class="sig-name descname"><span class="pre">build_components</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">Path</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="spdl.io.Demuxer.html#spdl.io.Demuxer" title="spdl.io._core.Demuxer"><span class="pre">Demuxer</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.VideoDecoder.html#spdl.io.VideoDecoder" title="spdl.io.lib._spdl_ffmpeg8.VideoDecoder"><span class="pre">VideoDecoder</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.FilterGraph.html#spdl.io.FilterGraph" title="spdl.io.lib._spdl_ffmpeg8.FilterGraph"><span class="pre">FilterGraph</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.VideoEncoder.html#spdl.io.VideoEncoder" title="spdl.io.lib._spdl_ffmpeg8.VideoEncoder"><span class="pre">VideoEncoder</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.Muxer.html#spdl.io.Muxer" title="spdl.io._core.Muxer"><span class="pre">Muxer</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/streaming_video_processing.py?#L226-L273"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#streaming_video_processing.build_components" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">build_components</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">Path</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="spdl.io.Demuxer.html#spdl.io.Demuxer" title="spdl.io._core.Demuxer"><span class="pre">Demuxer</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.VideoDecoder.html#spdl.io.VideoDecoder" title="spdl.io.lib._spdl_ffmpeg8.VideoDecoder"><span class="pre">VideoDecoder</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.FilterGraph.html#spdl.io.FilterGraph" title="spdl.io.lib._spdl_ffmpeg8.FilterGraph"><span class="pre">FilterGraph</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.VideoEncoder.html#spdl.io.VideoEncoder" title="spdl.io.lib._spdl_ffmpeg8.VideoEncoder"><span class="pre">VideoEncoder</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="spdl.io.Muxer.html#spdl.io.Muxer" title="spdl.io._core.Muxer"><span class="pre">Muxer</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//examples/streaming_video_processing.py?#L238-L285"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#streaming_video_processing.build_components" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </div></section>
@@ -1026,7 +1067,7 @@ the encoder.</p></li>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=cce5339e"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=a82ae3da"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

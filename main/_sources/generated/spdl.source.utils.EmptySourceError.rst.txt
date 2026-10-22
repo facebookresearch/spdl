@@ -1,0 +1,6 @@
+spdl.source.utils.EmptySourceError
+==================================
+
+.. currentmodule:: spdl.source.utils
+
+.. autoexception:: EmptySourceError

@@ -1,0 +1,13 @@
+spdl.pipeline.config.ThreadOutputQueueConfig
+============================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autoclass:: ThreadOutputQueueConfig
+   :members:
+
+   .. rubric:: Attributes
+
+   .. autosummary::
+      ~ThreadOutputQueueConfig.enabled
+      ~ThreadOutputQueueConfig.queue_class

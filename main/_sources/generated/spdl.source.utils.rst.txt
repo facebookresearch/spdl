@@ -102,6 +102,20 @@ MergeIterator
 
 
 
+.. rubric:: Exceptions
+
+
+EmptySourceError
+^^^^^^^^^^^^^^^^
+.. autosummary::
+   :toctree:
+   :nosignatures:
+   :hide_from_toctree:
+
+   EmptySourceError
+
+
+
 
 
 ..
@@ -117,6 +131,7 @@ MergeIterator
    ############################################################################
    Others
    ############################################################################
+
 
 
 

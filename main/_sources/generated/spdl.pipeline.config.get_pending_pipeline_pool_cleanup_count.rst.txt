@@ -1,0 +1,6 @@
+spdl.pipeline.config.get\_pending\_pipeline\_pool\_cleanup\_count
+=================================================================
+
+.. currentmodule:: spdl.pipeline.config
+
+.. autofunction:: get_pending_pipeline_pool_cleanup_count

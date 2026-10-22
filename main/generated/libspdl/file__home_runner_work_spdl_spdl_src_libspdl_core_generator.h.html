@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>File generator.h - SPDL 0.8.0 documentation</title>
+        <title>File generator.h - SPDL 0.9.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">SPDL 0.8.0 documentation</div></a>
+      <a href="../../index.html"><div class="brand">SPDL 0.9.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.8.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.9.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -217,6 +217,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../agents.html">Working with Agents</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../getting_started/index.html">Getting Started</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Getting Started</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../getting_started/intro.html">Building and Running Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../getting_started/stages.html">Pipeline Stages</a></li>
@@ -228,14 +229,32 @@
 <li class="toctree-l2"><a class="reference internal" href="../../getting_started/pytorch.html">Building High-Performance DataLoaders</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../async/index.html">Introduction to Async I/O</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Introduction to Async I/O</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../pipeline_guides/index.html">Pipeline Guides</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Pipeline Guides</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../pipeline_guides/best_practice.html">Design and best practices</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../pipeline_guides/memory_and_transport/index.html">Memory and transport</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Memory and transport</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../pipeline_guides/memory_and_transport/shared_memory_arenas.html">Shared-memory arenas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pipeline_guides/memory_and_transport/transparent_region_arenas.html">Explicit caller-owned process-region arenas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pipeline_guides/memory_and_transport/direct_allocations.html">Direct allocations for collation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../pipeline_guides/case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../pipeline_guides/case_studies/parallelism.html">Parallelism and Performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pipeline_guides/case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pipeline_guides/case_studies/shared_memory_arena.html">Shared-memory arena transport benchmark</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pipeline_guides/case_studies/data_format.html">Data Format and Performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pipeline_guides/case_studies/inference.html">Building an inference pipeline</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../async/index.html">Introduction to Async I/O</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Introduction to Async I/O</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../async/problem.html">Implementing an Orchestration Mechanism</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../async/event_loop.html">The Event Loop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../async/unit.html">The <code class="docutils literal notranslate"><span class="pre">async</span></code> and <code class="docutils literal notranslate"><span class="pre">await</span></code> keywords</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../async/sync.html">Running Synchronous Functions</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../io/index.html">IO Module</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of IO Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../io/index.html">IO Module</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of IO Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../io/basic.html">High-Level Loading Functions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../io/decoding_overview.html">Decoding Process Overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../io/packets_frames_concepts.html">Packets and Frames</a></li>
@@ -243,46 +262,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../../io/color_space.html">Video Color Space</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../io/advanced_filtering.html">Advanced Filter Graphs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../io/streaming_decoding.html">Streaming Decoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../io/fusion.html">Fusing IO Calls</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../io/gpu_decoding.html">Hardware-Accelerated Video Decoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../io/numpy_arrays.html">Loading NumPy Arrays</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../io/encoding.html">Media Encoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../io/ffmpeg_cheatsheet.html">FFmpeg CLI Cheat Sheet</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/headspace_analysis.html">Headspace Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/noisy_neighbour.html">Noisy Neighbour</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/setup.html">Composition of Pipeline</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/analysis.html">Analyzing the Performance</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/stats.html">Understanding the performance statistics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/straggler.html">The Straggler</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
-</ul>
-</li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../case_studies/parallelism.html">Parallelism and Performance</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../case_studies/ipc.html">The Cost of Inter-Process Communication</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../case_studies/shared_memory_arena.html">Shared-Memory Arena</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../case_studies/data_format.html">Data Format and Performance</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../case_studies/inference.html">Building Inference Pipeline</a></li>
-</ul>
-</li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../autoresearch/autoresearch.html">How It Works</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../autoresearch/autoresearch_example.html">Example: Video Classification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../autoresearch/autoresearch_example_v2.html">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../autoresearch/autoresearch_architecture.html">Architecture</a></li>
-</ul>
-</li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../migration/index.html">Migration Guide</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Migration Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../migration/why.html">Why migrate to SPDL?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../migration/paradigm_shift.html">Paradigm Shift</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../migration/pytorch.html">Migrating from PyTorch DataLoader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../migration/grain.html">Migrating from Grain</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../../best_practice.html">Best Practices</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../llm_finetune.llm_finetuning.html">Llm finetuning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../image_dataloading.html">Image dataloading</a></li>
@@ -303,14 +295,48 @@
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmark_region_arena.html">Benchmark region arena</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmark_direct_output.html">Benchmark direct output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmark_pinned_arena.html">Benchmark pinned arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
 </li>
 </ul>
+<p class="caption" role="heading"><span class="caption-text">Optimization</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../optimization_guide/index.html">Optimization Guide</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Optimization Guide</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/headspace_analysis.html">Headspace Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/noisy_neighbour.html">Noisy Neighbour</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/setup.html">Composition of Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/analysis.html">Analyzing the Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/stats.html">Understanding the performance statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/straggler.html">The Straggler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../knowledge_base/index.html">Knowledge Base</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of Knowledge Base</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../knowledge_base/_generated/optimization/_categories/technique-catalog.html">Technique catalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../knowledge_base/_generated/optimization/techniques/_categories/techniques-by-area.html">Techniques by area</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../knowledge_base/_generated/optimization/_categories/optimization-guidance.html">Optimization guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../knowledge_base/_generated/optimization/model_techniques/_categories/model-optimization.html">Model optimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../knowledge_base/_generated/migration/_categories/migration-guidance.html">Migration guidance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../knowledge_base/_generated/authoring/_categories/pipeline-authoring.html">Pipeline authoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../knowledge_base/_generated/_categories/startup-audit.html">Startup audit</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../autoresearch/index.html">Autoresearch</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of Autoresearch</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../autoresearch/autoresearch.html">How It Works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../autoresearch/autoresearch_example.html">Example: Video Classification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../autoresearch/autoresearch_example_v2.html">Example: Video Classification (MTP + Concurrency Tuning)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../autoresearch/autoresearch_architecture.html">Architecture</a></li>
+</ul>
+</li>
+</ul>
 <p class="caption" role="heading"><span class="caption-text">API References</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../spdl.pipeline.html">spdl.pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spdl.pipeline.defs.html">spdl.pipeline.defs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../spdl.pipeline.config.html">spdl.pipeline.config</a></li>
@@ -322,10 +348,10 @@
 <li class="toctree-l2"><a class="reference internal" href="../spdl.source.html">spdl.source</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../cpp.html">API Reference (C++)</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of API Reference (C++)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="libspdl_class.html">Class List</a></li>
 <li class="toctree-l2"><a class="reference internal" href="libspdl_file.html">File List</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="libspdl_api.html">API</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><div class="visually-hidden">Toggle navigation of API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="namespace_spdl.html">Namespace spdl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="namespace_spdl__core.html">Namespace spdl::core</a></li>
 <li class="toctree-l3"><a class="reference internal" href="namespace_spdl__core__detail.html">Namespace spdl::core::detail</a></li>
@@ -371,7 +397,7 @@
 <li class="toctree-l3"><a class="reference internal" href="function_conversion_8h_1a87d61e0429716c42f3a5f5e85aad5b61.html">Function spdl::core::create_reference_video_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1a06ceaf30e970aa4ab42f0a9e831b9bbe.html">Template Function spdl::core::deserialize_packets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1a17e80346c554363a3ca0f92f23f35d61.html">Template Function spdl::core::deserialize_packets_view</a></li>
-<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1ad3bdea22ad439f82174ce27c26bec857.html">Function spdl::core::extract_packets_at_indices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="function_packets_8h_1a0d3adfab8851b38d60a666b31ca766f5.html">Function spdl::core::extract_packets_at_indices</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a0aef7b410dcb4075e477b10ba3e71f80.html">Function spdl::core::get_ffmpeg_filters</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1ae1a3d30b33d837c39c40190e681d37c8.html">Function spdl::core::get_ffmpeg_log_level</a></li>
 <li class="toctree-l3"><a class="reference internal" href="function_utils_8h_1a0ebae69b46f68552c3f64ddc2af67f53.html">Function spdl::core::get_ffmpeg_versions</a></li>
@@ -439,11 +465,12 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development Notes</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/index.html">Development Notes</a><input class="toctree-checkbox" id="toctree-checkbox-15" name="toctree-checkbox-15" role="switch" type="checkbox"/><label for="toctree-checkbox-15"><div class="visually-hidden">Toggle navigation of Development Notes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../notes/pipeline_impl.html">Implementation detail of Pipeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/shared_memory_ownership.html">Why shared arena outputs keep storage alive</a></li>
 </ul>
 </li>
 </ul>
@@ -466,6 +493,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.9.0">0.9.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.8.0">0.8.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
@@ -628,7 +657,7 @@
     </aside>
   </div>
 </div>
-    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=cce5339e"></script>
+    <script src="../../_static/js/custom.js"></script><script src="../../_static/documentation_options.js?v=a82ae3da"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

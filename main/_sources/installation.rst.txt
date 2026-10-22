@@ -68,7 +68,7 @@ Requirements
     - (Optional) CUDA Toolkit
 
 * Runtime Requirements and dependencies
-    - Python 3.10+
+    - Python 3.11+
     - NumPy
     - (Optional) PyTorch
     - (Optional) Numba

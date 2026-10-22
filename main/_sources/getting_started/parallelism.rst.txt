@@ -366,6 +366,13 @@ shared-memory segments instead of allocating one per transfer, edging out a plai
 tensor. See the :ref:`shared-memory arena case study <shared-memory-arena>` and
 the :py:mod:`benchmark_arena_transport` example for the measured numbers.
 
+For the public arena constructors and an ordinary CPU subprocess workflow, see
+:doc:`../pipeline_guides/memory_and_transport/shared_memory_arenas`. The same public
+:py:func:`spdl.pipeline.iterate_in_subprocess` boundary supports matched
+``pin_memory=False/True`` comparisons in :py:mod:`benchmark_pinned_arena`.
+Storage-lifetime obligations are described in
+:doc:`../notes/shared_memory_ownership`.
+
 But if you send several consecutive stages each to a ``ProcessPoolExecutor``, the
 data makes a round trip between the main process and a worker at *every* stage
 boundary. Copying data back and forth like this wastes both time and memory.
@@ -374,6 +381,8 @@ To keep several stages running together inside the workers without paying a
 per-stage round trip, mark a region of the pipeline (next section) or run the
 whole pipeline in a subprocess. These are the building blocks behind the
 recommended MP and MTP patterns; see :ref:`execution-models`.
+
+.. _pipeline-parallelism-executor-regions:
 
 Multi-processing (region)
 -------------------------
@@ -434,10 +443,12 @@ Inside a region, generator ops and async ops work as usual, a
 worker sub-pipelines warm across epochs, and a region composes with
 :py:func:`~spdl.pipeline.run_pipeline_in_subprocess`. Every op must be picklable,
 since the region config is shipped to the worker. See the
-:py:meth:`~spdl.pipeline.PipelineBuilder.to` reference for the details.
+:py:meth:`~spdl.pipeline.PipelineBuilder.to` reference for the details and
+:ref:`transparent-region-arenas` for using caller-owned arenas at region
+boundaries.
 
 Buffering the boundary
-^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~
 
 Crossing the region boundary costs a fixed amount *per transfer* — pickling, a
 queue handoff, and (for tensors) a shared-memory allocation — no matter how small

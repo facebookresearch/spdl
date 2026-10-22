@@ -1,0 +1,13 @@
+spdl.pipeline.ArenaReservation
+==============================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: ArenaReservation
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~ArenaReservation.allocate_bytes
+      ~ArenaReservation.seal

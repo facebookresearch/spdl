@@ -84,6 +84,12 @@ Program Listing for File frames.h
      Rational get_time_base() const;
    
      void push_back(AVFrame* frame);
+   
+     void extend(Frames&& other)
+       requires(media != MediaType::Image);
+   
+     FramesPtr<media> take_front(size_t n)
+       requires(media != MediaType::Image);
      // the behavior is different for image
    
      // Get to the PTS of the specified AVFrame as-is.
