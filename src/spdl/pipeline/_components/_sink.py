@@ -40,3 +40,4 @@ async def _sink(input_queue: AsyncQueue, output_queue: AsyncQueue) -> None:
             if is_eof(item):
                 break
             await output_queue.put(item)
+            del item

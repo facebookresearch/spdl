@@ -390,6 +390,8 @@ class _DrainSource:
                 # invisible to the sub-pipeline's stages.
                 for item in payload:
                     yield item
+                    del item
+                del payload
             elif kind == _EPOCH:
                 if type(payload) is not int:
                     raise RuntimeError(
@@ -486,6 +488,8 @@ def _run_sessions(
             if kind == _ITEM:
                 for item in payload:
                     yield item
+                    del item
+                del payload
             elif kind == _SESSION_END:
                 session_ended = True
                 return
