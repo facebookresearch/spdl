@@ -5,18 +5,50 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import asyncio
 import functools
+import threading
 import unittest
 import warnings
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from fractions import Fraction
 from typing import Type, TypeVar
 
 from parameterized import parameterized
-from spdl.pipeline import PipelineBuilder, PipelineFailure
+from spdl.pipeline import AsyncQueue, PipelineBuilder, PipelineFailure
 
 _F = TypeVar("_F", bound=Callable[..., object])
 _C = TypeVar("_C", bound=Type[object])
+
+
+class _ThresholdBackpressureQueue(AsyncQueue):
+    """Observe the probation-boundary result while its queue is full."""
+
+    terminal_put = threading.Event()
+    terminal_put_state: str | None = None
+
+    @classmethod
+    def reset(cls) -> None:
+        cls.terminal_put.clear()
+        cls.terminal_put_state = None
+
+    async def put(self, item: object) -> None:
+        if self.info.stage_name != "threshold_stage" or item != 99:
+            await super().put(item)
+            return
+
+        try:
+            await asyncio.sleep(0)
+        except asyncio.CancelledError:
+            type(self).terminal_put_state = "cancelled_before_commit"
+            type(self).terminal_put.set()
+            raise
+
+        type(self).terminal_put_state = (
+            "backpressured" if self.full() else "not_backpressured"
+        )
+        type(self).terminal_put.set()
+        await super().put(item)
 
 
 def _ignore_intentional_warnings(fn: _F) -> _F:
@@ -68,6 +100,91 @@ class PipelineFailureRateTest(unittest.TestCase):
 
     The pipeline stops when failure rate strictly exceeds the threshold (>).
     """
+
+    @parameterized.expand(
+        [
+            ("completion",),
+            ("input",),
+        ]
+    )
+    def test_success_crossing_threshold_is_published_under_backpressure(
+        self, output_order: str
+    ) -> None:
+        """A successful probation-boundary item is committed before shutdown."""
+
+        def fail_on_seven(x: int) -> int:
+            if x % 7 == 0:
+                raise ValueError(f"Multiple of 7: {x}")
+            return x
+
+        _ThresholdBackpressureQueue.reset()
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(100))
+            .pipe(
+                fail_on_seven,
+                name="threshold_stage",
+                output_order=output_order,
+                max_failures=Fraction(11, 100),
+            )
+            .add_sink(1)
+            .build(num_threads=1, queue_class=_ThresholdBackpressureQueue)
+        )
+        expected = [x for x in range(100) if x % 7 != 0]
+        expected_prefix = [x for x in expected if x <= 93]
+        vals = []
+
+        with self.assertRaises(PipelineFailure):
+            with pipeline.auto_stop():
+                iterator = pipeline.get_iterator(timeout=30)
+                vals.extend(next(iterator) for _ in expected_prefix)
+                self.assertEqual(expected_prefix, vals)
+                self.assertTrue(_ThresholdBackpressureQueue.terminal_put.wait(30))
+                self.assertEqual(
+                    "backpressured",
+                    _ThresholdBackpressureQueue.terminal_put_state,
+                )
+                vals.extend(iterator)
+
+        self.assertEqual(expected, vals)
+
+    def test_generator_success_crossing_threshold_is_published(self) -> None:
+        """A generator yield that ends probation is committed before shutdown."""
+
+        async def generate(x: int) -> AsyncIterator[int]:
+            if x < 15:
+                raise ValueError(f"Initial failure: {x}")
+            yield 99 if x == 57 else x
+
+        _ThresholdBackpressureQueue.reset()
+        pipeline = (
+            PipelineBuilder()
+            .add_source(range(58))
+            .pipe(
+                generate,
+                name="threshold_stage",
+                max_failures=Fraction(11, 100),
+            )
+            .add_sink(1)
+            .build(num_threads=1, queue_class=_ThresholdBackpressureQueue)
+        )
+        expected = [*range(15, 57), 99]
+        expected_prefix = list(range(15, 53))
+        vals = []
+
+        with self.assertRaises(PipelineFailure):
+            with pipeline.auto_stop():
+                iterator = pipeline.get_iterator(timeout=30)
+                vals.extend(next(iterator) for _ in expected_prefix)
+                self.assertEqual(expected_prefix, vals)
+                self.assertTrue(_ThresholdBackpressureQueue.terminal_put.wait(30))
+                self.assertEqual(
+                    "backpressured",
+                    _ThresholdBackpressureQueue.terminal_put_state,
+                )
+                vals.extend(iterator)
+
+        self.assertEqual(expected, vals)
 
     @parameterized.expand(
         [

@@ -70,7 +70,7 @@ class ReaderFailureTest(unittest.TestCase):
                     _TaggedSource() if continuous else [0, 100],
                     continuous=continuous,
                 )
-                .to(ProcessPoolExecutorConfig(max_workers=1, mp_context="fork"))
+                .to(ProcessPoolExecutorConfig(max_workers=1, mp_context="spawn"))
                 .pipe(_fail_second_epoch, concurrency=1)
                 .to(MAIN_PROCESS)
                 .add_sink(1)
@@ -190,7 +190,7 @@ class ReaderFailureTest(unittest.TestCase):
             pipeline = (
                 PipelineBuilder()
                 .add_source(_TaggedSource(), continuous=True)
-                .to(ProcessPoolExecutorConfig(max_workers=1, mp_context="fork"))
+                .to(ProcessPoolExecutorConfig(max_workers=1, mp_context="spawn"))
                 .pipe(_fail_second_epoch, concurrency=1, max_failures=0)
                 .to(MAIN_PROCESS)
                 .add_sink(1)

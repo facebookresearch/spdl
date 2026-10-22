@@ -90,6 +90,7 @@ class _FailCounter(TaskHook):
         self._num_stage_failures: int = 0
         self._num_stage_invocations: int = 0
         self._exceeded: bool = False
+        self._failure_notified: bool = False
         self._failure_handler: Callable[[], None] | None = None
         self._failure_cause: Exception | None = None
 
@@ -110,7 +111,6 @@ class _FailCounter(TaskHook):
         For example, Fraction(3, 10) means "30% failure rate, but only start
         checking after at least 100 invocations".
         """
-        was_exceeded = self._exceeded
         match threshold := self.max_failures:
             case Fraction():
                 num, den = threshold.numerator, threshold.denominator
@@ -121,7 +121,14 @@ class _FailCounter(TaskHook):
             case int():
                 if threshold >= 0 and self.num_failures > threshold:
                     self._exceeded = True
-        if not was_exceeded and self._exceeded and self._failure_handler is not None:
+
+    def _notify_failure(self) -> None:
+        if (
+            self._exceeded
+            and not self._failure_notified
+            and self._failure_handler is not None
+        ):
+            self._failure_notified = True
             self._failure_handler()
 
     @property
@@ -187,6 +194,7 @@ class _FailCounter(TaskHook):
                 self._num_stage_failures += 1
             self._check_threshold()
             if _failed is not None:
+                self._notify_failure()
                 self._record_failure(_failed)
 
     def raise_for_failures(self, info: StageInfo) -> NoReturn:
@@ -251,15 +259,21 @@ async def _wrap_afunc(
     hooks: list[TaskHook],
     queue: AsyncQueue,
     item: Any = None,
+    *,
+    fail_counter: _FailCounter | None = None,
 ) -> None:
     async with _task_hooks(hooks, item):
         result = await coro
     del coro, item
 
     if result is _SKIP:
+        if fail_counter is not None:
+            fail_counter._notify_failure()
         return
 
     await queue.put(result)
+    if fail_counter is not None:
+        fail_counter._notify_failure()
 
 
 async def _wrap_agen(
@@ -267,9 +281,13 @@ async def _wrap_agen(
     hooks: list[TaskHook],
     queue: AsyncQueue,
     item: Any = None,
+    *,
+    fail_counter: _FailCounter | None = None,
 ) -> None:
     try:
-        while await _process_agen_step(coro, hooks, queue, item):
+        while await _process_agen_step(
+            coro, hooks, queue, item, fail_counter=fail_counter
+        ):
             pass
     finally:
         if isinstance(coro, AsyncGenerator):
@@ -284,6 +302,8 @@ async def _process_agen_step(
     hooks: list[TaskHook],
     queue: AsyncQueue,
     item: Any,
+    *,
+    fail_counter: _FailCounter | None = None,
 ) -> bool:
     """Process one generator step and report whether iteration should continue."""
     # NOTE:
@@ -314,13 +334,19 @@ async def _process_agen_step(
                 exhausted = True
                 raise
     except StopAsyncIteration:
+        if fail_counter is not None:
+            fail_counter._notify_failure()
         return False
 
     # A hook can absorb the StopAsyncIteration raised by anext().
     if exhausted:
+        if fail_counter is not None:
+            fail_counter._notify_failure()
         return False
     if result is not _SKIP:
         await queue.put(result)
+    if fail_counter is not None:
+        fail_counter._notify_failure()
     return True
 
 
@@ -384,12 +410,16 @@ def _pipe(
     if inspect.iscoroutinefunction(afunc):
 
         def _wrap(coro: Awaitable[U], item: Any = None) -> Coroutine:
-            return _wrap_afunc(coro, hooks, output_queue, item)
+            return _wrap_afunc(
+                coro, hooks, output_queue, item, fail_counter=fail_counter
+            )
 
     elif inspect.isasyncgenfunction(afunc):
 
         def _wrap(coro: AsyncIterator[U], item: Any = None) -> Coroutine:
-            return _wrap_agen(coro, hooks, output_queue, item)
+            return _wrap_agen(
+                coro, hooks, output_queue, item, fail_counter=fail_counter
+            )
 
     else:
         raise ValueError(f"{afunc=} must be either async function or async generator.")
@@ -588,6 +618,7 @@ def _ordered_pipe(
             else:
                 if result is not _SKIP:
                     await output_queue.put(result)
+                fail_counter._notify_failure()
                 del result
             finally:
                 del task, item
