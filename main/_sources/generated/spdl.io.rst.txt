@@ -439,16 +439,6 @@ get\_buffer\_desc
    get_buffer_desc
 
 
-transfer\_tensor
-^^^^^^^^^^^^^^^^
-.. autosummary::
-   :toctree:
-   :nosignatures:
-   :hide_from_toctree:
-
-   transfer_tensor
-
-
 transfer\_tensor\_d2h
 ^^^^^^^^^^^^^^^^^^^^^
 .. autosummary::
@@ -895,7 +885,6 @@ CUDAConfig
    ############################################################################
    Others
    ############################################################################
-
 
 
 
