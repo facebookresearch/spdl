@@ -42,6 +42,37 @@ If the user reports numerical discrepancies between the original and new pipelin
 
 Inform the user: "If you observe any numerical differences between the original loader and the new SPDL pipeline, I can refactor the original implementation to use the same extracted functions, so you can verify the extraction itself is not the source of divergence."
 
+## Preserve or Explicitly Remove Constructor-Probe Semantics
+
+When migrating a child of `torchtnt.utils.data.MultiDataLoader`, account for
+its constructor probe: `MultiDataLoader.__init__` calls
+`next(iter(child_loader))` to reject empty children. With a persistent PyTorch
+`DataLoader`, this is not a harmless peek. The worker pool initially receives
+`num_workers * prefetch_factor` tasks, returns one batch, and refills one task.
+Thus up to `W * P + 1` batches can execute and be discarded before the real
+training iterator, while worker-local dataset, cache, and RNG state persists.
+For example, `W=12` and `P=2` can discard 25 executed batches; this illustrates
+the formula, not a universal count.
+
+A naive adapter that bypasses `MultiDataLoader.__init__` or wraps a continuous
+SPDL pipeline changes numerical behavior as well as startup and cache behavior.
+Do not fix the constructor check with a plain iterable wrapper: abandoning the
+first SPDL iterator can leave an epoch in flight.
+
+Migration parity must either reproduce the probe or consciously remove and
+document it. For exact emulation, use the same persistent worker pool,
+drain/discard the probe work, reset the sampler to epoch 0, realign worker
+dispatch when necessary, and preserve worker-local state. The baseline refill
+boundary is after CPU pinning and before an external host-to-device transfer.
+Because `spdl.io.transfer_tensor_h2d` combines pinning and copying, an exact
+topology may require a separate pin-only stage before H2D.
+
+Verify parity below loss metrics. Record worker IDs and call counts, sampler
+indices, pre-transform RNG fingerprints, and post-collate tensor hashes for the
+probe and initial training batches. Also verify the collate implementation:
+custom collates may not use `default_collate`'s shared-storage `out=` fast path,
+so do not assume identical allocation or copy behavior.
+
 ## Constructing the Pipeline
 
 ### Source
