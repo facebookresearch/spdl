@@ -64,6 +64,7 @@ from spdl.pipeline.defs._defs import (
 )
 
 __all__ = [
+    "_build_fused_stage_core",  # required for extending region API.
     "_fuse_marked_regions",
 ]
 
@@ -73,7 +74,7 @@ _FUSED_SINK_BUFFER: int = 3
 
 # Threads reserved in the fused sub-pipeline's pool for its source, on top of the region's op
 # concurrency. The source blocks on the worker's input queue, so it must never compete with the
-# ops for the last thread. See :py:func:`_build_fused_stage_from_spec`.
+# ops for the last thread. See :py:func:`_build_fused_stage_core`.
 _SOURCE_THREADS: int = 1
 
 
@@ -157,20 +158,30 @@ def _warn_fork_with_threads(ctx: Any, stacklevel: int) -> None:
 def _build_fused_stage_core(
     stages: Sequence[object],
     *,
+    spec: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig,
     backend: _PoolBackend,
-    num_threads: int,
-    max_workers: int,
-    user_initializer: Any,
-    user_initargs: tuple[Any, ...],
+    num_threads: int | None = None,
     report_stats_interval: float,
     fail_fast: bool,
     continuous: bool,
     input_buffer_size: int,
     output_buffer_size: int,
 ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
-    """Spawn a worker pool that runs ``stages`` as a nested pipeline; return the pool and its
-    replacement stage. Called by :py:func:`_build_fused_stage_from_spec` once the pool
-    parameters and backend have been resolved from a region's spec."""
+    """Build the worker pool and replacement stage for one ``.to()`` region.
+
+    Pool parameters come from ``spec``. ``num_threads`` defaults to synchronous
+    stage concurrency (at least one) plus one thread for the source.
+    """
+    # ``+ _SOURCE_THREADS``: the nested pipeline's source is a *blocking* read of the worker's
+    # input queue, dispatched onto the very same thread pool as the region's ops. Sizing that
+    # pool by op concurrency alone lets the read occupy every thread, so the ops cannot drain
+    # what the source produced and the worker wedges -- reliably so when the sum is 1, where
+    # the single thread is either reading input or running an op, never both.
+    if num_threads is None:
+        num_threads = (
+            max(1, sum(_stage_concurrency(s) for s in stages)) + _SOURCE_THREADS
+        )
+    max_workers = spec.max_workers or os.cpu_count() or 1
     stripped = [_strip_executor(s) for s in stages]
     sub_config: PipelineConfig[Any] = PipelineConfig(
         src=SourceConfig(
@@ -186,7 +197,7 @@ def _build_fused_stage_core(
     if fail_fast:
         build_kwargs["max_failures"] = 0
     initializer = partial(
-        _worker_initializer, _get_global_id(), user_initializer, user_initargs
+        _worker_initializer, _get_global_id(), spec.initializer, spec.initargs
     )
     pool = _SubprocessPipelinePool(
         backend,
@@ -211,46 +222,6 @@ def _build_fused_stage_core(
     if sizes:
         name += "[buffer_size " + " ".join(sizes) + "]"
     return _SubprocessPipelineConfig(name=name, handle=pool.make_handle()), pool
-
-
-def _build_fused_stage_from_spec(
-    stages: Sequence[object],
-    spec: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig,
-    backend: _PoolBackend,
-    report_stats_interval: float,
-    fail_fast: bool,
-    continuous: bool,
-    input_buffer_size: int,
-    output_buffer_size: int,
-) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
-    """Build the worker pool and replacement stage for one ``.to()`` region, reading the pool
-    parameters from ``spec``. ``num_threads`` for the nested pipeline is the sum of the region
-    stages' concurrency plus one for its source, ``max_workers`` falls back to the CPU count,
-    and ``report_stats_interval`` is inherited from
-    :py:func:`~spdl.pipeline._build.build_pipeline`. ``backend`` (process or subinterpreter) is
-    chosen by the caller from the spec type. The two buffer sizes come from the region's
-    :py:class:`~spdl.pipeline.defs.PlacementConfig` markers, not from ``spec``: they describe
-    the boundary crossings rather than the pool."""
-    # ``+ _SOURCE_THREADS``: the nested pipeline's source is a *blocking* read of the worker's
-    # input queue, dispatched onto the very same thread pool as the region's ops. Sizing that
-    # pool by op concurrency alone lets the read occupy every thread, so the ops cannot drain
-    # what the source produced and the worker wedges -- reliably so when the sum is 1, where
-    # the single thread is either reading input or running an op, never both.
-    num_threads = max(1, sum(_stage_concurrency(s) for s in stages)) + _SOURCE_THREADS
-    max_workers = spec.max_workers or os.cpu_count() or 1
-    return _build_fused_stage_core(
-        stages,
-        backend=backend,
-        num_threads=num_threads,
-        max_workers=max_workers,
-        user_initializer=spec.initializer,
-        user_initargs=spec.initargs,
-        report_stats_interval=report_stats_interval,
-        fail_fast=fail_fast,
-        continuous=continuous,
-        input_buffer_size=input_buffer_size,
-        output_buffer_size=output_buffer_size,
-    )
 
 
 def _has_executor_markers(pipes: Sequence[object]) -> bool:
@@ -325,9 +296,8 @@ def _fuse_marked_regions(
             backend = _InterpreterBackend()
         else:  # pragma: no cover -- a main-process target never accumulates a region
             raise AssertionError(f"Unexpected region target: {target!r}")
-        fused, pool = _build_fused_stage_from_spec(
+        fused, pool = target._build(
             region,
-            target,
             backend,
             report_stats_interval,
             fail_fast,
