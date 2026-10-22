@@ -18,7 +18,4 @@ spdl.pipeline.SharedMemoryRingBuffer
    .. rubric:: Attributes
 
    .. autosummary::
-      ~SharedMemoryRingBuffer.capacity
-      ~SharedMemoryRingBuffer.head
       ~SharedMemoryRingBuffer.name
-      ~SharedMemoryRingBuffer.tail

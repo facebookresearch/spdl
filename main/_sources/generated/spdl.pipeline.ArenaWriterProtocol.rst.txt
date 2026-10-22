@@ -1,0 +1,16 @@
+spdl.pipeline.ArenaWriterProtocol
+=================================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: ArenaWriterProtocol
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~ArenaWriterProtocol.abort_unit
+      ~ArenaWriterProtocol.begin_unit
+      ~ArenaWriterProtocol.commit_unit
+      ~ArenaWriterProtocol.reset
+      ~ArenaWriterProtocol.write_binary

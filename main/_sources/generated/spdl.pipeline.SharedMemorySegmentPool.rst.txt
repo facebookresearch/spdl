@@ -14,11 +14,3 @@ spdl.pipeline.SharedMemorySegmentPool
       ~SharedMemorySegmentPool.open_writer
       ~SharedMemorySegmentPool.shutdown_arena
       ~SharedMemorySegmentPool.unlink
-
-   .. rubric:: Attributes
-
-   .. autosummary::
-      ~SharedMemorySegmentPool.count
-      ~SharedMemorySegmentPool.published
-      ~SharedMemorySegmentPool.reclaimed
-      ~SharedMemorySegmentPool.segment_size

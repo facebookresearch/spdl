@@ -1,0 +1,16 @@
+spdl.pipeline.ArenaProtocol
+===========================
+
+.. currentmodule:: spdl.pipeline
+
+.. autoclass:: ArenaProtocol
+   :members:
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      ~ArenaProtocol.close
+      ~ArenaProtocol.open_reader
+      ~ArenaProtocol.open_writer
+      ~ArenaProtocol.shutdown_arena
+      ~ArenaProtocol.unlink

@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Headspace Analysis" href="headspace_analysis.html" /><link rel="prev" title="FFmpeg CLI Cheat Sheet" href="../io/ffmpeg_cheatsheet.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>Optimization Guide - SPDL 0.8.0 documentation</title>
+        <title>Optimization Guide - SPDL 0.9.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.8.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.9.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,7 +190,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.8.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.9.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -258,6 +258,7 @@
 <li class="toctree-l2"><a class="reference internal" href="fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shared_memory_arenas.html">Shared-memory arenas</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -303,6 +304,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_pinned_arena.html">Benchmark pinned arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../generated/benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
@@ -444,6 +446,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/shared_memory_ownership.html">Why shared arena outputs keep storage alive</a></li>
 </ul>
 </li>
 </ul>
@@ -466,6 +469,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.9.0">0.9.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.8.0">0.8.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
@@ -521,7 +526,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
@@ -615,6 +620,22 @@ and examine some cases, and discuss how we approach performance issues.</p>
 </li>
 </ul>
 </div>
+<section id="shared-memory-arenas">
+<h2>Shared-memory arenas<a class="headerlink" href="#shared-memory-arenas" title="Link to this heading">¶</a></h2>
+<p>Once measurements identify allocation, inter-process copying or CPU-to-GPU
+staging as a relevant cost, consider these shared-memory optimizations. Reusable
+buffers trade some memory-budget and lifetime discipline for less allocation or
+copying work; measure the application’s results before selecting a backend.
+Read <a class="reference internal" href="shared_memory_arenas.html"><span class="doc">Shared-memory arenas</span></a> for the core pool/ring workflow and the later
+memory-pinning option for GPU transfer. For technical storage-lifetime management,
+see <a class="reference internal" href="../notes/shared_memory_ownership.html"><span class="doc">Why shared arena outputs keep storage alive</span></a> in Development Notes.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Shared-memory arenas</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="shared_memory_arenas.html">Shared-memory arenas</a></li>
+</ul>
+</div>
+</section>
 </section>
 
         </article>
@@ -660,14 +681,33 @@ and examine some cases, and discuss how we approach performance issues.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Optimization Guide</a><ul>
+<li><a class="reference internal" href="#shared-memory-arenas">Shared-memory arenas</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=cce5339e"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=a82ae3da"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

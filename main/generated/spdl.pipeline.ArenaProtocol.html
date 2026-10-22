@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.07.18 -->
-        <title>spdl.io.transfer_tensor - SPDL 0.8.0 documentation</title>
+        <title>spdl.pipeline.ArenaProtocol - SPDL 0.9.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=613ab9ff" />
     <link rel="stylesheet" type="text/css" href="../_static/collapsible-lists/css/tree_view.css?v=a885cde7" />
@@ -178,7 +178,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">SPDL 0.8.0 documentation</div></a>
+      <a href="../index.html"><div class="brand">SPDL 0.9.0 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -202,7 +202,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   
-  <span class="sidebar-brand-text">SPDL 0.8.0 documentation</span>
+  <span class="sidebar-brand-text">SPDL 0.9.0 documentation</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -258,6 +258,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/fleet_metrics.html">Metrics across Ranks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/straggler.html">The Straggler</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../optimization_guide/resolution.html">Resolving the Bottleneck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimization_guide/shared_memory_arenas.html">Shared-memory arenas</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../case_studies/index.html">Case Studies</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Case Studies</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -303,6 +304,7 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark_video.html">Benchmark video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_thread_output_queue.html">Benchmark thread output queue</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_arena_transport.html">Benchmark arena transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_pinned_arena.html">Benchmark pinned arena</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_ipc_dataloader.html">Benchmark ipc dataloader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark_transfer_overlap.html">Benchmark transfer overlap</a></li>
 </ul>
@@ -444,6 +446,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../notes/remote_iterable_protocol.html">Remote Iterable Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/pytorch_cuda_race_condition.html">PyTorch CUDA Race Condition in Multi-threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../notes/packets_and_frames_lifecycle.html">Lifecycle Management of Packets and Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notes/shared_memory_ownership.html">Why shared arena outputs keep storage alive</a></li>
 </ul>
 </li>
 </ul>
@@ -466,6 +469,8 @@
     <ul>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/main">dev</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/latest">latest-release</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.9.0">0.9.0</a></li>
+      <li class="toctree-l2"><a class="reference internal" href="/spdl/0.8.0">0.8.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.7.0">0.7.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.6.0">0.6.0</a></li>
       <li class="toctree-l2"><a class="reference internal" href="/spdl/0.5.0">0.5.0</a></li>
@@ -507,7 +512,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/generated/spdl.io.transfer_tensor.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/generated/spdl.pipeline.ArenaProtocol.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -527,30 +532,138 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="spdl-io-transfer-tensor">
-<h1>spdl.io.transfer_tensor<a class="headerlink" href="#spdl-io-transfer-tensor" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="spdl.io.transfer_tensor">
-<span class="sig-name descname"><span class="pre">transfer_tensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">batch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_caches</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/io/_transfer.py?#L195-L217"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.io.transfer_tensor" title="Link to this definition">¶</a></dt>
-<dd><p>Transfer PyTorch tensors from CPU to CUDA in a dedicated stream.</p>
-<div class="deprecated">
-<p><span class="versionmodified deprecated">Deprecated since version 0.8.0: </span>Use <a class="reference internal" href="spdl.io.transfer_tensor_h2d.html#spdl.io.transfer_tensor_h2d" title="spdl.io.transfer_tensor_h2d"><code class="xref py py-func docutils literal notranslate"><span class="pre">spdl.io.transfer_tensor_h2d()</span></code></a> instead.</p>
+          <section id="spdl-pipeline-arenaprotocol">
+<h1>spdl.pipeline.ArenaProtocol<a class="headerlink" href="#spdl-pipeline-arenaprotocol" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="spdl.pipeline.ArenaProtocol">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ArenaProtocol</span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_protocol.py?#L233-L332"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ArenaProtocol" title="Link to this definition">¶</a></dt>
+<dd><p>An arena object passed to <code class="docutils literal notranslate"><span class="pre">iterate_in_subprocess</span></code> via <code class="docutils literal notranslate"><span class="pre">arena</span></code>.</p>
+<p>Owns the shared-memory segment and produces the writer / reader
+endpoints used on each side of the inter-process boundary. The
+arena is created and owned by the parent, passed to the worker
+through process spawn arguments, and torn down by the parent after
+the worker is confirmed dead. Custom objects conform structurally;
+importing or subclassing this protocol is not required. Ordinary iteration
+owns arena teardown; process-region channels borrow caller-owned arenas.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 0.7.0.</span></p>
 </div>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 0.9.0: </span>This extension contract is publicly available from <code class="docutils literal notranslate"><span class="pre">spdl.pipeline</span></code>.</p>
+</div>
+<p class="rubric">Methods</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.ArenaProtocol.close" title="spdl.pipeline.ArenaProtocol.close"><code class="xref py py-obj docutils literal notranslate"><span class="pre">close</span></code></a>()</p></td>
+<td><p>Release this process's handle to the shared-memory segment.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.ArenaProtocol.open_reader" title="spdl.pipeline.ArenaProtocol.open_reader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">open_reader</span></code></a>()</p></td>
+<td><p>Open the reader endpoint for the parent side.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.ArenaProtocol.open_writer" title="spdl.pipeline.ArenaProtocol.open_writer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">open_writer</span></code></a>()</p></td>
+<td><p>Open the writer endpoint for the worker side.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spdl.pipeline.ArenaProtocol.shutdown_arena" title="spdl.pipeline.ArenaProtocol.shutdown_arena"><code class="xref py py-obj docutils literal notranslate"><span class="pre">shutdown_arena</span></code></a>()</p></td>
+<td><p>Request shutdown and wake producers blocked on arena capacity.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spdl.pipeline.ArenaProtocol.unlink" title="spdl.pipeline.ArenaProtocol.unlink"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unlink</span></code></a>()</p></td>
+<td><p>Destroy the OS-level shared-memory segment.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ArenaProtocol.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_protocol.py?#L302-L316"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ArenaProtocol.close" title="Link to this definition">¶</a></dt>
+<dd><p>Release this process’s handle to the shared-memory segment.</p>
+<p>Called by the parent during teardown after the worker has been
+confirmed dead. Does not destroy the OS-level segment; see
+<a class="reference internal" href="#spdl.pipeline.ArenaProtocol.unlink" title="spdl.pipeline.ArenaProtocol.unlink"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unlink()</span></code></a> for that. Safe to call once per arena. Backends that
+provide terminal cancellation through <code class="docutils literal notranslate"><span class="pre">close</span></code> may also use it before
+worker join, but final physical retirement must wait for worker and
+native-export/transfer quiescence. Live or uncertain storage must remain
+retained rather than being unmapped or overwritten.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>batch</strong> – A <a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code></a> or a composition of tensors with
-container types such as <code class="docutils literal notranslate"><span class="pre">list</span></code>, <code class="docutils literal notranslate"><span class="pre">tuple</span></code>, <code class="docutils literal notranslate"><span class="pre">dict</span></code> and
-<code class="docutils literal notranslate"><span class="pre">dataclass</span></code>.</p></li>
-<li><p><strong>num_caches</strong> – Number of recent output batches retained to mitigate
-allocator races across CUDA streams.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>An object of the same type as the input, with CPU tensors transferred
-to CUDA.</p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None.</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ArenaProtocol.open_reader">
+<span class="sig-name descname"><span class="pre">open_reader</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.ArenaReaderProtocol.html#spdl.pipeline.ArenaReaderProtocol" title="spdl.pipeline._arena._protocol.ArenaReaderProtocol"><span class="pre">ArenaReaderProtocol</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_protocol.py?#L265-L276"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ArenaProtocol.open_reader" title="Link to this definition">¶</a></dt>
+<dd><p>Open the reader endpoint for the parent side.</p>
+<p>Should be called once per arena, in the parent process, before
+the first item is consumed. The returned reader is the first
+step in the parent pipeline. A process-region channel opens it in its
+receiving process; consumer-local pinning is the backend’s policy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A fresh <a class="reference internal" href="spdl.pipeline.ArenaReaderProtocol.html#spdl.pipeline.ArenaReaderProtocol" title="spdl.pipeline.ArenaReaderProtocol"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArenaReaderProtocol</span></code></a> bound to this arena.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ArenaProtocol.open_writer">
+<span class="sig-name descname"><span class="pre">open_writer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="spdl.pipeline.ArenaWriterProtocol.html#spdl.pipeline.ArenaWriterProtocol" title="spdl.pipeline._arena._protocol.ArenaWriterProtocol"><span class="pre">ArenaWriterProtocol</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_protocol.py?#L252-L263"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ArenaProtocol.open_writer" title="Link to this definition">¶</a></dt>
+<dd><p>Open the writer endpoint for the worker side.</p>
+<p>Should be called once per arena, in the worker process, before
+the first item is offloaded. The returned writer is the last
+step in the worker pipeline. A process-region channel opens it in its
+sending process, which may instead be the parent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A fresh <a class="reference internal" href="spdl.pipeline.ArenaWriterProtocol.html#spdl.pipeline.ArenaWriterProtocol" title="spdl.pipeline.ArenaWriterProtocol"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArenaWriterProtocol</span></code></a> bound to this arena.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ArenaProtocol.shutdown_arena">
+<span class="sig-name descname"><span class="pre">shutdown_arena</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_protocol.py?#L278-L300"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ArenaProtocol.shutdown_arena" title="Link to this definition">¶</a></dt>
+<dd><p>Request shutdown and wake producers blocked on arena capacity.</p>
+<p>Called before joining the sending process, so a producer waiting inside
+<a class="reference internal" href="spdl.pipeline.ArenaWriterProtocol.html#spdl.pipeline.ArenaWriterProtocol.begin_unit" title="spdl.pipeline.ArenaWriterProtocol.begin_unit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ArenaWriterProtocol.begin_unit()</span></code></a> or
+<a class="reference internal" href="spdl.pipeline.ArenaWriterProtocol.html#spdl.pipeline.ArenaWriterProtocol.write_binary" title="spdl.pipeline.ArenaWriterProtocol.write_binary"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ArenaWriterProtocol.write_binary()</span></code></a> can observe shutdown and
+leave its wait. IPC callers use this operation through the protocol,
+not a backend-specific private hook.</p>
+<p>This operation is repeatable and must not release mappings, unregister
+live storage or unlink shared names. Existing byte exports and pending
+transfers retain their storage. A shutdown request is not proof that
+the worker has exited or that storage is safe to retire; complete
+<a class="reference internal" href="#spdl.pipeline.ArenaProtocol.close" title="spdl.pipeline.ArenaProtocol.close"><code class="xref py py-meth docutils literal notranslate"><span class="pre">close()</span></code></a> and <a class="reference internal" href="#spdl.pipeline.ArenaProtocol.unlink" title="spdl.pipeline.ArenaProtocol.unlink"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unlink()</span></code></a> only after safe teardown.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None.</p>
+</dd>
+</dl>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 0.9.0: </span>Custom arena backends must expose the pre-join shutdown operation
+explicitly as part of this structural contract.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spdl.pipeline.ArenaProtocol.unlink">
+<span class="sig-name descname"><span class="pre">unlink</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference external" href="https://github.com/facebookresearch/spdl/tree/main//src/spdl/pipeline/_arena/_protocol.py?#L318-L332"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spdl.pipeline.ArenaProtocol.unlink" title="Link to this definition">¶</a></dt>
+<dd><p>Destroy the OS-level shared-memory segment.</p>
+<p>Called by the owning parent during teardown after safe
+<a class="reference internal" href="#spdl.pipeline.ArenaProtocol.close" title="spdl.pipeline.ArenaProtocol.close"><code class="xref py py-meth docutils literal notranslate"><span class="pre">close()</span></code></a> retirement. If close fails with uncertain storage or
+worker state, retain ownership and names until safe retry is possible;
+unlink is not a substitute for proving quiescence. Must be called once
+per arena by its owner and only after every process that mapped the
+segment has released its handle. Removing names must not invalidate
+surviving mapped aliases.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -592,8 +705,15 @@ to CUDA.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">spdl.io.transfer_tensor</a><ul>
-<li><a class="reference internal" href="#spdl.io.transfer_tensor"><code class="docutils literal notranslate"><span class="pre">transfer_tensor()</span></code></a></li>
+<li><a class="reference internal" href="#">spdl.pipeline.ArenaProtocol</a><ul>
+<li><a class="reference internal" href="#spdl.pipeline.ArenaProtocol"><code class="docutils literal notranslate"><span class="pre">ArenaProtocol</span></code></a><ul>
+<li><a class="reference internal" href="#spdl.pipeline.ArenaProtocol.close"><code class="docutils literal notranslate"><span class="pre">ArenaProtocol.close()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ArenaProtocol.open_reader"><code class="docutils literal notranslate"><span class="pre">ArenaProtocol.open_reader()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ArenaProtocol.open_writer"><code class="docutils literal notranslate"><span class="pre">ArenaProtocol.open_writer()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ArenaProtocol.shutdown_arena"><code class="docutils literal notranslate"><span class="pre">ArenaProtocol.shutdown_arena()</span></code></a></li>
+<li><a class="reference internal" href="#spdl.pipeline.ArenaProtocol.unlink"><code class="docutils literal notranslate"><span class="pre">ArenaProtocol.unlink()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -606,7 +726,7 @@ to CUDA.</p>
     </aside>
   </div>
 </div>
-    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=cce5339e"></script>
+    <script src="../_static/js/custom.js"></script><script src="../_static/documentation_options.js?v=a82ae3da"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
