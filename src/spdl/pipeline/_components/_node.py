@@ -326,6 +326,8 @@ def _convert_pipes(
     pipeline_id: int,
     stage_id: _MutableInt,
     path_idx: int = -1,
+    *,
+    buffer_size: int,
 ) -> _TOutputNodes:
     """Convert a sequence of pipe configs into a chain of _Nodes.
 
@@ -338,6 +340,7 @@ def _convert_pipes(
         pipeline_id: A unique identifier for the pipeline, used in stage naming.
         stage_id: A mutable counter for assigning unique stage IDs.
         path_idx: Used if the upstream node is _FanOutNode.
+        buffer_size: The capacity of each queue between stages.
 
     Returns:
         The last node in the chain.
@@ -347,7 +350,15 @@ def _convert_pipes(
         idx = path_idx if i == 0 else -1
         match cfg:
             case PathVariantsConfig():
-                n = _convert_path_variants(cfg, n, q_class, pipeline_id, stage_id, idx)
+                n = _convert_path_variants(
+                    cfg,
+                    n,
+                    q_class,
+                    pipeline_id,
+                    stage_id,
+                    idx,
+                    buffer_size=buffer_size,
+                )
             case PlacementConfig():
                 # Region markers are build-time directives resolved before the pipeline is
                 # built; they must never reach node construction.
@@ -358,7 +369,7 @@ def _convert_pipes(
                 in_q = _get_output_queue(n, idx)
                 info = _get_stage_info(cfg, pipeline_id, stage_id)
                 stage_id += 1
-                out_q = q_class(info, buffer_size=_BUFFER_SIZE)
+                out_q = q_class(info, buffer_size=buffer_size)
                 n = _Node(info, cfg, [n], input_queue=in_q, output_queue=out_q)
         ret = n
     # pyrefly: ignore [unbound-name]
@@ -372,6 +383,8 @@ def _convert_path_variants(
     pipeline_id: int,
     stage_id: _MutableInt,
     path_idx: int = -1,
+    *,
+    buffer_size: int,
 ) -> _FanInNode:
     """Convert a PathVariantsConfig into a sub-graph of _Nodes.
 
@@ -390,6 +403,7 @@ def _convert_path_variants(
         pipeline_id: Pipeline identifier for naming.
         stage_id: Mutable stage counter.
         path_idx: Used if the upstream node is _FanOutNode.
+        buffer_size: The capacity of each queue between stages.
 
     Returns:
         The merge node (last node of the sub-graph).
@@ -413,7 +427,7 @@ def _convert_path_variants(
             stage_id=str(stage_id),
             stage_name=f"path_variants_path{i}",
         )
-        path_queues.append(q_class(path_info, buffer_size=_BUFFER_SIZE))
+        path_queues.append(q_class(path_info, buffer_size=buffer_size))
 
     # Create router node (fan-out: 1 input, N output queues)
     router_info = _get_stage_info(cfg, pipeline_id, stage_id)
@@ -427,7 +441,15 @@ def _convert_path_variants(
     )
     # Create each path
     end_nodes = [
-        _convert_pipes(path_configs, start_node, q_class, pipeline_id, stage_id, i)
+        _convert_pipes(
+            path_configs,
+            start_node,
+            q_class,
+            pipeline_id,
+            stage_id,
+            i,
+            buffer_size=buffer_size,
+        )
         for i, path_configs in enumerate(cfg.paths)
     ]
     # Create merge node (fan-in: N input queues, 1 output)
@@ -437,7 +459,7 @@ def _convert_path_variants(
         stage_name="path_variants_merge",
     )
     stage_id += 1
-    merge_out_q = q_class(merge_info, buffer_size=_BUFFER_SIZE)
+    merge_out_q = q_class(merge_info, buffer_size=buffer_size)
     merge_node = _FanInNode(
         merge_info,
         _PathVariantsMergeConfig(batched=cfg.batched),
@@ -456,6 +478,8 @@ def _convert_config(
     stage_id: _MutableInt,
     disable_sink: bool = False,
     use_thread_output_queue: bool = False,
+    *,
+    buffer_size: int = _BUFFER_SIZE,
 ) -> _TOutputNodes:
     """Convert a :py:class:`~spdl.pipeline.defs.PipelineConfig` into a linked list of
     :py:class:`~spdl.pipeline._components._node._Node` objects.
@@ -470,6 +494,8 @@ def _convert_config(
         pipeline_id: A unique identifier for the pipeline, used in stage naming.
         stage_id: A mutable counter for assigning unique stage IDs.
         disable_sink: If True, skip creating the sink node (used for merge branches).
+        buffer_size: The capacity of each queue between stages. The sink's queue is sized
+            by ``plc.sink`` instead.
 
     Returns:
         The sink node (or the last processing node if disable_sink is True) with
@@ -477,13 +503,20 @@ def _convert_config(
     """
     info = _get_stage_info(plc.src, pipeline_id, stage_id)
     stage_id += 1
-    q = q_class(info, buffer_size=_BUFFER_SIZE)
+    q = q_class(info, buffer_size=buffer_size)
     match cfg := plc.src:
         case SourceConfig():
             n = _SourceNode(info, cfg, output_queue=q)
         case MergeConfig():
             upstream = [
-                _convert_config(c, q_class, pipeline_id, stage_id, disable_sink=True)
+                _convert_config(
+                    c,
+                    q_class,
+                    pipeline_id,
+                    stage_id,
+                    disable_sink=True,
+                    buffer_size=buffer_size,
+                )
                 for c in cfg.pipeline_configs
             ]
             in_qs = [n.output_queue for n in upstream]
@@ -492,7 +525,9 @@ def _convert_config(
             raise NotImplementedError(f"`{type(cfg)}` is not supported.")
 
     if plc.pipes:
-        n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
+        n = _convert_pipes(
+            plc.pipes, n, q_class, pipeline_id, stage_id, buffer_size=buffer_size
+        )
 
     if not disable_sink:
         info = _get_stage_info(plc.sink, pipeline_id, stage_id)
@@ -744,6 +779,7 @@ def _build_pipeline_node(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None,
     stage_id: int,
     use_thread_output_queue: bool = False,
+    stage_buffer_size: int = _BUFFER_SIZE,
 ) -> _TOutputNodes:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
@@ -762,6 +798,7 @@ def _build_pipeline_node(
         _PIPELINE_ID,
         _MutableInt(stage_id),
         use_thread_output_queue=use_thread_output_queue,
+        buffer_size=stage_buffer_size,
     )
     _validate_continuous_mode(node)
     _build_node_recursive(node, fc_class, hook_factory, max_failures)
@@ -1011,6 +1048,7 @@ def _build_pipeline_coro(
     stage_id: int = 0,
     background_tasks: Sequence[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
+    stage_buffer_size: int = _BUFFER_SIZE,
 ) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
     try:
         node = _build_pipeline_node(
@@ -1021,6 +1059,7 @@ def _build_pipeline_coro(
             task_hook_factory=task_hook_factory,
             stage_id=stage_id,
             use_thread_output_queue=use_thread_output_queue,
+            stage_buffer_size=stage_buffer_size,
         )
         coro = _run_pipeline_coroutines(node, background_tasks=background_tasks)
 

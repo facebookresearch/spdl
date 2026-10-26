@@ -671,6 +671,70 @@ class FusedThreadCountTest(unittest.TestCase):
         self.assertEqual(self._num_threads_for(stages), 5)
 
 
+class FusedBufferSizeTest(unittest.TestCase):
+    """The executor config's buffer sizes reach the fused sub-pipeline."""
+
+    def _sub_pipeline_for(
+        self, spec: ProcessPoolExecutorConfig
+    ) -> tuple[PipelineConfig[Any], dict[str, Any]]:
+        with patch.object(_fuse_mod, "_SubprocessPipelinePool") as pool:
+            _fuse_mod._build_fused_stage_core(
+                [Pipe(add_one)],
+                spec=spec,
+                backend=_ProcessBackend(mp.get_context("spawn")),
+                report_stats_interval=-1.0,
+                fail_fast=False,
+                continuous=True,
+                input_buffer_size=1,
+                output_buffer_size=1,
+            )
+        return pool.call_args.args[2], pool.call_args.args[3]
+
+    def test_defaults_are_unchanged(self) -> None:
+        """Unset buffer sizes keep the fused sub-pipeline's existing sink and stage queues."""
+        sub_config, build_kwargs = self._sub_pipeline_for(
+            ProcessPoolExecutorConfig(max_workers=1)
+        )
+        self.assertEqual(sub_config.sink.buffer_size, _fuse_mod._FUSED_SINK_BUFFER)
+        self.assertNotIn("stage_buffer_size", build_kwargs)
+
+    def test_configured_sizes_are_used(self) -> None:
+        """Set buffer sizes reach the fused sub-pipeline's sink and its build kwargs."""
+        sub_config, build_kwargs = self._sub_pipeline_for(
+            ProcessPoolExecutorConfig(
+                max_workers=1, stage_buffer_size=1, sink_buffer_size=1
+            )
+        )
+        self.assertEqual(sub_config.sink.buffer_size, 1)
+        self.assertEqual(build_kwargs["stage_buffer_size"], 1)
+
+    def test_region_with_size_one_buffers_runs(self) -> None:
+        """The smallest queues still stream every item through a worker region."""
+        n = 16
+        config = _cfg(
+            range(n),
+            [
+                PlacementConfig(
+                    target=ProcessPoolExecutorConfig(
+                        max_workers=2, stage_buffer_size=1, sink_buffer_size=1
+                    )
+                ),
+                Pipe(add_one),
+                Pipe(times_two),
+                PlacementConfig(target=MAIN_PROCESS),
+            ],
+        )
+        pipeline = build_pipeline(config, num_threads=4)
+        self.assertEqual(sorted(_run(pipeline)), sorted((x + 1) * 2 for x in range(n)))
+
+    def test_rejects_non_positive_sizes(self) -> None:
+        """A zero size is rejected when the executor config is built, for either field."""
+        with self.assertRaisesRegex(ValueError, "stage_buffer_size"):
+            ProcessPoolExecutorConfig(stage_buffer_size=0)
+        with self.assertRaisesRegex(ValueError, "sink_buffer_size"):
+            ProcessPoolExecutorConfig(sink_buffer_size=0)
+
+
 class ContinuousRegionTest(unittest.TestCase):
     """A ``.to()`` region under a continuous source stays warm and correct across epochs."""
 

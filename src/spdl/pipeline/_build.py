@@ -29,6 +29,7 @@ from spdl.pipeline._bg_task import (
     get_default_background_tasks,
 )
 from spdl.pipeline._components import (
+    _BUFFER_SIZE,
     _build_pipeline_coro,
     _get_global_id,
     _set_global_id,
@@ -173,6 +174,7 @@ def _build_pipeline(
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
+    stage_buffer_size: int = _BUFFER_SIZE,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
         try:
@@ -220,6 +222,7 @@ def _build_pipeline(
             stage_id=stage_id,
             background_tasks=all_bg_tasks or None,
             use_thread_output_queue=use_thread_output_queue,
+            stage_buffer_size=stage_buffer_size,
         )
         cleanup.add_coro(coro)
 
@@ -238,6 +241,7 @@ def build_pipeline(
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool = False,
+    stage_buffer_size: int = _BUFFER_SIZE,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -314,6 +318,13 @@ def build_pipeline(
             ``asyncio.run_coroutine_threadsafe``, reducing per-batch latency from
             ~200-400us to ~10us. Default: ``False``.
 
+        stage_buffer_size: The capacity of each queue between stages (the sink's queue is
+            sized by the config). Every queued item stays alive, so with large items, such
+            as collated batches, a smaller size trades a little readiness for memory.
+            Default: ``2``.
+
+            .. versionadded:: 0.9.0
+
     .. seealso::
 
        :py:meth:`~spdl.pipeline.PipelineBuilder.to`
@@ -322,6 +333,10 @@ def build_pipeline(
     """
     from . import _profile
 
+    if stage_buffer_size < 1:
+        raise ValueError(
+            f"`stage_buffer_size` must be a positive integer. Got: {stage_buffer_size}."
+        )
     if _profile.is_diagnostic_mode_enabled():
         return _profile._build_pipeline_diagnostic_mode(pipeline_cfg)
 
@@ -335,6 +350,7 @@ def build_pipeline(
         stage_id=stage_id,
         background_tasks=background_tasks,
         use_thread_output_queue=use_thread_output_queue,
+        stage_buffer_size=stage_buffer_size,
     )
 
 

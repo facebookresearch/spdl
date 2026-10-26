@@ -476,6 +476,31 @@ class ExecutorConfig:
     initargs: tuple[Any, ...] = ()
     """Positional arguments passed to ``initializer``."""
 
+    stage_buffer_size: int | None = None
+    """Capacity of each queue between the stages inside a worker. ``None`` keeps the
+    default of :py:func:`~spdl.pipeline.build_pipeline`.
+
+    Every queued item stays alive in the worker, so with large items, such as collated
+    batches, the queues of a many-stage region can hold several gigabytes per worker.
+
+    .. versionadded:: 0.9.0
+    """
+
+    sink_buffer_size: int | None = None
+    """Capacity of the queue at the end of each worker's stages, from which results are
+    sent back. ``None`` keeps the default (3).
+
+    .. versionadded:: 0.9.0
+    """
+
+    def __post_init__(self) -> None:
+        for name in ("stage_buffer_size", "sink_buffer_size"):
+            value = getattr(self, name)
+            if value is not None and value < 1:
+                raise ValueError(
+                    f"`{name}` must be a positive integer or None. Got: {value}."
+                )
+
     def _build(
         self,
         stages: Sequence[object],

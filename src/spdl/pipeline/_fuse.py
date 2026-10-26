@@ -188,12 +188,18 @@ def _build_fused_stage_core(
             []
         ),  # placeholder; the worker sets the real source per session
         pipes=stripped,  # pyre-ignore[6]
-        sink=SinkConfig(_FUSED_SINK_BUFFER),
+        sink=SinkConfig(
+            _FUSED_SINK_BUFFER
+            if spec.sink_buffer_size is None
+            else spec.sink_buffer_size
+        ),
     )
     build_kwargs = {
         "num_threads": num_threads,
         "report_stats_interval": report_stats_interval,
     }
+    if spec.stage_buffer_size is not None:
+        build_kwargs["stage_buffer_size"] = spec.stage_buffer_size
     if fail_fast:
         build_kwargs["max_failures"] = 0
     initializer = partial(

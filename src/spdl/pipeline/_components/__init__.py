@@ -12,7 +12,13 @@ from ._hook import (
     TaskPerfStats,
     TaskStatsHook,
 )
-from ._node import _build_pipeline_coro, _get_global_id, _set_global_id, PipelineFailure
+from ._node import (
+    _BUFFER_SIZE,
+    _build_pipeline_coro,
+    _get_global_id,
+    _set_global_id,
+    PipelineFailure,
+)
 from ._queue import (
     _AsyncQueueWithSyncMirror,
     _ThreadBasedAsyncQueue,
@@ -36,6 +42,7 @@ from ._subprocess_pipe import (
 )
 
 __all__ = [
+    "_BUFFER_SIZE",
     "_build_pipeline_coro",
     "_DONE",
     "_EPOCH",
