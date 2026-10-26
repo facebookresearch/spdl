@@ -73,7 +73,6 @@ from spdl.io._preprocessing import (
 )
 from spdl.io._tar import iter_tarfile as iter_tarfile
 from spdl.io._transfer import (
-    transfer_tensor as transfer_tensor,
     transfer_tensor_d2h as transfer_tensor_d2h,
     transfer_tensor_h2d as transfer_tensor_h2d,
 )
@@ -176,7 +175,6 @@ __all__ = [
     # From _tar
     "iter_tarfile",
     # From _transfer
-    "transfer_tensor",
     "transfer_tensor_d2h",
     "transfer_tensor_h2d",
     # From _wav

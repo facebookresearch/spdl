@@ -6,6 +6,7 @@
 
 
 import unittest
+import warnings
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -14,7 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import spdl.io._transfer
 import torch
-from spdl.io import transfer_tensor, transfer_tensor_h2d
+from spdl.io import transfer_tensor_h2d
 from spdl.io._transfer import _recursive_apply
 
 
@@ -166,16 +167,60 @@ class TestGpuTransfer(unittest.TestCase):
         with ThreadPoolExecutor(max_workers=1) as exec:
             exec.submit(_test).result()
 
+
+class TestDeprecatedTransferTensor(unittest.TestCase):
+    def test_deprecated_lookup_warns_and_aliases_h2d(self) -> None:
+        """Each deprecated-name lookup warns at the caller and returns H2D."""
+        for _ in range(2):
+            with self.assertWarnsRegex(FutureWarning, "transfer_tensor_h2d") as warning:
+                deprecated = getattr(spdl.io, "transfer_tensor")  # noqa: B009 - Runtime-only alias is absent from the type stub.
+
+            self.assertIs(deprecated, transfer_tensor_h2d)
+            self.assertEqual(warning.filename, __file__)
+
+    def test_deprecated_import_warns_and_aliases_h2d(self) -> None:
+        """Importing the deprecated name still works and emits a warning."""
+        namespace = {}
+
+        with self.assertWarnsRegex(FutureWarning, "transfer_tensor_h2d"):
+            exec("from spdl.io import transfer_tensor as deprecated", namespace)
+
+        self.assertIs(namespace["deprecated"], transfer_tensor_h2d)
+
     def test_deprecated_name_forwards_to_h2d(self) -> None:
-        """The deprecated API warns and forwards its arguments to H2D."""
+        """The resolved alias retains the H2D signature without call-time warnings."""
         batch = {"value": object()}
         expected = {"result": object()}
-        with patch(
-            "spdl.io._transfer.transfer_tensor_h2d",
-            return_value=expected,
-        ) as mock_transfer:
-            with self.assertWarnsRegex(FutureWarning, "transfer_tensor_h2d"):
-                actual = transfer_tensor(batch, num_caches=7)
+        with self.assertWarns(FutureWarning):
+            deprecated = getattr(spdl.io, "transfer_tensor")  # noqa: B009 - Runtime-only alias is absent from the type stub.
+        with patch("spdl.io._transfer._get_transfer_func") as mock_get_transfer:
+            mock_get_transfer.return_value.return_value = expected
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                actual = deprecated(batch, num_caches=7)
 
         self.assertIs(actual, expected)
-        mock_transfer.assert_called_once_with(batch, num_caches=7)
+        self.assertEqual(caught, [])
+        mock_get_transfer.assert_called_once_with(7)
+        mock_get_transfer.return_value.assert_called_once_with(batch)
+
+    def test_h2d_lookup_does_not_warn(self) -> None:
+        """Looking up the replacement API does not emit a deprecation warning."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            replacement = spdl.io.transfer_tensor_h2d
+
+        self.assertIs(replacement, transfer_tensor_h2d)
+        self.assertEqual(caught, [])
+
+    def test_deprecated_name_is_not_advertised(self) -> None:
+        """The deprecated name is omitted from the advertised public API."""
+        self.assertNotIn("transfer_tensor", spdl.io.__all__)
+        self.assertNotIn("transfer_tensor", dir(spdl.io))
+        self.assertIn("transfer_tensor_h2d", spdl.io.__all__)
+        self.assertIn("transfer_tensor_h2d", dir(spdl.io))
+
+    def test_unknown_name_raises_attribute_error(self) -> None:
+        """Unknown module attributes retain the standard AttributeError behavior."""
+        with self.assertRaisesRegex(AttributeError, "transfer_tensor_missing"):
+            getattr(spdl.io, "transfer_tensor_missing")  # noqa: B009 - Unknown attribute is absent from the type stub.
