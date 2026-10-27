@@ -263,9 +263,9 @@ def _install_queue_feeder_error_handler(
     """Install the hook CPython exposes for executor-specific feeder recovery."""
     # This private hook is intentionally provided "for overriding by concurrent.futures" and
     # is how ProcessPoolExecutor reports call-item pickling errors. It is present throughout
-    # SPDL's supported CPython range (3.10+). Install it in each producer process before that
-    # process starts its local feeder thread; Queue does not preserve arbitrary attributes when
-    # it is pickled into another process.
+    # SPDL's supported CPython range. Install it in each producer process before that process
+    # starts its local feeder thread; Queue does not preserve arbitrary attributes when it is
+    # pickled into another process.
     q._on_queue_feeder_error = handler
 
 

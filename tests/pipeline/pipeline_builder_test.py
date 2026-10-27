@@ -492,27 +492,12 @@ class TestPipe(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(set(output), {1, 2, 3, 4})
 
     def test_async_pipe_concurrency_runs_ops_in_parallel(self) -> None:
-        """A pool pipe runs up to `concurrency` ops simultaneously.
-
-        Every op increments a shared counter and then waits on a single event that is
-        only set once the counter reaches `concurrency` -- i.e. once all `concurrency`
-        ops are in flight at the same time. If the pipe ran them serially the event
-        would never be set and the wait would time out, proving real parallelism without
-        depending on wall-clock timing.
-
-        A hand-rolled counter+event is used rather than ``asyncio.Barrier`` because the
-        latter is Python 3.11+ and SPDL supports 3.10.
-        """
+        """A pool pipe runs up to ``concurrency`` operations simultaneously."""
         concurrency = 4
-        all_running = asyncio.Event()
-        num_running = 0
+        barrier = asyncio.Barrier(concurrency)
 
         async def op(val):
-            nonlocal num_running
-            num_running += 1
-            if num_running == concurrency:
-                all_running.set()
-            await asyncio.wait_for(all_running.wait(), timeout=30)
+            await asyncio.wait_for(barrier.wait(), timeout=30)
             return val
 
         async def test():
@@ -3266,6 +3251,7 @@ class TestPipelineFailureStructure(unittest.TestCase):
         )
 
     def test_pipeline_failure_is_exception_group(self) -> None:
+        """Pipeline failures are always raised as exception groups."""
         pipeline = self._build_failing_pipeline()
 
         with self.assertRaises(PipelineFailure) as ctx:
@@ -3273,15 +3259,14 @@ class TestPipelineFailureStructure(unittest.TestCase):
                 list(pipeline.get_iterator(timeout=30))
 
         pf = ctx.exception
-        if sys.version_info >= (3, 11):
-            self.assertIsInstance(pf, ExceptionGroup)
-        else:
-            self.assertIsInstance(pf, RuntimeError)
+        self.assertIsInstance(pf, ExceptionGroup)
         self.assertGreaterEqual(len(pf.exceptions), 1)
         exception_types = {type(e) for e in pf.exceptions}
         self.assertTrue(exception_types & {ValueError})
 
     def test_pipeline_failure_individual_exceptions(self) -> None:
+        """Pipeline failures expose the individual stage exceptions."""
+
         def failing_range(n):
             yield from range(n)
             raise TypeError("source failed")
@@ -3299,17 +3284,15 @@ class TestPipelineFailureStructure(unittest.TestCase):
                 list(pipeline.get_iterator(timeout=30))
 
         pf = ctx.exception
-        if sys.version_info >= (3, 11):
-            self.assertIsInstance(pf, ExceptionGroup)
-        else:
-            self.assertIsInstance(pf, RuntimeError)
+        self.assertIsInstance(pf, ExceptionGroup)
         self.assertGreaterEqual(len(pf.exceptions), 1)
         self.assertTrue(
             any(isinstance(e, TypeError) for e in pf.exceptions),
         )
 
-    @unittest.skipIf(sys.version_info < (3, 11), "ExceptionGroup requires Python 3.11+")
     def test_pipeline_failure_subgroup(self) -> None:
+        """Exception subgroups preserve the PipelineFailure type."""
+
         def failing_range(n):
             yield from range(n)
             raise ValueError("Iterator failed")
@@ -3332,8 +3315,9 @@ class TestPipelineFailureStructure(unittest.TestCase):
         self.assertIsInstance(sub, PipelineFailure)
         self.assertTrue(all(isinstance(e, ValueError) for e in sub.exceptions))
 
-    @unittest.skipIf(sys.version_info < (3, 11), "ExceptionGroup requires Python 3.11+")
     def test_pipeline_failure_notes_contain_stage_name(self) -> None:
+        """Pipeline failures annotate exceptions with their stage names."""
+
         def failing_range(n):
             yield from range(n)
             raise ValueError("Iterator failed")
@@ -3352,10 +3336,23 @@ class TestPipelineFailureStructure(unittest.TestCase):
 
         pf = ctx.exception
         for exc in pf.exceptions:
-            notes = getattr(exc, "__notes__", [])
             self.assertTrue(
-                any(note.startswith("Pipeline stage:") for note in notes),
+                any(note.startswith("Pipeline stage:") for note in exc.__notes__),
             )
+
+    def test_pipeline_failure_except_star(self) -> None:
+        """Pipeline failures can be handled with ``except*``."""
+        pipeline = self._build_failing_pipeline()
+
+        caught: list[Exception] = []
+        try:
+            with pipeline.auto_stop():
+                list(pipeline.get_iterator(timeout=30))
+        except* ValueError as exc_group:
+            caught.extend(exc_group.exceptions)
+
+        self.assertGreaterEqual(len(caught), 1)
+        self.assertIsInstance(caught[0], ValueError)
 
 
 class _SlowFinalizeQueue(AsyncQueue):

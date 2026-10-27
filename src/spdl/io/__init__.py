@@ -89,7 +89,7 @@ def __dir__() -> list[str]:
 
 
 def __getattr__(name: str) -> object:
-    """Lazily import C++ extension modules and their contents."""
+    """Resolve deprecated aliases and lazily import module contents."""
     if name == "__version__":
         from importlib.metadata import PackageNotFoundError, version
 
@@ -97,6 +97,16 @@ def __getattr__(name: str) -> object:
             return version("spdl.io")
         except PackageNotFoundError:
             return "unknown"
+
+    if name == "transfer_tensor":
+        import warnings
+
+        warnings.warn(
+            "transfer_tensor is deprecated; use transfer_tensor_h2d instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return _transfer.transfer_tensor_h2d
 
     # Lazy loading of C++ extension classes from _libspdl
     if name in _LIBSPDL_ITEMS:

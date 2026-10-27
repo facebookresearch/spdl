@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 __all__ = [
-    "transfer_tensor",
     "transfer_tensor_d2h",
     "transfer_tensor_h2d",
 ]
@@ -13,7 +12,6 @@ __all__ = [
 import logging
 import os
 import threading
-import warnings
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from dataclasses import fields, is_dataclass
@@ -190,31 +188,6 @@ def transfer_tensor_h2d(batch: T, /, *, num_caches: int = 4) -> T:
     """
     transfer = _get_transfer_func(num_caches)
     return transfer(batch)
-
-
-def transfer_tensor(batch: T, /, *, num_caches: int = 4) -> T:
-    """Transfer PyTorch tensors from CPU to CUDA in a dedicated stream.
-
-    .. deprecated:: 0.8.0
-       Use :py:func:`spdl.io.transfer_tensor_h2d` instead.
-
-    Args:
-        batch: A :py:class:`torch.Tensor` or a composition of tensors with
-            container types such as ``list``, ``tuple``, ``dict`` and
-            ``dataclass``.
-        num_caches: Number of recent output batches retained to mitigate
-            allocator races across CUDA streams.
-
-    Returns:
-        An object of the same type as the input, with CPU tensors transferred
-        to CUDA.
-    """
-    warnings.warn(
-        "transfer_tensor is deprecated; use transfer_tensor_h2d instead.",
-        FutureWarning,
-        stacklevel=2,
-    )
-    return transfer_tensor_h2d(batch, num_caches=num_caches)
 
 
 ###############################################################################
