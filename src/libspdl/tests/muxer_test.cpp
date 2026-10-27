@@ -23,6 +23,7 @@ extern "C" {
 #include <cstdint>
 #include <filesystem>
 #include <mutex>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -69,7 +70,10 @@ class ScopedWarningCapture final : public google::LogSink {
 };
 
 std::string get_temp_output_path(const std::string& filename) {
-  const auto path = std::filesystem::path(testing::TempDir()) / filename;
+  // Copies of this binary can run concurrently and share TempDir(); with a
+  // fixed name, one copy's remove() unlinks a file another still has open.
+  const auto path = std::filesystem::path(testing::TempDir()) /
+      (std::to_string(std::random_device{}()) + "_" + filename);
   std::filesystem::remove(path);
   return path.string();
 }
