@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from enum import IntEnum
 from threading import Event as SyncEvent, Thread
-from typing import Any, Generic, NoReturn, TypeVar
+from typing import Any, cast, Generic, NoReturn, TypeVar
 
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._components import (
@@ -330,8 +330,17 @@ class _EventLoopState(IntEnum):
 _EOF_MSG: str = "Reached the end of the pipeline."
 
 
-class _QueueReadTimedOut(Exception):
-    """Signal that one loop-side queue-read slice expired."""
+class _ReadTimedOut:
+    """Result of a loop-side queue-read slice that expired without an item.
+
+    Returned rather than raised: an exception stored in the cross-thread Future
+    gains a traceback when re-raised, which forms a reference cycle with the
+    reading frames and keeps the item last returned by ``get_item`` alive until
+    the cyclic garbage collector runs.
+    """
+
+
+_READ_TIMED_OUT = _ReadTimedOut()
 
 
 class _OutputReadPublicationTimedOut(Exception):
@@ -634,7 +643,7 @@ class _PipelineImpl(Generic[T]):
             raise
 
         if task.cancelled():
-            raise _QueueReadTimedOut from None
+            return cast(T, _READ_TIMED_OUT)
         return self._publish_output_item(task.result())
 
     def _publish_output_item(self, item: T) -> T:
@@ -647,10 +656,12 @@ class _PipelineImpl(Generic[T]):
         self._pending_output_read = None
         try:
             item = future.result()
-        except (_QueueReadTimedOut, asyncio.QueueEmpty):
+        except asyncio.QueueEmpty:
             raise queue.Empty from None
         except concurrent.futures.CancelledError as error:
             return self._recover_cancelled_output_read(error)
+        if isinstance(item, _ReadTimedOut):
+            raise queue.Empty
         try:
             return self._take_pending_output_item()
         except queue.Empty:
@@ -666,9 +677,6 @@ class _PipelineImpl(Generic[T]):
 
         try:
             item = future.result(timeout=timeout)
-        except _QueueReadTimedOut:
-            self._pending_output_read = None
-            raise queue.Empty from None
         except asyncio.QueueEmpty:
             self._pending_output_read = None
             raise queue.Empty from None
@@ -687,6 +695,8 @@ class _PipelineImpl(Generic[T]):
             raise
 
         self._pending_output_read = None
+        if isinstance(item, _ReadTimedOut):
+            raise queue.Empty
         try:
             return self._take_pending_output_item()
         except queue.Empty:
