@@ -5,12 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import asyncio
+import gc
 import inspect
 import queue
 import sys
 import threading
 import time
 import unittest
+import weakref
 from collections.abc import Coroutine, Iterable
 from concurrent.futures import (
     CancelledError as FutureCancelledError,
@@ -18,16 +20,12 @@ from concurrent.futures import (
     ThreadPoolExecutor,
     TimeoutError as FutureTimeoutError,
 )
-from typing import Any
+from typing import Any, cast
 from unittest.mock import call, MagicMock, patch
 
 from spdl.pipeline import Pipeline, PipelineBuilder
 from spdl.pipeline._components import _ThreadBasedAsyncQueue, StageInfo
-from spdl.pipeline._pipeline import (
-    _EventLoop,
-    _EventLoopState,
-    _QueueReadTimedOut,
-)
+from spdl.pipeline._pipeline import _EventLoop, _EventLoopState, _READ_TIMED_OUT
 
 _TIMEOUT: float = 30.0
 
@@ -340,7 +338,7 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
         class _RacingTimeoutFuture(Future[int]):
             def result(self, timeout: float | None = None) -> int:
                 if not self.done():
-                    self.set_exception(_QueueReadTimedOut())
+                    self.set_result(cast(int, _READ_TIMED_OUT))
                     raise FutureTimeoutError
                 return super().result(timeout)
 
@@ -352,6 +350,39 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
                 pipeline._impl._get_pending_output_read(timeout=0.01)
             self.assertIsNone(pipeline._impl._pending_output_read)
         finally:
+            pipeline.stop(timeout=_TIMEOUT)
+
+    def test_item_returned_after_empty_slices_is_not_retained(self) -> None:
+        """An item returned after empty read slices is freed once the caller drops it."""
+
+        class _Item:
+            pass
+
+        output_queue: asyncio.Queue[_Item] = asyncio.Queue(1)
+
+        async def produce_after_empty_slices() -> None:
+            # Longer than several 0.1 s read slices, so get_item sees empty reads.
+            await asyncio.sleep(0.35)
+            await output_queue.put(_Item())
+            await asyncio.Event().wait()
+
+        pipeline = Pipeline(
+            produce_after_empty_slices(),
+            output_queue,
+            ThreadPoolExecutor(max_workers=1),
+            desc="pipeline core lifecycle test",
+        )
+        gc_was_enabled = gc.isenabled()
+        gc.disable()
+        try:
+            pipeline.start(timeout=_TIMEOUT)
+            item = pipeline.get_item(timeout=_TIMEOUT)
+            ref = weakref.ref(item)
+            del item
+            self.assertIsNone(ref())
+        finally:
+            if gc_was_enabled:
+                gc.enable()
             pipeline.stop(timeout=_TIMEOUT)
 
     def test_cancelled_sink_read_propagates(self) -> None:
@@ -905,8 +936,10 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
                 with self.assertRaises(asyncio.CancelledError):
                     await asyncio.sleep(0)
 
-                with self.assertRaises(_QueueReadTimedOut):
-                    await pipeline._impl._get_with_timeout_on_loop(0)
+                self.assertIs(
+                    await pipeline._impl._get_with_timeout_on_loop(0),
+                    _READ_TIMED_OUT,
+                )
             finally:
                 pipeline._impl._event_loop._coro.close()
                 executor.shutdown()
