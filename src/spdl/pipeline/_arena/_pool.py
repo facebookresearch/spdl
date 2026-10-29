@@ -332,11 +332,8 @@ class SharedMemorySegmentPool:
     def unlink(self) -> None:
         """Remove all segments from the system (call once, by the owner)."""
         for name in [self._ctrl_name, *self._seg_names]:
-            # Attach a temporary handle via _attach (so it is not registered with
-            # the resource_tracker) and close it after unlinking, to avoid
-            # leaking the mapping or emitting already-unlinked warnings.
             try:
-                shm = _attach(name)
+                shm = shared_memory.SharedMemory(name=name)
             except FileNotFoundError:
                 continue
             try:

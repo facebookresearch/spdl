@@ -7,7 +7,11 @@
 
 import gc
 import multiprocessing as mp
+import os
 import struct
+import subprocess
+import sys
+import textwrap
 import threading
 import time
 import unittest
@@ -52,6 +56,40 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
         self.addCleanup(pool.unlink)
         self.addCleanup(pool.close)
         return pool
+
+    def test_unlink_removes_segments_without_tracker_errors(self) -> None:
+        """Owner cleanup removes every segment without resource-tracker errors."""
+        script = textwrap.dedent(
+            """
+            from multiprocessing import shared_memory
+            from spdl.pipeline import SharedMemorySegmentPool
+
+            pool = SharedMemorySegmentPool(segment_size=1 << 16, count=3)
+            names = [pool._ctrl_name, *pool._seg_names]
+            pool.close()
+            pool.unlink()
+            pool.unlink()
+            for name in names:
+                try:
+                    shm = shared_memory.SharedMemory(name=name)
+                except FileNotFoundError:
+                    continue
+                shm.close()
+                shm.unlink()
+                raise AssertionError(f"Segment {name} still exists after unlink")
+            """
+        )
+        # A fresh interpreter isolates its tracker; communicate also waits for
+        # the tracker's stderr pipe to close, so asynchronous errors are captured.
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            env={**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)},
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("resource_tracker", result.stderr, result.stderr)
 
     def test_unit_round_trips_through_a_segment(self) -> None:
         """A unit written to a segment reads back byte-for-byte."""
