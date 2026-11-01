@@ -78,6 +78,7 @@ class PathVariantsDispatchTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(logs.records), 2)
             self.assertEqual(
                 {
+                    # pyrefly: ignore [unsupported-operation]
                     str(record.exc_info[1])
                     for record in logs.records
                     if record.exc_info is not None
