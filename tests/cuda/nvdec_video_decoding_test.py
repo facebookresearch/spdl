@@ -594,7 +594,7 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
                 decoder = spdl.io.nvdec_decoder(
                     cuda_config, packets.codec, use_cache=True
                 )
-                results.append(id(decoder))
+                results.append(decoder)
             except AttributeError as e:
                 errors.append(f"AttributeError: {e}")
             except Exception as e:
@@ -616,7 +616,9 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
         self.assertEqual(len(results), 3, "All threads should create decoders")
         # Verify each thread got its own decoder instance
         self.assertEqual(
-            len(set(results)), 3, "Each thread should have a unique decoder instance"
+            len({id(d) for d in results}),
+            3,
+            "Each thread should have a unique decoder instance",
         )
 
 
