@@ -18,10 +18,6 @@ repos:
         exclude: docs
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version. Pinned to the ruff bundled in fbsource's ruff-api==0.2.1
-    # (tools/lint/pyfmt/reqs/requirements-fmt.txt) so OSS pre-commit and
-    # internal `arc lint` agree. Verify with:
-    #   python -c "import ruff_api; print(ruff_api.ruff_version)"
     rev: v0.14.3
     hooks:
       # Run the formatter.
@@ -29,6 +25,12 @@ repos:
         files: "src/|tests/|examples/|.github/"
         exclude: "src/spdl/io/lib/.+.pyi"
         types_or: [ python, pyi ]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.3
+    hooks:
+      - id: ruff-check
+        types_or: [ python ]
 
   # This check is set to never fail, but will print all current mypy failures. See:
   # https://stackoverflow.com/a/59745587
