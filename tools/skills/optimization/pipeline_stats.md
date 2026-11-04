@@ -1,0 +1,51 @@
+# Interpret SPDL Pipeline Statistics
+
+Use [analysis.md](analysis.md) to select a bottleneck and next remedy, and [workflow.md](workflow.md) for acceptance. Analyze the actual exported schema/version rather than inventing metrics.
+
+## Bind metrics to a valid scope
+
+- Record exact job/version/attempt, pipeline configuration/source, resource allocation, data/cache state, interval and completed work. Failed, stopped, retried and preempted attempts are not interchangeable windows.
+- CPU utilization and throughput must describe the same interval and normalization; include all loader processes/threads. State memory scope/metric and shared accounting. Missing rows or partial coverage are unavailable, not zero.
+- Distinguish startup/cold cache, warm training, loader-only tests, cached-output diagnostics and complete E2E. Select representative windows from observed progress, not fixed step-count exclusions or whole-run SM percentiles.
+- Primary speed is completed equivalent work divided by the full wall time of the declared scope. Include recurring GC, epoch, checkpoint/callback and communication costs when in scope. Medians/tails are diagnostics, not a way to discard these costs.
+- Correlate progress with stage/queue time series on aligned windows and all ranks. Summed overlapping work is not exposed step time; isolated function latency need not be the critical path.
+
+## Runtime event interpretation
+
+Legacy event names have the form `pipeline:{pipeline_id}:{stage_index}:{name}_{suffix}`; queue names may include `_queue`. Configuration and export version determine the exact names and semantics.
+
+- `_ave_time`: stage service time; `_num_tasks` / `_num_failures`: task and failure counts.
+- `_qps` / `_num_items`: items delivered at a queue; normalize sample versus batch/aggregate/disaggregate units.
+- `_put`: wait to enqueue downstream; `_get`: wait for the consumer to dequeue.
+- `_occupation_rate`: **fraction of time non-empty**, not fill depth or fraction of trainer time saved.
+- Use the actual documented/exported summary semantics; labels such as p50 are not a license to assume a true percentile when the export contains means. Keep sampling/aggregation windows visible.
+
+## Locate delivery starvation and backpressure
+
+- Low occupancy plus high get-wait supports insufficient upstream delivery. Trace back to the producer's service-time/capacity, failures, storage/serde and executor waits; correlate with actual trainer stalls.
+- High occupancy plus high put-wait supports backpressure/slow consumption at that boundary, not its cause. Check downstream work **and** frontend/dispatch/GIL interference before selecting a remedy.
+- High occupancy with high get-wait may indicate locking/dequeue overhead or mismatched time windows, not ordinary empty-queue starvation.
+- Compare stage service time with concurrency/executor ownership and queue units. The largest raw mean service time or `concurrency / service_time` ratio is a capacity clue, not proof of the training bottleneck.
+- Use **minimum sink occupancy across all ranks**, per-rank low/empty-window fractions and worst-rank evidence. Cross-rank averages cannot rule out starvation; stragglers can move between epochs.
+- Inspect task failures/retries and whether pipeline output preserves sample identity/cardinality. Failures may waste time or change data; a low failure percentage is not automatically acceptable.
+- Stage QPS can diverge at aggregate/disaggregate or dropped/retried inputs. Explain unit/cardinality differences before declaring a bottleneck.
+
+Every production launch needs this analysis, including architecture comparisons. Non-architectural next steps follow the identified cost; broad concurrency/buffer sweeps wait for finalized architecture unless a minimal documented safety/runnability repair is needed.
+
+## Non-empty sink with lower end-to-end throughput
+
+Treat this as a priority **main/trainer-process GIL contention hypothesis**, not proof. A frontend/source/feeder thread can delay GPU-driving Python and consumption while the sink remains stocked. Near-zero `next(dataloader)` wait therefore does not exonerate the loader.
+
+1. Confirm the discrepancy in matched trainer-progress/complete-work windows and all-rank queue evidence. Rule out mismatched units/windows and hidden empty ranks.
+2. Capture actual GIL-holder Python/native stacks across **all trainer-process threads** and correlate source/feeder request serialization, result restoration, recursive pinning, callbacks and model work with the slowdown.
+3. Separate the holder from a named warning victim such as `disaggregate`; native detector blind spots are clues, not holder stacks. Isolated worker GIL holds do not directly block the trainer's GIL. Distinguish one-time bootstrap from recurring feeder/submission work.
+4. Separately attribute synchronous work actually blocking the asyncio loop: a native call can release the GIL yet still stop that loop when invoked inline. Use executor/process placement or native async APIs only for the evidenced call site.
+5. If recursive metadata pickling is the confirmed regression, retain compact boundary requests and materialize rows worker-side without changing the lookup/transform/collate contract. Recheck data, CPU and complete-work throughput after repair, not just disappearance of a warning.
+
+Use available holder/loop profilers to support attribution; missing evidence remains unresolved. Model/communication/transfer/memory-pressure stalls can coexist; a full sink alone is not model-bound evidence.
+
+During Phase 1, keep custom optimization blocked until initial parity passes. A slow Phase 2/3 branch is blocked/rejected **without revoking its validated parent**; continue independent work from the accepted top.
+
+## Analysis result
+
+Return the decisive scoped signals, measured bottleneck and uncertainty, next measurement or relevant remedy, and commit/job/analysis links. Keep the attempt entry concise; linked evidence contains the full time series/stacks. Do not replace interpretation with an unconditional list of techniques.

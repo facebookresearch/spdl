@@ -1,5 +1,10 @@
 # Migrating Data Loaders to SPDL
 
+## Campaign obligations
+
+- Before Phase 1 tests/launches, read the bundled `workflow.md` and `development_record.md` references for the indexed record and every-production-launch SPDL queue analysis.
+- After parity, that workflow owns architecture/model optimization, neutral hygiene, validated stacking and final sweeps; this guide is the single baseline procedure. Preserve each phase's gates and keep temporary campaign documents out of reusable skill dependencies.
+
 ## 1. Preserve the baseline
 
 - Capture the original loader/model revision, effective data/configuration, sampler/sharding, seed, batching, workers/prefetch, cache state, CPU allocation, training topology and comparison windows. Keep the original path reproducible.
@@ -36,5 +41,5 @@ A 100% occupation rate means the sink is non-empty, not necessarily full. With l
 
 - Plot original/minimal-SPDL loader-only capacity **without training load**: x = consistently normalized CPU utilization; y = throughput and memory on labelled axes/panels. Match representative inputs/cache/consumer work and report worker/resource settings, intervals/repeats and shared-memory accounting; summed shared RSS is not unique memory.
 - At least **2x throughput at comparable resource cost** makes fewer training nodes a separate later candidate, not scaling proof or permission to change Phase 1 topology. Validate that candidate's global-batch/schedule/data semantics, GPU/communication behavior, end-to-end cost/speed and original-baseline quality.
-- Save the passing minimal SPDL source/configuration and evidence. Post-parity architecture changes use measured bottlenecks; model accuracy uses the original model baseline, and new experiments follow the validated cumulative top with immediate-parent speed comparisons. Final parameter sweeps wait until architecture is finalized.
+- Save the passing minimal SPDL source/configuration and evidence. Post-parity MP/MT/MTP comparisons may be empirical architecture exploration; other remedies require measured bottleneck evidence. Model accuracy uses the original baseline, and subsequent experiments start from the validated cumulative top with immediate-parent speed comparisons. Final parameter sweeps wait until architecture is finalized.
 - Optional construction examples are in [pipeline_patterns.md](pipeline_patterns.md); load them only when implementing the relevant shape. They are not baseline prerequisites.

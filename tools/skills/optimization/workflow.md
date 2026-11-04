@@ -1,0 +1,45 @@
+# SPDL Campaign Workflow
+
+## Phase 1 — establish migration parity
+
+- Follow the bundled `migrating_to_spdl_pipeline.md` procedure. Compose the pipeline from the original implementation's functions/classes, with the closest architecture and minimal deviation. Routine trainer-interface adaptation is not prohibited.
+- Iterate locally on data/state consistency and close `(CPU utilization, throughput)` pairs counting the full loader process tree. Materially more CPU to match throughput fails initial parity. Confirm matched end-to-end training/quality; a runnable loader, full sink or loader-only QPS is not a gate pass.
+- Record loader-only CPU/throughput/memory curves without training load. At least 2x throughput at comparable resource cost makes fewer training nodes a separate Phase 2 candidate, not automatic GPU-scaling proof. Validate global-batch/schedule semantics, cost/speed and original-baseline quality before accepting a node change.
+- The campaign record and per-production-launch analysis start in Phase 1, not after parity. Missing attribution permits a targeted measurement or the smallest evidenced migration repair, not speculative optimization.
+
+## Phase 2 — two distinct kinds of experiment
+
+### Empirical architecture exploration
+
+- MP regions, in-process multithreading and MTP can be compared without a bottleneck diagnosis that predicts which will win: their performance depends on actual implementation, GIL release, process state and IPC costs. Mark the trial **architecture exploration**, not a proven bottleneck remedy.
+- Start after parity from the current validated top, with comparable bounded resources and unchanged processing/data semantics. Record any safety/runnability setting or unavoidable state/order difference. Do not bundle a broad parameter sweep or unrelated decoder/cache/model changes into the topology trial.
+- No architecture is universally mandatory and no fixed technique/count checklist governs stopping. Analyze every trial afterward and explain the observed gain/regression or unresolved attribution before selecting follow-ups.
+
+### Bottleneck-guided optimization
+
+- **Analyze → identify the measured critical-path cost → select a relevant technique → test → re-profile.** The knowledge base supplies remedies for the identified bottleneck, not a list to execute in order.
+- For loaders, analyze SPDL source/stage/sink service time, QPS, queue waits/occupancy, failures and rank variation alongside actual trainer progress. For models, use traces or measured phase/operator/kernel timings to identify the largest exposed forward, backward or update costs. Follow [analysis.md](analysis.md).
+- Insufficient evidence means the next action is measurement/attribution. A familiar technique, a full sink or GPU-kernel activity alone is not proof of a bottleneck. Resolve loader starvation and frontend GIL/asyncio interference before treating training as model-bound.
+- Once evidence establishes model-bound training, continue Phase 2 with attributable forward/backward, optimizer/update, fusion/compilation or supported 8-/16-bit precision work. Keep the accepted loader fixed; do not wait for Phase 3 loader sweeps. Validate changed math/runtime/precision against original-baseline model quality.
+- [hygiene.md](hygiene.md) has a narrow neutral-hygiene path: background H2D, removing redundant foreground-prefetch for GPU-ready batches and regulated GC may be preferred if matched performance/resources, correctness, quality and reliability do not regress. Label neutral hygiene honestly, not as a speed gain.
+
+## Evidence and acceptance — every production launch
+
+- Record exact job/version/attempt, source/package/configuration, parent, resources, workload and intended windows before analyzing the result. Analyze available telemetry while running and finalize on completion; failed/stopped/retried attempts stay visible.
+- Use the `spdl` CLI as the primary loader source where available. Interpret minimum sink occupancy across all ranks, low/empty-window fractions, worst-rank waits/service times and normalized aggregate/disaggregate units. Missing telemetry is a gap, never proof of health.
+- Compare completed equivalent work and CPU/memory over matched intervals/scopes. Separate startup/cold-cache, warm training and complete E2E; include recurring GC/epoch/checkpoint/communication costs in the scope they belong to. Do not select a warm window using whole-run SM percentiles or rank a result by median step time alone.
+- A repeatable speed win against the immediate validated parent triggers the established accuracy non-degradation check against the **original model baseline**. Use `speed_validated` / `accuracy_pending` until it passes. Do not invent tolerances or claim quality from tensor shapes/short speed runs. Check reliable epoch/cancellation/shutdown behavior too.
+- Stack accepted speed-and-quality wins and explicitly validated neutral hygiene. New experiments begin at that latest validated top. Revalidate each cumulative combination: independent gains need not add. A failed candidate is rejected/blocked without revoking its accepted parent's evidence; independent branches can continue.
+- Respect actual allocation, reliability and the task's speed/cost goal. Phase 2/3 resource increases can be documented tradeoffs; a generic CPU40% or cores/8 rule is not a universal veto. This does not relax initial CPU/resource parity.
+
+## Phase 3 — final parameter sweep
+
+- Freeze validated architecture, processing and model/data contract. Use [parameter_sweep.md](parameter_sweep.md) for the small parameter set justified by Phase 2 findings, including lower values and worker/stage/library-thread interactions.
+- GC policy is a Phase 2 candidate; its interval is tuned here. Node count or training batch/global schedule is not an untracked loader knob.
+- Analyze every sweep launch and confirm the winning combination's matched throughput/resources/E2E and original-baseline quality before recommending defaults. If a structural issue appears, explicitly return to Phase 2 and validate a new top.
+
+## Operating the campaign
+
+- Read [orchestration.md](orchestration.md) for dedicated persistent approach subagents in isolated worktrees and main-agent job/analysis/planning/integration duties.
+- Read [development_record.md](development_record.md) for concise attempts and per-phase records/one-pagers. Google Docs: Tab 1 index; Tabs 2/3 Phase 1 record/summary; 4/5 Phase 2; 6/7 Phase 3; later indexed diagnostic notes. Centralize shared-record updates.
+- Keep accepted source recipes and evidence linked; no automatic landing or production-default change is authorized by this workflow.

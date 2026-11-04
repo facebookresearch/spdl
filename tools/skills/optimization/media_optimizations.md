@@ -1,0 +1,68 @@
+# Remedies for Measured Media Decode and Transfer Costs
+
+Use [analysis.md](analysis.md) to identify exposed media work first; [architectures.md](architectures.md) owns empirical process/thread topology trials. Hardware/version-dependent examples are candidate shapes, not fixed winners or default concurrency targets.
+
+## CPU/native decode
+
+- Measure the complete decode path, including Python metadata, EXIF/colorspace, tensor conversion and allocations. Native bindings releasing the GIL do not make the outer Python wrapper GIL-free.
+- A native decoder replacement must preserve selected frames/timestamps, variable frame-rate behavior, colorspace/EXIF/JPEG rounding, dtype/layout, labels/masks and augmentation. Basic value/interface checks precede speed trials; original-baseline model quality follows a speed win.
+- FFmpeg filtering belongs to the supported decode/filter configuration, not an invented `convert_frames(filter_desc=...)` call. Verify public API signatures and version limits.
+- CPU RGB24 paths commonly yield channel-last tensors, while GPU paths may yield channel-first data. Inspect actual output and adapt explicitly before the model; a format name alone does not establish layout parity.
+
+## Decode only already-requested work
+
+If the original sampling contract needs a bounded temporal window, test demuxing that window rather than decoding all frames only to discard them:
+
+```python
+packets = spdl.io.demux_video(data, timestamp=(start_time, end_time))
+```
+
+- Preserve sampled timestamps, keyframe/decode dependencies and tail padding; `fps * duration` alone does not prove equivalence.
+- For an existing multi-window contract, streaming demux may amortize repeated demuxer construction:
+
+```python
+def extract_subclips(video_data, subclip_duration):
+    with spdl.io.Demuxer(video_data) as demuxer:
+        yield from demuxer.streaming_demux(
+            demuxer.video_stream_index, duration=subclip_duration
+        )
+```
+
+- Check codec/packet metadata, decoder state/flush and independently decodable boundaries. Do not silently multiply samples or alter clip/temporal distributions to improve a throughput number.
+
+## GPU versus CPU placement
+
+- Test GPU decode only if decode/placement is an identified critical-path cost. Verify hardware/codec support, filtering/resize constraints, output semantics and memory/compute interference. Dedicated engines do not make lower SM utilization a quality or speed regression; use actual completed-work throughput.
+- Keep CUDA decode/transfer in its GPU-owning trainer process. CPU fetch/demux may remain worker-side if that avoids measured interference; current supported `VideoPackets` serialization is not permission to pickle decoder contexts.
+- Use a dedicated decode executor if required for context/thread ownership. Detect actual device/codec resources and measure them; do not hardcode universal engine counts.
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+
+with ThreadPoolExecutor(max_workers=decode_workers) as decode_executor:
+    frontend = (
+        PipelineBuilder()
+        .add_source(packet_batches, continuous=True)
+        .pipe(nvdec_decode, executor=decode_executor, concurrency=decode_concurrency)
+        .aggregate(batch_size, drop_last=baseline_drop_last)
+        .pipe(collate)
+        .add_sink(buffer_size=sink_depth)
+        .build(num_threads=frontend_threads)
+    )
+    try:
+        for epoch in range(num_epochs):
+            for batch in frontend.get_iterator(timeout=batch_timeout):
+                train_step(batch)
+    finally:
+        frontend.stop()
+```
+
+`nvdec_decode` and `collate` are verified workload callables; GPU buffers require a compatible collate. This shape is not a required replacement. Compare CPU/GPU placement including H2D, model activity, memory and stream handoff. Once placement is retained, concurrency/decoder-thread tuning belongs to [parameter_sweep.md](parameter_sweep.md).
+
+## H2D and GPU preprocessing
+
+- Distinguish the cost of CPU pinning, tensor traversal, DMA transfer, stream synchronization and downstream preprocessing. H2D of many ragged/small objects may lose to allocation/dispatch even if kernels are faster.
+- `transfer_tensor_h2d` pins CPU tensors, copies using a thread-local CUDA stream and synchronizes that stream before returning. Background execution relative to foreground training can overlap work; the call is not a guarantee of immediate asynchronous return.
+- Match boundary bytes/tensor counts and buffer retention. GPU preprocessing must finish before model consumption and establish correct stream dependencies/tensor lifetime. A new Python background thread alone is insufficient.
+- Move CPU processing to GPU only as an attributable critical-path candidate; preserve values/layout/masks/timestamps and explicitly record RNG/precision changes. Re-profile after changing placement and validate model quality.
+- For neutral background-H2D and redundant foreground-prefetch hygiene, use [hygiene.md](hygiene.md); the initial migration still preserves its original transfer contract.
