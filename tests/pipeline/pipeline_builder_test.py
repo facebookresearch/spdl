@@ -18,7 +18,7 @@ import threading
 import time
 import unittest
 import warnings
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from concurrent.futures import (
     BrokenExecutor,
     Future,
@@ -888,7 +888,7 @@ class TestPipelineHook(unittest.TestCase):
 
         class _failure_capture_hook(TaskHook):
             @asynccontextmanager
-            async def task_hook(self, input_item=None):
+            async def task_hook(self, input_item: Any = None) -> AsyncIterator[None]:
                 try:
                     yield
                 except StopAsyncIteration:
@@ -1214,7 +1214,7 @@ class TestPipelineOrder(unittest.TestCase):
     def test_pipeline_order_input_sync_func(self) -> None:
         """The output is in the order of the input."""
 
-        def _sleep(i):
+        def _sleep(i: int) -> int:
             print(f"Sleeping: {i}")
             time.sleep(i / 10)
             print(f"Returning: {i}")
@@ -3416,7 +3416,7 @@ class TestStageFinalizationCancellation(unittest.TestCase):
     def test_type_error(self) -> None:
         """A stage TypeError surfaces despite finalization cancellation."""
 
-        async def wrong_sig(i, _):
+        async def wrong_sig(i: int, _: object) -> int:
             return i
 
         self._assert_fails(
