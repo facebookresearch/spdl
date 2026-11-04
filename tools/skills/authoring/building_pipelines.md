@@ -1,6 +1,8 @@
 # Building an Efficient SPDL Pipeline From Scratch
 
-Instructions for authoring a **new** SPDL data pipeline (greenfield) that keeps the GPU fed without starving it or triggering the noisy-neighbour effect. If you are converting an *existing* PyTorch `DataLoader`/`Dataset`, start from `migrating_to_spdl_pipeline.md` instead — it covers the same construction patterns plus how to decompose existing `__getitem__`/iterator code. This guide is for when there is no prior loader to migrate.
+Instructions for authoring a **new** SPDL data pipeline (greenfield) that keeps the GPU fed without starving it or triggering the noisy-neighbour effect. If any baseline loader exists (including MDL, PyTorch `DataLoader`/`Dataset`, or a custom loader), first follow `migrating_to_spdl_pipeline.md` (the migration reference bundled with this skill; canonical source: `fbcode/spdl/tools/skills/migration/migrating_to_spdl_pipeline.md`): reuse its components with minimal deviation and establish correctness and measured end-to-end performance parity before stage decomposition or custom optimization. Rewriting an existing loader is not greenfield. This guide's construction patterns are for when there is no prior loader to migrate, or for experiments after the migration gate passes.
+
+For a genuinely new pipeline, first establish a working end-to-end SPDL control before custom tuning; do not invent a legacy-loader comparison.
 
 ## Mental Model
 
@@ -10,7 +12,7 @@ An SPDL pipeline is a series of stages connected by queues. Each stage runs conc
 source → pipe(fetch) → pipe(decode) → aggregate(batch) → pipe(collate) → pipe(transfer) → sink
 ```
 
-The core idea for efficiency: **classify every operation by its nature and give each its own stage with independent concurrency.** Never bundle operations of different natures (e.g. network fetch + CPU decode) into one function — they need different concurrency and would block each other.
+The core starting pattern for efficiency is to **classify operations by nature and test stage boundaries with independent concurrency**. Keep fused work when splitting adds overhead or fails correctness; an existing loader must first pass the minimal-change migration gate.
 
 | Nature | Examples | Stage design |
 |---|---|---|
@@ -55,7 +57,7 @@ for epoch in range(num_epochs):
 
 ## Efficiency Principles
 
-1. **One nature per stage.** Split I/O, CPU, and GPU work into separate `.pipe()` calls with independent `concurrency`. This is the single biggest lever.
+1. **Test stage boundaries.** Compare separate I/O, CPU, and GPU `.pipe()` stages with independent `concurrency` against fused alternatives. Keep the end-to-end winner; do not split an existing loader before migration parity.
 2. **Respect the CPU budget.** Keep total CPU utilization ≤ 40% — above that, the OS can't schedule GPU kernel launches promptly (the noisy-neighbour effect) and the GPU idles even with data ready. Do not set concurrency higher than `num_CPU_cores / 8`. Using all CPUs for data loading is an anti-pattern.
 3. **Use `spdl.io` for media.** Replace Pillow/TorchVision/torchaudio with `spdl.io` for image/video/audio — it releases the GIL, keeps data in native format until batch creation, and converts zero-copy into one contiguous batch tensor.
 4. **Async stage functions: pass them as-is.** `.pipe()` accepts both sync (`def`) and async (`async def`) callables. Pass a coroutine function **directly** — SPDL awaits it on its own event loop and drives up to `concurrency` of them at once on a single thread, which is ideal for I/O-bound work.
@@ -190,7 +192,7 @@ When variants genuinely differ in topology (not just an argument), inline each o
 
 ## Checklist
 
-- [ ] Every operation classified by nature and given its own stage
+- [ ] Operations classified by nature; stage boundaries measured, retaining fused work when splitting loses
 - [ ] I/O stages high concurrency (16-32); CPU stages moderate (4-8); GPU transfer isolated (1 worker)
 - [ ] Media decoding uses `spdl.io` (not Pillow/TorchVision) where applicable
 - [ ] Async functions passed to `.pipe()` as-is (no `asyncio.run()` wrapping)

@@ -1,246 +1,40 @@
-# Migrating Data Loaders to SPDL Pipeline
+# Migrating Data Loaders to SPDL
 
-Instructions for converting existing data loading code (PyTorch DataLoader, StatefulDataLoader, or any Dataset/iterable-based loader) into an SPDL Pipeline.
+## 1. Preserve the baseline
 
-## Goal
+- Capture the original loader/model revision, effective data/configuration, sampler/sharding, seed, batching, workers/prefetch, cache state, CPU allocation, training topology and comparison windows. Keep the original path reproducible.
+- Construct SPDL orchestration with `PipelineBuilder` or a complete `PipelineConfig`, choosing the closest execution/ownership graph. For an original multiprocessing loader, a multiprocessing region is often closest; do not force threading or MTP first.
+- Compose the SPDL pipeline from the original implementation's **functions and classes** for sampling, lookup/cache, decode, transforms, fused collate and transfer. Reuse the processing building blocks, not the original loader's orchestration. Ordinary trainer-interface adaptation is compatible with this requirement. If extraction is necessary, share it between both paths and compare against the untouched original.
+- Preserve batch membership/order, partial-batch policy, worker-local state/RNG, epoch/restart behavior, constructor probes, pinning and H2D boundaries. Record unavoidable deviations; loss alone does not prove equivalence. For TorchTNT constructor probes, read [constructor_probe.md](constructor_probe.md).
+- Do not split/rewrite collate, change decoder/cache formats, introduce RPC/GPU preprocessing/custom memory pools, change training topology/batch size, or run broad tuning before parity. Fused work may already avoid allocation/copy/coordination overhead; a cache-heavy local path may lose to RPC serialization/network cost.
 
-Produce the final-form SPDL pipeline directly. Do not preserve intermediate compatibility layers or Dataset abstractions.
+## 2. Iterate locally and record joint parity evidence
 
-Build the replacement explicitly with `PipelineBuilder` or as a complete `PipelineConfig`. Do not carry a boxed, preassembled, or domain-specific loader abstraction into the final design. Existing wrappers may be inspected as structural references, but recreate their required stages and configuration directly with SPDL primitives.
+Use matched local original-loader/SPDL tests as the fast inner loop; separate detailed consistency checks from timed runs.
 
-## Analysis: Decompose the Existing Data Loading Logic
+- **Data:** compare sample IDs/order, output values/shapes/dtypes, lengths, masks/padding, controlled augmentation/RNG, epoch/probe/restart behavior and applicable quality checks. Exercise actual lookup/decode/transform/collate and process boundaries, not unrelated synthetic work or repeated cached output batches.
+- **Matched setup:** use the same machine/CPU allocation, representative data, sampler/seed, batch count/size, workers/prefetch, cache state, warmup and consumer work. Choose windows before examining results; repeat to resolve noise.
+- **Paired point:** report `(CPU utilization, throughput)` over the same interval. Include the full loader/harness process tree: frontend/orchestration, all workers and native/feeder/pin threads. Use one CPU normalization and exclude unrelated colocated work from both arms.
+- **Accounting:** aggregate user+system CPU-seconds divided by elapsed wall time gives core equivalents; divide by the same allocated core count for utilization percent. Throughput is completed equivalent samples/batches divided by that same wall time. Missing worker accounting or different windows are not a valid pair.
+- **Acceptance:** points must be close within repeat-run variation or an established tolerance; comparable/better throughput with no greater CPU demand is acceptable. Materially more CPU to match throughput fails initial migration parity, even below a generic host-CPU budget. Do not invent a tolerance or hide unresolved variability.
+- **Training confirmation:** local tests accelerate iteration but do not replace matched end-to-end training and model-quality validation. Compare completed work/complete step time with the same data, model, resources and declared windows. Separate startup/cold-cache from warm/E2E scopes; retain recurring costs within their proper scope.
+- **Baseline receipt:** record component reuse/deviations, correctness results, exact local/job/revision/configuration references, paired CPU/throughput values, memory metric/scope, windows/coverage and pass/unresolved verdict. A runnable pipeline, full sink, near-zero fetch wait or loader-only QPS is not parity evidence.
 
-Before writing any SPDL code, analyze the existing `__getitem__`, `__iter__`, or collate logic and classify each operation by its nature:
+Repair attributed adapter, scheduling, state-ownership or process-boundary overhead before parity with the smallest semantics-preserving change, then repeat these checks. This is necessary migration repair, not permission for speculative optimization.
 
-| Nature | Examples | SPDL Stage Design |
-|---|---|---|
-| **Network I/O** | HTTP fetch, blob store read, database query, file download | `.pipe(fn, concurrency=16-32, output_order="completion")` |
-| **Disk I/O** | Local file read, mmap access | `.pipe(fn, concurrency=8-16)` |
-| **CPU-bound (GIL-free)** | Image/video/audio decode, tokenization (tiktoken), tensor ops, NumPy | `.pipe(fn, concurrency=4-8)` |
-| **CPU-bound (GIL-holding)** | Pure Python transforms, non-GIL-releasing libraries | `.pipe(fn, concurrency=1)` — minimize or replace |
-| **Batching** | Collation, stacking tensors | `.aggregate(batch_size)` then `.pipe(collate_fn)` |
-| **GPU transfer** | `.to(device)`, pinned memory copy | `spdl.io.transfer_tensor_h2d` in a dedicated 1-worker ThreadPoolExecutor (see below) |
+## 3. Diagnose a non-empty sink with slower training
 
-### Key Questions to Ask
+A 100% occupation rate means the sink is non-empty, not necessarily full. With lower end-to-end throughput it prioritizes **main/trainer-process GIL contention** as a hypothesis, not a proven cause; slowed consumption can let the sink refill despite frontend interference.
 
-1. **What does each operation in `__getitem__` / the iterator actually do?** Split monolithic functions into separate stages by nature.
-2. **Does each operation release the GIL?** If not, can it be replaced with a GIL-releasing alternative? (e.g., Pillow → `spdl.io`, custom Python parsing → C extension)
-3. **Is each operation thread-safe?** If not, use thread-local storage (TLS). HuggingFace tokenizers require TLS; tiktoken is safe.
-4. **What is the data flow?** Identify where items multiply (disaggregate) or combine (aggregate).
+- Confirm matched progress/complete-step windows and all-rank minimum sink occupancy, low/empty-window fractions, QPS and put/get waits. Cross-rank averages can hide starvation.
+- Inspect blocking summaries/blind spots and capture actual GIL-holder Python/native stacks across all trainer-process threads. Correlate source/feeder serialization, result deserialization, pinning, callbacks and model work with the slowdown.
+- Distinguish an actual holder from a named event-loop victim such as `disaggregate`, isolated workers from the trainer, and one-time bootstrap from recurring queue-feeder serialization. Separately attribute synchronous work blocking the asyncio loop. Missing profiling means unresolved attribution; do not tune blindly.
+- If recursive request pickling is the confirmed regression, restore compact process-boundary inputs and worker-side materialization while retaining data/processing semantics. Do not remove a named victim based on a warning alone.
+- Recheck correctness, CPU cost and complete-work throughput after repair. Initial optimization remains blocked until joint parity passes; model/communication/memory/transfer stalls may coexist.
 
-## Extracting Stage Functions from Existing Code
+## 4. Record capacity and hand off after parity
 
-When decomposing `__getitem__` or iterator logic into pipeline stages, prefer **Path 1** (leave original intact). If numerical issues arise, fall back to **Path 2** (refactor original).
-
-### Path 1: Reimplement Separately (Default)
-
-Write new standalone functions for each stage based on reading and understanding the original implementation. Leave the original `__getitem__`/Dataset code untouched. This allows the user to run both pipelines side-by-side and compare outputs for correctness.
-
-### Path 2: Refactor Original (Fallback)
-
-If the user reports numerical discrepancies between the original and new pipeline, refactor the original `__getitem__` implementation to call the same extracted functions used by the SPDL pipeline. This ensures both paths share identical logic, making it possible to isolate whether differences come from the extraction or from pipeline execution order/threading.
-
-Inform the user: "If you observe any numerical differences between the original loader and the new SPDL pipeline, I can refactor the original implementation to use the same extracted functions, so you can verify the extraction itself is not the source of divergence."
-
-## Preserve or Explicitly Remove Constructor-Probe Semantics
-
-When migrating a child of `torchtnt.utils.data.MultiDataLoader`, account for
-its constructor probe: `MultiDataLoader.__init__` calls
-`next(iter(child_loader))` to reject empty children. With a persistent PyTorch
-`DataLoader`, this is not a harmless peek. The worker pool initially receives
-`num_workers * prefetch_factor` tasks, returns one batch, and refills one task.
-Thus up to `W * P + 1` batches can execute and be discarded before the real
-training iterator, while worker-local dataset, cache, and RNG state persists.
-For example, `W=12` and `P=2` can discard 25 executed batches; this illustrates
-the formula, not a universal count.
-
-A naive adapter that bypasses `MultiDataLoader.__init__` or wraps a continuous
-SPDL pipeline changes numerical behavior as well as startup and cache behavior.
-Do not fix the constructor check with a plain iterable wrapper: abandoning the
-first SPDL iterator can leave an epoch in flight.
-
-Migration parity must either reproduce the probe or consciously remove and
-document it. For exact emulation, use the same persistent worker pool,
-drain/discard the probe work, reset the sampler to epoch 0, realign worker
-dispatch when necessary, and preserve worker-local state. The baseline refill
-boundary is after CPU pinning and before an external host-to-device transfer.
-Because `spdl.io.transfer_tensor_h2d` combines pinning and copying, an exact
-topology may require a separate pin-only stage before H2D.
-
-Verify parity below loss metrics. Record worker IDs and call counts, sampler
-indices, pre-transform RNG fingerprints, and post-collate tensor hashes for the
-probe and initial training batches. Also verify the collate implementation:
-custom collates may not use `default_collate`'s shared-storage `out=` fast path,
-so do not assume identical allocation or copy behavior.
-
-## Constructing the Pipeline
-
-### Source
-
-Replace sampler/index logic:
-
-```python
-from spdl.dataloader import PipelineBuilder
-from spdl.source import DistributedRandomSampler
-
-source = DistributedRandomSampler(num_samples, rank=rank, world_size=world_size)
-```
-
-Or any iterable that yields keys/paths/metadata for downstream stages.
-
-### Stages
-
-Map each classified operation to a `.pipe()` stage with appropriate concurrency. Separate operations of different natures into distinct stages — never bundle network I/O and CPU decode in one function.
-
-`.pipe()` accepts both sync (`def`) and async (`async def`) callables. If the original loader used `async` I/O (e.g. `aiohttp`), **pass the coroutine function to `.pipe()` as-is** — SPDL awaits it on its own event loop. Do **not** wrap it as `asyncio.run(coro(x))`: that spins up and tears down a brand-new event loop on every item — pure per-item overhead — and forces the work onto worker threads instead of running as cheap cooperative coroutines on SPDL's shared event loop.
-
-Use `PriorityThreadPoolExecutor` from `spdl.pipeline` as the shared executor. It prioritizes downstream stages over upstream ones — when the thread pool is contended, items closer to the pipeline output are processed first, reducing end-to-end latency and ensuring data flows through the pipeline faster.
-
-```python
-from spdl.pipeline import PipelineBuilder, PriorityThreadPoolExecutor
-
-pool = PriorityThreadPoolExecutor(max_workers=num_threads)
-
-pipeline = (
-    PipelineBuilder()
-    .add_source(source, continuous=True)
-    .pipe(fetch_data, executor=pool.get_executor(), concurrency=24)   # network I/O
-    .pipe(decode, executor=pool.get_executor(), concurrency=8)        # CPU, GIL-free
-    .aggregate(batch_size, drop_last=True)
-    .pipe(collate, executor=pool.get_executor())                      # batching
-    .add_sink(buffer_size=3)
-    .build(num_threads=1)
-)
-```
-
-Each `pool.get_executor()` call auto-assigns increasing priority to later (downstream) stages. The pipeline's own thread pool can be set to 1 since execution is delegated to the priority executor.
-
-### Media Workloads: Use spdl.io
-
-For image/video/audio, replace Pillow/TorchVision/torchaudio with `spdl.io` to eliminate redundant memory allocation:
-
-```python
-import spdl.io
-
-filter_desc = spdl.io.get_video_filter_desc(scale_width=224, scale_height=224)
-
-def decode_image(path: str):
-    packets = spdl.io.demux_image(path)
-    return spdl.io.decode_packets(packets, filter_desc=filter_desc)
-
-def collate_frames(items):
-    frames, labels = list(zip(*items, strict=True))
-    buffer = spdl.io.convert_frames(frames)
-    tensor = spdl.io.to_torch(buffer).permute(0, 3, 1, 2)
-    return tensor, labels
-```
-
-`spdl.io` keeps data in native format (e.g., YUV420) until batch creation, then converts directly into one contiguous batch tensor with zero-copy to PyTorch.
-
-### GPU Transfer: `spdl.io.transfer_tensor_h2d`
-
-Always use `spdl.io.transfer_tensor_h2d` for moving batches to GPU. It pins memory and uses a dedicated CUDA stream internally, enabling overlap of data transfer and compute.
-
-Run it in a **dedicated ThreadPoolExecutor with 1 worker** to isolate the transfer thread from pipeline worker threads. This ensures the CUDA stream is not shared and transfer does not contend with CPU stages:
-
-```python
-from concurrent.futures import ThreadPoolExecutor
-from spdl.io import transfer_tensor_h2d
-
-_gpu_executor = ThreadPoolExecutor(max_workers=1)
-
-pipeline = (
-    PipelineBuilder()
-    ...
-    .pipe(transfer_tensor_h2d, executor=_gpu_executor)
-    .add_sink(buffer_size=3)
-    .build(num_threads=1)
-)
-```
-
-### Production: Multi-Threading in Subprocess (MTP)
-
-For production training, isolate CPU work in a subprocess to avoid GIL contention with GPU kernels:
-
-```python
-import spdl.pipeline
-from concurrent.futures import ThreadPoolExecutor
-from spdl.io import transfer_tensor_h2d
-from spdl.pipeline import PipelineBuilder, PriorityThreadPoolExecutor
-
-_gpu_executor = ThreadPoolExecutor(max_workers=1)
-
-# All CPU work — runs in subprocess with priority scheduling
-pool = PriorityThreadPoolExecutor(max_workers=num_threads)
-
-backend = (
-    PipelineBuilder()
-    .add_source(source, continuous=True)
-    .pipe(fetch_data, executor=pool.get_executor(), concurrency=24)
-    .pipe(decode, executor=pool.get_executor(), concurrency=8)
-    .aggregate(batch_size, drop_last=True)
-    .pipe(collate, executor=pool.get_executor())
-    .add_sink(buffer_size=3)
-)
-
-source2 = spdl.pipeline.run_pipeline_in_subprocess(
-    backend.get_config(),
-    num_threads=num_threads,
-)
-
-# GPU transfer only — runs in main process, dedicated thread + CUDA stream
-frontend = (
-    PipelineBuilder()
-    .add_source(source2, continuous=True)
-    .pipe(transfer_tensor_h2d, executor=_gpu_executor)
-    .add_sink(buffer_size=3)
-)
-pipeline = frontend.build(num_threads=1)
-```
-
-Always benchmark a multiprocessing execution region regardless of data
-modality; it is especially promising for small text or image records. Use
-`.to(ProcessPoolExecutorConfig(...))` ... `.to(MAIN_PROCESS)` around adjacent
-I/O and CPU stages instead of assigning process executors stage by stage. Each
-worker runs the region as a nested Pipeline with its own async event loop, so
-large intermediates remain in-worker. For GPU training, compose the region with
-`run_pipeline_in_subprocess()` and keep GPU transfer in the frontend.
-
-## Constraints
-
-### Pickling (required for MTP subprocess mode)
-
-Stage functions must be picklable. Use module-level functions with `functools.partial`, or callable classes with `__getstate__`/`__setstate__`. Never use lambdas or nested functions.
-
-### Thread Safety
-
-- HuggingFace tokenizers: NOT thread-safe — wrap in TLS (`threading.local`)
-- tiktoken: thread-safe, no TLS needed
-- `spdl.io`: thread-safe
-- PyTorch/NumPy ops: generally thread-safe and GIL-releasing
-
-### Concurrency Budget
-
-Keep total CPU utilization ≤ 40% to avoid the noisy-neighbour effect on GPU kernel scheduling. Do not set concurrency higher than `num_CPU_cores / 8`.
-
-## Training Loop
-
-```python
-for epoch in range(num_epochs):
-    for batch in pipeline.get_iterator(timeout=900):
-        train_step(batch)
-```
-
-Prefer `for batch in pipeline.get_iterator():` over manually calling `next(iterator)` — the manual approach requires extra `StopIteration` handling that complicates the code for no benefit.
-
-## Checklist
-
-- [ ] Decomposed monolithic `__getitem__`/iterator into stages by operation nature
-- [ ] Each stage function releases GIL (or has concurrency=1 if unavoidable)
-- [ ] Thread-unsafe libraries wrapped in TLS
-- [ ] Media decoding uses `spdl.io` (not Pillow/TorchVision) where applicable
-- [ ] Batching uses `.aggregate()` + explicit collate stage
-- [ ] Production benchmarks compare MTP and an MP region for every data modality
-- [ ] Stage functions are picklable (module-level or callable classes)
-- [ ] Total concurrency respects CPU budget (≤ 40% utilization)
-- [ ] Replacement assembled explicitly with `PipelineBuilder` or a complete `PipelineConfig`, not a boxed loader
+- Plot original/minimal-SPDL loader-only capacity **without training load**: x = consistently normalized CPU utilization; y = throughput and memory on labelled axes/panels. Match representative inputs/cache/consumer work and report worker/resource settings, intervals/repeats and shared-memory accounting; summed shared RSS is not unique memory.
+- At least **2x throughput at comparable resource cost** makes fewer training nodes a separate later candidate, not scaling proof or permission to change Phase 1 topology. Validate that candidate's global-batch/schedule/data semantics, GPU/communication behavior, end-to-end cost/speed and original-baseline quality.
+- Save the passing minimal SPDL source/configuration and evidence. Post-parity architecture changes use measured bottlenecks; model accuracy uses the original model baseline, and new experiments follow the validated cumulative top with immediate-parent speed comparisons. Final parameter sweeps wait until architecture is finalized.
+- Optional construction examples are in [pipeline_patterns.md](pipeline_patterns.md); load them only when implementing the relevant shape. They are not baseline prerequisites.
