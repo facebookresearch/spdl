@@ -58,7 +58,7 @@ for epoch in range(num_epochs):
 ## Efficiency Principles
 
 1. **Test stage boundaries.** Compare separate I/O, CPU, and GPU `.pipe()` stages with independent `concurrency` against fused alternatives. Keep the end-to-end winner; do not split an existing loader before migration parity.
-2. **Respect the CPU budget.** Keep total CPU utilization ≤ 40% — above that, the OS can't schedule GPU kernel launches promptly (the noisy-neighbour effect) and the GPU idles even with data ready. Do not set concurrency higher than `num_CPU_cores / 8`. Using all CPUs for data loading is an anti-pattern.
+2. **Respect measured resource limits.** Use the actual CPU allocation and observed end-to-end throughput, contention and memory/reliability limits. Generic 40% CPU or `cores / 8` heuristics are not proof of interference or unconditional Phase 2/3 vetoes. An existing-loader migration still requires the initial matched-resource parity gate.
 3. **Use `spdl.io` for media.** Replace Pillow/TorchVision/torchaudio with `spdl.io` for image/video/audio — it releases the GIL, keeps data in native format until batch creation, and converts zero-copy into one contiguous batch tensor.
 4. **Async stage functions: pass them as-is.** `.pipe()` accepts both sync (`def`) and async (`async def`) callables. Pass a coroutine function **directly** — SPDL awaits it on its own event loop and drives up to `concurrency` of them at once on a single thread, which is ideal for I/O-bound work.
 
@@ -72,16 +72,23 @@ for epoch in range(num_epochs):
 
    **Do not** wrap it as `asyncio.run(fetch(x))`: that spins up and tears down a brand-new event loop on every single item — pure per-item overhead — and forces the work onto pipeline worker threads instead of running as cheap cooperative coroutines on SPDL's shared event loop.
 5. **`transfer_tensor_h2d` for GPU.** Use `spdl.io.transfer_tensor_h2d` in a dedicated `ThreadPoolExecutor(max_workers=1)` so it gets its own CUDA stream and overlaps transfer with compute.
-6. **Batching is two steps.** `.aggregate(batch_size, drop_last=True)` then a `.pipe(collate)` stage. `drop_last=True` avoids partial-batch shape mismatches under DDP.
+6. **Preserve the batch contract.** Use aggregate/collate semantics appropriate to the workload; retain the original batch membership and partial-batch policy when migrating. Do not add `drop_last=True` as an unchecked architecture optimization.
 7. **Iterate with a timeout.** Prefer `pipeline.get_iterator(timeout=<seconds>)` over `for batch in pipeline` / manual `next()` — it prevents jobs from hanging forever on a stall.
 
 ## Going to Production: Benchmark MTP and MP Regions
 
-For production training, always benchmark both MTP and an MP execution region, regardless of data modality. MTP isolates the CPU-heavy stages in one subprocess and keeps only GPU transfer in the main process; it is a strong starting point for large payloads such as video. Use `PipelineBuilder.to(ProcessPoolExecutorConfig(...))` to run adjacent I/O and CPU stages in multiple worker processes, then close the region with `.to(MAIN_PROCESS)`. MP regions are especially promising for small text or image records, but must also be tried for video, audio, and other workloads. Each worker runs a nested Pipeline and async event loop, so intermediate values stay in-worker instead of crossing IPC after every stage. Avoid assigning a process executor stage by stage.
+For production training, compare relevant MTP, multiprocessing-region and
+threading candidates in Phase 2 after the control is established. There is no
+mandatory winner or required list for every data modality. Keep adjacent region
+processing in-worker, preserve data/order/state semantics, and avoid per-stage
+process executors that add repeated IPC. Use the maintained architecture recipes.
 
-For GPU training, compose the MP region with `run_pipeline_in_subprocess()` so orchestration also stays outside the GPU-driving process. Stage functions and region-boundary values must be **picklable** (module-level functions with `functools.partial`, or callable classes — never lambdas or nested functions). See `optimization_strategies.md` for complete MTP and MP-region patterns and selection guidance.
+Keep GPU work in the appropriate trainer-side frontend. An outer
+`run_pipeline_in_subprocess()` wrapper around a region is a measured optional
+orchestration choice, not mandatory. Callables and region-boundary values must
+be picklable and resource ownership/lifetime must be validated.
 
-See `migrating_to_spdl_pipeline.md` for the full MTP construction pattern, pickling/thread-safety constraints, and media (`spdl.io`) recipes — they apply identically to a from-scratch build. The optimization guide also covers concurrency search, subprocess IPC / shared-memory arena, GPU (NVDEC) video decode, decoder-thread tuning, GC-stall mitigation, and headspace analysis.
+For optional construction and pickling/transfer examples, use the bundled `pipeline_patterns.md`; `migrating_to_spdl_pipeline.md` owns baseline parity, not the construction catalog. The maintained optimization reference map routes architecture recipes and the post-finalization parameter sweep separately.
 
 ## Pipeline Lifecycle and Cleanup
 
@@ -197,8 +204,8 @@ When variants genuinely differ in topology (not just an argument), inline each o
 - [ ] Media decoding uses `spdl.io` (not Pillow/TorchVision) where applicable
 - [ ] Async functions passed to `.pipe()` as-is (no `asyncio.run()` wrapping)
 - [ ] Batching uses `.aggregate()` + an explicit collate stage
-- [ ] Total concurrency respects the CPU budget (≤ 40% utilization)
-- [ ] Production benchmarks compare MTP and an MP region for every data modality
+- [ ] Total concurrency fits the actual allocation and measured end-to-end resource/reliability limits
+- [ ] Relevant architecture candidates compared after the control is established; no mandatory MTP/MP list or outer wrapper
 - [ ] Iterated via `get_iterator(timeout=...)`
 - [ ] Pipeline assembled explicitly with `PipelineBuilder` or a complete `PipelineConfig`, not a boxed loader
 - [ ] Each pipeline shape is a single readable builder chain (no partial-construction helpers)

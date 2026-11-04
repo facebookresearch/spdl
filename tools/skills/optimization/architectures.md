@@ -1,0 +1,83 @@
+# Empirical Execution-Architecture Exploration
+
+Use [workflow.md](workflow.md) for the Phase 1 parity gate and acceptance rules. Architecture switching is an empirical exception to bottleneck-remedy selection: MP, MT and MTP performance depends on actual processing, GIL release, process state and boundary representations, so traces alone need not predict the winner. Mark these trials **architecture exploration**, keep processing/data semantics and bounded resources comparable, and analyze every result with [analysis.md](analysis.md) and [pipeline_stats.md](pipeline_stats.md).
+
+## Common contract
+
+- Start from the latest validated top after initial parity. Reuse its functions/classes, source/batching/order, worker RNG/epoch semantics and transfer boundary; record unavoidable differences and quality risk.
+- A pipe's concurrency is in-flight capacity, not thread count or CPU usage. Shared and dedicated executor capacities, per-worker stages and native library threads all matter.
+- Async callables run on their loop; blocking synchronous work belongs in an executor/process. Threaded performance depends on the complete callable's GIL/thread-safety behavior, not a library or data-modality label.
+- Keep adjacent worker processing and large intermediates local where the chosen topology supports it. Additional process boundaries add serialization, dispatch and memory costs; isolation is not free.
+- Keep GPU operations in their owning trainer process and validate stream/buffer lifetime. Preserve routine trainer integration rather than imposing a new wrapper design.
+- No architecture or fixed list of trials is mandatory. Do not combine the topology comparison with broad parameter sweeps or unrelated processing/model changes. Minimum safety/runnability settings are recorded; final tuning belongs to [parameter_sweep.md](parameter_sweep.md).
+
+## In-process multithreading
+
+- Use the existing operations with bounded stage/shared-executor capacity; it can win when operations release the GIL or process-boundary overhead is large relative to useful work.
+- Inspect actual main-process holders/loop blockers, OS scheduling and pin/transfer/dispatch interference. A full sink and near-zero fetch wait do not clear the frontend.
+- A priority executor can favor downstream stages; test it as its own attributable hypothesis rather than adding it to every topology trial. Avoid redundant large executor pools.
+
+## Multiprocessing execution regions
+
+`PipelineBuilder.to` opens a sequence of stages executed in worker-local nested pipelines. Only boundary inputs/outputs cross processes; intermediates stay inside the worker.
+
+```python
+from spdl.pipeline import PipelineBuilder
+from spdl.pipeline.defs import MAIN_PROCESS, ProcessPoolExecutorConfig
+
+backend = (
+    PipelineBuilder()
+    .add_source(source, continuous=True)
+    .aggregate(batch_size, drop_last=baseline_drop_last)
+    .to(ProcessPoolExecutorConfig(max_workers=workers), buffer_size=input_buffer)
+    .pipe(fetch_batch)
+    .pipe(transform_batch)
+    .pipe(collate_batch)
+    .to(MAIN_PROCESS, buffer_size=output_buffer)
+    .add_sink(buffer_size=sink_depth)
+)
+```
+
+- This example assumes the retained functions consume batches; do not change training batching merely to fit it. Regions are often closest to an original multiprocessing loader during migration.
+- Close the region before the sink; `MAIN_PROCESS` is the process driving that graph, which may itself be a subprocess. Per-stage process executors pay repeated IPC and are a different topology.
+- Callables and boundary payloads must be picklable; intermediate values need not be. Keep requests compact where compatible. Region buffers group transport, not training samples; whole-transfer assignment/fill can change latency and balance.
+- Account for `workers * stage_concurrency`, worker pools and library threads across ranks. Preserve source ordering explicitly: independently completing workers do not imply global input order. Validate order restoration and worker RNG/state behavior.
+- Preserve the baseline process-start method or use supported defaults unless compatibility requires a documented change. Repair import/pickling/initialization failures without silently changing the tested architecture.
+
+## Multithreading in a subprocess (MTP)
+
+MTP isolates one multithreaded CPU pipeline and leaves GPU work in the trainer. This removes backend threads from the trainer's GIL domain, not frontend serialization/pinning/transfer costs.
+
+```python
+from spdl.pipeline import PipelineBuilder, run_pipeline_in_subprocess
+
+backend = (
+    PipelineBuilder()
+    .add_source(source, continuous=True)
+    .pipe(lookup_fn)
+    .pipe(process_fn, concurrency=process_concurrency)
+    .aggregate(batch_size, drop_last=baseline_drop_last)
+    .pipe(collate_fn)
+    .add_sink(buffer_size=sink_depth)
+)
+cpu_batches = run_pipeline_in_subprocess(
+    backend.get_config(), num_threads=worker_threads
+)
+```
+
+- Pass a complete `PipelineConfig`, not a built pipeline or iterator. A GPU-owning frontend consumes `cpu_batches`; keep the original transfer contract unless a separate experiment changes it.
+- A continuous re-iterable source can keep the backend warm across epochs. Preserve original sampler/shuffle/seed and source lifetime; do not turn one-shot input into unbounded repeat or flatten epochs accidentally.
+- The MP-region graph above may also run inside MTP when evidence warrants isolating orchestration. An extra outer subprocess is optional, not required around every region.
+- Large worker-local payloads may favor MTP; small records may favor process parallelism; aggressive caching can make fixed IPC dominate. These are possible mechanisms, not predetermined outcomes.
+
+## Process state and pickling
+
+- Prefer importable module-level callables/`functools.partial` or callable objects with explicit picklable state. Existing bound methods may be reused if their instance state is picklable; they are not categorically invalid.
+- Initialize unpicklable clients/thread-local resources in their actual owner from a compact configuration. Do not capture a live `threading.local`, executor or CUDA context across the boundary.
+- Large captured metadata can make bootstrap expensive. Separate bootstrap from recurring submission/result costs before choosing a representation repair.
+- Classes do not bypass imports during unpickling. Diagnose zero-output/crash runs from actual stacks/logs; do not assume every startup failure is a pickling problem or silently drop failed examples.
+- Thread-local copies can isolate mutable non-thread-safe objects, but must preserve behavior and memory budgets; not every tokenizer/decoder requires TLS.
+
+## Interpret the trial
+
+Compare completed-work throughput, full process-tree CPU/memory, queues, startup and recurring costs against the accepted parent. Explain observed service/dispatch/IPC/GIL effects or mark attribution unresolved. A new topology can be faster without the expected mechanism; do not invent causality. Proven speed then original-baseline accuracy/reliability governs acceptance; update the validated top before new trials.
