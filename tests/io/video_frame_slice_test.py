@@ -15,7 +15,7 @@ from spdl.io import get_video_filter_desc
 from ..fixture import FFMPEG_CLI, get_sample
 
 
-def _to_numpy(frames):
+def _to_numpy(frames: spdl.io.VideoFrames) -> np.ndarray:
     buffer = spdl.io.convert_frames(frames)
     return spdl.io.to_numpy(buffer)
 
