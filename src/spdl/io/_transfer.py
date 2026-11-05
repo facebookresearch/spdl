@@ -14,8 +14,7 @@ import os
 import threading
 from collections import defaultdict
 from collections.abc import Callable, Mapping
-from dataclasses import fields, is_dataclass
-from functools import partial
+from dataclasses import dataclass, fields, is_dataclass
 from types import ModuleType
 from typing import Any, cast, TYPE_CHECKING, TypeVar
 
@@ -88,41 +87,98 @@ def _transfer(obj: T, device: "TDevice", pinned_memory_cache: "set[Tensor]") -> 
     return obj
 
 
+@dataclass(eq=False)
+class _IncompleteH2D:
+    sources: "set[Tensor]"
+    destinations: "set[Tensor]"
+    stream: "torch.cuda.Stream"
+
+
+_FAILED_H2D: list[_IncompleteH2D] = []
+_FAILED_H2D_LOCK = threading.Lock()
+
+
 class _DataTransfer:
     def __init__(self, device: "TDevice", num_caches: int) -> None:
+        if num_caches < 0:
+            raise ValueError("num_caches must be non-negative")
         self._device = device
         self._stream = torch.cuda.Stream(device)
         self._batch_cache: list[Any] = [None for _ in range(num_caches)]
+        self._pending: _IncompleteH2D | None = None
 
     def _transfer(self, obj: T, pinned_memory_cache: "set[Tensor]") -> T:
         return _transfer(obj, self._device, pinned_memory_cache)
 
+    def _drain_pending(self) -> None:
+        pending = self._pending
+        if pending is not None:
+            self._stream.synchronize()
+            with _FAILED_H2D_LOCK:
+                _FAILED_H2D[:] = [
+                    entry for entry in _FAILED_H2D if entry is not pending
+                ]
+            self._pending = None
+
+    def _hold_incomplete(
+        self, sources: "set[Tensor]", destinations: "set[Tensor]"
+    ) -> None:
+        pending = _IncompleteH2D(sources, destinations, self._stream)
+        with _FAILED_H2D_LOCK:
+            _FAILED_H2D.append(pending)
+        self._pending = pending
+
     def __call__(self, batch: T) -> T:
-        pinned_memory_cache = set()
-        fn = partial(self._transfer, pinned_memory_cache=pinned_memory_cache)
-        with torch.cuda.stream(self._stream):
-            batch = _recursive_apply(fn, batch)
-        self._stream.synchronize()
-        self._batch_cache.append(batch)
+        self._drain_pending()
+        sources: set[Tensor] = set()
+        destinations: set[Tensor] = set()
+
+        def transfer(obj: S) -> S:
+            result = self._transfer(obj, sources)
+            if isinstance(result, torch.Tensor) and result.device == self._device:
+                destinations.add(result)
+            return result
+
+        try:
+            with torch.cuda.device(self._device), torch.cuda.stream(self._stream):
+                result = _recursive_apply(transfer, batch)
+        except BaseException as traversal_error:
+            try:
+                self._stream.synchronize()
+            except BaseException as sync_error:  # noqa: B036 - Primary error wins.
+                self._hold_incomplete(sources, destinations)
+                traversal_error.add_note(
+                    "H2D synchronization failed; "
+                    f"storage owners retained: {sync_error!r}"
+                )
+            raise
+        try:
+            self._stream.synchronize()
+        except BaseException:
+            self._hold_incomplete(sources, destinations)
+            raise
+        if destinations:
+            default_stream = torch.cuda.default_stream(self._device)
+            for destination in destinations:
+                destination.record_stream(default_stream)
+        self._batch_cache.append(result)
         self._batch_cache.pop(0)
-        return batch
+        return result
 
 
 _THREAD_LOCAL = threading.local()
 
 
 def _get_transfer_func(num_caches: int) -> _DataTransfer:
-    if not hasattr(_THREAD_LOCAL, "transfer"):
-        local_rank = int(os.environ.get("LOCAL_RANK", "0"))
-        if local_rank >= torch.cuda.device_count():
-            raise RuntimeError(
-                "The local rank is larger than the number of available GPUs."
-            )
-        device = torch.device(f"cuda:{local_rank}")
+    if num_caches < 0:
+        raise ValueError("num_caches must be non-negative")
+    device = _normalize_cuda_device(None)
+    if (
+        not hasattr(_THREAD_LOCAL, "transfer")
+        or _THREAD_LOCAL.transfer._device != device
+    ):
         _LG.info("Creating transfer stream on %s", device)
-        _THREAD_LOCAL.transfer = _DataTransfer(  # pyre-ignore: [16]
-            device, num_caches=num_caches
-        )
+        _THREAD_LOCAL.transfer = _DataTransfer(device, num_caches=num_caches)
     return _THREAD_LOCAL.transfer
 
 
@@ -130,6 +186,12 @@ def transfer_tensor_h2d(batch: T, /, *, num_caches: int = 4) -> T:
     """Transfer PyTorch tensors from CPU to CUDA in a dedicated stream.
 
     .. versionadded:: 0.8.0
+
+    .. versionchanged:: 0.9.0
+       Recursive failures drain submitted copies before unwinding. Failed drains
+       retain source/destination owners until completion is proved. Returned GPU
+       destinations are recorded on the selected device's default consumer stream;
+       callers using other streams retain normal readiness/recording responsibilities.
 
     This function wraps calls to :py:meth:`torch.Tensor.pin_memory` and
     :py:meth:`torch.Tensor.to`, and executes them in a dedicated CUDA stream.
@@ -153,8 +215,8 @@ def transfer_tensor_h2d(batch: T, /, *, num_caches: int = 4) -> T:
        variable.)
     2. Activates the CUDA stream.
     3. Traverses the given object recursively and transfers CPU tensors to CUDA.
-       Data is first copied to page-locked memory by calling ``pin_memory``,
-       then transferred to CUDA asynchronously with
+       ``pin_memory`` reuses source storage when Torch recognizes it as pinned;
+       otherwise it creates a page-locked copy. CUDA transfer is submitted with
        ``.to(non_blocking=True)``.
     4. Synchronizes the stream, to ensure that all the data transfers are
        completed.

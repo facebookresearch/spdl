@@ -119,8 +119,10 @@ class TestGpuTransfer(unittest.TestCase):
     @patch("torch.cuda.stream")
     @patch("torch.cuda.Stream")
     @patch("torch.cuda.device_count")
+    @patch("torch.cuda.device")
     def test_gpu_transfer(
         self,
+        mock_device,
         mock_device_count,
         mock_Stream,
         mock_stream_func,
