@@ -19,17 +19,11 @@ buffer). A handler restores a zero-copy view when ``zero_copy`` is true and an
 owning / copied-out value when it is false — so the restored type can differ
 between backends (see :py:class:`_BytesHandler`).
 
-``from_buffer`` returns ``(object, anchor)``: the restored object, plus an
-*anchor* whose lifetime equals "some view of the shared-memory segment is still
-alive" (e.g. the ``np.frombuffer`` array, or a restored ``memoryview`` itself),
-or ``None`` when the object does not alias a reusable segment — i.e. always on the
-ring (copied out), and on the pool only for the off-switch copy paths. For the
-segment-pool backend a non-``None`` anchor keeps the segment reserved until it is
-garbage-collected. The anchor is returned separately because views and shallow
-copies of a NumPy array / Torch tensor share the buffer but are different objects,
-and — importantly — NumPy/Torch do not retain the exact ``memoryview`` passed in,
-so it cannot be used as the anchor (a plain ``memoryview``, by contrast, *is* its
-own anchor — it keeps the buffer exported and is weak-referenceable).
+``from_buffer`` returns ``(object, anchor)``. For reusable pool views the
+anchor is the underlying buffer exporter, retained by native Torch storage and
+NumPy/memoryview base chains. The pool also tracks exports at ``read_binary``
+so a handler failure cannot lose an escaped alias. Tensor wrapper finalization
+is not proof that detached tensors or retained native storage are dead.
 
 NumPy and Torch are reached through ``lazy_import`` so ``import spdl.pipeline``
 works without them installed and they never become hard Buck dependencies. A
@@ -185,7 +179,7 @@ class _BytesHandler:
             # shared memory. It is its own lifetime anchor, so the pool holds the
             # segment until the view is released. (bytes/bytearray inputs come back
             # as memoryview here; that is the accepted zero-copy discrepancy.)
-            return buf, buf
+            return buf, buf.obj
         # Ring: the bytes were copied out into a private per-unit buffer — rebuild
         # the original type so the restored value matches what was sent. No anchor:
         # nothing aliases a reusable segment.
@@ -224,15 +218,8 @@ class _NumpyHandler:
         self, buf: "memoryview[bytes]", meta: tuple[object, ...], zero_copy: bool
     ) -> tuple[object, object | None]:
         dtype_str, shape = meta
-        # np.frombuffer aliases ``buf`` (no copy); for the segment pool this is a
-        # live view into shared memory, for the ring it views the copied-out
-        # bytes that read_binary already produced. The anchor matters only for the
-        # pool: ``arr`` is its lifetime anchor (every reshape/slice/view of the
-        # result keeps it — and thus the segment — alive, whereas the reshaped
-        # object can be dropped while a view of it survives). On the ring the bytes
-        # are already a private copy the array keeps alive, so no anchor is needed.
         arr: Any = np.frombuffer(buf, dtype=np.dtype(dtype_str))
-        return arr.reshape(shape), (arr if zero_copy else None)
+        return arr.reshape(shape), (buf.obj if zero_copy else None)
 
 
 class _TorchHandler:
@@ -262,10 +249,19 @@ class _TorchHandler:
     ) -> tuple[object, object | None]:
         dtype_str, shape = meta
         dtype = getattr(torch, str(dtype_str).split(".")[-1])
-        # As for NumPy, ``t`` is the pool's lifetime anchor (views keep the base
-        # tensor alive); the ring copied the bytes out, so no anchor is needed.
-        t: Any = torch.frombuffer(buf, dtype=dtype)
-        return t.reshape(shape), (t if zero_copy else None)
+        if not buf.nbytes:
+            return torch.empty(shape, dtype=dtype), None
+        # Native storage owns the immutable arena exporter itself. For other
+        # buffers retain a fresh wrapper, preserving any supplied slice offset.
+        owner = (
+            buf.obj
+            if type(buf.obj).__module__ == "spdl.io.lib._buffer"
+            and buf.c_contiguous
+            and buf.nbytes == memoryview(buf.obj).nbytes
+            else memoryview(buf)
+        )
+        t: Any = torch.frombuffer(owner, dtype=dtype)
+        return t.reshape(shape), (buf.obj if zero_copy else None)
 
 
 class _PacketsHandler:
