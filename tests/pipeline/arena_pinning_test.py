@@ -62,6 +62,77 @@ class ArenaPinningTest(unittest.TestCase):
         reader.end_unit(span, [])
         return value
 
+    def test_public_pinned_benchmark_restores_through_public_boundary(self) -> None:
+        """An ordinary public pool boundary verifies full CPU values across epochs."""
+        import spdl.examples.benchmark_pinned_arena as benchmark
+        import torch
+
+        original_threads = torch.get_num_threads()
+        self.addCleanup(torch.set_num_threads, original_threads)
+        config = {
+            "size": 8192,
+            "kind": "numpy",
+            "dtype": "fp32",
+            "items": 2,
+            "workers": 1,
+            "slots": 2,
+            "warmup_epochs": 1,
+            "timeout": 60.0,
+            "local_rank": 0,
+            "device": "cpu",
+        }
+        result = benchmark.run_benchmark("pool-pageable", config)
+        self.assertEqual(len(result["warmup"][0]["items"]), 2)
+        self.assertEqual(len(result["measured"]["items"]), 2)
+        self.assertEqual(
+            [row["sequence"] for row in result["measured"]["items"]], [2, 3]
+        )
+        self.assertTrue(
+            all(
+                not row["producer"]["cuda_initialized"]
+                for row in result["measured"]["items"]
+            )
+        )
+        self.assertFalse(torch.cuda.is_initialized())
+
+    def test_public_benchmark_payloads_are_ready_after_normal_import(self) -> None:
+        """All public payload kinds work without a separate dependency-loading call."""
+        import numpy as np
+        import spdl.examples.benchmark_pinned_arena as benchmark
+        import torch
+
+        self.assertIs(benchmark.torch, torch)
+        self.assertIs(benchmark.np, np)
+        for kind in ("torch", "numpy", "nested"):
+            with self.subTest(kind=kind):
+                first = benchmark.make_payload(8192, kind, "fp32", sequence=1)
+                second = benchmark.make_payload(8192, kind, "fp32", sequence=2)
+                first_leaf = first["main"] if kind == "nested" else first
+                second_leaf = second["main"] if kind == "nested" else second
+                if kind == "numpy":
+                    self.assertIsInstance(first_leaf, np.ndarray)
+                    self.assertFalse(np.array_equal(first_leaf, second_leaf))
+                else:
+                    self.assertIsInstance(first_leaf, torch.Tensor)
+                    self.assertEqual(first_leaf.device.type, "cpu")
+                    self.assertFalse(torch.equal(first_leaf, second_leaf))
+        self.assertFalse(torch.cuda.is_initialized())
+
+    def test_public_benchmark_producer_configures_threads_without_cuda(self) -> None:
+        """Producer setup keeps one CPU thread before work and imports do not start CUDA."""
+        import spdl.examples.benchmark_pinned_arena as benchmark
+        import torch
+
+        original_threads = torch.get_num_threads()
+        self.addCleanup(torch.set_num_threads, original_threads)
+        with patch.object(
+            torch, "set_num_threads", wraps=torch.set_num_threads
+        ) as configure:
+            benchmark.configure_process()
+        configure.assert_called_once_with(1)
+        self.assertEqual(torch.get_num_threads(), 1)
+        self.assertFalse(torch.cuda.is_initialized())
+
     def test_pool_registration_is_consumer_local_and_reused(self) -> None:
         """Creation/writing never registers; the consumer registers each mapping once."""
         registrations = [Mock(), Mock()]
