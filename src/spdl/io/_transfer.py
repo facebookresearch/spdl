@@ -205,6 +205,10 @@ def transfer_tensor_h2d(batch: T, /, *, num_caches: int = 4) -> T:
        :ref:`pipeline-parallelism-custom-mt` - An intended way to use
        this function in :py:class:`~spdl.pipeline.Pipeline`.
 
+       :py:mod:`benchmark_pinned_arena` - Matched public pool/ring pinning
+       comparisons through subprocess iteration and synchronized H2D wall time,
+       with archival earlier measurements.
+
     .. image:: ../../_static/data/parallelism_transfer.png
 
     Concretely, it performs the following operations.
