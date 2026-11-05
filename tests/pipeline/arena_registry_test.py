@@ -81,12 +81,12 @@ class BytesHandlerTest(unittest.TestCase):
                 self.assertEqual(bytes(cast(Any, restored)), bytes(src))
                 self.assertIsNone(anchor)
 
-    def test_zero_copy_restore_is_a_self_anchoring_memoryview(self) -> None:
-        """zero_copy=True (pool) returns a memoryview that is its own anchor."""
+    def test_zero_copy_restore_anchors_underlying_exporter(self) -> None:
+        """zero_copy=True returns the buffer exporter as its lifetime anchor."""
         buf, meta = _BytesHandler().get_buffer(b"z" * 64)
         restored, anchor = _BytesHandler().from_buffer(_copy_view(buf), meta, True)
         self.assertIsInstance(restored, memoryview)
-        self.assertIs(restored, anchor)
+        self.assertIs(cast(memoryview, restored).obj, anchor)
 
     def test_noncontiguous_memoryview_is_flattened(self) -> None:
         """get_buffer copies a non-contiguous memoryview into a flat buffer."""

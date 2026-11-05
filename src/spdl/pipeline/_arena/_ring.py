@@ -33,9 +33,11 @@ from __future__ import annotations
 import multiprocessing
 import struct
 from multiprocessing import shared_memory
+from multiprocessing.context import BaseContext
 from multiprocessing.synchronize import Condition as _Condition
-from typing import TypedDict
+from typing import cast, TypedDict
 
+from ._pinning import _allocate_pinned, _check_host_budget
 from ._shm import _attach
 
 __all__ = ["SharedMemoryRingBuffer"]
@@ -54,6 +56,7 @@ class _RingState(TypedDict):
     capacity: int
     acquire_timeout: float
     space_cv: _Condition
+    pin_memory: bool
 
 
 # Control header: head, tail (absolute, monotonic byte counters), shutdown
@@ -87,6 +90,10 @@ class SharedMemoryRingBuffer:
           Benchmarks this ring buffer against a plain pickle/queue transfer and
           the segment pool, across payload types and sizes.
 
+       :py:mod:`benchmark_pinned_arena`
+          Matched public pool/ring ``pin_memory=False/True`` comparisons through
+          subprocess iteration and synchronized H2D, with archival earlier results.
+
        :ref:`shared-memory-arena`
           Case study with the measured CPU, throughput, and memory numbers.
 
@@ -99,6 +106,17 @@ class SharedMemoryRingBuffer:
             enough space before raising :py:exc:`BufferError`. Guards against a
             stalled/dead consumer; set to ``0`` for non-blocking behavior (raise
             immediately when the in-progress unit would not fit).
+        pin_memory: Copy supported restored tensor/array/memoryview payloads
+            directly into independent Torch-allocator pinned destinations on
+            the CUDA device selected by ``LOCAL_RANK``. The source ring is not
+            CUDA-registered and its existing copy-out/reclaim contract is
+            unchanged. CUDA initializes lazily only in the consumer. Retained
+            outputs can accumulate pinned memory beyond ring capacity.
+            Rebuilt owning bytes/bytearrays and Packets may be pageable.
+            Defaults to ``False``.
+
+    .. versionadded:: 0.9.0
+       The ``pin_memory`` argument.
     """
 
     def __init__(
@@ -106,6 +124,8 @@ class SharedMemoryRingBuffer:
         capacity: int,
         *,
         acquire_timeout: float = _DEFAULT_ACQUIRE_TIMEOUT,
+        pin_memory: bool = False,
+        _mp_context: BaseContext | None = None,
     ) -> None:
         if capacity <= 0:
             raise ValueError("capacity must be positive")
@@ -113,6 +133,10 @@ class SharedMemoryRingBuffer:
             raise ValueError("acquire_timeout must be non-negative")
         self._capacity: int = capacity
         self._acquire_timeout: float = acquire_timeout
+        self._pin_memory = pin_memory
+        self._space_cv: _Condition = (
+            _mp_context or multiprocessing.get_context("spawn")
+        ).Condition()
         shm = shared_memory.SharedMemory(create=True, size=_HEADER_SIZE + capacity)
         self._shm_name: str = shm.name
         self._shm: shared_memory.SharedMemory | None = shm
@@ -120,9 +144,7 @@ class SharedMemoryRingBuffer:
         self._buf: "memoryview[bytes] | None" = shm.buf
         # pyrefly: ignore [bad-argument-type]
         _HEADER.pack_into(shm.buf, 0, 0, 0, 0)
-        # Process-shared condition variable used by the producer to block on
-        # ``tail`` advances by the consumer (or on a shutdown wakeup).
-        self._space_cv: _Condition = multiprocessing.Condition()
+        # Creating and writing the source ring never initializes CUDA.
 
     # -- pickling: carry only the spec; attach lazily, once, per process --
 
@@ -131,6 +153,7 @@ class SharedMemoryRingBuffer:
             "shm_name": self._shm_name,
             "capacity": self._capacity,
             "acquire_timeout": self._acquire_timeout,
+            "pin_memory": self._pin_memory,
             "space_cv": self._space_cv,
         }
 
@@ -138,6 +161,7 @@ class SharedMemoryRingBuffer:
         self._shm_name = state["shm_name"]
         self._capacity = state["capacity"]
         self._acquire_timeout = state["acquire_timeout"]
+        self._pin_memory = state.get("pin_memory", False)
         self._space_cv = state["space_cv"]
         self._shm = None
         self._buf = None
@@ -229,23 +253,16 @@ class SharedMemoryRingBuffer:
 
     def unlink(self) -> None:
         """Remove the segment from the system (call once, by the owner)."""
-        shm = self._shm
-        temporary = shm is None
-        if shm is None:
-            # Already closed in this process: attach a temporary handle just to
-            # unlink, using _attach so it is not (re)registered with the
-            # resource_tracker, and close it afterwards so its mapping is freed.
-            try:
-                shm = _attach(self._shm_name)
-            except FileNotFoundError:
-                return
+        try:
+            shm = shared_memory.SharedMemory(name=self._shm_name)
+        except FileNotFoundError:
+            return
         try:
             shm.unlink()
         except FileNotFoundError:
             pass
         finally:
-            if temporary:
-                shm.close()
+            shm.close()
 
 
 class _RingWriter:
@@ -261,17 +278,11 @@ class _RingWriter:
         self._wpos: int = 0
 
     def reset(self) -> None:
-        """Reclaim all space at an iteration boundary.
-
-        Safe to set both cursors here because the parent is quiescent (waiting
-        for ``ITERATION_STARTED``) and has not started reading the new
-        iteration; any residual bytes from an abandoned iteration are discarded.
-        """
-        self._b.head = 0
-        # ``tail`` setter notifies the space cv, which is the right behavior
-        # here: a fresh iteration has the entire arena free.
-        self._b.tail = 0
-        self._ustart = self._wpos = 0
+        """Reset a drained epoch without invalidating unread committed spans."""
+        if self._b.head == self._b.tail:
+            self._b.head = 0
+            self._b.tail = 0
+        self._ustart = self._wpos = self._b.head
 
     def begin_unit(self) -> None:
         """Start a new unit at the current published head."""
@@ -374,6 +385,7 @@ class _RingReader:
         self._mv = mv
         self._cap: int = buf.capacity
         self._data_off: int = _HEADER_SIZE
+        self._budget_checked = False
 
     def reset(self) -> None:
         """No-op: the writer resets both cursors at the iteration boundary."""
@@ -389,15 +401,21 @@ class _RingReader:
         buf = self._mv
         d = self._data_off
         end_run = self._cap - offset
-        if nbytes <= end_run:
-            data = bytes(buf[d + offset : d + offset + nbytes])
-        else:
-            data = bytes(buf[d + offset : d + self._cap]) + bytes(
-                buf[d : d + (nbytes - end_run)]
-            )
-        # Wrap in a bytearray so the restored view is writable (and so Torch's
-        # frombuffer does not warn about a read-only buffer).
-        return memoryview(bytearray(data))
+        if not 0 <= offset < self._cap or not 0 <= nbytes <= self._cap:
+            raise ValueError("binary is outside the ring")
+        if self._b._pin_memory and not self._budget_checked:
+            _check_host_budget(self._cap, shared=False)
+            self._budget_checked = True
+        result = (
+            _allocate_pinned(nbytes)
+            if self._b._pin_memory
+            else memoryview(bytearray(nbytes))
+        )
+        first = min(nbytes, end_run)
+        result[:first] = buf[d + offset : d + offset + first]
+        if first < nbytes:
+            result[first:] = buf[d : d + nbytes - first]
+        return cast("memoryview[bytes]", result)
 
     def end_unit(self, span: int, pinned: list[object]) -> None:
         """Return the unit's region in bulk (advance tail).
