@@ -260,16 +260,6 @@ class SharedMemorySegmentPool:
         self._pin_error = None
         self._pin_pid = None
 
-    @property
-    def segment_size(self) -> int:
-        """Size of each segment in bytes."""
-        return self._segment_size
-
-    @property
-    def count(self) -> int:
-        """Number of segments in the pool."""
-        return self._count
-
     def _ctrl_view(self) -> "memoryview[bytes]":
         if self._closed:
             raise RuntimeError("segment pool is closed")
@@ -305,7 +295,7 @@ class SharedMemorySegmentPool:
             return
         device = _local_device()
         self._segment(0)
-        _check_host_budget(self.segment_size * self.count, shared=False)
+        _check_host_budget(self._segment_size * self._count, shared=False)
         self._pin_pid = os.getpid()
         with _REGISTRATION_QUARANTINE_LOCK:
             _REGISTRATION_QUARANTINE.add(self)
@@ -346,21 +336,21 @@ class SharedMemorySegmentPool:
                 self._close_segments()
 
     @property
-    def published(self) -> int:
+    def _published(self) -> int:
         """Number of units published by the writer."""
         return int(_CTRL.unpack_from(self._ctrl_view(), 0)[0])
 
-    @published.setter
-    def published(self, value: int) -> None:
+    @_published.setter
+    def _published(self, value: int) -> None:
         struct.pack_into("<Q", self._ctrl_view(), 0, value)
 
     @property
-    def reclaimed(self) -> int:
+    def _reclaimed(self) -> int:
         """Number of units whose segments have been returned to the pool."""
         return int(_CTRL.unpack_from(self._ctrl_view(), 0)[1])
 
-    @reclaimed.setter
-    def reclaimed(self, value: int) -> None:
+    @_reclaimed.setter
+    def _reclaimed(self, value: int) -> None:
         struct.pack_into("<Q", self._ctrl_view(), 8, value)
         # Wake any producer blocked in ``begin_unit`` waiting for a free segment.
         # Doing this in the setter (rather than at every call site) means manual
@@ -474,7 +464,7 @@ class _PoolWriter:
 
     def __init__(self, pool: SharedMemorySegmentPool) -> None:
         self._p = pool
-        self._seg_size: int = pool.segment_size
+        self._seg_size: int = pool._segment_size
         self._acquire_timeout: float = pool._acquire_timeout
         self._cursor: int = 0
 
@@ -498,7 +488,7 @@ class _PoolWriter:
                 ``acquire_timeout=0`` and no segment is currently free.
         """
         p = self._p
-        if p.count - (p.published - p.reclaimed) < 1:
+        if p._count - (p._published - p._reclaimed) < 1:
             if self._acquire_timeout == 0:
                 raise BufferError(
                     "segment pool exhausted: no free segment and "
@@ -511,7 +501,7 @@ class _PoolWriter:
                 def _ready() -> bool:
                     if p._shutdown:
                         return True
-                    return p.count - (p.published - p.reclaimed) >= 1
+                    return p._count - (p._published - p._reclaimed) >= 1
 
                 if not p._space_cv.wait_for(_ready, timeout=self._acquire_timeout):
                     raise BufferError(
@@ -540,7 +530,7 @@ class _PoolWriter:
                 f"unit exceeds segment_size ({self._seg_size}); increase "
                 "SharedMemorySegmentPool segment_size"
             )
-        seg = self._p._segment(self._p.published)
+        seg = self._p._segment(self._p._published)
         offset = self._cursor
         seg[offset : offset + n] = mv
         self._cursor += n
@@ -549,7 +539,7 @@ class _PoolWriter:
     def commit_unit(self) -> int:
         """Publish the unit (advance the publish counter); return its byte span."""
         span = self._cursor
-        self._p.published = self._p.published + 1
+        self._p._published = self._p._published + 1
         return span
 
     def abort_unit(self) -> None:
@@ -631,7 +621,7 @@ class _PoolReader:
 
     def read_binary(self, offset: int, nbytes: int) -> "memoryview[bytes]":
         """Return a storage-owned view into the current unit's segment."""
-        if offset < 0 or nbytes < 0 or offset + nbytes > self._p.segment_size:
+        if offset < 0 or nbytes < 0 or offset + nbytes > self._p._segment_size:
             raise ValueError("binary is outside the segment")
         guard = None
         try:
@@ -639,7 +629,7 @@ class _PoolReader:
                 if self._p._closed:
                     raise RuntimeError("segment pool is closed")
                 self._p._ensure_pinned()
-                name = self._p._seg_names[self._next % self._p.count]
+                name = self._p._seg_names[self._next % self._p._count]
                 view = self._p._segment(self._next)[offset : offset + nbytes]
                 lease = self._lease
                 if lease is None:
@@ -655,11 +645,17 @@ class _PoolReader:
                     error.add_note(f"Export setup rollback failed: {cleanup_error!r}")
             raise
 
-    def end_unit(self, span: int, pinned: list[object]) -> None:
-        """Seal the unit; exported storage, not original wrappers, gates reuse.
+    def end_unit(self, span: int, anchors: list[object] | None = None) -> None:
+        """Release the logical unit; actual buffer exports still gate FIFO reuse.
 
-        ``pinned`` remains accepted for the reader protocol. Holds are acquired
-        at ``read_binary``, including a handler that exports then fails to restore.
+        Holds are acquired at ``read_binary``, including an export that escapes
+        a failed payload reconstruction. ``anchors`` remains accepted for the
+        extension contract; this builtin ignores the list.
+
+        .. versionchanged:: 0.9.0
+           Renamed ``pinned`` to optional ``anchors`` with a ``None`` default.
+           Replace the old ``pinned=`` keyword with ``anchors=``; positional
+           calls are unchanged.
         """
         lease = self._lease
         unit = self._next
@@ -680,4 +676,4 @@ class _PoolReader:
                 advanced = True
             if advanced and not self._p._closed:
                 # Setter wakes any blocked producer via the space cv.
-                self._p.reclaimed = self._reclaimed
+                self._p._reclaimed = self._reclaimed

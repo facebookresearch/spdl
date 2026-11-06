@@ -6,7 +6,13 @@
 
 """Implements :py:class:`~spdl.pipeline.Pipeline`, a generic task execution engine."""
 
-from ._arena import SharedMemoryRingBuffer, SharedMemorySegmentPool
+from ._arena import (
+    ArenaProtocol,
+    ArenaReaderProtocol,
+    ArenaWriterProtocol,
+    SharedMemoryRingBuffer,
+    SharedMemorySegmentPool,
+)
 from ._bg_task import BackgroundTask, BackgroundTaskFactory
 from ._build import (
     build_pipeline,
@@ -46,6 +52,9 @@ from ._priority_interpreter_executor import PriorityInterpreterPoolExecutor
 from ._profile import profile_pipeline, ProfileHook, ProfileResult
 
 __all__ = [
+    "ArenaProtocol",
+    "ArenaReaderProtocol",
+    "ArenaWriterProtocol",
     "BackgroundTask",
     "BackgroundTaskFactory",
     "ProcessGroupResourceUsage",
