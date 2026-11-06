@@ -55,12 +55,12 @@ class ArenaOwnershipTest(unittest.TestCase):
                 alias = make_alias(original)
                 del original
                 gc.collect()
-                self.assertEqual(pool.reclaimed, 0)
+                self.assertEqual(pool._reclaimed, 0)
                 with self.assertRaises(BufferError):
                     writer.begin_unit()
                 del alias
                 gc.collect()
-                self.assertEqual(pool.reclaimed, 1)
+                self.assertEqual(pool._reclaimed, 1)
                 replacement = _restore(
                     _offload(torch.full((1024,), 91), writer, registry),
                     reader,
@@ -70,7 +70,7 @@ class ArenaOwnershipTest(unittest.TestCase):
                 self.assertEqual(cast(torch.Tensor, replacement).tolist(), [91] * 1024)
                 del replacement
                 gc.collect()
-                self.assertEqual(pool.reclaimed, 2)
+                self.assertEqual(pool._reclaimed, 2)
 
     def test_buffer_and_numpy_aliases_hold_exporter(self) -> None:
         """Slice/cast and cross-library aliases retain the actual exporter."""
@@ -93,12 +93,12 @@ class ArenaOwnershipTest(unittest.TestCase):
                 alias = make_alias(value)
                 del value
                 gc.collect()
-                self.assertEqual(pool.reclaimed, 0)
+                self.assertEqual(pool._reclaimed, 0)
                 with self.assertRaises(BufferError):
                     writer.begin_unit()
                 del alias
                 gc.collect()
-                self.assertEqual(pool.reclaimed, 1)
+                self.assertEqual(pool._reclaimed, 1)
 
     def test_close_defers_unmap_until_last_storage_release(self) -> None:
         """Close/unlink keeps native storage valid and automatically unmaps on release."""
@@ -138,11 +138,11 @@ class ArenaOwnershipTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "restore failure"):
             _restore(_offload(b"z" * 8192, writer, registry), reader, registry)
         gc.collect()
-        self.assertEqual(pool.reclaimed, 0)
+        self.assertEqual(pool._reclaimed, 0)
         self.assertEqual(bytes(escaped[0]), b"z" * 8191)
         escaped.clear()
         gc.collect()
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
 
     def test_release_order_and_multiple_exports(self) -> None:
         """Out-of-order unit release advances only the contiguous watermark."""
@@ -157,11 +157,11 @@ class ArenaOwnershipTest(unittest.TestCase):
         held = cast(list[memoryview], first)[0][1:].cast("B")
         del first, second
         gc.collect()
-        self.assertEqual(pool.reclaimed, 0)
+        self.assertEqual(pool._reclaimed, 0)
         self.assertEqual(bytes(held), b"a" * 4095)
         del held
         gc.collect()
-        self.assertEqual(pool.reclaimed, 2)
+        self.assertEqual(pool._reclaimed, 2)
 
     def test_explicit_release_keeps_native_exporter_consumer_alive(self) -> None:
         """The safe raw-exporter Torch route survives release of the original view."""
@@ -175,12 +175,12 @@ class ArenaOwnershipTest(unittest.TestCase):
         view.release()
         del view
         gc.collect()
-        self.assertEqual(pool.reclaimed, 0)
+        self.assertEqual(pool._reclaimed, 0)
         self.assertTrue(torch.all(tensor == 97).item())
         np.testing.assert_array_equal(array, np.full(4096, 97, dtype=np.uint8))
         del tensor, array
         gc.collect()
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
 
     def test_failed_export_does_not_take_callback_ownership(self) -> None:
         """Native construction failures do not invoke the release callback."""

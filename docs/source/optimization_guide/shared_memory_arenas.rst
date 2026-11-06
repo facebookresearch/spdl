@@ -129,6 +129,35 @@ Closing local use and unlinking a shared name are different from invalidating
 live storage. See :doc:`../notes/shared_memory_ownership` in Development Notes
 for the technical storage-owner, alias, cleanup and external-consumer rules.
 
+Using a custom arena backend
+----------------------------
+
+Normal callers construct a concrete arena and pass it to
+:py:func:`spdl.pipeline.iterate_in_subprocess`, as in the CPU example above.
+Custom storage implementations can do the same: they conform structurally to
+:py:class:`spdl.pipeline.ArenaProtocol`. Importing or subclassing that protocol
+is not required to use a concrete object.
+
+The public :py:class:`~spdl.pipeline.ArenaWriterProtocol` and
+:py:class:`~spdl.pipeline.ArenaReaderProtocol` references describe the sender and
+receiver contract for implementers. The arena groups byte fragments into units;
+the separate serializer handles payload classes and reconstruction. Returned
+buffers must own their backing, so logical unit release does not invalidate
+retained shared aliases or in-flight transfers. A copy-out backend instead
+returns independently owned buffers.
+
+Subprocess iteration calls
+:py:meth:`~spdl.pipeline.ArenaProtocol.shutdown_arena` before joining its worker,
+so a producer blocked on arena capacity can leave its wait. This is distinct
+from releasing mappings with ``close()`` or destroying names with ``unlink()``;
+live exports and transfers must remain valid during shutdown.
+
+See the protocol references for endpoint signatures, commit/abort behavior,
+shutdown and teardown ordering, consumer-local storage policy and reader
+compatibility. Technical
+storage-owner and alias-lifetime details remain in
+:doc:`../notes/shared_memory_ownership`.
+
 Memory pinning
 --------------
 

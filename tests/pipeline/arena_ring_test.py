@@ -42,9 +42,9 @@ class SharedMemoryRingBufferTest(unittest.TestCase):
         writer.begin_unit()
         writer.write_binary(b"x" * 100)
         # head is only advanced by commit_unit, so the reader's view is empty.
-        self.assertEqual(buf.head, 0)
+        self.assertEqual(buf._head, 0)
         writer.commit_unit()
-        self.assertEqual(buf.head, 100)
+        self.assertEqual(buf._head, 100)
 
     def test_release_advances_tail_in_bulk(self) -> None:
         """Releasing a unit returns its whole region in one tail advance."""
@@ -57,7 +57,7 @@ class SharedMemoryRingBufferTest(unittest.TestCase):
         span = writer.commit_unit()
         self.assertEqual(span, 100)
         reader.end_unit(span, [])
-        self.assertEqual(buf.tail, 100)
+        self.assertEqual(buf._tail, 100)
 
     def test_payload_wrapping_physical_end_is_intact(self) -> None:
         """Data that straddles the physical end of the arena is preserved."""

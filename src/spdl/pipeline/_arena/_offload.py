@@ -167,7 +167,7 @@ def _restore(
     unpickler = pickle.Unpickler(io.BytesIO(blob[_SPAN.size :]))
     # Lifetime anchors for zero-copy fields (e.g. the np.frombuffer array). The
     # backend keeps the underlying region alive until these are released.
-    pinned: list[object] = []
+    anchors: list[object] = []
 
     def persistent_load(marker: object) -> object:
         assert isinstance(marker, _ShmMarker)
@@ -175,7 +175,7 @@ def _restore(
         view = reader.read_binary(marker.offset, marker.nbytes)
         obj, anchor = handler.from_buffer(view, marker.meta, reader.zero_copy)
         if anchor is not None:
-            pinned.append(anchor)
+            anchors.append(anchor)
         return obj
 
     unpickler.persistent_load = persistent_load  # type: ignore[method-assign]
@@ -185,4 +185,4 @@ def _restore(
         # Tell the backend the unit is fully read. It reclaims the region now
         # (ring / copy-out) or once every anchor is released (segment pool /
         # zero-copy). Always runs, so accounting stays correct even on error.
-        reader.end_unit(span, pinned)
+        reader.end_unit(span, anchors)

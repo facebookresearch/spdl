@@ -31,7 +31,7 @@ class _Arena:
     """
 
     def __init__(self, arena: ArenaProtocol) -> None:
-        self._arena = arena
+        self.arena = arena
         self._writer: ArenaWriterProtocol | None = None
         self._reader: ArenaReaderProtocol | None = None
         self._registry: _OffloadRegistry | None = None
@@ -40,14 +40,14 @@ class _Arena:
     def writer(self) -> ArenaWriterProtocol:
         """The arena's writer endpoint (opened once, on first access)."""
         if self._writer is None:
-            self._writer = self._arena.open_writer()
+            self._writer = self.arena.open_writer()
         return self._writer
 
     @property
     def reader(self) -> ArenaReaderProtocol:
         """The arena's reader endpoint (opened once, on first access)."""
         if self._reader is None:
-            self._reader = self._arena.open_reader()
+            self._reader = self.arena.open_reader()
         return self._reader
 
     @property
