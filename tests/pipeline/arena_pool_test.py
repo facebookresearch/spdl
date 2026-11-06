@@ -171,7 +171,7 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
 
         def _reclaim_soon() -> None:
             time.sleep(0.1)
-            pool.reclaimed = pool.reclaimed + 1  # simulate the consumer releasing
+            pool._reclaimed = pool._reclaimed + 1  # simulate the consumer releasing
 
         t = threading.Thread(target=_reclaim_soon)
         t.start()
@@ -283,11 +283,11 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
             registry,
         )
         # The view pins the segment: nothing reclaimed yet.
-        self.assertEqual(pool.reclaimed, 0)
+        self.assertEqual(pool._reclaimed, 0)
         del out
         gc.collect()
         # Once the view is gone, the segment returns to the pool.
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
 
     def test_live_view_survives_iteration_reset(self) -> None:
         """An iteration reset must not recycle a segment with a live view."""
@@ -341,11 +341,11 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
         )
         del second
         gc.collect()
-        self.assertEqual(pool.reclaimed, 0)
+        self.assertEqual(pool._reclaimed, 0)
 
         del first_view
         gc.collect()
-        self.assertEqual(pool.reclaimed, 2)
+        self.assertEqual(pool._reclaimed, 2)
 
     def test_torch_restore_is_a_zero_copy_view(self) -> None:
         """A restored Torch tensor aliases the segment (no copy)."""
@@ -385,10 +385,10 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
         view = cast(dict[str, Any], out)["a"][100:200]  # a view sharing storage
         del out
         gc.collect()
-        self.assertEqual(pool.reclaimed, 0)
+        self.assertEqual(pool._reclaimed, 0)
         del view
         gc.collect()
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
 
     def test_segment_held_until_shallow_copy_released(self) -> None:
         """A view/shallow copy outliving the original array still pins the segment."""
@@ -411,10 +411,10 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
         gc.collect()
         # The lifetime is tracked on the underlying memoryview, not the array
         # object, so the segment is still held while the slice is alive.
-        self.assertEqual(pool.reclaimed, 0)
+        self.assertEqual(pool._reclaimed, 0)
         del view
         gc.collect()
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
 
     def test_bytes_like_restore_is_a_zero_copy_view(self) -> None:
         """On the pool, bytes/bytearray/memoryview all restore as a memoryview
@@ -438,10 +438,10 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
                 pool._segment(0)[0:1] = b"\x00"
                 self.assertEqual(view[0], 0)
                 # The segment stays reserved until the view is released.
-                self.assertEqual(pool.reclaimed, 0)
+                self.assertEqual(pool._reclaimed, 0)
                 del out, view
                 gc.collect()
-                self.assertEqual(pool.reclaimed, 1)
+                self.assertEqual(pool._reclaimed, 1)
 
 
 class IterateInSubprocessSegmentPoolTest(unittest.TestCase):
@@ -527,9 +527,9 @@ class IterateInSubprocessSegmentPoolTest(unittest.TestCase):
             self.assertEqual(first["i"], 0)
 
             deadline = time.monotonic() + 5
-            while pool.published < pool.count and time.monotonic() < deadline:
+            while pool._published < pool._count and time.monotonic() < deadline:
                 time.sleep(0.01)
-            self.assertEqual(pool.published, pool.count)
+            self.assertEqual(pool._published, pool._count)
 
             del first, iterator
             gc.collect()

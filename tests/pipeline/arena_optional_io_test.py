@@ -22,7 +22,8 @@ from spdl.pipeline._arena._pinning import _allocate_pinned
 class ArenaOptionalIOTest(unittest.TestCase):
     def test_pipeline_and_pageable_ring_work_without_optional_modules(self) -> None:
         """Ordinary execution and ring copy-out never import IO, NumPy or Torch."""
-        script = textwrap.dedent("""
+        script = textwrap.dedent(
+            """
             import importlib.abc, sys
             class RejectOptional(importlib.abc.MetaPathFinder):
                 def find_spec(self, fullname, path=None, target=None):
@@ -67,7 +68,7 @@ class ArenaOptionalIOTest(unittest.TestCase):
                 else:
                     raise AssertionError('native pool export silently succeeded')
                 reader.end_unit(span, [])
-                assert pool.reclaimed == 1
+                assert pool._reclaimed == 1
             finally:
                 pool.close(); pool.unlink()
             assert not any(
@@ -75,7 +76,8 @@ class ArenaOptionalIOTest(unittest.TestCase):
                 or n.split('.')[0] in ('torch', 'numpy') for n in sys.modules
             )
             print('PYTHON_ONLY_BOUNDARY_PASSED')
-        """)
+        """
+        )
         result = subprocess.run(
             [sys.executable, "-c", script],
             env={**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)},

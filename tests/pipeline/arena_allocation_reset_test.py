@@ -70,11 +70,11 @@ class ArenaAllocationResetTest(unittest.TestCase):
             writer.write_binary(b"a" * 9)
             writer.write_binary(b"b" * 7)
             abandoned_span = writer.commit_unit()
-            old_head, old_tail = ring.head, ring.tail
+            old_head, old_tail = ring._head, ring._tail
             writer.reset()
-            self.assertEqual((ring.head, ring.tail), (old_head, old_tail))
+            self.assertEqual((ring._head, ring._tail), (old_head, old_tail))
             reader.end_unit(abandoned_span, [])
-            self.assertEqual(ring.tail, old_head)
+            self.assertEqual(ring._tail, old_head)
             writer.begin_unit()
             offset, size = writer.write_binary(bytes([epoch]) * 32)
             span = writer.commit_unit()
@@ -83,7 +83,7 @@ class ArenaAllocationResetTest(unittest.TestCase):
             )
             reader.end_unit(span, [])
             writer.reset()
-            self.assertEqual((ring.head, ring.tail), (0, 0))
+            self.assertEqual((ring._head, ring._tail), (0, 0))
 
     def test_aborted_unpublished_span_is_not_counted_after_reset(self) -> None:
         """Reset drops unpublished reservation without advancing either shared watermark."""
@@ -98,7 +98,7 @@ class ArenaAllocationResetTest(unittest.TestCase):
         writer.write_binary(b"unpublished")
         writer.abort_unit()
         writer.reset()
-        self.assertEqual((ring.head, ring.tail), (16, 0))
+        self.assertEqual((ring._head, ring._tail), (16, 0))
         ring.open_reader().end_unit(16, [])
         writer.reset()
-        self.assertEqual((ring.head, ring.tail), (0, 0))
+        self.assertEqual((ring._head, ring._tail), (0, 0))

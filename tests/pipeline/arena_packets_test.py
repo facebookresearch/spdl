@@ -118,11 +118,11 @@ class PacketsOffloadTest(unittest.TestCase):
             _offload({"p": _demux("video")}, writer, registry), reader, registry
         )
         # The restored packets are a zero-copy view: the segment is still pinned.
-        self.assertEqual(pool.reclaimed, 0)
+        self.assertEqual(pool._reclaimed, 0)
         del out
         gc.collect()
         # Once the view is dropped, the segment returns to the pool.
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
 
     def test_packets_stay_inline_above_threshold(self) -> None:
         """With a threshold above the payload, Packets are pickled inline (via

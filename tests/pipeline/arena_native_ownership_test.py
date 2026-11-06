@@ -97,13 +97,13 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
         view.release()
         del view
         gc.collect()
-        self.assertEqual(pool.reclaimed, 0)
+        self.assertEqual(pool._reclaimed, 0)
         self.assertEqual(bytes(alias), b"a" * 32)
         with self.assertRaises(BufferError):
             writer.begin_unit()
         del alias
         gc.collect()
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
         self.assertNotIn("torch", sys.modules)
         self.assertIn("spdl.io.lib._buffer", sys.modules)
 
@@ -212,7 +212,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
             first.clear()
         gc.collect()
         self.assertEqual(pool._mapping_exports[name], 1)
-        self.assertEqual(pool.reclaimed, 0)
+        self.assertEqual(pool._reclaimed, 0)
         with self.assertRaises(BufferError):
             writer.begin_unit()
         self._release_failed_export(root, captured, pool, writer, name)
@@ -228,7 +228,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
             captured.clear()
             gc.collect()
         self.assertEqual(pool._mapping_exports[name], 0)
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
         writer.begin_unit()
         writer.write_binary(b"b" * 32)
         writer.abort_unit()
@@ -406,7 +406,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
         self.assertIs(raised.exception, root)
         self.assertEqual(pool._mapping_exports.get(pool._seg_names[0], 0), 0)
         reader.end_unit(span, [])
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
         writer.begin_unit()
         writer.abort_unit()
 
@@ -471,7 +471,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
             worker.join(10)
             self.assertFalse(worker.is_alive())
         self.assertEqual(order, [True])
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
 
     def test_gc_keeps_bound_partial_callback_callable_until_export_destruction(
         self,
@@ -519,7 +519,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
                 self.assertEqual(pool._mapping_exports[pool._seg_names[0]], 1)
                 gc.collect()
                 self.assertEqual(pool._mapping_exports[pool._seg_names[0]], 0)
-                self.assertEqual(pool.reclaimed, 1)
+                self.assertEqual(pool._reclaimed, 1)
         finally:
             if enabled:
                 gc.enable()
@@ -551,6 +551,6 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
         self.assertIs(raised.exception, root)
         self.assertEqual(pool._mapping_exports[pool._seg_names[0]], 0)
         reader.end_unit(span, [])
-        self.assertEqual(pool.reclaimed, 1)
+        self.assertEqual(pool._reclaimed, 1)
         writer.begin_unit()
         writer.abort_unit()

@@ -167,11 +167,6 @@ class SharedMemoryRingBuffer:
         self._buf = None
 
     @property
-    def capacity(self) -> int:
-        """Size of the payload arena in bytes."""
-        return self._capacity
-
-    @property
     def name(self) -> str:
         """Name of the underlying shared-memory segment."""
         return self._shm_name
@@ -185,21 +180,21 @@ class SharedMemoryRingBuffer:
         return self._buf
 
     @property
-    def head(self) -> int:
+    def _head(self) -> int:
         """Absolute byte count published by the writer."""
         return int(_HEADER.unpack_from(self._ensure(), 0)[0])
 
-    @head.setter
-    def head(self, value: int) -> None:
+    @_head.setter
+    def _head(self, value: int) -> None:
         struct.pack_into("<Q", self._ensure(), 0, value)
 
     @property
-    def tail(self) -> int:
+    def _tail(self) -> int:
         """Absolute byte count released by the reader."""
         return int(_HEADER.unpack_from(self._ensure(), 0)[1])
 
-    @tail.setter
-    def tail(self, value: int) -> None:
+    @_tail.setter
+    def _tail(self, value: int) -> None:
         struct.pack_into("<Q", self._ensure(), 8, value)
         # Wake any producer blocked in ``write_binary`` waiting for free space.
         # Doing this in the setter (rather than only at the end_unit call site)
@@ -271,7 +266,7 @@ class _RingWriter:
     def __init__(self, buf: SharedMemoryRingBuffer, mv: "memoryview[bytes]") -> None:
         self._b = buf
         self._mv = mv
-        self._cap: int = buf.capacity
+        self._cap: int = buf._capacity
         self._acquire_timeout: float = buf._acquire_timeout
         self._data_off: int = _HEADER_SIZE
         self._ustart: int = 0
@@ -279,14 +274,14 @@ class _RingWriter:
 
     def reset(self) -> None:
         """Reset a drained epoch without invalidating unread committed spans."""
-        if self._b.head == self._b.tail:
-            self._b.head = 0
-            self._b.tail = 0
-        self._ustart = self._wpos = self._b.head
+        if self._b._head == self._b._tail:
+            self._b._head = 0
+            self._b._tail = 0
+        self._ustart = self._wpos = self._b._head
 
     def begin_unit(self) -> None:
         """Start a new unit at the current published head."""
-        self._ustart = self._wpos = self._b.head
+        self._ustart = self._wpos = self._b._head
 
     def write_binary(
         self, data: "bytes | bytearray | memoryview[bytes]"
@@ -323,7 +318,7 @@ class _RingWriter:
                 "SharedMemoryRingBuffer capacity."
             )
         b = self._b
-        free = self._cap - (self._wpos - b.tail)
+        free = self._cap - (self._wpos - b._tail)
         if n > free:
             if self._acquire_timeout == 0:
                 raise BufferError(
@@ -337,7 +332,7 @@ class _RingWriter:
                 def _ready() -> bool:
                     if b._shutdown:
                         return True
-                    return self._cap - (self._wpos - b.tail) >= n
+                    return self._cap - (self._wpos - b._tail) >= n
 
                 if not b._space_cv.wait_for(_ready, timeout=self._acquire_timeout):
                     raise BufferError(
@@ -365,7 +360,7 @@ class _RingWriter:
 
     def commit_unit(self) -> int:
         """Publish the unit (advance head); return the unit's byte span."""
-        self._b.head = self._wpos
+        self._b._head = self._wpos
         return self._wpos - self._ustart
 
     def abort_unit(self) -> None:
@@ -383,7 +378,7 @@ class _RingReader:
     def __init__(self, buf: SharedMemoryRingBuffer, mv: "memoryview[bytes]") -> None:
         self._b = buf
         self._mv = mv
-        self._cap: int = buf.capacity
+        self._cap: int = buf._capacity
         self._data_off: int = _HEADER_SIZE
         self._budget_checked = False
 
@@ -417,12 +412,15 @@ class _RingReader:
             result[first:] = buf[d : d + nbytes - first]
         return cast("memoryview[bytes]", result)
 
-    def end_unit(self, span: int, pinned: list[object]) -> None:
-        """Return the unit's region in bulk (advance tail).
+    def end_unit(self, span: int, anchors: list[object] | None = None) -> None:
+        """Return the unit's region in bulk after independent copy-out.
 
-        ``pinned`` is ignored: read_binary already copied the data out, so
-        restored views alias the copy, not the ring, and the region is free to
-        reuse immediately. Advancing ``tail`` via the property setter wakes any
-        producer blocked in ``write_binary``.
+        Returned views own their copied storage, not the ring. Advancing the
+        private tail wakes any producer blocked on byte capacity.
+
+        .. versionchanged:: 0.9.0
+           Renamed ``pinned`` to optional ``anchors`` with a ``None`` default.
+           Replace the old ``pinned=`` keyword with ``anchors=``; positional
+           calls are unchanged.
         """
-        self._b.tail = self._b.tail + span
+        self._b._tail = self._b._tail + span

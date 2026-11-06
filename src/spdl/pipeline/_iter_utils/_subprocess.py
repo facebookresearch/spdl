@@ -162,15 +162,13 @@ class _ipc(Generic[T]):
 
         if arena is not None:
             # Wake a producer blocked while waiting for arena space before join.
-            shutdown = getattr(arena, "shutdown_arena", None)
-            if shutdown is not None:
-                try:
-                    shutdown()
-                except Exception:
-                    _LG.warning(
-                        "Failed to wake the subprocess arena during teardown.",
-                        exc_info=True,
-                    )
+            try:
+                arena.shutdown_arena()
+            except Exception:
+                _LG.warning(
+                    "Failed to wake the subprocess arena during teardown.",
+                    exc_info=True,
+                )
 
         try:
             _drain(data_q)
