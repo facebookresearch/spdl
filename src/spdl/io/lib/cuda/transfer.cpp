@@ -16,7 +16,7 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/unique_ptr.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace nb = nanobind;
 
