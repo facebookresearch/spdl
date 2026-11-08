@@ -14,9 +14,9 @@
 #include "libspdl/core/detail/ffmpeg/wrappers.h"
 #include "libspdl/core/detail/logging.h"
 
-#include <fmt/core.h>
 #include <fmt/format.h>
 
+#include <cstring>
 #include <filesystem>
 #include <set>
 

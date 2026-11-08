@@ -11,7 +11,7 @@
 #include "libspdl/core/detail/ffmpeg/muxer.h"
 #include "libspdl/core/detail/logging.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace spdl::core {
 
