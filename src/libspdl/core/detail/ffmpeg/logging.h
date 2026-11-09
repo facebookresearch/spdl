@@ -10,7 +10,7 @@
 
 #include "libspdl/core/detail/logging.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 extern "C" {
 #include <libavutil/attributes.h>
