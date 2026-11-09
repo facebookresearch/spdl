@@ -394,9 +394,11 @@ class _ThreadBasedAsyncQueue(AsyncQueue):
 
     This class replaces the underlying storage with a standard
     :py:class:`queue.Queue`, whose blocking ``get``/``put`` release the
-    GIL while waiting.  The async ``put``/``get`` methods delegate to the
-    queue via ``run_in_executor`` so the event loop is never blocked.
-    The foreground consumer can also call ``_queue.get(timeout=...)``
+    GIL while waiting. The async ``get`` delegates to the queue via
+    ``run_in_executor``. Async ``put`` commits directly when a bounded queue has
+    capacity and uses the executor when full; unbounded queues retain the
+    yielding executor path. The foreground consumer can also call
+    ``_queue.get(timeout=...)``
     directly, bypassing the asyncio event loop entirely and reducing
     handoff latency to ~10us when an item is already available.
 
@@ -431,6 +433,12 @@ class _ThreadBasedAsyncQueue(AsyncQueue):
         self._queue: queue.Queue[Any] = queue.Queue(maxsize=buffer_size)
 
     async def put(self, item: object) -> None:
+        if self._queue.maxsize > 0:
+            try:
+                self._queue.put_nowait(item)
+                return
+            except queue.Full:
+                pass
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._queue.put, item)  # pyre-ignore[32]
 
