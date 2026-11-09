@@ -400,8 +400,12 @@ class ProcessGroupResourceUsage:
     """CPU utilization as a percentage of a single core over the last interval.
 
     Computed as ``delta_cpu_usec / delta_wall_usec * 100``.  A value of
-    200.0 means two cores were fully utilized.  ``None`` on the first
-    snapshot (no previous value to diff against).
+    200.0 means two cores were fully utilized.  ``None`` when no valid previous
+    sample exists or the aggregate CPU counter decreases, for example when a
+    process exits.  The current counter becomes the next interval's baseline.
+
+    .. versionchanged:: 0.9.0
+       Decreasing aggregate CPU counters yield ``None`` rather than negative utilization.
     """
 
     rss_bytes: int | None = None
@@ -464,7 +468,7 @@ def _collect_pgrp_stats(
     for all processes in the current process group.
 
     Args:
-        prev_cpu_usec: Cumulative CPU µs from the previous snapshot
+        prev_cpu_usec: Aggregate CPU µs from the previous snapshot
             (used to compute ``cpu_percent``).  ``None`` on the first call.
         prev_time_usec: Wall-clock µs (``time.monotonic()`` × 1e6) of the
             previous snapshot.
@@ -474,8 +478,8 @@ def _collect_pgrp_stats(
             snapshot.  ``None`` on the first call.
 
     Returns:
-        A tuple of
-        ``(usage, current_cpu_usec, current_time_usec, current_net_rx_bytes, current_net_tx_bytes)``.
+        A tuple of ``(usage, current_cpu_usec, current_time_usec,
+        current_net_rx_bytes, current_net_tx_bytes)``.
         ``current_cpu_usec`` is ``None`` when /proc could not be read.
         ``current_net_*_bytes`` are ``None`` when /proc/net/dev could not be read.
     """
@@ -494,6 +498,7 @@ def _collect_pgrp_stats(
             prev_cpu_usec is not None
             and prev_time_usec is not None
             and now_usec > prev_time_usec
+            and pgrp.cpu_usec >= prev_cpu_usec
         ):
             delta_cpu = pgrp.cpu_usec - prev_cpu_usec
             delta_wall = now_usec - prev_time_usec
