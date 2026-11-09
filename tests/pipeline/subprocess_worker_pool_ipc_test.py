@@ -14,6 +14,7 @@ import queue
 import threading
 import unittest
 import warnings
+import weakref
 from concurrent.futures import BrokenExecutor, Future
 from typing import Any, cast
 from unittest.mock import call, MagicMock, patch
@@ -1609,6 +1610,12 @@ class WorkerPoolSerializationTest(unittest.TestCase):
             target=_observe_remote_router_shutdown,
             args=(pool.make_executor(), router_started, result_sender),
         )
+        sentinel_payloads: list[weakref.ReferenceType[Any]] = []
+
+        def fail_send_bytes(payload: Any) -> None:
+            sentinel_payloads.append(weakref.ref(payload))
+            raise OSError("output sentinel transport failed")
+
         try:
             client.start()
             result_sender.close()
@@ -1620,7 +1627,7 @@ class WorkerPoolSerializationTest(unittest.TestCase):
                 patch.object(
                     out_q,
                     "_send_bytes",
-                    side_effect=OSError("output sentinel transport failed"),
+                    new=fail_send_bytes,
                 ),
                 self.assertLogs(
                     "spdl.pipeline._subprocess_worker_pool", level="WARNING"
@@ -1628,6 +1635,8 @@ class WorkerPoolSerializationTest(unittest.TestCase):
             ):
                 pool.shutdown()
 
+            self.assertEqual(len(sentinel_payloads), 1)
+            self.assertIsNone(sentinel_payloads[0]())
             self.assertTrue(
                 result_receiver.poll(_PROCESS_READY_TIMEOUT),
                 "spawned result router did not observe owner shutdown",

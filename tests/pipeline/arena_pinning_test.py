@@ -300,6 +300,7 @@ class PinningBudgetTest(unittest.TestCase):
             _pinning.os,
             "statvfs",
             return_value=SimpleNamespace(f_bavail=2, f_frsize=1024),
+            create=True,
         ) as stat:
             _pinning._check_host_budget(2048, shared=True)
             with self.assertRaisesRegex(BufferError, "tmpfs has 2048 free"):
