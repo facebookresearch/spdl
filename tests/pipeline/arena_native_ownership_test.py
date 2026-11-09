@@ -84,28 +84,57 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
         self,
     ) -> None:
         """Slices/casts hold optional IO storage without loading Torch or CUDA."""
-        pool = SharedMemorySegmentPool(64, 1, acquire_timeout=0)
-        self.addCleanup(pool.unlink)
-        self.addCleanup(pool.close)
-        writer, reader = pool.open_writer(), pool.open_reader()
-        writer.begin_unit()
-        offset, size = writer.write_binary(b"a" * 64)
-        span = writer.commit_unit()
-        view = reader.read_binary(offset, size)
-        alias = view[::2]
-        reader.end_unit(span, [])
-        view.release()
-        del view
-        gc.collect()
-        self.assertEqual(pool._reclaimed, 0)
-        self.assertEqual(bytes(alias), b"a" * 32)
-        with self.assertRaises(BufferError):
-            writer.begin_unit()
-        del alias
-        gc.collect()
-        self.assertEqual(pool._reclaimed, 1)
-        self.assertNotIn("torch", sys.modules)
-        self.assertIn("spdl.io.lib._buffer", sys.modules)
+        script = textwrap.dedent("""
+            import gc
+            import importlib.abc
+            import sys
+            import unittest
+
+            class RejectMetaLogging(importlib.abc.MetaPathFinder):
+                def find_spec(self, fullname, path=None, target=None):
+                    if fullname == 'spdl.pipeline.fb':
+                        raise ModuleNotFoundError(
+                            'Meta logging is not part of the OSS fixture', name=fullname
+                        )
+
+            sys.meta_path.insert(0, RejectMetaLogging())
+            from spdl.pipeline._arena._pool import SharedMemorySegmentPool
+
+            class MemoryviewAliasesTest(unittest.TestCase):
+                def test_alias_lifetime(self):
+                    pool = SharedMemorySegmentPool(64, 1, acquire_timeout=0)
+                    self.addCleanup(pool.unlink)
+                    self.addCleanup(pool.close)
+                    writer, reader = pool.open_writer(), pool.open_reader()
+                    writer.begin_unit()
+                    offset, size = writer.write_binary(b'a' * 64)
+                    span = writer.commit_unit()
+                    view = reader.read_binary(offset, size)
+                    alias = view[::2]
+                    reader.end_unit(span, [])
+                    view.release()
+                    del view
+                    gc.collect()
+                    self.assertEqual(pool._reclaimed, 0)
+                    self.assertEqual(bytes(alias), b'a' * 32)
+                    with self.assertRaises(BufferError):
+                        writer.begin_unit()
+                    del alias
+                    gc.collect()
+                    self.assertEqual(pool._reclaimed, 1)
+                    self.assertNotIn('torch', sys.modules)
+                    self.assertIn('spdl.io.lib._buffer', sys.modules)
+
+            unittest.main()
+        """)
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            env={**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)},
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_close_rejects_new_exports_and_preserves_retained_alias(self) -> None:
         """Closed pools cannot reopen mappings while old native exports remain valid."""
