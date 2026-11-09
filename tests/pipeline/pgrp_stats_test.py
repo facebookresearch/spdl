@@ -8,8 +8,10 @@
 import asyncio
 import multiprocessing
 import os
+import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 from collections.abc import Awaitable, Callable
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -17,10 +19,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from spdl.pipeline._bg_task import BackgroundTask
 from spdl.pipeline._pgrp_stats import (
     _collect_pgrp_stats,
+    _NetworkBytes,
     _parse_proc_io,
     _parse_proc_stat,
     _parse_smaps_rollup,
     _pgrp_monitor_subprocess,
+    _PgrpStats,
     _read_file,
     _read_network_bytes,
     _read_pgrp_stats,
@@ -56,6 +60,25 @@ class LiveProcMonitorTest(unittest.TestCase):
 
     def test_collect_pgrp_stats_returns_complete_snapshot(self) -> None:
         """_collect_pgrp_stats should return a fully populated snapshot."""
+        script = textwrap.dedent("""
+            import importlib
+            import sys
+
+            module = importlib.import_module(sys.argv[1])
+            module.LiveProcMonitorTest()._assert_complete_snapshot()
+        """)
+        result = subprocess.run(
+            [sys.executable, "-c", script, __name__],
+            env={**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)},
+            start_new_session=True,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def _assert_complete_snapshot(self) -> None:
+        self.assertEqual(os.getpgrp(), os.getpid())
         result, cpu_usec, time_usec, net_rx, net_tx = _collect_pgrp_stats()
         self.assertIsInstance(result, ProcessGroupResourceUsage)
         self.assertEqual(result.pid, os.getpid())
@@ -89,6 +112,80 @@ class LiveProcMonitorTest(unittest.TestCase):
         # RSS must be positive for a running process.
         assert result.rss_bytes is not None
         self.assertGreater(result.rss_bytes, 0)
+
+
+@unittest.skipUnless(sys.platform == "linux", "Requires Linux /proc filesystem")
+class CollectPgrpStatsTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.stats = _PgrpStats(
+            cpu_usec=2_000_000,
+            rss_bytes=4096,
+            pss_bytes=2048,
+            private_bytes=1024,
+            disk_read_bytes=100,
+            disk_write_bytes=200,
+            num_procs=2,
+        )
+        self.enterContext(patch(f"{_MODULE}._read_pgrp_stats", return_value=self.stats))
+        self.enterContext(
+            patch(
+                f"{_MODULE}._read_network_bytes",
+                return_value=_NetworkBytes(rx_bytes=300, tx_bytes=400),
+            )
+        )
+        self.clock = self.enterContext(patch("time.monotonic", return_value=2.0))
+
+    def test_first_snapshot_has_no_cpu_or_network_deltas(self) -> None:
+        """The first snapshot supplies cumulative counters without inventing deltas."""
+        usage, cpu, timestamp, rx, tx = _collect_pgrp_stats()
+        self.assertIsNone(usage.cpu_percent)
+        self.assertIsNone(usage.net_rx_bytes)
+        self.assertIsNone(usage.net_tx_bytes)
+        self.assertEqual((cpu, timestamp, rx, tx), (2_000_000, 2_000_000, 300, 400))
+
+    def test_cpu_delta_preserves_zero_and_multicore_utilization(self) -> None:
+        """Valid CPU deltas include idle intervals and values above one core."""
+        for previous, expected in (
+            (2_000_000, 0.0),
+            (1_500_000, 50.0),
+            (500_000, 150.0),
+        ):
+            with self.subTest(previous=previous):
+                usage, *_ = _collect_pgrp_stats(previous, 1_000_000)
+                self.assertEqual(usage.cpu_percent, expected)
+
+    def test_cpu_counter_decrease_rebases_without_losing_snapshot(self) -> None:
+        """A lost process invalidates one CPU interval, then the new baseline recovers."""
+        self.stats.cpu_usec = 1_000_000
+        self.stats.num_procs = 1
+        usage, cpu, timestamp, rx, tx = _collect_pgrp_stats(
+            2_000_000, 1_000_000, 100, 200
+        )
+        self.assertIsNone(usage.cpu_percent)
+        self.assertEqual((cpu, timestamp), (1_000_000, 2_000_000))
+        self.assertEqual(usage.num_procs, 1)
+        self.assertEqual(usage.rss_bytes, 4096)
+        self.assertEqual(usage.disk_read_bytes, 100)
+        self.assertEqual(usage.disk_write_bytes, 200)
+        self.assertEqual((usage.net_rx_bytes, usage.net_tx_bytes), (200, 200))
+        self.stats.cpu_usec = 1_500_000
+        self.clock.return_value = 3.0
+        recovered, *_ = _collect_pgrp_stats(cpu, timestamp, rx, tx)
+        self.assertEqual(recovered.cpu_percent, 50.0)
+
+    def test_missing_cpu_or_time_baseline_has_no_percentage(self) -> None:
+        """A CPU interval requires both counters and a prior timestamp."""
+        for cpu, timestamp in ((None, 1_000_000), (2_000_000, None)):
+            with self.subTest(cpu=cpu, timestamp=timestamp):
+                usage, *_ = _collect_pgrp_stats(cpu, timestamp)
+                self.assertIsNone(usage.cpu_percent)
+
+    def test_nonpositive_elapsed_time_has_no_percentage(self) -> None:
+        """Equal or reversed timestamps cannot produce a meaningful CPU percentage."""
+        for timestamp in (2_000_000, 3_000_000):
+            with self.subTest(timestamp=timestamp):
+                usage, *_ = _collect_pgrp_stats(1_000_000, timestamp)
+                self.assertIsNone(usage.cpu_percent)
 
 
 class ReadFileTest(unittest.TestCase):
