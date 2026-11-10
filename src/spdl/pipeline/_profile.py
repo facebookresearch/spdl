@@ -218,6 +218,7 @@ def _profile_pipe(
             cfg_,
             num_threads=concurrency,
             queue_class=StatsQueue,
+            use_thread_output_queue=False,
         )
         with hook_.stage_profile_hook(pipe.name, concurrency):
             qps_, outputs = _run(pipeline)

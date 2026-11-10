@@ -313,8 +313,8 @@ def build_pipeline(
         use_thread_output_queue: ``None`` (the default) uses
             :py:class:`~spdl.pipeline.config.ThreadOutputQueueConfig`, set by
             :py:func:`~spdl.pipeline.config.set_default_thread_output_queue_config`.
-            The initial OSS configuration keeps the async sink. Explicit
-            ``False`` keeps the async sink, ``True`` selects the configured
+            The initial configuration selects the stats-enabled thread sink.
+            Explicit ``False`` keeps the async sink, ``True`` selects the configured
             thread class, and an explicit
             :py:class:`~spdl.pipeline.ThreadOutputQueue` subclass takes priority.
             Use :py:class:`~spdl.pipeline.StatsThreadOutputQueue` for background
@@ -325,7 +325,8 @@ def build_pipeline(
 
             .. versionchanged:: 0.9.0
                A thread-output queue class can be supplied explicitly.
-               ``None`` resolves the explicit default configuration.
+               ``None`` resolves the explicit default configuration, which now
+               enables the stats-enabled thread sink by default.
 
     .. seealso::
 
@@ -609,7 +610,8 @@ def run_pipeline_in_subprocess(
             environment. See :py:func:`build_pipeline`.
 
             .. versionchanged:: 0.9.0
-               ``None`` resolves the explicit thread-output default configuration.
+               ``None`` resolves the explicit thread-output default configuration,
+               which now enables the stats-enabled thread sink by default.
         kwargs: Passed to :py:func:`iterate_in_subprocess`.
 
     .. seealso::
@@ -779,7 +781,8 @@ def run_pipeline_in_subinterpreter(
             environment. See :py:func:`build_pipeline`.
 
             .. versionchanged:: 0.9.0
-               ``None`` resolves the explicit thread-output default configuration.
+               ``None`` resolves the explicit thread-output default configuration,
+               which now enables the stats-enabled thread sink by default.
         kwargs: Passed to :py:func:`iterate_in_subinterpreter`.
 
     Yields:

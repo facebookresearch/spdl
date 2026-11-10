@@ -51,7 +51,9 @@ class ThreadOutputOverrideTest(unittest.TestCase):
     def setUp(self) -> None:
         defaults = get_default_thread_output_queue_config()
         self.addCleanup(set_default_thread_output_queue_config, defaults)
-        set_default_thread_output_queue_config(ThreadOutputQueueConfig())
+        set_default_thread_output_queue_config(
+            ThreadOutputQueueConfig(enabled=False, queue_class=ThreadOutputQueue)
+        )
         for path, value in [
             ("spdl.pipeline._build._DEFAULT_BUILD_CALLBACK", None),
             ("spdl.pipeline._bg_task._DEFAULT_BACKGROUND_TASKS", []),
@@ -59,6 +61,12 @@ class ThreadOutputOverrideTest(unittest.TestCase):
             guard = patch(path, value)
             guard.start()
             self.addCleanup(guard.stop)
+
+    def test_initial_config_preserves_sink_statistics(self) -> None:
+        """The new OSS initial defaults enable the public statistics thread sink."""
+        defaults = ThreadOutputQueueConfig()
+        self.assertTrue(defaults.enabled)
+        self.assertIs(defaults.queue_class, StatsThreadOutputQueue)
 
     def test_true_default_is_plain_thread_queue(self) -> None:
         """Explicit True uses the configured class even when the enabled default is False."""
@@ -138,13 +146,16 @@ class NoMeta(importlib.abc.MetaPathFinder):
             raise ModuleNotFoundError("Meta extension excluded", name=fullname)
 sys.meta_path.insert(0, NoMeta())
 from spdl.pipeline import PipelineBuilder, ThreadOutputQueue, StatsThreadOutputQueue, AsyncQueue
+from spdl.pipeline.config import get_default_thread_output_queue_config
+assert get_default_thread_output_queue_config().enabled is True
+assert get_default_thread_output_queue_config().queue_class is StatsThreadOutputQueue
 class MyStats(StatsThreadOutputQueue):
     final = []
     async def interval_stats_callback(self, stats):
         pass
     async def final_stats_callback(self, stats):
         self.final.append(stats)
-for selection in [True, ThreadOutputQueue, MyStats]:
+for selection in [None, True, ThreadOutputQueue, MyStats, False]:
     consumed = threading.Event()
     async def source():
         for i in range(20): yield i
@@ -158,6 +169,11 @@ for selection in [True, ThreadOutputQueue, MyStats]:
         finally: consumed.set()
         assert list(it) == []
     if selection is MyStats: assert pipeline._impl._output_queue.final[0].num_items == 20
+    if selection is None or selection is True:
+        sink = pipeline._impl._output_queue
+        assert type(sink) is StatsThreadOutputQueue
+        assert sink._stats_provider.get_stats().num_items == 20
+        assert sink._stats_provider.put_counter.num_items == 20
 assert not any(name.startswith("spdl.pipeline.fb") for name in sys.modules)
 print("OSS_CUSTOM_THREAD_QUEUE_PASSED")
 """
