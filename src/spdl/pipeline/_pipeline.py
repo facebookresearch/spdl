@@ -25,8 +25,8 @@ from typing import Any, cast, Generic, NoReturn, TypeVar
 from spdl.pipeline._common._misc import create_task
 from spdl.pipeline._components import (
     _AsyncQueueWithSyncMirror,
-    _ThreadBasedAsyncQueue,
     is_epoch_end,
+    ThreadOutputQueue,
 )
 
 __all__ = ["Pipeline"]
@@ -402,7 +402,7 @@ class _PipelineImpl(Generic[T]):
 
     def _drain_thread_output_queue_until(self, deadline: float) -> None:
         """Release thread-backed sink pressure until the cleanup deadline."""
-        assert isinstance(self._output_queue, _ThreadBasedAsyncQueue)
+        assert isinstance(self._output_queue, ThreadOutputQueue)
         q = self._output_queue._queue  # pyrefly: ignore [missing-attribute]
         try:
             # Each removal can wake a producer blocked on this thread-safe
@@ -557,7 +557,7 @@ class _PipelineImpl(Generic[T]):
                     # Empty the sink to release producer backpressure. asyncio.Queue
                     # wakes blocked putters while draining, so it must be touched on
                     # its owning event loop rather than from this foreground thread.
-                    if isinstance(self._output_queue, _ThreadBasedAsyncQueue):
+                    if isinstance(self._output_queue, ThreadOutputQueue):
                         self._drain_thread_output_queue_until(drain_deadline)
                     else:
                         self._drain_async_output_queue_until(drain_deadline)
@@ -609,7 +609,7 @@ class _PipelineImpl(Generic[T]):
 
         if isinstance(self._output_queue, _AsyncQueueWithSyncMirror):
             return self._get_item_mirrored_queue(timeout=timeout)
-        if isinstance(self._output_queue, _ThreadBasedAsyncQueue):
+        if isinstance(self._output_queue, ThreadOutputQueue):
             return self._get_item_thread_queue(timeout=timeout)
         return self._get_item_async_queue(timeout=timeout)
 
@@ -1059,7 +1059,7 @@ class _PipelineImpl(Generic[T]):
                     self._raise_task_failure_or_eof()
                 raise
 
-        if isinstance(self._output_queue, _ThreadBasedAsyncQueue):
+        if isinstance(self._output_queue, ThreadOutputQueue):
             q = self._output_queue._queue  # pyre-ignore[16]
             try:
                 return q.get_nowait()

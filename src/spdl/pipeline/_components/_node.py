@@ -43,7 +43,6 @@ from ._pipe import (
 )
 from ._queue import (
     _AsyncQueueWithSyncMirror,
-    _ThreadBasedAsyncQueue,
     AsyncQueue,
     get_default_queue_class,
     StatsQueue,
@@ -51,6 +50,7 @@ from ._queue import (
 from ._sink import _sink
 from ._source import _source, _source_continuous
 from ._subprocess_pipe import _subprocess_pipeline
+from ._thread_queue import _make_thread_output_queue, ThreadOutputQueue
 from ._variants import _batched_path_variants_merge, _path_variants_router
 
 T = TypeVar("T")
@@ -455,7 +455,8 @@ def _convert_config(
     pipeline_id: int,
     stage_id: _MutableInt,
     disable_sink: bool = False,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
+    report_stats_interval: float = -1,
 ) -> _TOutputNodes:
     """Convert a :py:class:`~spdl.pipeline.defs.PipelineConfig` into a linked list of
     :py:class:`~spdl.pipeline._components._node._Node` objects.
@@ -498,7 +499,12 @@ def _convert_config(
         info = _get_stage_info(plc.sink, pipeline_id, stage_id)
         stage_id += 1
         if use_thread_output_queue:
-            sink_out_q = _ThreadBasedAsyncQueue(info, buffer_size=plc.sink.buffer_size)
+            sink_out_q = _make_thread_output_queue(
+                info,
+                plc.sink.buffer_size,
+                use_thread_output_queue,
+                report_stats_interval,
+            )
         else:
             sink_out_q = q_class(info, buffer_size=plc.sink.buffer_size)
             if type(sink_out_q) in (AsyncQueue, StatsQueue):
@@ -743,11 +749,18 @@ def _build_pipeline_node(
     queue_class: type[AsyncQueue] | None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None,
     stage_id: int,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
 ) -> _TOutputNodes:
     global _PIPELINE_ID
     _PIPELINE_ID += 1
 
+    if not isinstance(use_thread_output_queue, bool) and not (
+        isinstance(use_thread_output_queue, type)
+        and issubclass(use_thread_output_queue, ThreadOutputQueue)
+    ):
+        raise TypeError(
+            "use_thread_output_queue must be bool or a ThreadOutputQueue class"
+        )
     q_class = _default_q(report_stats_interval) if queue_class is None else queue_class
     hook_factory = (
         _default_hook_factory(report_stats_interval)
@@ -762,6 +775,7 @@ def _build_pipeline_node(
         _PIPELINE_ID,
         _MutableInt(stage_id),
         use_thread_output_queue=use_thread_output_queue,
+        report_stats_interval=report_stats_interval,
     )
     _validate_continuous_mode(node)
     _build_node_recursive(node, fc_class, hook_factory, max_failures)
@@ -1010,7 +1024,7 @@ def _build_pipeline_coro(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: Sequence[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
 ) -> tuple[Coroutine[None, None, None], asyncio.Queue]:
     try:
         node = _build_pipeline_node(

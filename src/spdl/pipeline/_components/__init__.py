@@ -15,7 +15,6 @@ from ._hook import (
 from ._node import _build_pipeline_coro, _get_global_id, _set_global_id, PipelineFailure
 from ._queue import (
     _AsyncQueueWithSyncMirror,
-    _ThreadBasedAsyncQueue,
     AsyncQueue,
     get_default_queue_class,
     QueuePerfStats,
@@ -34,6 +33,7 @@ from ._subprocess_pipe import (
     _SESSION_END,
     _subprocess_pipeline,
 )
+from ._thread_queue import StatsThreadOutputQueue, ThreadOutputQueue
 
 __all__ = [
     "_build_pipeline_coro",
@@ -55,7 +55,6 @@ __all__ = [
     "is_epoch_end",
     "PipelineFailure",
     "_AsyncQueueWithSyncMirror",
-    "_ThreadBasedAsyncQueue",
     "set_default_hook_class",
     "set_default_queue_class",
     "TaskHook",
@@ -64,5 +63,7 @@ __all__ = [
     "QueuePerfStats",
     "StageInfo",
     "StatsQueue",
+    "ThreadOutputQueue",
+    "StatsThreadOutputQueue",
     "AsyncQueue",
 ]

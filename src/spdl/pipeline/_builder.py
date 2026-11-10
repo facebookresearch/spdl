@@ -13,7 +13,7 @@ from fractions import Fraction
 from typing import Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
-from spdl.pipeline._components import AsyncQueue, StageInfo, TaskHook
+from spdl.pipeline._components import AsyncQueue, StageInfo, TaskHook, ThreadOutputQueue
 from spdl.pipeline.defs import (
     _MainProcess,
     _PipeType,
@@ -543,7 +543,7 @@ class PipelineBuilder(Generic[T, U]):
         queue_class: type[AsyncQueue] | None = None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         stage_id: int = 0,
-        use_thread_output_queue: bool = False,
+        use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
     ) -> Pipeline[U]:
         """Build the pipeline.
 
@@ -586,9 +586,18 @@ class PipelineBuilder(Generic[T, U]):
 
             stage_id: The index of the initial stage  used for logging.
 
-            use_thread_output_queue: If ``True``, replace the sink's output queue with a
-                ``queue.Queue``-backed queue for lower-latency batch handoff.
+            use_thread_output_queue: ``False`` keeps the asyncio sink. ``True``
+                selects the configured default thread queue. A
+                :py:class:`~spdl.pipeline.ThreadOutputQueue` subclass selects
+                that implementation explicitly; use
+                :py:class:`~spdl.pipeline.StatsThreadOutputQueue` for optional
+                background statistics and custom reporting callbacks. See these
+                queue-class docstrings for usage and subclassing examples.
+                ``queue_class`` continues to configure internal stage queues.
                 Default: ``False``.
+
+                .. versionchanged:: 0.9.0
+                   A thread-output queue class can be supplied explicitly.
 
         .. seealso::
 

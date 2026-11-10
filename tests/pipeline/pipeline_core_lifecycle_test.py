@@ -24,7 +24,7 @@ from typing import Any, cast
 from unittest.mock import call, MagicMock, patch
 
 from spdl.pipeline import Pipeline, PipelineBuilder
-from spdl.pipeline._components import _ThreadBasedAsyncQueue, StageInfo
+from spdl.pipeline._components import StageInfo, ThreadOutputQueue
 from spdl.pipeline._pipeline import _EventLoop, _EventLoopState, _READ_TIMED_OUT
 
 _TIMEOUT: float = 30.0
@@ -1487,7 +1487,7 @@ class PipelineStopTest(unittest.TestCase):
         async def unused_pipeline() -> None:
             return None
 
-        output_queue = _ThreadBasedAsyncQueue(
+        output_queue = ThreadOutputQueue(
             StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
         )
         pipeline_coro = unused_pipeline()
@@ -1572,7 +1572,7 @@ class PipelineStopTest(unittest.TestCase):
         async def unused_pipeline() -> None:
             return None
 
-        output_queue = _ThreadBasedAsyncQueue(
+        output_queue = ThreadOutputQueue(
             StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
         )
         output_queue._queue.put_nowait(1)
@@ -1635,7 +1635,7 @@ class PipelineStopTest(unittest.TestCase):
         async def unused_pipeline() -> None:
             return None
 
-        output_queue = _ThreadBasedAsyncQueue(
+        output_queue = ThreadOutputQueue(
             StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
         )
         output_queue._queue.put_nowait(1)
@@ -1688,7 +1688,7 @@ class PipelineStopTest(unittest.TestCase):
         async def unused_pipeline() -> None:
             return None
 
-        output_queue = _ThreadBasedAsyncQueue(
+        output_queue = ThreadOutputQueue(
             StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
         )
         output_queue._queue.put_nowait(1)
@@ -1759,7 +1759,7 @@ class PipelineStopTest(unittest.TestCase):
         async def unused_pipeline() -> None:
             return None
 
-        output_queue = _ThreadBasedAsyncQueue(
+        output_queue = ThreadOutputQueue(
             StageInfo(pipeline_id=0, stage_id="0", stage_name="output")
         )
         output_queue._queue.put_nowait(1)
