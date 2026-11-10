@@ -12,7 +12,7 @@ import asyncio
 import queue
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from spdl.pipeline._common._misc import create_task
@@ -38,10 +38,10 @@ class ThreadOutputQueue(AsyncQueue):
     Pass this class, or a subclass, as ``use_thread_output_queue`` to
     :py:meth:`~spdl.pipeline.PipelineBuilder.build` or
     :py:func:`~spdl.pipeline.build_pipeline`. An omitted or ``None`` selector
-    uses :py:class:`~spdl.pipeline.config.ThreadOutputQueueConfig`; its initial OSS
-    configuration keeps the async sink. ``False`` explicitly keeps the async
-    sink, and ``True`` selects the configured thread-output class. An explicit
-    class takes priority over the configuration.
+    uses :py:class:`~spdl.pipeline.config.ThreadOutputQueueConfig`; its initial
+    configuration selects the stats-enabled thread sink. ``False`` explicitly
+    keeps the async sink, and ``True`` selects the configured thread-output
+    class. An explicit class takes priority over the configuration.
     Pass a class, not a prebuilt instance; the builder constructs the sink.
 
     Internal stage queues still use ``queue_class``. This plain sink does not
@@ -260,12 +260,18 @@ class ThreadOutputQueueConfig:
         )
 
     .. versionadded:: 0.9.0
+
+    .. versionchanged:: 0.9.0
+       The initial configuration enables the thread sink and uses
+       :py:class:`~spdl.pipeline.StatsThreadOutputQueue` to preserve sink statistics.
     """
 
-    enabled: bool = False
+    enabled: bool = True
     """Whether omitted/None build options select the thread-backed sink."""
 
-    queue_class: type[ThreadOutputQueue] = ThreadOutputQueue
+    queue_class: type[ThreadOutputQueue] = field(
+        default_factory=lambda: StatsThreadOutputQueue
+    )
     """The class used when the thread-backed sink is enabled without an explicit class."""
 
 
@@ -276,8 +282,8 @@ def get_default_thread_output_queue_config() -> ThreadOutputQueueConfig:
     """Return the immutable process-local thread-sink configuration.
 
     Returns:
-        The installed configuration, or the OSS initial configuration with
-        ``enabled=False`` and plain :py:class:`~spdl.pipeline.ThreadOutputQueue`.
+        The installed configuration, or the initial configuration with
+        ``enabled=True`` and :py:class:`~spdl.pipeline.StatsThreadOutputQueue`.
 
     .. versionadded:: 0.9.0
     """
@@ -418,9 +424,8 @@ class StatsThreadOutputQueue(ThreadOutputQueue):
     reporting. Unexpected aggregation errors propagate through the collector
     and stage finalization rather than silently discarding stage metrics.
 
-    This customization does not change stage execution or serialization and does
-    not make the thread-output option the default. Measure the intended workload
-    before choosing an implementation.
+    This customization does not change stage execution or serialization.
+    Measure the intended workload before choosing an implementation.
 
     Benchmark comparison
     --------------------
