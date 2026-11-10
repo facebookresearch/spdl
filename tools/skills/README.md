@@ -13,6 +13,7 @@ Use this index to load only the guidance for the current decision. Migration fir
 
 - [Workflow](optimization/workflow.md): phases, empirical architecture exception, acceptance/quality, stacking and final sweep.
 - [Analysis](optimization/analysis.md): identify loader bottlenecks using pipeline statistics and model bottlenecks using traces/timings; select remedies and re-profile.
+- [Cached-first model benchmarks](optimization/cached_model_benchmark.md): short warmed native training with real GPU-ready `CacheDataLoader` replay before full-epoch E2E and original-baseline quality validation; preserve distributed communication and correctness.
 - [Pipeline statistics](optimization/pipeline_stats.md): timing scopes, all-rank readiness, starvation/backpressure and GIL/event-loop attribution.
 - [Architectures](optimization/architectures.md): multiprocessing, multithreading and MTP comparisons and process-state constraints.
 - [Execution remedies](optimization/execution_optimizations.md): measured I/O, dispatch, serialization and copy costs.
