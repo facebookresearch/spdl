@@ -35,6 +35,7 @@ from spdl.pipeline._components import (
     AsyncQueue,
     StageInfo,
     TaskHook,
+    ThreadOutputQueue,
 )
 from spdl.pipeline._executor_proxy import _make_config_executors_picklable
 from spdl.pipeline._fuse import _fuse_marked_regions
@@ -172,7 +173,7 @@ def _build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
 ) -> Pipeline[U]:
     if _DEFAULT_BUILD_CALLBACK is not None:
         try:
@@ -237,7 +238,7 @@ def build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -308,11 +309,17 @@ def build_pipeline(
             Tasks are cancelled when the pipeline completes. Their errors are logged
             but do not cause the pipeline to fail.
 
-        use_thread_output_queue: If ``True``, replace the sink's output queue with a
-            :py:class:`queue.Queue`-backed queue for the final handoff from the
-            background event loop to the foreground consumer thread. This bypasses
-            ``asyncio.run_coroutine_threadsafe``, reducing per-batch latency from
-            ~200-400us to ~10us. Default: ``False``.
+        use_thread_output_queue: ``False`` keeps the asyncio sink. ``True`` uses
+            the configured default :py:class:`~spdl.pipeline.ThreadOutputQueue`.
+            Pass a subclass to select it explicitly, for example
+            :py:class:`~spdl.pipeline.StatsThreadOutputQueue` for background
+            statistics with overridable reporting callbacks. See the queue-class
+            docstrings for usage and subclassing examples. The builder passes
+            ``buffer_size`` and ``report_stats_interval`` to its constructor.
+            Internal stage queues still use ``queue_class``. Default: ``False``.
+
+            .. versionchanged:: 0.9.0
+               A thread-output queue class can be supplied explicitly.
 
     .. seealso::
 
@@ -363,7 +370,7 @@ class _Wrapper(Generic[U]):
         queue_class: type[AsyncQueue] | None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         background_tasks: list[BackgroundTaskFactory] | None = None,
-        use_thread_output_queue: bool = False,
+        use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
     ) -> None:
         self.config = config
         self.num_threads = num_threads
@@ -435,7 +442,7 @@ def run_pipeline_in_subprocess(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
     **kwargs: Any,
 ) -> Iterable[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
@@ -723,7 +730,7 @@ def run_pipeline_in_subinterpreter(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool = False,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
     **kwargs: Any,
 ) -> Iterable[T]:
     """**[Experimental]** Run the given Pipeline in a subinterpreter, and iterate on the result.

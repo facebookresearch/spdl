@@ -5,45 +5,28 @@
 # LICENSE file in the root directory of this source tree.
 
 
-"""Benchmark: SPDL pipeline handoff latency with and without thread output queue.
+"""Compare handoff with False, ThreadOutputQueue and StatsThreadOutputQueue.
 
-Compares main-thread ``get_item`` latency between the default asyncio-based
-handoff (``run_coroutine_threadsafe`` + ``Future.result`` polling) and the
-``queue.Queue``-based handoff (direct ``queue.Queue.get``).
+Runs a source-to-sink pipeline with 500 integer items, buffer capacity 8 and two
+configured executor workers. Foreground CPU busy-work is swept from 0 to 30 ms
+in 3 ms steps. After 20 warmup items, timed and untimed iterator reads alternate,
+producing 240 latency observations per variant and work setting.
 
-The benchmark emulates a realistic training loop: each iteration the
-foreground thread receives a batch, does simulated work (busy-wait to
-mimic a GPU forward/backward pass), and then times how long the *next*
-``get_item`` call takes.  When the simulated work is long enough the
-producer has time to pre-fill the queue, so the handoff latency
-isolates the cross-thread scheduling overhead.
-
-Foreground work is swept from 0ms to 30ms in 3ms steps.
+The busy loop creates CPU/GIL contention rather than real GPU work. Results
+measure iterator handoff, not sustained-load, training or GPU-overlap performance.
+The False control uses the configured async sink (a synchronous mirror for the
+built-in StatsQueue); both thread variants are explicitly selected classes.
+StatsThreadOutputQueue collects with its default final reporting callback;
+periodic reporting is disabled. Existing internal queues and task hooks retain
+normal defaults in every variant.
 
 Usage::
 
     buck2 run //spdl/examples:benchmark_thread_output_queue
 
-Example results (devserver, no GPU, 500 lightweight int items)::
-
-    FG work   default (p50)   default (p99)   thread_q (p50)   thread_q (p99)
-    -------   -------------   -------------   --------------   --------------
-      0ms         199us           625us           116us            313us
-      3ms         246us           642us           223us            646us
-      6ms         232us           532us           190us            555us
-      9ms         287us           485us           153us            549us
-     12ms         280us           822us            14us            464us
-     15ms         221us           396us             8us            385us
-     18ms         227us           431us             9us             70us
-     21ms         224us           450us            11us             41us
-     24ms         240us           533us            12us             34us
-     27ms         227us           470us            12us             27us
-     30ms         242us           512us            12us             26us
-
-The default asyncio path stays flat at ~220-280us regardless of overlap
-time — that is the fixed ``run_coroutine_threadsafe`` scheduling tax.
-The thread output queue drops to ~8-14us once the foreground work is
-long enough (>= ~12ms on this machine) for the producer to pre-fill it.
+The complete measured comparison is documented on
+:py:class:`spdl.pipeline.ThreadOutputQueue` and
+:py:class:`spdl.pipeline.StatsThreadOutputQueue`.
 """
 
 from __future__ import annotations
@@ -52,9 +35,9 @@ import statistics
 import time
 from dataclasses import dataclass, field
 
-from spdl.pipeline import PipelineBuilder
+from spdl.pipeline import PipelineBuilder, StatsThreadOutputQueue, ThreadOutputQueue
 
-__all__ = ["BenchResult", "main"]
+__all__ = ["BenchResult", "run_benchmark", "main"]
 
 
 @dataclass
@@ -102,30 +85,36 @@ def _busy_wait_us(us: float) -> None:
         pass
 
 
-def _run_bench(
+def run_benchmark(
     name: str,
     n_items: int,
     buffer_size: int,
-    use_thread_output_queue: bool,
+    use_thread_output_queue: bool | type[ThreadOutputQueue],
     work_us: float,
     warmup: int = 20,
 ) -> BenchResult:
-    """Run a single benchmark: source -> sink pipeline with foreground work.
+    """Run a source-to-sink pipeline with foreground CPU busy-work.
 
-    Builds a trivial pipeline (source of *n_items* integers -> sink) and
-    iterates it.  Between each consumed item the foreground thread
-    busy-waits for *work_us* microseconds to simulate consumer-side
-    compute (e.g. a GPU training step).  After warmup, the time spent
-    inside each ``get_item`` call is recorded.
+    After warmup, every other iterator advance is timed. The public build option
+    selects the configured async sink or an explicit thread-output class.
 
     Args:
         name: Human-readable label for the result.
-        n_items: Total number of items the source produces.
-        buffer_size: Sink buffer size (number of slots).
-        use_thread_output_queue: Whether to use the thread output queue handoff.
-        work_us: Duration of simulated foreground work in microseconds.
+        n_items: Total number of integer items the source produces.
+        buffer_size: Sink buffer size in items; zero means unbounded.
+        use_thread_output_queue: ``False``, ``True``, or a thread-output queue class.
+        work_us: Duration of foreground CPU busy-work in microseconds.
         warmup: Number of items to consume before recording latencies.
+
+    Returns:
+        Latencies of timed iterator advances, in microseconds. The workload
+        alternates timed and untimed reads after warmup; it is CPU-only and does
+        not establish sustained-load or GPU-overlap performance.
     """
+    if n_items <= warmup + 1 or warmup < 0:
+        raise ValueError("n_items must exceed warmup by at least two")
+    if buffer_size < 0 or work_us < 0:
+        raise ValueError("buffer_size and work_us must be nonnegative")
     items = list(range(n_items))
     pipeline = (
         PipelineBuilder()
@@ -136,35 +125,28 @@ def _run_bench(
 
     result = BenchResult(name=name)
     consumed = 0
-    for _ in pipeline.get_iterator(timeout=60):
-        consumed += 1
+    try:
+        for _ in pipeline.get_iterator(timeout=60):
+            consumed += 1
+            _busy_wait_us(work_us)
+            if consumed <= warmup:
+                continue
 
-        # Simulate foreground work (e.g. GPU fwd+bwd).
-        # This gives the producer time to pre-fill the queue
-        # so the next get_item measures pure handoff overhead.
-        _busy_wait_us(work_us)
-
-        if consumed <= warmup:
-            continue
-
-        # Time the next get_item call — this is what we're measuring.
-        t0 = time.perf_counter()
-        try:
-            next(pipeline.get_iterator(timeout=60))
-        except StopIteration:
-            break
-        result.latencies_us.append((time.perf_counter() - t0) * 1e6)
-        consumed += 1
-
-        # Do work after the timed item too, so the *next* iteration's
-        # measurement also has overlap time.
-        _busy_wait_us(work_us)
-
+            t0 = time.perf_counter()
+            try:
+                next(pipeline.get_iterator(timeout=60))
+            except StopIteration:
+                break
+            result.latencies_us.append((time.perf_counter() - t0) * 1e6)
+            consumed += 1
+            _busy_wait_us(work_us)
+    finally:
+        pipeline.stop(timeout=60)
     return result
 
 
 def main() -> None:
-    """Run the full benchmark sweep and print results."""
+    """Run the three-way sweep and print every mean/p50/p95/p99 result."""
     n_items = 500
     buffer_size = 8
 
@@ -172,33 +154,29 @@ def main() -> None:
     print("=" * 90)
 
     results: list[BenchResult] = []
-
-    work_ms_values = list(range(0, 31, 3))
-    for work_ms in work_ms_values:
-        work_us = work_ms * 1000.0
+    for work_ms in range(0, 31, 3):
         label = f"{work_ms}ms foreground work"
         print(f"\n--- {label} ({n_items} items, buffer_size={buffer_size}) ---")
-
-        for use_toq, tag in [
-            (False, "default asyncio"),
-            (True, "thread output queue"),
+        for selection, tag in [
+            (False, "False"),
+            (ThreadOutputQueue, "ThreadOutputQueue"),
+            (StatsThreadOutputQueue, "StatsThreadOutputQueue"),
         ]:
-            r = _run_bench(
+            result = run_benchmark(
                 f"{tag}, {label}",
                 n_items,
                 buffer_size,
-                use_thread_output_queue=use_toq,
-                work_us=work_us,
+                use_thread_output_queue=selection,
+                work_us=work_ms * 1000.0,
             )
-            results.append(r)
-            print(f"  {r.summary()}")
+            results.append(result)
+            print(f"  {result.summary()}")
 
     print(f"\n{'=' * 90}")
-    print("SUMMARY — main thread get_item() latency (lower is better)")
+    print("SUMMARY — foreground iterator handoff latency (lower is better)")
     print(f"{'=' * 90}")
-    for r in results:
-        if r.latencies_us:
-            print(f"  {r.summary()}")
+    for result in results:
+        print(f"  {result.summary()}")
 
 
 if __name__ == "__main__":

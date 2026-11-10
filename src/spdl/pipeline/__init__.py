@@ -29,9 +29,11 @@ from ._components import (
     QueuePerfStats,
     StageInfo,
     StatsQueue,
+    StatsThreadOutputQueue,
     TaskHook,
     TaskPerfStats,
     TaskStatsHook,
+    ThreadOutputQueue,
 )
 from ._iter_utils import (
     cache_iterator,
@@ -73,6 +75,8 @@ __all__ = [
     "TaskHook",
     "TaskStatsHook",
     "TaskPerfStats",
+    "StatsThreadOutputQueue",
+    "ThreadOutputQueue",
     "AsyncQueue",
     "StageInfo",
     "StatsQueue",
