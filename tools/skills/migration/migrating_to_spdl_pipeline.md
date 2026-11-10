@@ -5,6 +5,10 @@
 - Before Phase 1 tests/launches, read the bundled `workflow.md` and `development_record.md` references for the indexed record and every-production-launch SPDL queue analysis.
 - After parity, that workflow owns architecture/model optimization, neutral hygiene, validated stacking and final sweeps; this guide is the single baseline procedure. Preserve each phase's gates and keep temporary campaign documents out of reusable skill dependencies.
 
+## Startup call-chain audit
+
+Before implementation or tuning, follow each recurring network lookup/fetch through wrappers, decorators, sync adapters and client internals to the actual standard-library/native event-loop and transport boundary. Apply the shared `async_boundary_audit.md` procedure bundled with the migration skill. Check per-call `asyncio.run` or equivalent bridges, client/connection lifetime, and setup/shutdown frequency; measure the wrapper and nested work before attributing a cost. Preserve the original baseline and scope any required bridge repair explicitly. Do not confuse a one-time CLI runner with a recurring sample path or assume a fixed seconds-per-call penalty.
+
 ## 1. Preserve the baseline
 
 - Capture the original loader/model revision, effective data/configuration, sampler/sharding, seed, batching, workers/prefetch, cache state, CPU allocation, training topology and comparison windows. Keep the original path reproducible.

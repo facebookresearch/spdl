@@ -2,9 +2,11 @@
 
 Read [analysis.md](analysis.md) first. Use a recipe only when pipeline statistics plus function/holder/transport measurements identify an exposed bottleneck. Empirical architecture comparisons use [architectures.md](architectures.md); they do not exempt unrelated cache/I/O/processing changes from evidence.
 
-## Blocking I/O or synchronous bridges on the hot path
+## Network calls hidden behind synchronous bridges
 
-- Pass native `async def` operations directly to `.pipe()` and await the verified storage client operation. Do not wrap a coroutine per item with `asyncio.run` or another async-to-sync bridge.
+Perform the shared `async_boundary_audit.md` startup audit before choosing a remedy. Inspect recurring fetch helpers through their sync facades, retry/decorator layers and actual network client to the standard-library/native boundary. Attribute per-call loop/client setup and shutdown separately from request latency; a cached-model assay does not measure this input path. Preserve the untouched baseline and record any necessary migration repair as its own scoped deviation.
+
+- Pass native `async def` operations directly to `.pipe()` and await the verified network client operation. Do not wrap a coroutine per item with `asyncio.run` or another async-to-sync bridge.
 - Move synchronous blocking I/O/CPU work off the asyncio loop into the appropriate executor/process. A native call can release the GIL yet still block the loop when called synchronously; diagnose loop blocking separately from GIL contention.
 - Avoid hot-path handler dispatch, file locks, temporary-path materialization and second reads if actual timings show their overhead and a supported native byte-returning path preserves semantics. Setup/manifest access is not the same per-sample path.
 
