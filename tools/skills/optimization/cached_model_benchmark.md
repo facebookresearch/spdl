@@ -33,6 +33,7 @@ If native self-repeat fails a strict diagnostic, preserve that failure and scope
 - Use the global paired block as the inference unit. For synchronous distributed timing, aggregate per-update durations across ranks using the declared statistic (for example, rank maximum), then aggregate within the block. Ranks and repeated adjacent steps are not independent samples. Account for temporal dependence in the interval method.
 - Report absolute parent/candidate means, candidate-minus-parent differences and confidence intervals, alongside point-estimate percentages. Retain fixed-N failures, unmet precision, outliers and incomplete coverage; never rerun until favorable or delete adverse blocks.
 - Phase rank maxima can have different owning ranks and are not additive to total-update latency. NCCL residence is not pure wire/service time or removable delay. Keep cache fill, warmup, profiled examples, timed updates and E2E clocks distinct.
+- Keep the validated baseline GC-regulation policy in both arms of a model-only assay; do not drop it just because the current hypothesis is not GC-related. Freezing a heap or changing collection scheduling is a separately attributed runtime optimization, not a way to suppress adverse timing blocks. Follow [gc_optimization.md](gc_optimization.md) for retention, process-wide ownership and cleanup; stopping acquisition must not conceal cyclic resource retention that needs full-epoch validation.
 
 ## Validate E2E after the cached result
 

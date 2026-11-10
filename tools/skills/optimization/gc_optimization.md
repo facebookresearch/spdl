@@ -1,0 +1,50 @@
+# GC Performance Optimization and Lifecycle Safety
+
+## Baseline retention and outcome
+
+After migration parity, establish a supported application-owned GC-regulation policy, validate safety and performance non-regression, and retain it across subsequent experiments even without an isolated speed gain. Preserve the untouched original baseline and record added policy explicitly. Unsafe or regressing policies require repair or a documented exception/replacement, not silent removal.
+
+A demonstrated E2E gain is a **runtime performance optimization**; validated retention with no measured improvement is **hygiene**. An unresolved or failed comparison qualifies as neither.
+
+## Why GC can materially improve distributed efficiency
+
+Regulation can reduce scanning of a large long-lived heap and staggered rank pauses that repeatedly delay peers at collectives. Attribute these mechanisms with matched full-epoch measurements. Repeated event-loop poll warnings or periodic slow steps are clues, not proof of a GC cause or the actual GIL holder.
+
+### Diagnose before selecting a policy
+
+- Use low-overhead `gc.callbacks` start/stop observations to record generation, elapsed duration, rank/process and training-step context, then correlate them with local stalls and all-rank tails. Keep callbacks short: defer reporting/aggregation and do not call `gc.collect()` recursively from a callback. Remove only the callback this instrumentation installed.
+- Inspect the effective Python version/build, GC enablement/thresholds, existing trainer/loader policies, long-lived tracked containers and cyclic resources. Distinguish reference-count reclamation from cyclic collection. Python generation behavior differs across versions and free-threaded builds; do not assume one universal trigger formula.
+- Record complete-work latency, host/GPU memory, collection count/duration and shared-buffer/view reclamation. Do not hide recurring pauses with median step time or call a poll warning definitive collection evidence.
+
+### Regulate collections at supported boundaries
+
+- Treat a collection-policy change as an attributable runtime hypothesis, not measurement-only instrumentation.
+- TorchTNT's inspected `GarbageCollector(step_interval=...)` disables automatic collection, performs generation-1 collection on steps and full collection at the interval, and enables collection in its normal end hooks. Check the actual version's generation semantics, exception/cancellation behavior and prior-state restoration; normal hooks alone are not a `finally` guarantee, and enabling GC is not restoration if it was disabled beforehand.
+- Equal step intervals across ranks do not guarantee simultaneous pauses. Use a shared completed-step/epoch policy when supported and compare actual rank-aligned events. Do not add an unmeasured per-step barrier or multiply/sum rank pauses as a calibrated E2E saving.
+- **Tune the interval in Phase 3** using [parameter_sweep.md](parameter_sweep.md). Do not mandate an arbitrary interval or disable automatic GC indefinitely without bounded cyclic-memory and cleanup checks.
+
+### Freeze a long-lived heap when warranted
+
+`gc.freeze()` moves all currently GC-tracked objects in the process into a permanent generation that future cyclic collections skip, including explicit `gc.collect()`. `gc.unfreeze()` returns those objects to the oldest generation; it does not collect them. Reference counting still operates, and newly created objects remain eligible for normal cyclic collection if automatic GC is enabled. Freeze neither makes objects immutable nor freezes model parameters, and it does not itself disable automatic GC.
+
+Consider freezing after stable initialization, or refreshing the frozen heap at a supported epoch boundary, when measurements implicate repeated scanning of long-lived containers. A process-owned refresh sequence is:
+
+```python
+gc.unfreeze()
+gc.collect()
+gc.freeze()
+```
+
+This is a policy sketch, not a drop-in loader hook: the trainer application must own the process-wide freeze policy and run it at a quiescent lifecycle boundary. Keep required cleanup and safe collection points in the experiment's elapsed costs.
+
+- Freeze/unfreeze affect the whole process, not just a sampler or loader. Check existing freeze ownership first. Do not unfreeze another component's objects, call freeze as a library import side effect, or assume `gc.get_freeze_count()` can identify/restore a component's previous frozen set. It is an aggregate diagnostic count, not a membership or memory inventory.
+- Frozen unreachable cycles can retain GPU tensors, shared-memory views, client sessions or buffer-pool leases until they are unfrozen and collected. Objects created later can also become linked into such cycles. An epoch-boundary policy bounds that retention only if the boundary and cleanup actually run; cancellation or early termination can skip it. Explicit resource close/release remains required.
+- With no pre-existing frozen heap and explicit sole application ownership, arrange normal-end and exception/cancellation cleanup to unfreeze the owned heap, collect where safe and restore prior automatic-GC enablement/thresholds. If an existing frozen set is present or ownership is unclear, use the existing owner policy rather than claim an exact rollback that these APIs cannot provide.
+- Validate multiple boundaries, resume, early stop, exceptions and outstanding resource views, not just a short no-OOM run. Monitor frozen-object count, cyclic collection, memory growth and buffer wait/lease recovery. Keep parent/candidate policies equal in a model-only cached assay; evaluate a GC change separately with the real acquisition/resource lifecycle and full-epoch E2E validation.
+- Compact numeric/index arrays can reduce Python-object and memory overhead, but do not guarantee fewer or cheaper full collections: changes in allocation/survivor counts can change collection frequency. Measure the combined representation and GC policy rather than assuming their gains add.
+
+An application-specific short A/B is not a universal speedup or long-run leak guarantee. Short cached model timings and tensor shapes do not prove training quality.
+
+## Handoff
+
+Record the application-owned policy, exception/replacement decisions, measured speed outcome and resource/lifecycle evidence. Use [orchestration.md](orchestration.md) for isolated approach ownership and [development_record.md](development_record.md) for concise attempt records.

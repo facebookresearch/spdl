@@ -22,7 +22,8 @@ Use this index to load only the guidance for the current decision. Migration fir
 - [Architectures](optimization/architectures.md): multiprocessing, multithreading and MTP comparisons and process-state constraints.
 - [Execution remedies](optimization/execution_optimizations.md): measured I/O, dispatch, serialization and copy costs.
 - [Media remedies](optimization/media_optimizations.md): measured decode/transfer and placement costs.
-- [Hygiene](optimization/hygiene.md): validated neutral H2D, foreground-prefetch and GC decisions.
+- [GC runtime optimization](optimization/gc_optimization.md): establish and retain validated regulation across experiments; evaluate heap-scan/straggler improvements and safe process-owned freeze/unfreeze. Measured gains are optimizations, neutral retention is hygiene.
+- [Neutral hygiene](optimization/hygiene.md): validated H2D/foreground-prefetch cleanup and baseline-policy retention without a measured performance gain.
 - [Parameter sweep](optimization/parameter_sweep.md): tune only after architecture is finalized.
 - [Local testing](optimization/local_testing.md): paired data/resource tests and CPU/throughput/memory curves.
 
