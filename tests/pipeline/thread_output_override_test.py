@@ -13,6 +13,7 @@ import subprocess
 import sys
 import unittest
 from contextlib import asynccontextmanager
+from dataclasses import FrozenInstanceError
 from typing import Any, cast
 from unittest.mock import patch
 
@@ -24,11 +25,12 @@ from spdl.pipeline import (
     StatsThreadOutputQueue,
     ThreadOutputQueue,
 )
-from spdl.pipeline._components import _thread_queue
 from spdl.pipeline._components._common import StageInfo
-from spdl.pipeline._components._thread_queue import (
-    _make_thread_output_queue,
-    _set_default_thread_output_queue_class,
+from spdl.pipeline._components._thread_queue import _make_thread_output_queue
+from spdl.pipeline.config import (
+    get_default_thread_output_queue_config,
+    set_default_thread_output_queue_config,
+    ThreadOutputQueueConfig,
 )
 
 
@@ -46,32 +48,54 @@ class _CollectedSink(StatsThreadOutputQueue):
 
 
 class ThreadOutputOverrideTest(unittest.TestCase):
+    def setUp(self) -> None:
+        defaults = get_default_thread_output_queue_config()
+        self.addCleanup(set_default_thread_output_queue_config, defaults)
+        set_default_thread_output_queue_config(ThreadOutputQueueConfig())
+        for path, value in [
+            ("spdl.pipeline._build._DEFAULT_BUILD_CALLBACK", None),
+            ("spdl.pipeline._bg_task._DEFAULT_BACKGROUND_TASKS", []),
+        ]:
+            guard = patch(path, value)
+            guard.start()
+            self.addCleanup(guard.stop)
+
     def test_true_default_is_plain_thread_queue(self) -> None:
-        """True selects the uninstrumented thread class unless explicitly overridden."""
+        """Explicit True uses the configured class even when the enabled default is False."""
         info = StageInfo(pipeline_id=0, stage_id="0", stage_name="sink")
-        with patch.object(
-            _thread_queue, "_DEFAULT_THREAD_OUTPUT_QUEUE_CLASS", ThreadOutputQueue
-        ):
-            output = _make_thread_output_queue(info, 2, True, -1)
+        output = _make_thread_output_queue(info, 2, True, -1)
         self.assertIs(type(output), ThreadOutputQueue)
         self.assertIs(type(output._queue), queue.Queue)
         self.assertFalse(hasattr(output, "_stats_provider"))
 
     def test_explicit_class_overrides_configured_default(self) -> None:
-        """An explicit class wins over the configured True default."""
+        """An explicit class wins over the immutable configured default."""
         info = StageInfo(pipeline_id=0, stage_id="0", stage_name="sink")
-        with patch.object(
-            _thread_queue, "_DEFAULT_THREAD_OUTPUT_QUEUE_CLASS", ThreadOutputQueue
-        ):
-            _set_default_thread_output_queue_class(_CollectedSink)
-            selected = _make_thread_output_queue(info, 3, True, 5)
-            explicit = _make_thread_output_queue(info, 4, ThreadOutputQueue, 5)
-            _set_default_thread_output_queue_class(ThreadOutputQueue)
+        defaults = ThreadOutputQueueConfig(enabled=True, queue_class=_CollectedSink)
+        set_default_thread_output_queue_config(defaults)
+        self.assertIs(get_default_thread_output_queue_config(), defaults)
+        selected = _make_thread_output_queue(info, 3, True, 5)
+        explicit = _make_thread_output_queue(info, 4, ThreadOutputQueue, 5)
         self.assertIsInstance(selected, _CollectedSink)
         self.assertEqual(selected.interval, 5)
         self.assertEqual(selected._queue.maxsize, 3)
         self.assertIs(type(explicit), ThreadOutputQueue)
         self.assertEqual(explicit._queue.maxsize, 4)
+
+    def test_config_is_immutable_and_validated(self) -> None:
+        """Invalid configurations cannot change defaults, and valid records are immutable."""
+        defaults = get_default_thread_output_queue_config()
+        with self.assertRaises(FrozenInstanceError):
+            cast(Any, defaults).enabled = True
+        for invalid in [
+            object(),
+            ThreadOutputQueueConfig(enabled=cast(Any, 1)),
+            ThreadOutputQueueConfig(queue_class=cast(Any, AsyncQueue)),
+        ]:
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(TypeError):
+                    set_default_thread_output_queue_config(cast(Any, invalid))
+                self.assertEqual(get_default_thread_output_queue_config(), defaults)
 
     def test_invalid_class_is_rejected(self) -> None:
         """Only thread-output subclasses are accepted as a class selection."""
@@ -83,8 +107,8 @@ class ThreadOutputOverrideTest(unittest.TestCase):
                     use_thread_output_queue=cast(Any, value),
                 )
 
-    def test_false_remains_default(self) -> None:
-        """Existing builder defaults still select the asyncio sink."""
+    def test_false_keeps_async_sink(self) -> None:
+        """Explicit False selects the asyncio sink even with Meta defaults enabled."""
         with (
             patch("spdl.pipeline._build._DEFAULT_BUILD_CALLBACK", None),
             patch("spdl.pipeline._bg_task._DEFAULT_BACKGROUND_TASKS", []),
@@ -97,6 +121,7 @@ class ThreadOutputOverrideTest(unittest.TestCase):
                     num_threads=2,
                     queue_class=AsyncQueue,
                     task_hook_factory=lambda _: [],
+                    use_thread_output_queue=False,
                 )
             )
             self.assertNotIsInstance(pipeline._impl._output_queue, ThreadOutputQueue)

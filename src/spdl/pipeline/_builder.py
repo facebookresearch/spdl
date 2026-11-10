@@ -543,7 +543,7 @@ class PipelineBuilder(Generic[T, U]):
         queue_class: type[AsyncQueue] | None = None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         stage_id: int = 0,
-        use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
+        use_thread_output_queue: bool | type[ThreadOutputQueue] | None = None,
     ) -> Pipeline[U]:
         """Build the pipeline.
 
@@ -586,18 +586,21 @@ class PipelineBuilder(Generic[T, U]):
 
             stage_id: The index of the initial stage  used for logging.
 
-            use_thread_output_queue: ``False`` keeps the asyncio sink. ``True``
-                selects the configured default thread queue. A
-                :py:class:`~spdl.pipeline.ThreadOutputQueue` subclass selects
-                that implementation explicitly; use
-                :py:class:`~spdl.pipeline.StatsThreadOutputQueue` for optional
-                background statistics and custom reporting callbacks. See these
-                queue-class docstrings for usage and subclassing examples.
-                ``queue_class`` continues to configure internal stage queues.
-                Default: ``False``.
+            use_thread_output_queue: ``None`` (the default) uses
+                :py:class:`~spdl.pipeline.config.ThreadOutputQueueConfig`, set by
+                :py:func:`~spdl.pipeline.config.set_default_thread_output_queue_config`.
+                Its initial OSS configuration keeps the async sink. Explicit
+                ``False`` keeps the async sink; ``True`` selects the configured
+                thread class. A :py:class:`~spdl.pipeline.ThreadOutputQueue`
+                subclass selects that class explicitly. Use
+                :py:class:`~spdl.pipeline.StatsThreadOutputQueue` for background
+                statistics and custom reporting callbacks. See these class
+                docstrings for usage and subclassing examples. ``queue_class``
+                continues to configure internal stage queues independently.
 
                 .. versionchanged:: 0.9.0
                    A thread-output queue class can be supplied explicitly.
+                   ``None`` resolves the explicit default configuration.
 
         .. seealso::
 

@@ -33,7 +33,14 @@ from ._subprocess_pipe import (
     _SESSION_END,
     _subprocess_pipeline,
 )
-from ._thread_queue import StatsThreadOutputQueue, ThreadOutputQueue
+from ._thread_queue import (
+    _resolve_thread_output_queue_selection,
+    get_default_thread_output_queue_config,
+    set_default_thread_output_queue_config,
+    StatsThreadOutputQueue,
+    ThreadOutputQueue,
+    ThreadOutputQueueConfig,
+)
 
 __all__ = [
     "_build_pipeline_coro",
@@ -65,5 +72,9 @@ __all__ = [
     "StatsQueue",
     "ThreadOutputQueue",
     "StatsThreadOutputQueue",
+    "ThreadOutputQueueConfig",
+    "get_default_thread_output_queue_config",
+    "set_default_thread_output_queue_config",
+    "_resolve_thread_output_queue_selection",
     "AsyncQueue",
 ]

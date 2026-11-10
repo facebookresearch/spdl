@@ -31,6 +31,7 @@ from spdl.pipeline._bg_task import (
 from spdl.pipeline._components import (
     _build_pipeline_coro,
     _get_global_id,
+    _resolve_thread_output_queue_selection,
     _set_global_id,
     AsyncQueue,
     StageInfo,
@@ -238,7 +239,7 @@ def build_pipeline(
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] | None = None,
 ) -> Pipeline[U]:
     """Build a pipeline from the config.
 
@@ -309,17 +310,22 @@ def build_pipeline(
             Tasks are cancelled when the pipeline completes. Their errors are logged
             but do not cause the pipeline to fail.
 
-        use_thread_output_queue: ``False`` keeps the asyncio sink. ``True`` uses
-            the configured default :py:class:`~spdl.pipeline.ThreadOutputQueue`.
-            Pass a subclass to select it explicitly, for example
-            :py:class:`~spdl.pipeline.StatsThreadOutputQueue` for background
+        use_thread_output_queue: ``None`` (the default) uses
+            :py:class:`~spdl.pipeline.config.ThreadOutputQueueConfig`, set by
+            :py:func:`~spdl.pipeline.config.set_default_thread_output_queue_config`.
+            The initial OSS configuration keeps the async sink. Explicit
+            ``False`` keeps the async sink, ``True`` selects the configured
+            thread class, and an explicit
+            :py:class:`~spdl.pipeline.ThreadOutputQueue` subclass takes priority.
+            Use :py:class:`~spdl.pipeline.StatsThreadOutputQueue` for background
             statistics with overridable reporting callbacks. See the queue-class
             docstrings for usage and subclassing examples. The builder passes
             ``buffer_size`` and ``report_stats_interval`` to its constructor.
-            Internal stage queues still use ``queue_class``. Default: ``False``.
+            Internal stage queues still use ``queue_class``.
 
             .. versionchanged:: 0.9.0
                A thread-output queue class can be supplied explicitly.
+               ``None`` resolves the explicit default configuration.
 
     .. seealso::
 
@@ -327,6 +333,9 @@ def build_pipeline(
           Designate a region of stages to run together in a subprocess (or subinterpreter)
           worker pool, eliminating the inter-stage IPC within the region.
     """
+    use_thread_output_queue = _resolve_thread_output_queue_selection(
+        use_thread_output_queue
+    )
     from . import _profile
 
     if _profile.is_diagnostic_mode_enabled():
@@ -442,7 +451,7 @@ def run_pipeline_in_subprocess(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] | None = None,
     **kwargs: Any,
 ) -> Iterable[T]:
     """Run the given Pipeline in a subprocess, and iterate on the result.
@@ -594,6 +603,13 @@ def run_pipeline_in_subprocess(
 
         num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory,background_tasks:
             Passed to :py:func:`build_pipeline`.
+        use_thread_output_queue: ``None`` uses the calling process's configured
+            enabled default. Explicit ``False``, ``True`` or a queue class takes
+            priority. ``True`` selects the configured thread class in the worker
+            environment. See :py:func:`build_pipeline`.
+
+            .. versionchanged:: 0.9.0
+               ``None`` resolves the explicit thread-output default configuration.
         kwargs: Passed to :py:func:`iterate_in_subprocess`.
 
     .. seealso::
@@ -621,6 +637,9 @@ def run_pipeline_in_subprocess(
          in a subprocess.
        - :ref:`parallelism-performance` for the context in which this function was created.
     """
+    use_thread_output_queue = _resolve_thread_output_queue_selection(
+        use_thread_output_queue
+    )
     if not isinstance(config_or_builder, PipelineConfig):
         warnings.warn(
             "Passing a `PipelineBuilder` object directly to `run_pipeline_in_subprocess` is "
@@ -730,7 +749,7 @@ def run_pipeline_in_subinterpreter(
     queue_class: type[AsyncQueue] | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
-    use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] | None = None,
     **kwargs: Any,
 ) -> Iterable[T]:
     """**[Experimental]** Run the given Pipeline in a subinterpreter, and iterate on the result.
@@ -754,6 +773,13 @@ def run_pipeline_in_subinterpreter(
         config: The definition of :py:class:`Pipeline`.
         num_threads,max_failures,report_stats_interval,queue_class,task_hook_factory,background_tasks:
             Passed to :py:func:`build_pipeline`.
+        use_thread_output_queue: ``None`` uses the calling interpreter's configured
+            enabled default. Explicit ``False``, ``True`` or a queue class takes
+            priority. ``True`` selects the configured thread class in the worker
+            environment. See :py:func:`build_pipeline`.
+
+            .. versionchanged:: 0.9.0
+               ``None`` resolves the explicit thread-output default configuration.
         kwargs: Passed to :py:func:`iterate_in_subinterpreter`.
 
     Yields:
@@ -784,6 +810,9 @@ def run_pipeline_in_subinterpreter(
          in a subinterpreter.
        - :ref:`parallelism-performance` for the context in which this function was created.
     """
+    use_thread_output_queue = _resolve_thread_output_queue_selection(
+        use_thread_output_queue
+    )
     initializer = _get_initializer(kwargs, shareable_rng_only=True)
     return iterate_in_subinterpreter(
         fn=partial(
