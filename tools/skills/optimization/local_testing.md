@@ -1,5 +1,7 @@
 # Local SPDL Tests and Loader-Only Capacity Curves
 
+For model optimization, use the separate [cached-first model benchmark](cached_model_benchmark.md): short warmed native `CacheDataLoader` replay before matched full-epoch E2E validation. The loader-only tests below remain uncached so they measure the input path being changed; neither method replaces final training/quality evidence.
+
 Use matched local original-loader/SPDL tests as the fast iteration loop during initial migration. Reuse real components and the closest execution architecture. Match data, seed/order/batching, cache state, consumer work, CPU allocation, worker/prefetch settings, warmup and timed work. Keep detailed data/tensor consistency checks out of performance timing.
 
 Measure `(CPU utilization, throughput)` over the same interval and full loader/harness process-tree scope, including workers and native/feeder/pin threads. Normalize CPU by the same allocated cores or report aggregate core equivalents. Initial points should be close; materially more CPU to match throughput is not parity. Record memory metric, units and shared-memory accounting separately.
