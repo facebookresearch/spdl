@@ -14,8 +14,11 @@
 from spdl.pipeline._components import (
     get_default_hook_class,
     get_default_queue_class,
+    get_default_thread_output_queue_config,
     set_default_hook_class,
     set_default_queue_class,
+    set_default_thread_output_queue_config,
+    ThreadOutputQueueConfig,
 )
 
 from ._bg_task import (
@@ -45,6 +48,9 @@ __all__ = [
     "get_default_hook_class",
     "set_default_queue_class",
     "get_default_queue_class",
+    "ThreadOutputQueueConfig",
+    "get_default_thread_output_queue_config",
+    "set_default_thread_output_queue_config",
     "set_default_profile_hook",
     "get_default_profile_hook",
     "set_default_profile_callback",

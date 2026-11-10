@@ -12,6 +12,7 @@ import asyncio
 import queue
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from typing import Any
 
 from spdl.pipeline._common._misc import create_task
@@ -24,7 +25,10 @@ __all__ = [
     "ThreadOutputQueue",
     "StatsThreadOutputQueue",
     "_make_thread_output_queue",
-    "_set_default_thread_output_queue_class",
+    "_resolve_thread_output_queue_selection",
+    "ThreadOutputQueueConfig",
+    "get_default_thread_output_queue_config",
+    "set_default_thread_output_queue_config",
 ]
 
 
@@ -33,9 +37,11 @@ class ThreadOutputQueue(AsyncQueue):
 
     Pass this class, or a subclass, as ``use_thread_output_queue`` to
     :py:meth:`~spdl.pipeline.PipelineBuilder.build` or
-    :py:func:`~spdl.pipeline.build_pipeline`. ``False`` keeps the asyncio sink
-    and remains the option default; ``True`` selects the configured default
-    thread-output class. An explicit class takes priority over that default.
+    :py:func:`~spdl.pipeline.build_pipeline`. An omitted or ``None`` selector
+    uses :py:class:`~spdl.pipeline.config.ThreadOutputQueueConfig`; its initial OSS
+    configuration keeps the async sink. ``False`` explicitly keeps the async
+    sink, and ``True`` selects the configured thread-output class. An explicit
+    class takes priority over the configuration.
     Pass a class, not a prebuilt instance; the builder constructs the sink.
 
     Internal stage queues still use ``queue_class``. This plain sink does not
@@ -225,15 +231,97 @@ class ThreadOutputQueue(AsyncQueue):
         await asyncio.get_running_loop().run_in_executor(None, self._queue.join)
 
 
-_DEFAULT_THREAD_OUTPUT_QUEUE_CLASS: type[ThreadOutputQueue] = ThreadOutputQueue
+@dataclass(frozen=True, kw_only=True)
+class ThreadOutputQueueConfig:
+    """Process-local defaults for selecting the final pipeline sink.
+
+    Configure the sink explicitly with
+    :py:func:`~spdl.pipeline.config.set_default_thread_output_queue_config` rather than
+    changing build-function keyword defaults. An omitted or ``None``
+    ``use_thread_output_queue`` option uses ``enabled``. Explicit ``False``
+    always keeps the async sink; ``True`` selects ``queue_class``; a caller's
+    explicit queue class takes priority over this configuration.
+
+    Configure defaults before building pipelines. Existing pipelines retain
+    their queue instances. Internal stage queues and task hooks are independent.
+
+    Example::
+
+        from spdl.pipeline import StatsThreadOutputQueue
+        from spdl.pipeline.config import (
+            ThreadOutputQueueConfig,
+            set_default_thread_output_queue_config,
+        )
+
+        set_default_thread_output_queue_config(
+            ThreadOutputQueueConfig(
+                enabled=True, queue_class=StatsThreadOutputQueue
+            )
+        )
+
+    .. versionadded:: 0.9.0
+    """
+
+    enabled: bool = False
+    """Whether omitted/None build options select the thread-backed sink."""
+
+    queue_class: type[ThreadOutputQueue] = ThreadOutputQueue
+    """The class used when the thread-backed sink is enabled without an explicit class."""
 
 
-def _set_default_thread_output_queue_class(cls: type[ThreadOutputQueue]) -> None:
-    """Configure the class selected by True; explicit caller classes take priority."""
-    if not isinstance(cls, type) or not issubclass(cls, ThreadOutputQueue):
-        raise TypeError("thread-output class must inherit ThreadOutputQueue")
-    global _DEFAULT_THREAD_OUTPUT_QUEUE_CLASS
-    _DEFAULT_THREAD_OUTPUT_QUEUE_CLASS = cls
+_DEFAULT_THREAD_OUTPUT_QUEUE_CONFIG: ThreadOutputQueueConfig | None = None
+
+
+def get_default_thread_output_queue_config() -> ThreadOutputQueueConfig:
+    """Return the immutable process-local thread-sink configuration.
+
+    Returns:
+        The installed configuration, or the OSS initial configuration with
+        ``enabled=False`` and plain :py:class:`~spdl.pipeline.ThreadOutputQueue`.
+
+    .. versionadded:: 0.9.0
+    """
+    if _DEFAULT_THREAD_OUTPUT_QUEUE_CONFIG is None:
+        return ThreadOutputQueueConfig()
+    return _DEFAULT_THREAD_OUTPUT_QUEUE_CONFIG
+
+
+def set_default_thread_output_queue_config(config: ThreadOutputQueueConfig) -> None:
+    """Set explicit thread-sink defaults for subsequently built pipelines.
+
+    Args:
+        config: Immutable defaults. Configure them before building pipelines;
+            already-built pipelines and explicit caller selections are unchanged.
+
+    Raises:
+        TypeError: If the configuration, enabled flag or queue class is invalid.
+
+    .. seealso::
+
+       :py:class:`~spdl.pipeline.config.ThreadOutputQueueConfig`
+          Selection rules and a configuration example.
+
+    .. versionadded:: 0.9.0
+    """
+    if not isinstance(config, ThreadOutputQueueConfig):
+        raise TypeError("config must be ThreadOutputQueueConfig")
+    if not isinstance(config.enabled, bool):
+        raise TypeError("enabled must be bool")
+    if not isinstance(config.queue_class, type) or not issubclass(
+        config.queue_class, ThreadOutputQueue
+    ):
+        raise TypeError("queue_class must inherit ThreadOutputQueue")
+    global _DEFAULT_THREAD_OUTPUT_QUEUE_CONFIG
+    _DEFAULT_THREAD_OUTPUT_QUEUE_CONFIG = config
+
+
+def _resolve_thread_output_queue_selection(
+    selection: bool | type[ThreadOutputQueue] | None,
+) -> bool | type[ThreadOutputQueue]:
+    """Resolve an omitted selector in the calling build/worker environment."""
+    if selection is None:
+        return get_default_thread_output_queue_config().enabled
+    return selection
 
 
 def _make_thread_output_queue(
@@ -243,7 +331,11 @@ def _make_thread_output_queue(
     interval: float,
 ) -> ThreadOutputQueue:
     """Instantiate an explicit class or the configured True default."""
-    cls = _DEFAULT_THREAD_OUTPUT_QUEUE_CLASS if selection is True else selection
+    cls = (
+        get_default_thread_output_queue_config().queue_class
+        if selection is True
+        else selection
+    )
     if not isinstance(cls, type) or not issubclass(cls, ThreadOutputQueue):
         raise TypeError(
             "use_thread_output_queue must be bool or a ThreadOutputQueue class"
