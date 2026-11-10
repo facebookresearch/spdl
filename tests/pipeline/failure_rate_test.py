@@ -128,7 +128,7 @@ class PipelineFailureRateTest(unittest.TestCase):
                 max_failures=Fraction(11, 100),
             )
             .add_sink(1)
-            .build(num_threads=1, queue_class=_ThresholdBackpressureQueue)
+            .build(num_threads=2, queue_class=_ThresholdBackpressureQueue)
         )
         expected = [x for x in range(100) if x % 7 != 0]
         expected_prefix = [x for x in expected if x <= 93]

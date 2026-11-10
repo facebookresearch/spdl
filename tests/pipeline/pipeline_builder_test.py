@@ -1638,7 +1638,7 @@ class TestPipelineCancel(unittest.TestCase):
             .add_source(range(10))
             .pipe(passthrough)
             .add_sink(1)
-            .build(num_threads=1)
+            .build(num_threads=1, use_thread_output_queue=False)
         )
         # The nuffer and coroutinues will be blocked holding items as follows:
         #
