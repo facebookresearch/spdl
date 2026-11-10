@@ -2,6 +2,8 @@
 
 Read [workflow.md](workflow.md) for acceptance and the explicit architecture-exploration/neutral-hygiene exceptions. This file owns analysis and remedy selection; [pipeline_stats.md](pipeline_stats.md) owns loader-signal interpretation.
 
+Before this procedure, perform the skill's bundled `async_boundary_audit.md` startup audit of recurring network-fetch call chains. Follow wrappers to the actual standard-library/native implementation; check per-call event-loop/client lifecycle costs, including `asyncio.run`, before selecting architecture or tuning concurrency. Source inspection exposes a candidate cost; runtime attribution establishes whether it matters.
+
 ## Decision procedure
 
 1. Bind observations to the exact source/package/configuration, job/version/attempt, resources and completed-work window. Check whether the comparison is valid before ranking it; preserve unavailable or contaminated scopes explicitly.

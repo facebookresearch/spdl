@@ -2,6 +2,10 @@
 
 Use this index to load only the guidance for the current decision. Migration first preserves the original implementation's functions/classes and verifies data/resource/performance parity. Afterward, architecture comparisons are empirical experiments; other optimization techniques address a measured bottleneck.
 
+## Startup audit
+
+- [Hidden async-to-sync network boundaries](async_boundary_audit.md): follow recurring fetch wrappers to the actual client/event-loop/transport implementation before migration or optimization; measure lifecycle overhead and preserve native async ownership and baseline evidence.
+
 ## Migration
 
 - [Baseline migration](migration/migrating_to_spdl_pipeline.md): closest architecture, component reuse, local CPU/throughput comparisons and end-to-end parity.
