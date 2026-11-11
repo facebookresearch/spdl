@@ -39,6 +39,3 @@ members = [
   "packaging/spdl_core",
   "packaging/spdl_io",
 ]
-
-[tool.ruff]
-target-version = "py314"

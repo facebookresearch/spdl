@@ -237,7 +237,7 @@ class TestPriorityThreadPoolExecutorOrdering(unittest.TestCase):
         stage = executor.get_executor()
         executor.shutdown()
         with self.assertRaises(RuntimeError):
-            executor._submit_with_priority((0, 0), lambda: None, (), {})
+            stage._submit_with_priority((0, 0), lambda: None, (), {})
 
     def test_multiple_workers_all_complete(self) -> None:
         """With multiple workers, all tasks must complete."""
