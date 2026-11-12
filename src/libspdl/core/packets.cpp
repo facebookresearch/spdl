@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -177,8 +178,88 @@ template struct Packets<MediaType::Video>;
 template struct Packets<MediaType::Image>;
 
 namespace {
+std::optional<bool> h264_idr(
+    const AVPacket& packet,
+    const AVCodecParameters& codec) {
+  if (!packet.data || packet.size <= 0) {
+    return std::nullopt;
+  }
+  const auto* data = packet.data;
+  const auto size = static_cast<size_t>(packet.size);
+  bool idr = false;
+  bool other_vcl = false;
+  const auto accept_nal = [&](size_t offset, size_t length) {
+    if (length < 2 || (data[offset] & 0x80)) {
+      return false;
+    }
+    const auto type = data[offset] & 31;
+    if (!type || type == 7 || type == 8 || type > 12) {
+      return false;
+    }
+    if (type == 5) {
+      if (!(data[offset] & 0x60) || other_vcl) {
+        return false;
+      }
+      idr = true;
+    } else if (type <= 4) {
+      if (idr) {
+        return false;
+      }
+      other_vcl = true;
+    }
+    return true;
+  };
+  if (codec.extradata && codec.extradata_size >= 5 && codec.extradata[0] == 1) {
+    const size_t length_size = (codec.extradata[4] & 3) + 1;
+    size_t offset = 0;
+    while (offset < size) {
+      if (size - offset < length_size) {
+        return std::nullopt;
+      }
+      uint32_t length = 0;
+      for (size_t i = 0; i < length_size; ++i) {
+        length = (length << 8) | data[offset++];
+      }
+      if (length > size - offset || !accept_nal(offset, length)) {
+        return std::nullopt;
+      }
+      offset += length;
+    }
+    return idr;
+  }
+  std::optional<size_t> start;
+  for (size_t i = 0; i + 3 < size; ++i) {
+    if (data[i] || data[i + 1]) {
+      continue;
+    }
+    const size_t prefix = data[i + 2] == 1       ? 3
+        : (data[i + 2] == 0 && data[i + 3] == 1) ? 4
+                                                 : 0;
+    if (!prefix) {
+      continue;
+    }
+    if (!start) {
+      for (size_t j = 0; j < i; ++j) {
+        if (data[j]) {
+          return std::nullopt;
+        }
+      }
+    }
+    if (start && !accept_nal(*start, i - *start)) {
+      return std::nullopt;
+    }
+    start = i + prefix;
+    i += prefix - 1;
+  }
+  if (!start || *start >= size || !accept_nal(*start, size - *start)) {
+    return std::nullopt;
+  }
+  return idr;
+}
+
 std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
-    const std::vector<AVPacket*>& packets) {
+    const std::vector<AVPacket*>& packets,
+    const AVCodecParameters* codec) {
   // Split the input video packets into multiple sets of packets,
   // each of which starts with a key frame.
   //
@@ -223,11 +304,24 @@ std::vector<std::tuple<size_t, size_t, size_t>> get_keyframe_indices(
   }
 
   // 1. Extract the PTS of key frames.
+  // Recovery-point H.264 I pictures can still depend on the preceding GOP.
   std::vector<std::tuple<size_t, int64_t>> keyframe_pts;
   keyframe_pts.emplace_back(0, packets[0]->pts);
-  for (size_t i = 1; i < packets.size(); ++i) {
+  bool can_split_h264 = true;
+  for (size_t i = 0; i < packets.size(); ++i) {
     auto pkt = packets[i];
-    if (pkt->flags & AV_PKT_FLAG_KEY) {
+    bool independent = true;
+    if (codec && codec->codec_id == AV_CODEC_ID_H264) {
+      for (int j = 0; j < pkt->side_data_elems; ++j) {
+        if (pkt->side_data[j].type == AV_PKT_DATA_NEW_EXTRADATA) {
+          can_split_h264 = false;
+        }
+      }
+      const auto idr = can_split_h264 ? h264_idr(*pkt, *codec) : std::nullopt;
+      can_split_h264 = can_split_h264 && idr.has_value();
+      independent = idr.value_or(false);
+    }
+    if (i && (pkt->flags & AV_PKT_FLAG_KEY) && independent) {
       keyframe_pts.emplace_back(i, pkt->pts);
     }
   }
@@ -283,7 +377,8 @@ extract_packets(const VideoPacketsPtr& src, size_t start, size_t end) {
 std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
 extract_packets_at_indices(
     const VideoPacketsPtr& src,
-    std::vector<size_t> indices) {
+    std::vector<size_t> indices,
+    bool h264_idr_split) {
   auto& src_packets = src->pkts.get_packets();
   // If timestamp is set, then there are frames before the window.
   // `indices` are supposed to be within the window.
@@ -303,7 +398,9 @@ extract_packets_at_indices(
       i += offset;
     }
   }
-  auto split_indices = get_keyframe_indices(src_packets);
+  auto split_indices = get_keyframe_indices(
+      src_packets,
+      h264_idr_split && src->codec ? src->codec->get_parameters() : nullptr);
 
   std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>> ret;
   size_t i = 0;

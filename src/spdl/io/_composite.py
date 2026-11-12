@@ -26,6 +26,16 @@ from . import _config, _core, _preprocessing
 from ._core import _FILTER_DESC_DEFAULT, TimeWindow
 from .lib import _libspdl, _libspdl_cuda
 
+try:
+    from .fb import _is_sample_decode_enabled
+except ImportError:
+
+    def _is_sample_decode_enabled() -> bool:
+        return True
+
+
+_SAMPLE_DECODE_ENABLED = _is_sample_decode_enabled()
+
 _LG: logging.Logger = logging.getLogger(__name__)
 
 
@@ -641,6 +651,29 @@ def _decode_partial(
     return frames
 
 
+def _decode_selected(
+    packets: "VideoPackets",
+    indices: list[int],
+    decode_config: "DecodeConfig | None",
+    filter_desc: str | None,
+) -> "list[ImageFrames]":
+    if (
+        filter_desc == "format=pix_fmts=rgb24"
+        and len(indices) <= 32
+        and len(indices) * 2 < max(indices) + 1
+    ):
+        select = "+".join(f"eq(n,{i})" for i in indices)
+        frames = _core.decode_packets(
+            packets,
+            decode_config=decode_config,
+            filter_desc=f"select=expr='{select}',{filter_desc}",
+            num_frames=len(indices),
+        )
+        return [frames[i] for i in range(len(indices))]  # type: ignore[arg-type]
+    frames = _decode_partial(packets, indices, decode_config, filter_desc)
+    return [frames[i] for i in indices]  # type: ignore[arg-type]
+
+
 def sample_decode_video(
     packets: "VideoPackets",
     indices: list[int],
@@ -653,7 +686,10 @@ def sample_decode_video(
     This function decodes the input video packets and returns the frames
     specified by ``indices``. Internally, it splits the packets into
     smaller set of packets and decode the minimum number of frames to
-    retrieve the specified frames.
+    retrieve the specified frames. H.264 recovery-point keyframes retain
+    their preceding dependencies; only verified IDR packets start a new
+    decoding group. Uncertain framing or parameter-set updates retain a
+    larger group. Filters operate within each decoding group.
 
     .. mermaid::
 
@@ -755,11 +791,17 @@ def sample_decode_video(
     if filter_desc == _FILTER_DESC_DEFAULT:
         filter_desc = _preprocessing.get_video_filter_desc()
 
+    enabled = _SAMPLE_DECODE_ENABLED
     ret: "list[ImageFrames]" = []
     # pyrefly: ignore [missing-attribute]
-    for split, idxes in _libspdl._extract_packets_at_indices(packets, indices):
-        frames = _decode_partial(split, idxes, decode_config, filter_desc)
-        ret.extend([frames[i] for i in idxes])  # type: ignore[arg-type]
+    for split, idxes in _libspdl._extract_packets_at_indices(
+        packets, indices, h264_idr_split=enabled
+    ):
+        if enabled:
+            ret.extend(_decode_selected(split, idxes, decode_config, filter_desc))
+        else:
+            frames = _decode_partial(split, idxes, decode_config, filter_desc)
+            ret.extend([frames[i] for i in idxes])  # type: ignore[arg-type]
     return ret
 
 

@@ -5,14 +5,17 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import gc
 import time
 import unittest
 import warnings
 from collections.abc import Sequence
+from unittest import mock
 
 import numpy as np
 import spdl.io
 from parameterized import parameterized
+from spdl.io import _composite
 
 from ..fixture import FFMPEG_CLI, get_sample
 
@@ -381,6 +384,97 @@ class TestPacketLen(unittest.TestCase):
         self.assertEqual(len(frame_pts), len(expected))
         for i, frame_pt in enumerate(frame_pts):
             self.assertAlmostEqual(frame_pt, expected[i], places=5)
+
+
+class TestSparseRgbSelection(unittest.TestCase):
+    def setUp(self) -> None:
+        patcher = mock.patch.object(_composite, "_SAMPLE_DECODE_ENABLED", True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    @parameterized.expand(
+        [
+            ("yuv420p", "libx264", "mp4", "bt709", "tv"),
+            ("yuv420p", "libx264", "ts", "bt709", "tv"),
+            ("yuv444p", "libx264", "mp4", "smpte170m", "tv"),
+            ("yuv420p10le", "libx264", "mp4", "bt709", "pc"),
+            ("yuv444p12le", "ffv1", "mkv", "bt709", "tv"),
+            ("rgb24", "rawvideo", "nut", "bt709", "pc"),
+        ]
+    )
+    def test_rgb_pixels_pts_and_lifetime(
+        self, pix_fmt: str, codec: str, extension: str, matrix: str, color_range: str
+    ) -> None:
+        """Sparse RGB sampling preserves display pixels, PTS and detached ownership."""
+        extra = "-x264-params scenecut=0:open-gop=1 -bf 2" if codec == "libx264" else ""
+        cmd = (
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi "
+            f"-i testsrc2=size=64x48:rate=10 -frames:v 40 -g 12 "
+            f"-c:v {codec} -pix_fmt {pix_fmt} {extra} "
+            f"-colorspace {matrix} -color_range {color_range} sample.{extension}"
+        )
+        sample = get_sample(cmd)
+        for threads in (1, 4):
+            config = spdl.io.decode_config(decoder_options={"threads": str(threads)})
+            for indices in ([0, 2, 10, 11, 12, 22, 39], [39], list(range(40))):
+                with self.subTest(threads=threads, indices=indices):
+                    full = spdl.io.decode_packets(
+                        spdl.io.demux_video(sample.path),
+                        decode_config=config,
+                        filter_desc="format=pix_fmts=rgb24",
+                    )
+                    expected_pts = [full[i].pts for i in indices]
+                    expected = spdl.io.to_numpy(spdl.io.convert_frames(full))[
+                        indices
+                    ].copy()
+                    packets = spdl.io.demux_video(sample.path)
+                    selected = spdl.io.sample_decode_video(
+                        packets, indices, decode_config=config
+                    )
+                    self.assertEqual([f.pts for f in selected], expected_pts)
+                    clones = [f.clone() for f in selected]
+                    del packets, selected
+                    gc.collect()
+                    actual = spdl.io.to_numpy(spdl.io.convert_frames(clones))
+                    gc.collect()
+                    np.testing.assert_array_equal(actual, expected, strict=True)
+
+    def test_fractional_window_and_rgb_fallback_filters(self) -> None:
+        """Adjusted window ordinals and non-RGB filter contracts stay unchanged."""
+        sample = get_sample(
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc2=size=64x48:rate=10 "
+            "-frames:v 40 -g 40 -bf 2 -c:v libx264 sample.mp4"
+        )
+        for desc in (
+            "format=pix_fmts=rgb24",
+            None,
+            "format=pix_fmts=rgb8,format=pix_fmts=rgb24",
+            "fps=5,format=pix_fmts=rgb24",
+            "scale=32:24,format=pix_fmts=rgb24",
+            "setpts=PTS+1/TB,format=pix_fmts=rgb24",
+        ):
+            with self.subTest(filter_desc=desc):
+                indices = (
+                    [0, 4, 14] if desc != "fps=5,format=pix_fmts=rgb24" else [0, 2, 4]
+                )
+                packets = spdl.io.demux_video(sample.path, timestamp=(0.55, 2.05))
+                expected = []
+                # pyrefly: ignore [missing-attribute]
+                for split, local in _composite._libspdl._extract_packets_at_indices(
+                    packets.clone(), indices
+                ):
+                    prefix = spdl.io.decode_packets(
+                        split, filter_desc=desc, num_frames=max(local) + 1
+                    )
+                    expected.extend(prefix[i] for i in local)
+                selected = spdl.io.sample_decode_video(
+                    packets, indices, filter_desc=desc
+                )
+                self.assertEqual([f.pts for f in selected], [f.pts for f in expected])
+                self.assertEqual(len(selected), len(indices))
+                actual = spdl.io.to_numpy(spdl.io.convert_frames(selected))
+                reference = spdl.io.to_numpy(spdl.io.convert_frames(expected))
+                np.testing.assert_array_equal(actual, reference, strict=True)
 
 
 class TestSampleDecodingWindow(unittest.TestCase):

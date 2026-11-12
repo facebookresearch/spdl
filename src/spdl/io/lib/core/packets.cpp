@@ -369,7 +369,8 @@ void register_packets(nb::module_& m) {
       &extract_packets_at_indices,
       nb::call_guard<nb::gil_scoped_release>(),
       nb::arg("packets"),
-      nb::arg("indices"));
+      nb::arg("indices"),
+      nb::arg("h264_idr_split") = true);
 
   nb::class_<ImagePackets>(
       m,

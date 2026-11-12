@@ -16,6 +16,35 @@ from ..fixture import FFMPEG_CLI, get_sample, load_ref_audio, load_ref_video
 
 
 class FilterTest(unittest.TestCase):
+    def test_sparse_rgb_conversion_is_after_selection(self) -> None:
+        """Negotiated format conversion follows selection, with no RGB-input copy."""
+        for pix_fmt, source in (("yuv420p", "testsrc2"), ("rgb24", "testsrc")):
+            with self.subTest(pix_fmt=pix_fmt):
+                sample = get_sample(
+                    f"{FFMPEG_CLI} -hide_banner -y -f lavfi "
+                    f"-i {source}=size=64x48:rate=10 -frames:v 20 "
+                    f"-c:v rawvideo -pix_fmt {pix_fmt} sample.nut"
+                )
+                packets = spdl.io.demux_video(sample.path)
+                codec = packets.codec
+                self.assertIsNotNone(codec)
+                assert codec is not None
+                graph = spdl.io.FilterGraph(
+                    f"{get_buffer_desc(codec)},"
+                    "select=expr='eq(n,2)+eq(n,19)',"
+                    "format=pix_fmts=rgb24,buffersink"
+                )
+                dump = graph.dump()
+                if pix_fmt == "yuv420p":
+                    self.assertRegex(
+                        dump,
+                        r"Parsed_select_\d+:output0--\[[^\]]+ yuv420p\]"
+                        r"--default\| auto_scaler?_\d+",
+                    )
+                else:
+                    self.assertNotIn("auto_scale", dump)
+                    self.assertIn("(select)", dump)
+
     def test_filter_graph_abuffer_basic(self):
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine -c:a pcm_s16le -t 5 sample.wav"
 
