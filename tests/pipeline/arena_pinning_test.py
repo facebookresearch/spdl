@@ -83,20 +83,23 @@ class ArenaPinningTest(unittest.TestCase):
         self.assertNotIn("_registrations", pool.__getstate__())
 
     def test_pool_close_waits_for_exports_before_unregister(self) -> None:
-        """Final derived export release unregisters before unmap, even after unlink."""
+        """Derived exports defer unregister/unmap and keep names until safe retirement."""
         registration = Mock()
         pool, _ = self._pool([registration])
         value = self._publish(pool)
         alias = value[1:]
         del value
         pool.close()
-        pool.unlink()
+        with self.assertRaises(BufferError):
+            pool.unlink()
         registration.close.assert_not_called()
         self.assertEqual(bytes(alias), b"a" * 63)
         del alias
         gc.collect()
+        pool.close()
         registration.close.assert_called_once()
         self.assertIsNone(pool._segs)
+        pool.unlink()
 
     def test_repeated_close_retains_exports_and_retries_failed_unregister(self) -> None:
         """Both retained-segment close branches keep mappings until safe cleanup."""
@@ -115,10 +118,11 @@ class ArenaPinningTest(unittest.TestCase):
             registration.close.assert_not_called()
             self.assertEqual(bytes(alias), b"a" * 63)
         registration.close.side_effect = RuntimeError("unregister retry root")
+        alias.release()
+        del alias
+        gc.collect()
         with self.assertLogs("spdl.pipeline._arena._pool", level="ERROR"):
-            alias.release()
-            del alias
-            gc.collect()
+            pool.close()
         assert pool._segs is not None
         self.assertEqual([segment.name for segment in pool._segs], names)
         with self.assertLogs("spdl.pipeline._arena._pool", level="ERROR"):
@@ -149,16 +153,19 @@ class ArenaPinningTest(unittest.TestCase):
         value = self._publish(pool)
         reference = weakref.ref(pool)
         pool.close()
-        pool.unlink()
+        with self.assertRaises(BufferError):
+            pool.unlink()
         del pool
-        with self.assertLogs("spdl.pipeline._arena._pool", level="ERROR"):
-            del value
-            gc.collect()
+        del value
+        gc.collect()
         retained = reference()
         self.assertIsNotNone(retained)
+        with self.assertLogs("spdl.pipeline._arena._pool", level="ERROR"):
+            retained.close()
         self.assertIsNotNone(retained._segs)
         registration.close.side_effect = None
         retained.close()
+        retained.unlink()
         self.assertIsNone(retained._segs)
         self.assertEqual(retained._registrations, {})
         del retained
@@ -176,7 +183,8 @@ class ArenaPinningTest(unittest.TestCase):
         reference = weakref.ref(pool)
         with self.assertRaises(KeyboardInterrupt):
             pool.close()
-        pool.unlink()
+        with self.assertRaises(BufferError):
+            pool.unlink()
         del pool
         gc.collect()
         retained = reference()
@@ -184,6 +192,7 @@ class ArenaPinningTest(unittest.TestCase):
         self.assertIsNotNone(retained._segs)
         registration.close.side_effect = None
         retained.close()
+        retained.unlink()
         self.assertIsNone(retained._segs)
         del retained
         gc.collect()
@@ -199,13 +208,15 @@ class ArenaPinningTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "register root") as caught:
             pool.open_reader().read_binary(0, 1)
         self.assertIn("KeyboardInterrupt", caught.exception.__notes__[0])
-        pool.unlink()
+        with self.assertRaises(BufferError):
+            pool.unlink()
         del pool
         gc.collect()
         retained = reference()
         self.assertIsNotNone(retained)
         first.close.side_effect = None
         retained.close()
+        retained.unlink()
         self.assertIsNone(retained._segs)
 
     def test_ring_copies_seams_directly_to_independent_destination(self) -> None:

@@ -126,7 +126,8 @@ class H2DLifecycleTest(unittest.TestCase):
         self.assertEqual(transfer._batch_cache, [])
         del source, view, pending
         pool.close()
-        pool.unlink()
+        with self.assertRaises(BufferError):
+            pool.unlink()
         gc.collect()
         for attempt in range(5):
             rejected = _Tensor(self.cuda)
@@ -152,7 +153,9 @@ class H2DLifecycleTest(unittest.TestCase):
         self.assertIsNone(transfer._pending)
         self.assertIsNone(source_ref())
         self.assertIsNone(destination_ref())
+        pool.close()
         self.assertIsNone(pool._segs)
+        pool.unlink()
         self.assertEqual(self.cuda.events.count("enqueue"), 1)
 
     def test_failed_sync_keeps_external_storage_until_proven_retry(self) -> None:
@@ -179,7 +182,8 @@ class H2DLifecycleTest(unittest.TestCase):
         self.assertIn(pending, module._FAILED_H2D)
         del source, view
         pool.close()
-        pool.unlink()
+        with self.assertRaises(BufferError):
+            pool.unlink()
         gc.collect()
         self.assertIsNotNone(reference())
         self.assertIsNotNone(pool._segs)
@@ -187,5 +191,7 @@ class H2DLifecycleTest(unittest.TestCase):
         self.transfer([])
         gc.collect()
         self.assertIsNone(reference())
+        pool.close()
         self.assertIsNone(pool._segs)
+        pool.unlink()
         self.assertIsNone(self.transfer._pending)

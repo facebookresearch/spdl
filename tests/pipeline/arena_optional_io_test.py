@@ -51,7 +51,7 @@ class ArenaOptionalIOTest(unittest.TestCase):
                 span = writer.commit_unit()
                 view = reader.read_binary(offset, size)
                 assert bytes(view) == b'abcd'
-                reader.end_unit(span, [])
+                reader.end_unit(span)
                 del view
             finally:
                 ring.close(); ring.unlink()
@@ -67,7 +67,7 @@ class ArenaOptionalIOTest(unittest.TestCase):
                     assert 'install spdl.io' in str(error)
                 else:
                     raise AssertionError('native pool export silently succeeded')
-                reader.end_unit(span, [])
+                reader.end_unit(span)
                 assert pool._reclaimed == 1
             finally:
                 pool.close(); pool.unlink()
@@ -76,7 +76,7 @@ class ArenaOptionalIOTest(unittest.TestCase):
                 or n.split('.')[0] in ('torch', 'numpy') for n in sys.modules
             )
             print('PYTHON_ONLY_BOUNDARY_PASSED')
-        """
+            """
         )
         result = subprocess.run(
             [sys.executable, "-c", script],
@@ -86,7 +86,7 @@ class ArenaOptionalIOTest(unittest.TestCase):
             timeout=60,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("PYTHON_ONLY_BOUNDARY_PASSED", result.stdout)
+        self.assertIn("""PYTHON_ONLY_BOUNDARY_PASSED""", result.stdout)
 
     def test_missing_helper_and_original_dependency_errors_remain_distinct(
         self,

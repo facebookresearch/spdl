@@ -40,15 +40,19 @@ import multiprocessing
 import os
 import struct
 import threading
+import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import partial
 from multiprocessing import shared_memory
 from multiprocessing.context import BaseContext
-from multiprocessing.synchronize import Condition as _Condition
+from multiprocessing.synchronize import Condition as _Condition, Semaphore as _Semaphore
 from typing import cast, TypedDict
 
 from ._ownership import _export_buffer, _ExportGuard
 from ._pinning import _check_host_budget, _HostRegistration, _local_device
 from ._shm import _attach
+from ._sync import _process_exists, _signal_space
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -59,10 +63,15 @@ __all__ = ["SharedMemorySegmentPool"]
 # dead consumer rather than normal slow-consumer backpressure.
 _DEFAULT_ACQUIRE_TIMEOUT: float = 60.0
 
-# Control segment: published (units published, uint64), reclaimed (units
-# returned, uint64), shutdown (uint8 flag set on teardown to wake any blocked
-# producer cleanly).
-_CTRL: struct.Struct = struct.Struct("<QQB")
+# Control segment (<QQBBQQQ>, 42 bytes): published and reclaimed unit counters
+# (uint64), shared shutdown and channel mode flags (uint8), producer and consumer
+# process IDs (uint64), and the next unit to read (uint64). The read cursor tracks
+# delivery/discard separately from the reclaim watermark: a delivered unit may
+# still have native exports, while an unread unit must block a fresh writer.
+# Mode 0 is unselected; _ORDINARY selects ordinary serialized transport.
+_CTRL: struct.Struct = struct.Struct("<QQBBQQQ")
+_ORDINARY = 1
+_CONTROL_LOCK_TIMEOUT = 5.0
 
 # Binaries are aligned to this many bytes within a segment so that zero-copy
 # views into them (e.g. ``spdl.io`` Packets payloads) land on aligned addresses.
@@ -81,7 +90,7 @@ def _create_segments(
     ctrl = shared_memory.SharedMemory(create=True, size=_CTRL.size)
     segments = []
     try:
-        _CTRL.pack_into(cast(memoryview, ctrl.buf), 0, 0, 0, 0)
+        _CTRL.pack_into(cast(memoryview, ctrl.buf), 0, 0, 0, 0, 0, 0, 0, 0)
         for _ in range(count):
             segments.append(shared_memory.SharedMemory(create=True, size=segment_size))
     except BaseException as error:
@@ -111,7 +120,9 @@ class _PoolState(TypedDict):
     count: int
     acquire_timeout: float
     space_cv: _Condition
+    space_signal: _Semaphore
     pin_memory: bool
+    creator_pid: int
 
 
 class SharedMemorySegmentPool:
@@ -182,6 +193,12 @@ class SharedMemorySegmentPool:
             ``False``. Budget ``count * segment_size`` per pool and local rank;
             retained aliases and synchronized H2D sources prevent reuse/unmap.
 
+    .. versionchanged:: 0.9.0
+       Public endpoint methods conform to ``ArenaProtocol``. Storage sizing,
+       counters and lifecycle helpers used only by SPDL are private; constructor
+       configuration remains public. Native exports retain storage independently
+       of the reader anchor list.
+
     .. versionadded:: 0.9.0
        The ``pin_memory`` argument.
     """
@@ -205,9 +222,9 @@ class SharedMemorySegmentPool:
         self._count: int = count
         self._acquire_timeout: float = acquire_timeout
         self._pin_memory = pin_memory
-        self._space_cv: _Condition = (
-            _mp_context or multiprocessing.get_context("spawn")
-        ).Condition()
+        context = _mp_context or multiprocessing.get_context("spawn")
+        self._space_cv: _Condition = context.Condition(context.RLock())
+        self._space_signal: _Semaphore = context.Semaphore(0)
         if pin_memory:
             _check_host_budget(segment_size * count, shared=True)
         ctrl, segs = _create_segments(segment_size, count)
@@ -220,12 +237,19 @@ class SharedMemorySegmentPool:
             cast("memoryview[bytes]", segment.buf) for segment in segs
         ]
         self._closed = False
+        self._closing = False
+        self._reader: _PoolReader | None = None
         self._close_lock = threading.RLock()
         self._registrations: dict[str, _HostRegistration] = {}
         self._mapping_exports: dict[str, int] = {}
         self._pin_ready = False
         self._pin_error: BaseException | None = None
         self._pin_pid: int | None = None
+        self._mode = 0
+        self._pid = os.getpid()
+        self._creator_pid = self._pid
+        self._owns_names = True
+        self._retirement_error: BaseException | None = None
 
     # -- pickling: carry only the spec; attach lazily, once, per process --
 
@@ -238,6 +262,8 @@ class SharedMemorySegmentPool:
             "acquire_timeout": self._acquire_timeout,
             "pin_memory": self._pin_memory,
             "space_cv": self._space_cv,
+            "space_signal": self._space_signal,
+            "creator_pid": self._creator_pid,
         }
 
     def __setstate__(self, state: _PoolState) -> None:
@@ -248,17 +274,25 @@ class SharedMemorySegmentPool:
         self._acquire_timeout = state["acquire_timeout"]
         self._pin_memory = state.get("pin_memory", False)
         self._space_cv = state["space_cv"]
+        self._space_signal = state["space_signal"]
         self._ctrl = None
         self._segs = None
         self._ctrl_buf = None
         self._seg_bufs = None
         self._closed = False
+        self._closing = False
+        self._reader: _PoolReader | None = None
         self._close_lock = threading.RLock()
         self._registrations = {}
         self._mapping_exports = {}
         self._pin_ready = False
         self._pin_error = None
         self._pin_pid = None
+        self._mode = 0
+        self._pid = os.getpid()
+        self._creator_pid = state["creator_pid"]
+        self._owns_names = False
+        self._retirement_error = None
 
     def _ctrl_view(self) -> "memoryview[bytes]":
         if self._closed:
@@ -331,7 +365,10 @@ class SharedMemorySegmentPool:
 
     def _export_released(self, name: str) -> None:
         with self._close_lock:
-            self._mapping_exports[name] -= 1
+            remaining = self._mapping_exports.get(name, 0)
+            if remaining < 1:
+                raise RuntimeError("Arena mapping export released twice")
+            self._mapping_exports[name] = remaining - 1
             if self._closed:
                 self._close_segments()
 
@@ -356,8 +393,8 @@ class SharedMemorySegmentPool:
         # Doing this in the setter (rather than at every call site) means manual
         # mutations of the counter — including the consumer's ``_unit_released``
         # path and tests that simulate a reclaim — also wake the producer.
-        with self._space_cv:
-            self._space_cv.notify_all()
+        with self._condition():
+            self._signal_space()
 
     @property
     def _shutdown(self) -> bool:
@@ -368,50 +405,230 @@ class SharedMemorySegmentPool:
         struct.pack_into("<B", self._ctrl_view(), 16, 1 if value else 0)
 
     def shutdown_arena(self) -> None:
-        """Wake any producer blocked in :py:meth:`_PoolWriter.begin_unit`.
+        """Request shutdown and wake a producer blocked on arena capacity.
 
-        Sets a sticky shutdown flag in the control segment and broadcasts on the
-        space condition variable so a producer that is currently waiting for a
-        free segment exits the wait promptly with a :py:exc:`BufferError`. Safe
-        to call multiple times and from either process.
+        Call before worker join; this requests shutdown without closing mappings,
+        unregistering live storage or unlinking names. Existing exports remain
+        valid. Complete physical retirement separately through ``close()`` once
+        actual worker and storage quiescence is established.
+
+        Raises:
+            RuntimeError: Control state is unavailable or retired. Owned backing
+                remains retained; this failure is not proof of safe retirement.
         """
+        with self._close_lock:
+            if self._closed:
+                return
+        with self._condition(), self._close_lock:
+            if not self._closed:
+                self._shutdown = True
+                self._signal_space()
+
+    def _signal_space(self) -> None:
+        """Queue a capacity hint while the caller holds the control lock."""
+        _signal_space(self._space_signal)
+
+    def _control_deadline(self, deadline: float) -> float:
+        return deadline + _CONTROL_LOCK_TIMEOUT
+
+    def _wait_space(self, deadline: float, control_deadline: float) -> bool:
         try:
-            self._shutdown = True
-        except Exception:  # noqa: BLE001 — control buf may already be released
+            return self._space_signal.acquire(
+                timeout=max(0.0, deadline - time.monotonic())
+            )
+        except BaseException as error:
+            try:
+                with self._condition(deadline=control_deadline):
+                    self._signal_space()
+            except BaseException as cleanup:  # noqa: B036 - Preserve the primary failure.
+                error.add_note(f"Capacity wake handoff failed: {cleanup!r}")
+            raise
+
+    @property
+    def _read_cursor(self) -> int:
+        return int(_CTRL.unpack_from(self._ctrl_view(), 0)[6])
+
+    @_read_cursor.setter
+    def _read_cursor(self, value: int) -> None:
+        struct.pack_into("<Q", self._ctrl_view(), 34, value)
+
+    def _retain_retirement_failure(self, error: BaseException) -> None:
+        with self._close_lock:
+            first = self._retirement_error is None
+            if first:
+                self._retirement_error = error
+            with _REGISTRATION_QUARANTINE_LOCK:
+                _REGISTRATION_QUARANTINE.add(self)
+            if self._ctrl_buf is not None:
+                try:
+                    struct.pack_into("<B", self._ctrl_buf, 16, 1)
+                except (BufferError, TypeError, ValueError) as cleanup:
+                    error.add_note(f"Could not mark shared shutdown: {cleanup!r}")
+        if first:
+            _LG.error(
+                "Arena retirement failed; shared mappings retained",
+                exc_info=(type(error), error, error.__traceback__),
+            )
+        # A terminal wake cannot depend on the unavailable allocator lock.
+        _signal_space(self._space_signal)
+
+    @contextmanager
+    def _condition(
+        self, *, deadline: float | None = None, local_close: bool = False
+    ) -> Iterator[None]:
+        """Bound metadata access; retain storage on uncertain allocator state.
+
+        Local-only retirement cannot cancel another handle's shared work.
+        """
+        if self._retirement_error is not None:
+            if not local_close:
+                _signal_space(self._space_signal)
+            raise self._retirement_error
+        timeout = _CONTROL_LOCK_TIMEOUT
+        if deadline is not None:
+            timeout = max(0.0, min(timeout, deadline - time.monotonic()))
+        if not self._space_cv.acquire(timeout=timeout):
+            error = RuntimeError(
+                "Arena control lock unavailable; pool retired and mappings retained"
+            )
+            if local_close:
+                _LG.error(
+                    "Local pool close could not acquire control; mappings retained"
+                )
+            else:
+                self._retain_retirement_failure(error)
+            raise error
+        try:
+            yield
+        finally:
+            self._space_cv.release()
+
+    def _select_mode(self, mode: int) -> None:
+        if self._closed or self._retirement_error is not None:
+            raise RuntimeError("segment pool is closed or retired")
+        if self._mode == mode:
             return
-        with self._space_cv:
-            self._space_cv.notify_all()
+        with self._condition(), self._close_lock:
+            current = int(_CTRL.unpack_from(self._ctrl_view(), 0)[3])
+            if current not in (0, mode):
+                raise RuntimeError(
+                    "Direct reservations cannot share ordinary pool endpoints"
+                )
+            struct.pack_into("<B", self._ctrl_view(), 17, mode)
+            self._mode = mode
+
+    def _register_endpoint(self, side: int) -> None:
+        with self._condition(), self._close_lock:
+            if self._closing or self._shutdown:
+                raise BufferError("segment pool is closing")
+            if (
+                self._mode == _ORDINARY
+                and side == 0
+                and self._published > self._read_cursor
+            ):
+                raise RuntimeError(
+                    "Previous arena channel has unread published units; "
+                    "confirm delivery/discard before opening a new writer"
+                )
+            previous = int(_CTRL.unpack_from(self._ctrl_view(), 0)[4 + side])
+            pid = os.getpid()
+            if previous not in (0, pid) and (_process_exists(previous)):
+                raise RuntimeError("Arena endpoint already belongs to another process")
+            struct.pack_into("<Q", self._ctrl_view(), 18 + 8 * side, pid)
 
     def open_writer(self) -> _PoolWriter:
         """Return the writer endpoint (call in the worker process)."""
+        self._select_mode(_ORDINARY)
+        self._register_endpoint(0)
         return _PoolWriter(self)
 
     def open_reader(self) -> _PoolReader:
         """Return the reader endpoint (call in the parent process)."""
-        return _PoolReader(self)
+        self._select_mode(_ORDINARY)
+        self._register_endpoint(1)
+        with self._condition(), self._close_lock:
+            if self._reader is None:
+                self._reader = _PoolReader(self)
+            return self._reader
 
     def close(self) -> None:
-        """Release this process's mappings of the segments.
+        """Close this handle, cancelling global work only for its original creator.
 
-        Restored zero-copy views (Packets / NumPy / Torch) may still alias a
-        segment at teardown — their slices keep the underlying mmap exported, so
-        unmapping it raises ``BufferError``. We release what we can and *retain*
-        the segments that are still mapped; their shared memory is freed once the
-        views are garbage-collected, and :py:meth:`unlink` removes the names
-        regardless. Raising here would crash an otherwise-successful run.
+        The constructor-created handle owns names and terminal cancellation.
+        Deserialized handles, including same-process copies, only retire their
+        local mappings; closing a worker handle never consumes an in-transit
+        allocation or cancels the creator. Only the creator may unlink names.
+
+        Call the creator's ``close()`` in its ``finally`` block before stopping
+        a pipeline whose producer may be blocked. The terminal signal wakes
+        reservations but never invalidates existing storage aliases or H2D
+        source owners. A known-live or uncertain remote endpoint, native export
+        or active claim keeps control and data mappings durably retained.
+
+        After workers are actually reaped and local aliases/claims are gone,
+        call ``close()`` again to finish retirement, then ``unlink()``. Repeated
+        calls do not reopen mappings, reset counters or permit future reuse.
+        A normal return may mean deferred physical retirement; ``unlink()``
+        reports ``BufferError`` until all retained mappings are closed.
+
+        Raises:
+            RuntimeError: Control acquisition is unavailable or the handle was
+                inherited across fork. Uncertain storage remains retained.
+
+        .. versionchanged:: 0.9.0
+           Creator close is terminal cancellation with deferred retirement;
+           deserialized holder close only retires its process-local mappings.
         """
-        with self._close_lock:
+        if os.getpid() != self._pid:
+            raise RuntimeError("Inherited pool handle cannot close across fork")
+        self._closing = True
+        with _REGISTRATION_QUARANTINE_LOCK:
+            _REGISTRATION_QUARANTINE.add(self)
+        if self._closed:
+            self._close_local()
+            return
+        if not self._owns_names and self._ctrl is None and self._segs is None:
+            self._close_local()
+            return
+        with self._condition(local_close=not self._owns_names), self._close_lock:
             if self._closed:
-                self._close_segments()
+                self._close_local()
                 return
-            self.shutdown_arena()
+            if self._owns_names:
+                self.shutdown_arena()
+            producer, consumer = _CTRL.unpack_from(self._ctrl_view(), 0)[4:6]
+            if self._owns_names and any(
+                pid != os.getpid() and _process_exists(pid)
+                for pid in (producer, consumer)
+            ):
+                return
+            if any(self._mapping_exports.values()):
+                return
+            if consumer == os.getpid():
+                reader = self._reader
+                if reader is not None and reader.lease is not None:
+                    return
+                # Unused holders may close their independent local mapping;
+                # actual readers and the creator retain outstanding unit state.
+                if (self._owns_names or reader is not None) and (
+                    self._reclaimed < self._read_cursor
+                ):
+                    return
+            self._close_local()
+
+    def _close_local(self) -> None:
+        with self._close_lock:
             self._closed = True
             if self._ctrl_buf is not None:
                 self._ctrl_buf.release()
                 self._ctrl_buf = None
             if self._ctrl is not None:
-                self._ctrl.close()
-                self._ctrl = None
+                try:
+                    self._ctrl.close()
+                except BufferError:
+                    pass  # Retain the control mapping for a later safe retry.
+                else:
+                    self._ctrl = None
             if self._seg_bufs is not None:
                 for buf in self._seg_bufs:
                     buf.release()
@@ -440,23 +657,36 @@ class SharedMemorySegmentPool:
                 except BufferError:
                     stuck.append(segment)
             self._segs = stuck or None
-            if not self._registrations:
+            if not self._registrations and self._segs is None and self._ctrl is None:
                 with _REGISTRATION_QUARANTINE_LOCK:
                     _REGISTRATION_QUARANTINE.discard(self)
 
     def unlink(self) -> None:
-        """Remove all segments from the system (call once, by the owner)."""
-        for name in [self._ctrl_name, *self._seg_names]:
-            try:
-                shm = shared_memory.SharedMemory(name=name)
-            except FileNotFoundError:
-                continue
-            try:
-                shm.unlink()
-            except FileNotFoundError:
-                pass
-            finally:
-                shm.close()
+        """Remove creator names only after physical retirement completes.
+
+        Raises:
+            BufferError: Mappings or registrations are retained. Release live
+                owners, confirm worker reap and retry ``close()`` before unlink.
+            RuntimeError: This is not the original creator handle.
+        """
+        if not self._owns_names or os.getpid() != self._creator_pid:
+            raise RuntimeError("Only the creator handle may unlink arena names")
+        with self._close_lock:
+            if not self._closed or self._ctrl is not None or self._segs is not None:
+                raise BufferError(
+                    "Pool retirement is pending; retry close before unlink"
+                )
+            for name in [self._ctrl_name, *self._seg_names]:
+                try:
+                    shm = shared_memory.SharedMemory(name=name)
+                except FileNotFoundError:
+                    continue
+                try:
+                    shm.unlink()
+                except FileNotFoundError:
+                    pass
+                finally:
+                    shm.close()
 
 
 class _PoolWriter:
@@ -488,34 +718,22 @@ class _PoolWriter:
                 ``acquire_timeout=0`` and no segment is currently free.
         """
         p = self._p
-        if p._count - (p._published - p._reclaimed) < 1:
-            if self._acquire_timeout == 0:
-                raise BufferError(
-                    "segment pool exhausted: no free segment and "
-                    "acquire_timeout=0. Increase SharedMemorySegmentPool "
-                    "count/segment_size or acquire_timeout, or check the consumer."
-                )
-            with p._space_cv:
-                # Re-check after acquiring the cv: the consumer may have
-                # reclaimed (and notified) between the outer test and now.
-                def _ready() -> bool:
-                    if p._shutdown:
-                        return True
-                    return p._count - (p._published - p._reclaimed) >= 1
-
-                if not p._space_cv.wait_for(_ready, timeout=self._acquire_timeout):
+        deadline = time.monotonic() + self._acquire_timeout
+        control_deadline = deadline + _CONTROL_LOCK_TIMEOUT
+        expired = False
+        while True:
+            with p._condition(deadline=control_deadline):
+                if p._closed or p._shutdown:
+                    p._signal_space()
+                    raise BufferError("segment pool is closing")
+                if p._count - (p._published - p._reclaimed) >= 1:
+                    self._cursor = 0
+                    return
+                if expired or time.monotonic() >= deadline:
                     raise BufferError(
-                        "segment pool exhausted: no free segment after waiting "
-                        f"{self._acquire_timeout:g}s — the consumer is releasing "
-                        "views too slowly or has stalled. Increase "
-                        "SharedMemorySegmentPool count/segment_size or "
-                        "acquire_timeout, or check the consumer."
+                        "segment pool exhausted: no free segment within acquire_timeout"
                     )
-                if p._shutdown:
-                    raise BufferError(
-                        "segment pool shut down while waiting for a free segment"
-                    )
-        self._cursor = 0
+            expired = not p._wait_space(deadline, control_deadline)
 
     def write_binary(
         self, data: "bytes | bytearray | memoryview[bytes]"
@@ -530,17 +748,23 @@ class _PoolWriter:
                 f"unit exceeds segment_size ({self._seg_size}); increase "
                 "SharedMemorySegmentPool segment_size"
             )
-        seg = self._p._segment(self._p._published)
-        offset = self._cursor
-        seg[offset : offset + n] = mv
-        self._cursor += n
-        return offset, n
+        with self._p._condition(), self._p._close_lock:
+            if self._p._closed or self._p._shutdown:
+                raise BufferError("segment pool is closing")
+            seg = self._p._segment(self._p._published)
+            offset = self._cursor
+            seg[offset : offset + n] = mv
+            self._cursor += n
+            return offset, n
 
     def commit_unit(self) -> int:
         """Publish the unit (advance the publish counter); return its byte span."""
-        span = self._cursor
-        self._p._published = self._p._published + 1
-        return span
+        with self._p._condition(), self._p._close_lock:
+            if self._p._closed or self._p._shutdown:
+                raise BufferError("segment pool is closing")
+            span = self._cursor
+            self._p._published = self._p._published + 1
+            return span
 
     def abort_unit(self) -> None:
         """Discard an in-progress unit without publishing it."""
@@ -553,44 +777,43 @@ class _SegmentLease:
     def __init__(self, reader: _PoolReader, unit: int) -> None:
         self._reader = reader
         self._unit = unit
-        self._remaining = 1
-        self._lock = threading.Lock()
+        self.remaining = 1
+        self.lock = threading.RLock()
 
     def acquire(self) -> None:
-        with self._lock:
-            self._remaining += 1
+        with self.lock:
+            self.remaining += 1
 
     def release_export(self, name: str) -> None:
-        pool = self._reader._p
+        pool = self._reader.pool
         pool._export_released(name)
         self.release_one()
 
     def release_one(self) -> None:
-        with self._lock:
-            self._remaining -= 1
-            done = self._remaining == 0
+        with self.lock:
+            self.remaining -= 1
+            done = self.remaining == 0
         if done:
-            self._reader._unit_released(self._unit)
+            self._reader.unit_released(self._unit)
 
 
 class _PoolReader:
     """Reader endpoint. Used as the first step in the parent process.
 
-    Returns zero-copy views into the segments and defers reclaiming a segment
-    until every anchor of its unit has been released.
+    Returns shared byte views and defers segment reuse until every actual
+    buffer export has retired, independent of payload-wrapper finalization.
     """
 
-    # ``read_binary`` hands out live, reusable views into shared memory, so
-    # handlers restore zero-copy views (anchored to defer reclamation).
+    # Each returned buffer acquires a native export hold before reconstruction.
     zero_copy: bool = True
 
     def __init__(self, pool: SharedMemorySegmentPool) -> None:
-        self._p = pool
-        self._next: int = 0  # next unit index to restore
-        self._reclaimed: int = 0  # contiguous reclaim watermark (mirrors shm)
+        self.pool = pool
+        self._next: int = pool._read_cursor
+        self._reclaimed: int = pool._reclaimed
         self._released: set[int] = set()  # released units above the watermark
         self._lock = threading.RLock()
-        self._lease: _SegmentLease | None = None
+        self.lease: _SegmentLease | None = None
 
     def reset(self) -> None:
         """Preserve monotonic accounting and outstanding leases."""
@@ -601,16 +824,16 @@ class _PoolReader:
         """Acquire both setup holds, or restore them and cancel the native ticket."""
         try:
             guard.activate()
-            with lease._lock:
-                previous_exports = self._p._mapping_exports.get(name, 0)
-                previous_holds = lease._remaining
+            with lease.lock:
+                previous_exports = self.pool._mapping_exports.get(name, 0)
+                previous_holds = lease.remaining
                 try:
-                    self._p._mapping_exports[name] = previous_exports + 1
-                    lease._remaining = previous_holds + 1
-                    self._lease = lease
+                    self.pool._mapping_exports[name] = previous_exports + 1
+                    lease.remaining = previous_holds + 1
+                    self.lease = lease
                 except BaseException:
-                    self._p._mapping_exports[name] = previous_exports
-                    lease._remaining = previous_holds
+                    self.pool._mapping_exports[name] = previous_exports
+                    lease.remaining = previous_holds
                     raise
         except BaseException as error:
             try:
@@ -621,17 +844,17 @@ class _PoolReader:
 
     def read_binary(self, offset: int, nbytes: int) -> "memoryview[bytes]":
         """Return a storage-owned view into the current unit's segment."""
-        if offset < 0 or nbytes < 0 or offset + nbytes > self._p._segment_size:
+        if offset < 0 or nbytes < 0 or offset + nbytes > self.pool._segment_size:
             raise ValueError("binary is outside the segment")
         guard = None
         try:
-            with self._p._close_lock:
-                if self._p._closed:
+            with self.pool._condition(), self.pool._close_lock:
+                if self.pool._closed or self.pool._shutdown:
                     raise RuntimeError("segment pool is closed")
-                self._p._ensure_pinned()
-                name = self._p._seg_names[self._next % self._p._count]
-                view = self._p._segment(self._next)[offset : offset + nbytes]
-                lease = self._lease
+                self.pool._ensure_pinned()
+                name = self.pool._seg_names[self._next % self.pool._count]
+                view = self.pool._segment(self._next)[offset : offset + nbytes]
+                lease = self.lease
                 if lease is None:
                     lease = _SegmentLease(self, self._next)
                 guard = _ExportGuard(partial(lease.release_export, name))
@@ -657,23 +880,36 @@ class _PoolReader:
            Replace the old ``pinned=`` keyword with ``anchors=``; positional
            calls are unchanged.
         """
-        lease = self._lease
-        unit = self._next
-        self._next += 1
-        self._lease = None
-        if lease is None:
-            self._unit_released(unit)
-        else:
-            lease.release_one()
+        with self.pool._condition(), self.pool._close_lock, self._lock:
+            if self.pool._closed:
+                return
+            lease = self.lease
+            unit = self._next
+            self._next += 1
+            self.pool._read_cursor = self._next
+            self.lease = None
+            if lease is None:
+                self.unit_released(unit)
+            else:
+                lease.release_one()
 
-    def _unit_released(self, unit: int) -> None:
-        with self._p._close_lock, self._lock:
+    def unit_released(self, unit: int) -> None:
+        with self.pool._close_lock, self._lock:
             self._released.add(unit)
-            advanced = False
-            while self._reclaimed in self._released:
-                self._released.discard(self._reclaimed)
-                self._reclaimed += 1
-                advanced = True
-            if advanced and not self._p._closed:
-                # Setter wakes any blocked producer via the space cv.
-                self._p._reclaimed = self._reclaimed
+        if self.pool._closed or self.pool._retirement_error is not None:
+            return
+        try:
+            with self.pool._condition(), self.pool._close_lock, self._lock:
+                watermark = self._reclaimed
+                while watermark in self._released:
+                    watermark += 1
+                if watermark > self._reclaimed and not self.pool._closed:
+                    # Publish before forgetting pending releases. A failure
+                    # retains the pending units and forbids unsafe reuse.
+                    self.pool._reclaimed = watermark
+                    self._released.difference_update(range(self._reclaimed, watermark))
+                    self._reclaimed = watermark
+        except Exception as error:
+            # Native-export finalizers cannot propagate reclaim errors. Make
+            # the terminal failure observable and wake blocked producers.
+            self.pool._retain_retirement_failure(error)

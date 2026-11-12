@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 import multiprocessing as mp
 import queue
+import sys
 import threading
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import ExitStack
@@ -100,6 +101,7 @@ class _IPCResourceCleanup:
         self._arena = arena
         self._process_started = process_started
         self._cleanup = ExitStack()
+        self._active_error = sys.exception()
 
     def __enter__(self) -> _IPCResourceCleanup:
         self._cleanup.__enter__()
@@ -109,8 +111,7 @@ class _IPCResourceCleanup:
         self._cleanup.callback(_close_queue, self._data_q, abandon=True)
         self._cleanup.callback(_close_queue, self._cmd_q, abandon=True)
         if self._arena is not None:
-            self._cleanup.callback(self._arena.unlink)
-            self._cleanup.callback(self._arena.close)
+            self._cleanup.push(self._retire_arena)
         if self._process_started:
             self._cleanup.callback(_join, self._interface.process)
         return self
@@ -121,7 +122,42 @@ class _IPCResourceCleanup:
         exc: BaseException | None,
         traceback: TracebackType | None,
     ) -> bool | None:
-        return self._cleanup.__exit__(exc_type, exc, traceback)
+        primary = exc if exc is not None else self._active_error
+        try:
+            return self._cleanup.__exit__(exc_type, exc, traceback)
+        except Exception as cleanup:
+            if primary is None or primary is cleanup:
+                raise
+            primary.add_note(f"Subprocess resource cleanup failed: {cleanup!r}")
+            _LG.error(
+                "Subprocess cleanup failed after an existing error", exc_info=True
+            )
+            return False
+
+    def _retire_arena(
+        self,
+        _exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        _traceback: TracebackType | None,
+    ) -> bool:
+        """Unlink only after close, preserving errors and deferred backing."""
+        arena = self._arena
+        if arena is None:
+            return False
+        phase = "close"
+        try:
+            arena.close()
+            phase = "unlink"
+            arena.unlink()
+        except Exception as cleanup:
+            if phase == "unlink" and isinstance(cleanup, BufferError):
+                _LG.debug("Arena retirement is deferred; owning backing retained")
+            elif exc is not None:
+                exc.add_note(f"Arena {phase} failed: {cleanup!r}")
+                _LG.error("Arena cleanup failed after an existing error", exc_info=True)
+            else:
+                raise
+        return False
 
     def _clear_queue_references(self) -> None:
         self._interface.cmd_q = None
@@ -348,7 +384,10 @@ def iterate_in_subprocess(
             inter-process transfer by default, but allocate a fresh segment per
             object; the arena reuses one pre-allocated buffer instead. Ownership
             transfers to the returned iterable, which closes and unlinks the arena
-            at teardown, so do not reuse the arena afterwards.
+            at teardown, so do not reuse the arena afterwards. Custom backends
+            conform structurally to :py:class:`~spdl.pipeline.ArenaProtocol` and
+            its writer/reader contracts; importing or inheriting the protocol
+            is not required to pass a concrete object.
 
     Returns:
         Iterator over the results of the generator function.
