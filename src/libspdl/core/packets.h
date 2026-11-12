@@ -219,7 +219,8 @@ struct Packets {
 std::vector<std::tuple<VideoPacketsPtr, std::vector<size_t>>>
 extract_packets_at_indices(
     const VideoPacketsPtr& src,
-    std::vector<size_t> indices);
+    std::vector<size_t> indices,
+    bool h264_idr_split = true);
 
 /// Get packet timestamps in seconds.
 ///
