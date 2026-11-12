@@ -43,7 +43,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import queue as _queue
+import threading
 import traceback
 from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass, replace
@@ -63,6 +65,8 @@ from spdl.pipeline._components import (
     _SESSION_END,
 )
 from spdl.pipeline.defs._defs import PipelineConfig, SourceConfig
+
+from ._pool_cleanup import _release_pool_cleanup, _retain_pool_cleanup
 
 __all__ = [
     "_InterpreterBackend",
@@ -85,6 +89,7 @@ _DRAIN_POLL_TIMEOUT: float = 0.5
 # be force-killed -- there is no ``terminate``/``kill`` escalation, so
 # cooperative shutdown is the only lever.
 _INTERPRETER_JOIN_TIMEOUT: float = 10.0
+_QUEUE_FEEDER_JOIN_TIMEOUT: float = 0.2
 
 # Bounded blocking-put timeout for the shutdown marker on a subinterpreter worker's queue. See
 # ``_InterpreterBackend.try_put_shutdown`` -- a subinterpreter worker cannot be
@@ -669,7 +674,12 @@ class _Worker:
     """A spawned worker (process or subinterpreter thread) running the sub-pipeline loop."""
 
     def stop(self) -> None:
-        """Reap the worker. Called after a ``_POOL_SHUTDOWN`` marker has been broadcast."""
+        """Join/retire the worker, raising if any retirement step is incomplete.
+
+        Called after a ``_POOL_SHUTDOWN`` marker has been broadcast. A normal
+        return is positive proof that the backend has retired the worker, not
+        merely that a shutdown request was issued.
+        """
         raise NotImplementedError
 
 
@@ -687,7 +697,13 @@ class _PoolBackend:
         """Return async failure state, or ``None`` when queue puts fail synchronously."""
         raise NotImplementedError
 
-    def spawn(self, target: Callable[..., object], args: tuple[Any, ...]) -> _Worker:
+    def spawn(
+        self,
+        target: Callable[..., object],
+        args: tuple[Any, ...],
+        register: Callable[[_Worker], None],
+    ) -> _Worker:
+        """Create and register the cleanup owner before physically starting it."""
         raise NotImplementedError
 
     def try_put_shutdown(self, q: Any) -> None:
@@ -709,6 +725,9 @@ class _ProcessWorker(_Worker):
 
     def stop(self) -> None:
         p = self._proc
+        if p.pid is None:
+            p.close()
+            return
         p.join(3)
         if p.exitcode is None:
             p.terminate()
@@ -716,6 +735,8 @@ class _ProcessWorker(_Worker):
         if p.exitcode is None:
             p.kill()
             p.join(5)
+        if p.exitcode is None:
+            raise TimeoutError("Execution-region process survived kill/join")
 
 
 class _ProcessBackend(_PoolBackend):
@@ -732,10 +753,17 @@ class _ProcessBackend(_PoolBackend):
             self._ctx.Event(), self._ctx.Event(), self._ctx.Event()
         )
 
-    def spawn(self, target: Callable[..., object], args: tuple[Any, ...]) -> _Worker:
+    def spawn(
+        self,
+        target: Callable[..., object],
+        args: tuple[Any, ...],
+        register: Callable[[_Worker], None],
+    ) -> _Worker:
         proc = self._ctx.Process(target=target, args=args, daemon=True)
+        worker = _ProcessWorker(proc)
+        register(worker)
         proc.start()
-        return _ProcessWorker(proc)
+        return worker
 
     def try_put_shutdown(self, q: Any) -> None:
         # Non-blocking: the queues are bounded and on the error path workers may have stalled
@@ -754,7 +782,16 @@ class _ProcessBackend(_PoolBackend):
         # can never be delivered — ``cancel_join_thread`` first so ``join_thread`` does not
         # block forever flushing into a pipe no worker drains.
         q.cancel_join_thread()
+        # Close before enqueueing the feeder sentinel: its reader_close callback
+        # must not race this close on the same Connection handle.
+        q._reader.close()
         q.close()
+        feeder = q._thread
+        if feeder is not None:
+            feeder.join(timeout=_QUEUE_FEEDER_JOIN_TIMEOUT)
+            if feeder.is_alive():
+                raise TimeoutError("Execution-region queue feeder is still alive")
+        q._writer.close()
         q.join_thread()
 
 
@@ -762,21 +799,29 @@ class _InterpreterWorker(_Worker):
     def __init__(self, interp: Any, thread: Any) -> None:
         self._interp = interp
         self._thread = thread
+        self._closed = False
 
     def stop(self) -> None:
         # A subinterpreter thread cannot be force-killed; it exits when it observes the
         # ``_POOL_SHUTDOWN`` marker broadcast before ``stop``. Join with a bound so a wedged
         # worker cannot hang teardown forever.
-        self._thread.join(timeout=_INTERPRETER_JOIN_TIMEOUT)
-        if self._thread.is_alive():
-            _LG.warning("Subinterpreter worker did not terminate gracefully.")
-            return  # a still-running interpreter cannot be closed
-        # Destroy the subinterpreter to release its resources; without this they accumulate
-        # across repeated pipeline build/teardown cycles.
+        if self._closed:
+            return
+        if self._thread is not None:
+            self._thread.join(timeout=_INTERPRETER_JOIN_TIMEOUT)
+            if self._thread.is_alive():
+                raise TimeoutError(
+                    "Execution-region subinterpreter thread is still alive"
+                )
         try:
             self._interp.close()
         except Exception:
-            _LG.warning("Failed to close subinterpreter worker.", exc_info=True)
+            _LG.warning(
+                "Failed to close subinterpreter worker; cleanup remains pending.",
+                exc_info=True,
+            )
+            raise
+        self._closed = True
 
 
 class _InterpreterBackend(_PoolBackend):
@@ -805,20 +850,17 @@ class _InterpreterBackend(_PoolBackend):
         # the subinterpreter path synchronous instead of translating it through ``_ERROR``.
         return None
 
-    def spawn(self, target: Callable[..., object], args: tuple[Any, ...]) -> _Worker:
+    def spawn(
+        self,
+        target: Callable[..., object],
+        args: tuple[Any, ...],
+        register: Callable[[_Worker], None],
+    ) -> _Worker:
         interp = self._interpreters.create()
-        try:
-            thread = interp.call_in_thread(target, *args)
-        except BaseException:
-            # ``call_in_thread`` failed after ``create()`` succeeded: close the orphaned
-            # interpreter here, since outer cleanup only reaps workers this method returned.
-            # Guard the close so a failure in it cannot mask the original error being re-raised.
-            try:
-                interp.close()
-            except Exception:
-                _LG.warning("Failed to close orphaned subinterpreter.", exc_info=True)
-            raise
-        return _InterpreterWorker(interp, thread)
+        worker = _InterpreterWorker(interp, None)
+        register(worker)
+        worker._thread = interp.call_in_thread(target, *args)
+        return worker
 
     def try_put_shutdown(self, q: Any) -> None:
         # Best-effort but *bounded*: unlike the process backend, a subinterpreter worker that
@@ -868,70 +910,63 @@ class _SubprocessPipelinePool:
         self._input_buffer_size = input_buffer_size
         self._output_buffer_size = output_buffer_size
         self._closed = False
+        self._retired = False
+        self._owner_pid = os.getpid()
+        self._shutdown_lock = threading.Lock()
+        self._workers: list[_Worker] = []
+        self._in_qs: list[Any] = []
+        self._out_q: Any = None
+        self._max_workers = max_workers
         self._input_serialization_failed = backend.make_serialization_failure_flag()
         self._output_serialization_failed = backend.make_serialization_failure_flag()
-        self._out_q: Any = backend.make_queue(size)
-        # One input queue per worker in both modes. Continuous mode needs it to broadcast epoch
-        # boundaries cleanly; non-continuous mode needs it so each worker receives exactly one
-        # ``_SESSION_END`` on its own queue. A single shared queue cannot guarantee that — a
-        # worker that drains its stream and reaches ``_SESSION_END`` early can loop back and
-        # steal a second marker meant for a slower peer still holding (un-flushed) items. That
-        # peer then never ends, the collector reaches its ``_DONE`` count from the wrong workers
-        # and finishes, and the slow peer's items are silently dropped. Per-worker queues remove
-        # the shared marker entirely, so every worker ends exactly once.
-        self._in_qs: list[Any] = [backend.make_queue(size) for _ in range(max_workers)]
-        self._max_workers = max_workers
-        started: list[_Worker] = []
         try:
+            self._out_q = backend.make_queue(size)
+            # One queue per worker ensures a fast peer cannot steal another's
+            # _SESSION_END, report duplicate _DONE and drop the slow peer's tail.
+            # Continuous mode also needs one queue per worker to broadcast epochs.
+            for _ in range(max_workers):
+                self._in_qs.append(backend.make_queue(size))
             for i in range(max_workers):
-                started.append(
-                    backend.spawn(
-                        _pipeline_worker_loop,
-                        (
-                            self._in_qs[i],
-                            self._out_q,
-                            i,
-                            sub_config,
-                            build_kwargs,
-                            continuous,
-                            initializer,
-                            initargs,
-                            self._output_serialization_failed,
-                            output_buffer_size,
-                        ),
-                    )
+                worker = backend.spawn(
+                    _pipeline_worker_loop,
+                    (
+                        self._in_qs[i],
+                        self._out_q,
+                        i,
+                        sub_config,
+                        build_kwargs,
+                        continuous,
+                        initializer,
+                        initargs,
+                        self._output_serialization_failed,
+                        output_buffer_size,
+                    ),
+                    self._workers.append,
                 )
-            self._workers: list[_Worker] = started
+                assert worker is self._workers[-1]
         except BaseException:
-            # A ``spawn()`` partway through the loop (e.g. resource exhaustion) leaves the
-            # already-started workers running with no owner: this half-constructed pool is
-            # discarded by the caller and never reaches ``shutdown``. Broadcast the shutdown
-            # marker first (as ``shutdown`` does): a subinterpreter worker blocks on its input
-            # queue and cannot be force-killed, so without the marker it never exits, its join
-            # times out, and its interpreter is leaked. Then reap the started workers and close
-            # the queues before propagating, so the failure does not leak workers or pipe fds.
-            self._broadcast_shutdown()
-            self._reap(started)
-            for q in (*self._in_qs, self._out_q):
-                backend.close_queue(q)
+            try:
+                self.shutdown()
+            except BaseException:  # noqa: B036 - retain roots and preserve construction failure
+                _LG.exception("Execution-region construction cleanup is still pending")
             raise
 
-    @staticmethod
-    def _reap(workers: list[_Worker]) -> None:
-        """Reap the given workers (join, escalating to terminate/kill where the backend can).
-
-        Each worker is reaped independently: a failure stopping one (e.g. a
-        subinterpreter that will not close) must not prevent the rest from
-        being reaped, or the remaining workers and their pipe fds would leak.
-        """
-        for w in workers:
+    def _reap(self) -> list[Exception]:
+        """Attempt every worker independently, retaining only unfinished retirements."""
+        errors: list[Exception] = []
+        for worker in self._workers[:]:
             try:
-                w.stop()
-            except Exception:
-                _LG.warning("Failed to reap a worker.", exc_info=True)
+                worker.stop()
+            except Exception as error:
+                errors.append(error)
+            else:
+                self._workers.remove(worker)
+        return errors
 
     def make_handle(self) -> _SubprocessPipelineHandle:
         """Create the picklable submit-side handle that rides in the pipeline config."""
+        if self._closed:
+            raise RuntimeError("Execution-region pool shutdown has started")
         return _SubprocessPipelineHandle(
             self._in_qs,
             self._out_q,
@@ -943,38 +978,79 @@ class _SubprocessPipelinePool:
             self._output_buffer_size,
         )
 
-    def _broadcast_shutdown(self) -> None:
-        # One shutdown marker per worker, onto that worker's own input queue. Sequential by
-        # design: the process backend's put is non-blocking, and the subinterpreter backend's
-        # is bounded (``_INTERPRETER_SHUTDOWN_PUT_TIMEOUT``). That bound is only ever hit in the
-        # rare error-teardown case where a worker's queue is full and it has stopped consuming;
-        # worst-case teardown is then O(N) * the small per-worker bound -- acceptable on the
-        # teardown path and not worth a parallel-put thread pool.
+    def _broadcast_shutdown(self) -> list[Exception]:
+        """Attempt bounded shutdown delivery independently for every input queue."""
+        errors: list[Exception] = []
         for q in self._in_qs:
-            self._backend.try_put_shutdown(q)
+            try:
+                self._backend.try_put_shutdown(q)
+            except Exception as error:
+                errors.append(error)
+        return errors
+
+    def _close_queues(self) -> list[Exception]:
+        """Release successful queue owners and keep failed closes available for retry."""
+        errors: list[Exception] = []
+        for q in self._in_qs[:]:
+            try:
+                self._backend.close_queue(q)
+            except Exception as error:
+                errors.append(error)
+            else:
+                self._in_qs.remove(q)
+        if self._out_q is not None:
+            try:
+                self._backend.close_queue(self._out_q)
+            except Exception as error:
+                errors.append(error)
+            else:
+                self._out_q = None
+        return errors
 
     def shutdown(self) -> None:
-        """Tell every worker to exit, then reap them."""
-        if self._closed:
-            return
-        self._closed = True
-        self._broadcast_shutdown()
-        self._reap(self._workers)
-        # Release this process's queue handles so any feeder threads created on first ``put``
-        # exit; otherwise a process that creates many pipelines leaks threads and pipe fds.
-        for q in (*self._in_qs, self._out_q):
-            self._backend.close_queue(q)
-        # A bounded multiprocessing.Queue owns one process-shared capacity
-        # semaphore. The pool object outlives its finalizer through the wrapper,
-        # so retaining these closed queues defers their SemLock finalizers until
-        # interpreter shutdown, where resource_tracker reports one leak per queue.
-        # Drop the last owner references after all workers are reaped and handles
-        # are closed. ``_closed`` makes repeated shutdown harmless.
-        self._in_qs = []
-        self._out_q = None
-        self._workers = []
+        """Retire workers before closing queues; failed steps remain retryable.
+
+        A shutdown request prevents new handles, but it does not prove physical
+        retirement. Successful steps are not repeated. Failed cleanup remains
+        strongly rooted for an explicit retry even when the caller drops this pool.
+        """
+        if os.getpid() != self._owner_pid:
+            raise RuntimeError("Execution-region pool belongs to another process")
+        if not self._shutdown_lock.acquire(blocking=False):
+            raise RuntimeError("Execution-region pool cleanup is already in progress")
+        try:
+            if self._retired:
+                return
+            _retain_pool_cleanup(self)
+            self._closed = True
+            errors = self._broadcast_shutdown() if self._workers else []
+            errors.extend(self._reap())
+            if not self._workers:
+                errors.extend(self._close_queues())
+            if errors:
+                raise ExceptionGroup("Execution-region pool cleanup failed", errors)
+            self._retired = True
+            _release_pool_cleanup(self)
+        finally:
+            self._shutdown_lock.release()
 
 
 def _shutdown_pipeline_pools(pools: Sequence[_SubprocessPipelinePool]) -> None:
+    errors: list[BaseException] = []
+    owned: list[_SubprocessPipelinePool] = []
     for pool in pools:
-        pool.shutdown()
+        try:
+            _retain_pool_cleanup(pool)
+        except RuntimeError as error:
+            errors.append(error)
+        else:
+            owned.append(pool)
+    for pool in owned:
+        try:
+            pool.shutdown()
+        except BaseException as error:  # noqa: B036 - attempt all acquired cleanup owners
+            errors.append(error)
+        else:
+            _release_pool_cleanup(pool)
+    if errors:
+        raise BaseExceptionGroup("Execution-region pools failed to shut down", errors)
