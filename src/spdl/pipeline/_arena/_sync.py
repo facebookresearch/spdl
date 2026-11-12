@@ -17,6 +17,22 @@ __all__ = ["_process_exists", "_signal_space"]
 def _process_exists(pid: int) -> bool:
     if not pid:
         return False
+    if os.name == "nt":
+        import _winapi
+
+        if not 0 < pid <= 0xFFFFFFFF:
+            return True
+        try:
+            handle = _winapi.OpenProcess(_winapi.SYNCHRONIZE, False, pid)
+        except OSError as error:
+            return error.winerror != 87  # ERROR_INVALID_PARAMETER: no such PID.
+        try:
+            try:
+                return _winapi.WaitForSingleObject(handle, 0) != _winapi.WAIT_OBJECT_0
+            finally:
+                _winapi.CloseHandle(handle)
+        except OSError:
+            return True
     if os.name != "posix":
         return True
     try:
