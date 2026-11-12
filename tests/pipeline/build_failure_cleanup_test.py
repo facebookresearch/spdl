@@ -8,10 +8,16 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from spdl.pipeline import build_pipeline, run_pipeline_in_subprocess
+from spdl.pipeline._subprocess_pipeline_pool import _shutdown_pipeline_pools
 from spdl.pipeline.defs import PipelineConfig, SinkConfig, SourceConfig
 
 
 class BuildFailureCleanupTest(unittest.TestCase):
+    def _finish_mock_pools(self, *pools: MagicMock) -> None:
+        for pool in pools:
+            pool.shutdown.side_effect = None
+        _shutdown_pipeline_pools(pools)
+
     def test_later_build_failure_shuts_down_eager_fused_pool(self) -> None:
         """A build failure releases a fused pool before ownership transfers."""
         config = PipelineConfig(
@@ -47,6 +53,7 @@ class BuildFailureCleanupTest(unittest.TestCase):
         executor.shutdown.side_effect = RuntimeError("executor cleanup failed")
         first_pool.shutdown.side_effect = RuntimeError("pool cleanup failed")
         second_pool.shutdown.side_effect = BaseException("pool cleanup interrupted")
+        self.addCleanup(self._finish_mock_pools, first_pool, second_pool)
 
         with (
             patch(

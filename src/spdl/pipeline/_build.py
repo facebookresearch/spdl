@@ -85,8 +85,7 @@ class _BuildFailureCleanup:
             _LG.exception("Failed to clean up resources after a build failure.")
 
     def add_pools(self, pools: Sequence[Any]) -> None:
-        for pool in reversed(pools):
-            self._cleanup.callback(pool.shutdown)
+        self._cleanup.callback(_shutdown_pipeline_pools, tuple(pools))
 
     def add_executor(self, executor: ThreadPoolExecutor) -> None:
         self._cleanup.callback(executor.shutdown)
@@ -722,8 +721,16 @@ def run_pipeline_in_subprocess(
         # Any eager-spawn pass above (region fusion, hoisting) or the iterable creation failed;
         # the iterable is never returned to the caller, so reap the region and hoisted pools
         # here to avoid leaking their worker processes and pipe fds.
-        _shutdown_pools(pools)
-        _shutdown_pipeline_pools(fuse_pools)
+        try:
+            _shutdown_pools(pools)
+        except BaseException:  # noqa: B036 - preserve setup failure, still try region cleanup
+            _LG.exception("Hoisted worker cleanup failed during setup rollback")
+        try:
+            _shutdown_pipeline_pools(fuse_pools)
+        except BaseException:  # noqa: B036 - pending region cleanup is rooted for retry
+            _LG.exception(
+                "Execution-region cleanup is still pending after setup failure"
+            )
         raise
     # The hoisted ``ProcessPoolExecutor`` workers and the fused-stage worker pools are all
     # owned by this (the main) process and must outlive every iteration (they are reused across

@@ -32,6 +32,10 @@ from ._build import (
 from ._common._misc import (
     _set_compact_log as set_compact_log,
 )
+from ._pool_cleanup import (
+    get_pending_pipeline_pool_cleanup_count,
+    retry_pending_pipeline_pool_cleanup,
+)
 from ._profile import (
     diagnostic_mode_num_sources,
     get_default_profile_callback,
@@ -60,4 +64,6 @@ __all__ = [
     "get_default_background_tasks",
     "set_default_background_tasks",
     "set_compact_log",
+    "get_pending_pipeline_pool_cleanup_count",
+    "retry_pending_pipeline_pool_cleanup",
 ]

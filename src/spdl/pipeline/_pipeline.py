@@ -29,6 +29,8 @@ from spdl.pipeline._components import (
     ThreadOutputQueue,
 )
 
+from ._pool_cleanup import _release_pool_cleanup, _retain_pool_cleanup
+
 __all__ = ["Pipeline"]
 
 _LG: logging.Logger = logging.getLogger(__name__)
@@ -369,9 +371,10 @@ class _PipelineImpl(Generic[T]):
         self._event_loop_state: _EventLoopState = _EventLoopState.NOT_STARTED
         self._pending_output_read: concurrent.futures.Future[T] | None = None
         self._pending_output_items: deque[T] = deque()
-        # Worker pools owned by this pipeline (from subprocess-stage fusion). They are reaped in
-        # ``stop`` (and via the Pipeline finalizer), exactly once.
+        # Worker pools owned by this pipeline (from subprocess-stage fusion) are
+        # retained until shutdown succeeds; a later stop retries unfinished pools.
         self._pools: list[Any] = list(pools)
+        self._pool_shutdown_lock = threading.Lock()
 
     def __str__(self) -> str:
         return self._str
@@ -572,13 +575,31 @@ class _PipelineImpl(Generic[T]):
             raise exception
 
     def _shutdown_pools(self) -> None:
-        """Reap any owned worker pools exactly once (safe to call repeatedly)."""
-        pools, self._pools = self._pools, []
-        for pool in pools:
-            try:
-                pool.shutdown()
-            except Exception:
-                _LG.debug("Exception during worker pool shutdown.", exc_info=True)
+        """Retry owned pool cleanup, forgetting only positively completed shutdowns."""
+        if not self._pool_shutdown_lock.acquire(blocking=False):
+            _LG.warning("Pipeline pool cleanup is already in progress")
+            return
+        try:
+            owned: list[Any] = []
+            for pool in self._pools:
+                try:
+                    _retain_pool_cleanup(pool)
+                except RuntimeError:
+                    _LG.warning(
+                        "Cannot clean up a pool owned by another process", exc_info=True
+                    )
+                else:
+                    owned.append(pool)
+            for pool in owned:
+                try:
+                    pool.shutdown()
+                except Exception:
+                    _LG.warning("Worker pool cleanup is still pending.", exc_info=True)
+                else:
+                    self._pools.remove(pool)
+                    _release_pool_cleanup(pool)
+        finally:
+            self._pool_shutdown_lock.release()
 
     def get_item(self, *, timeout: float | None = None) -> T:
         """Get the next item.
@@ -1376,14 +1397,19 @@ class Pipeline(Generic[T]):
         .. versionchanged:: 0.8.0
            Terminal task failures are raised by at most one ``stop`` call and remain
            observable to foreground reads.
+
+        .. versionchanged:: 0.9.0
+           Failed execution-region pool cleanup retains its owners and is retried
+           by a later ``stop``. Automatic cleanup remains armed while pools are
+           pending. The process-local pending cleanup registry can also be retried
+           with :py:func:`~spdl.pipeline.config.retry_pending_pipeline_pool_cleanup`.
         """
         try:
             self._impl.stop(timeout=timeout)
         finally:
-            # A completed join means explicit cleanup owns the terminal result,
-            # even when stop() raises that result's task failure. Keep automatic
-            # cleanup armed only when a timed-out join still needs a retry.
-            if not self._impl._event_loop.needs_join():
+            # Keep automatic cleanup armed while a join or an owned pool still
+            # needs retry, even after the event-loop thread has exited.
+            if not self._impl._event_loop.needs_join() and not self._impl._pools:
                 self._finalizer.detach()
 
     @contextmanager
