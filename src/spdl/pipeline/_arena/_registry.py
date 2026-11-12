@@ -19,11 +19,12 @@ buffer). A handler restores a zero-copy view when ``zero_copy`` is true and an
 owning / copied-out value when it is false — so the restored type can differ
 between backends (see :py:class:`_BytesHandler`).
 
-``from_buffer`` returns ``(object, anchor)``. For reusable pool views the
-anchor is the underlying buffer exporter, retained by native Torch storage and
-NumPy/memoryview base chains. The pool also tracks exports at ``read_binary``
-so a handler failure cannot lose an escaped alias. Tensor wrapper finalization
-is not proof that detached tensors or retained native storage are dead.
+``from_buffer`` returns ``(object, anchor)``. The serializer collects opaque
+anchors and passes them to custom readers under the original ``end_unit``
+contract. Builtin pools instead retain native exports at ``read_binary`` before
+reconstruction, so escaped views remain safe even if a handler fails before
+returning its anchor. Tensor wrapper finalization is not proof that native
+storage aliases are dead.
 
 NumPy and Torch are reached through ``lazy_import`` so ``import spdl.pipeline``
 works without them installed and they never become hard Buck dependencies. A
@@ -120,11 +121,9 @@ class _OffloadHandlerProtocol(Protocol):
                 between backends.
 
         Returns:
-            An ``(object, anchor)`` pair: the restored object, plus an *anchor*
-            whose lifetime keeps any zero-copy view of ``buf`` valid — collected
-            by :py:func:`_restore` and handed to
-            :py:meth:`ArenaReaderProtocol.end_unit` — or ``None`` when the
-            restored object does not alias a reusable segment.
+            An ``(object, anchor)`` pair. The serializer passes the opaque anchor
+            to ``reader.end_unit(span, pinned)`` for custom lifetime policies.
+            Builtins own buffer-export lifetime independently of this value.
         """
         ...
 

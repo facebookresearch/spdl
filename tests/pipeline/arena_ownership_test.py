@@ -101,7 +101,7 @@ class ArenaOwnershipTest(unittest.TestCase):
                 self.assertEqual(pool._reclaimed, 1)
 
     def test_close_defers_unmap_until_last_storage_release(self) -> None:
-        """Close/unlink keeps native storage valid and automatically unmaps on release."""
+        """Close/unlink keeps native storage valid through a final safe retirement retry."""
         pool = self._pool()
         registry = _default_registry()
         value = _restore(
@@ -114,14 +114,15 @@ class ArenaOwnershipTest(unittest.TestCase):
         del value
         gc.collect()
         pool.close()
-        pool.unlink()
+        with self.assertRaises(BufferError):
+            pool.unlink()
         self.assertIsNotNone(pool._segs)
         alias = torch.empty(0, dtype=torch.int64).set_(storage)
         self.assertEqual(alias.tolist(), list(range(1024)))
         del storage, alias
         gc.collect()
-        self.assertIsNone(pool._segs)
         pool.close()
+        self.assertIsNone(pool._segs)
 
     def test_restore_failure_retains_escaped_buffer(self) -> None:
         """A failing handler cannot reclaim a buffer it already exposed."""

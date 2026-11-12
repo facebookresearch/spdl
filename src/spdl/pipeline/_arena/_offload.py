@@ -38,9 +38,14 @@ _SPAN: struct.Struct = struct.Struct("<Q")
 
 def _discard(blob: bytes, reader: ArenaReaderProtocol) -> None:
     """Account for an unread arena envelope without restoring its payload."""
-    if reader.zero_copy:
-        span = int(_SPAN.unpack_from(blob, 0)[0])
-        reader.end_unit(span, [])
+    span = _unit_span(blob)
+    reader.end_unit(span, [])
+
+
+def _unit_span(blob: bytes) -> int:
+    if type(blob) is not bytes or len(blob) < _SPAN.size:
+        raise ValueError("Invalid arena envelope: missing unit span")
+    return int(_SPAN.unpack_from(blob, 0)[0])
 
 
 def _offload(
@@ -131,11 +136,13 @@ def _restore(
     original object by reading the binary from ``reader`` and asking the
     matching handler in ``registry`` to rebuild it.
 
-    Zero-copy views of shared memory keep their backing region alive through
-    *anchors* returned by handlers. Anchors are collected for the duration of
-    the call and handed to ``reader.end_unit`` together with the unit span;
-    the backend reclaims the unit's region either immediately (ring / copied
-    out) or once every anchor is garbage-collected (segment pool / zero-copy).
+    Zero-copy views keep shared backing alive through their actual native
+    exporters. Handler-returned *anchors* are collected for the duration of
+    the call and handed to ``reader.end_unit`` together with the unit span, so
+    custom readers can retain their lifetime metadata. Builtins ignore that list
+    because native exports already retain the correct storage independently of
+    payload wrappers. The reader returns the unit immediately after copy-out
+    (ring), or once every underlying export is released (segment pool).
     ``end_unit`` runs in ``finally`` so accounting stays correct even if
     unpickling raises.
 
@@ -152,8 +159,8 @@ def _restore(
 
     Returns:
         The object originally passed to :py:func:`_offload`, with offloaded
-        leaves either copied out (ring) or aliasing shared memory through
-        anchors held by ``reader`` (segment pool). The exact restored type
+        leaves either copied out (ring) or aliasing lifetime-owned exported
+        storage (segment pool). The exact restored type
         for ``bytes`` / ``bytearray`` / ``memoryview`` depends on the
         backend — see :py:class:`~spdl.pipeline._arena._registry._BytesHandler`.
 
@@ -163,10 +170,10 @@ def _restore(
         >>> envelope = queue.get()
         >>> obj = _restore(envelope, reader, registry)
     """
-    span = int(_SPAN.unpack_from(blob, 0)[0])
+    span = _unit_span(blob)
     unpickler = pickle.Unpickler(io.BytesIO(blob[_SPAN.size :]))
-    # Lifetime anchors for zero-copy fields (e.g. the np.frombuffer array). The
-    # backend keeps the underlying region alive until these are released.
+    # Lifetime anchors for zero-copy fields (e.g. the np.frombuffer array).
+    # Custom readers may retain them; builtin readers rely on native exports.
     anchors: list[object] = []
 
     def persistent_load(marker: object) -> object:
@@ -183,6 +190,6 @@ def _restore(
         return unpickler.load()
     finally:
         # Tell the backend the unit is fully read. It reclaims the region now
-        # (ring / copy-out) or once every anchor is released (segment pool /
+        # (ring / copy-out) or once every export is released (segment pool /
         # zero-copy). Always runs, so accounting stays correct even on error.
         reader.end_unit(span, anchors)

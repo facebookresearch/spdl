@@ -287,7 +287,6 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
                 "drain",
                 "join",
                 "arena.close",
-                "arena.unlink",
                 "cmd.cancel",
                 "cmd.close",
                 "data.cancel",
@@ -296,6 +295,47 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         )
         self.assertIsNone(interface.cmd_q)
         self.assertIsNone(interface.data_q)
+
+    def test_deferred_arena_retirement_still_releases_ipc(self) -> None:
+        """Export-held arena names stay retained without failing successful teardown."""
+        process = MagicMock(pid=1, exitcode=0)
+        process.is_alive.return_value = False
+        cmd_q, data_q, arena = MagicMock(), MagicMock(), MagicMock()
+        arena.unlink.side_effect = BufferError("mapping is still exported")
+        interface = _ipc(process, cmd_q, data_q, 1.0, arena)
+        with patch("spdl.pipeline._iter_utils._subprocess._drain"):
+            interface.terminate()
+        arena.close.assert_called_once_with()
+        arena.unlink.assert_called_once_with()
+        self.assertTrue(interface.closed.is_set())
+        for ipc_queue in (cmd_q, data_q):
+            ipc_queue.close.assert_called_once_with()
+        self.assertIsNone(interface.cmd_q)
+        self.assertIsNone(interface.data_q)
+
+    def test_close_failure_preserves_existing_error_and_never_unlinks(self) -> None:
+        """A failed retirement cannot unlink names or replace an iteration error."""
+        process = MagicMock(pid=1, exitcode=0)
+        process.is_alive.return_value = False
+        cmd_q, data_q, arena = MagicMock(), MagicMock(), MagicMock()
+        arena.close.side_effect = RuntimeError("retirement failed")
+        interface = _ipc(process, cmd_q, data_q, 1.0, arena)
+        primary = RuntimeError("original iteration failed")
+        with (
+            patch("spdl.pipeline._iter_utils._subprocess._drain"),
+            self.assertLogs("spdl.pipeline._iter_utils._subprocess", level="ERROR"),
+            self.assertRaises(RuntimeError) as caught,
+        ):
+            try:
+                raise primary
+            finally:
+                interface.terminate()
+        self.assertIs(caught.exception, primary)
+        self.assertTrue(primary.__notes__)
+        arena.close.assert_called_once_with()
+        arena.unlink.assert_not_called()
+        for ipc_queue in (cmd_q, data_q):
+            ipc_queue.close.assert_called_once_with()
 
     @unittest.skipUnless("fork" in mp.get_all_start_methods(), "requires fork")
     def test_killed_result_writer_does_not_block_queue_cleanup(self) -> None:

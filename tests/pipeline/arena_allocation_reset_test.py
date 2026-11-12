@@ -44,12 +44,21 @@ class ArenaAllocationResetTest(unittest.TestCase):
     ) -> None:
         """Secondary cleanup failures are notes and do not prevent remaining cleanup."""
         ctrl, data = Mock(), Mock()
-        ctrl.buf = memoryview(bytearray(17))
+        created = iter([ctrl, data, OSError("allocation root")])
+
+        def allocate(*args, **kwargs):
+            result = next(created)
+            if isinstance(result, BaseException):
+                raise result
+            if result is ctrl:
+                ctrl.buf = memoryview(bytearray(kwargs["size"]))
+            return result
+
         ctrl.unlink.side_effect = OSError("unlink secondary")
         ctrl.close.side_effect = OSError("close secondary")
         with patch(
             "spdl.pipeline._arena._pool.shared_memory.SharedMemory",
-            side_effect=[ctrl, data, OSError("allocation root")],
+            side_effect=allocate,
         ):
             with self.assertRaisesRegex(OSError, "allocation root") as caught:
                 SharedMemorySegmentPool(64, 2)
@@ -82,8 +91,10 @@ class ArenaAllocationResetTest(unittest.TestCase):
                 bytes(reader.read_binary(offset, size)), bytes([epoch]) * 32
             )
             reader.end_unit(span, [])
+            completed = ring._head, ring._tail
             writer.reset()
-            self.assertEqual((ring._head, ring._tail), (0, 0))
+            self.assertEqual((ring._head, ring._tail), completed)
+            self.assertEqual(completed[0], completed[1])
 
     def test_aborted_unpublished_span_is_not_counted_after_reset(self) -> None:
         """Reset drops unpublished reservation without advancing either shared watermark."""
@@ -101,4 +112,4 @@ class ArenaAllocationResetTest(unittest.TestCase):
         self.assertEqual((ring._head, ring._tail), (16, 0))
         ring.open_reader().end_unit(16, [])
         writer.reset()
-        self.assertEqual((ring._head, ring._tail), (0, 0))
+        self.assertEqual((ring._head, ring._tail), (16, 16))

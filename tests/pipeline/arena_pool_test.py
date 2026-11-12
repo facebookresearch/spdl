@@ -144,12 +144,14 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
         view = cast(dict[str, Any], out)["a"]
         # A live view keeps the segment exported; close() must not raise.
         pool.close()
-        pool.unlink()
-        # The view is still valid after close()+unlink() (the mapping persists
-        # until it is released).
+        with self.assertRaises(BufferError):
+            pool.unlink()
+        # Retirement is deferred, and the live view remains valid.
         self.assertEqual(int(view[0]), 0)
         del out, view
         gc.collect()
+        pool.close()
+        pool.unlink()
 
     def test_exhausted_pool_raises(self) -> None:
         """With acquire_timeout=0 (Mode A), a unit with no free segment is refused."""
@@ -202,7 +204,7 @@ class SharedMemorySegmentPoolTest(unittest.TestCase):
         self.assertLess(elapsed, 2.0)
 
     def test_shutdown_wakes_blocked_producer(self) -> None:
-        """shutdown_arena() wakes a blocked producer immediately.
+        """Public shutdown_arena wakes a blocked producer without closing its mapping.
 
         Models the consumer-dies-first scenario: with no reclaim ever happening,
         flipping the shutdown flag still lets the producer exit so the worker

@@ -87,6 +87,12 @@ require SPDL IO. Its existing NumPy Python dependency may load on that path, but
 creating the buffer exporter does not load Torch, CUDA or media-native
 extensions. There is no unsafe finalizer fallback if the helper is unavailable.
 
+For concrete custom backend usage, see
+:doc:`../optimization_guide/shared_memory_arenas`. The public
+:py:class:`spdl.pipeline.ArenaProtocol` and writer/reader references define the
+byte-unit contract; the storage-owner rules above apply independently of payload
+reconstruction or logical unit release.
+
 Closing local use is not unlinking a name
 -------------------------------------------
 

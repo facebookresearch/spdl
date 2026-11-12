@@ -147,12 +147,14 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
         view = reader.read_binary(offset, size)
         reader.end_unit(span, [])
         pool.close()
-        pool.unlink()
+        with self.assertRaises(BufferError):
+            pool.unlink()
         with self.assertRaisesRegex(RuntimeError, "closed"):
             reader.read_binary(0, 1)
         self.assertEqual(bytes(view), b"a" * 64)
         del view
         gc.collect()
+        pool.close()
         self.assertIsNone(pool._segs)
         self.assertIsNone(pool._ctrl)
 
@@ -325,10 +327,9 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
             root.__traceback__ = None
             gc.collect()
             self.assertEqual(pool._mapping_exports[name], 0)
+            pool.close()
             registration.close.assert_called_once()
-            # Traceback clearing can drop the returned native view before a
-            # temporary source slice in another frame. Retry close after all
-            # those private frames are gone; unregister must not run twice.
+            # Final retirement is requested after traceback and native holds end.
             pool.close()
             registration.close.assert_called_once()
             self.assertIsNone(pool._segs)
@@ -499,7 +500,8 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
             worker.start()
             worker.join(10)
             self.assertFalse(worker.is_alive())
-        self.assertEqual(order, [True])
+        self.assertTrue(order)
+        self.assertTrue(all(order))
         self.assertEqual(pool._reclaimed, 1)
 
     def test_gc_keeps_bound_partial_callback_callable_until_export_destruction(

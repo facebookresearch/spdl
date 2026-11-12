@@ -162,7 +162,7 @@ class SharedMemoryRingBufferTest(unittest.TestCase):
         self.assertLess(elapsed, 2.0)
 
     def test_shutdown_wakes_blocked_producer(self) -> None:
-        """shutdown_arena() wakes a blocked producer immediately.
+        """Public shutdown_arena wakes a blocked producer without closing its mapping.
 
         Models the consumer-dies-first scenario: even though no reclaim ever
         happens, the parent flipping the shutdown flag must let the producer
