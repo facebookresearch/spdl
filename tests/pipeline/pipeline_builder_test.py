@@ -1171,6 +1171,89 @@ class TestPipelineResume(unittest.TestCase):
 
 
 class TestPipelineOrder(unittest.TestCase):
+    @parameterized.expand(
+        [
+            (order, concurrency)
+            for order in ("input", "completion")
+            for concurrency in (1, 2, 4)
+        ]
+    )
+    def test_pipe_runs_at_most_concurrency_sync_ops(
+        self, output_order: str, concurrency: int
+    ) -> None:
+        """A sync op never has more than ``concurrency`` calls running at once."""
+        lock = threading.Lock()
+        running = 0
+        peak = 0
+
+        def op(i: int) -> int:
+            nonlocal running, peak
+            with lock:
+                running += 1
+                peak = max(peak, running)
+            time.sleep(0.02)
+            with lock:
+                running -= 1
+            return i
+
+        src = list(range(24))
+        pipeline = (
+            PipelineBuilder()
+            .add_source(src)
+            .pipe(op, concurrency=concurrency, output_order=output_order)
+            .add_sink(100)
+            .build(num_threads=16)
+        )
+
+        with pipeline.auto_stop():
+            result = list(pipeline.get_iterator(timeout=30))
+
+        self.assertEqual(peak, concurrency)
+        if output_order == "input":
+            self.assertEqual(result, src)
+        else:
+            self.assertEqual(sorted(result), src)
+
+    @parameterized.expand(
+        [
+            (order, concurrency)
+            for order in ("input", "completion")
+            for concurrency in (1, 2, 4)
+        ]
+    )
+    def test_pipe_runs_at_most_concurrency_async_ops(
+        self, output_order: str, concurrency: int
+    ) -> None:
+        """An async op never has more than ``concurrency`` calls running at once."""
+        running = 0
+        peak = 0
+
+        async def op(i: int) -> int:
+            nonlocal running, peak
+            running += 1
+            peak = max(peak, running)
+            await asyncio.sleep(0.02)
+            running -= 1
+            return i
+
+        src = list(range(24))
+        pipeline = (
+            PipelineBuilder()
+            .add_source(src)
+            .pipe(op, concurrency=concurrency, output_order=output_order)
+            .add_sink(100)
+            .build(num_threads=1)
+        )
+
+        with pipeline.auto_stop():
+            result = list(pipeline.get_iterator(timeout=30))
+
+        self.assertEqual(peak, concurrency)
+        if output_order == "input":
+            self.assertEqual(result, src)
+        else:
+            self.assertEqual(sorted(result), src)
+
     def test_pipeline_order_complete(self) -> None:
         """The output is in the order of completion."""
 
