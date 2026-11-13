@@ -19,6 +19,7 @@ from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 from spdl.pipeline import _pool_cleanup, build_pipeline, PipelineBuilder
+from spdl.pipeline._components import _POOL_SHUTDOWN
 from spdl.pipeline._pipeline import _PipelineImpl
 from spdl.pipeline._subprocess_pipeline_pool import (
     _InterpreterBackend,
@@ -108,6 +109,19 @@ def _wait_for_release(ready: Any, release: Any) -> None:
     ready.set()
     if not release.wait(30):
         raise TimeoutError("test worker did not receive release")
+
+
+def _fill_input_pipe(q: Any, ready: Any) -> None:
+    send_bytes = q._send_bytes
+
+    def send(data: bytes) -> None:
+        ready.set()
+        send_bytes(data)
+
+    q._send_bytes = send
+    q.put(b"x" * (4 * 1024 * 1024))
+    q.close()
+    q.join_thread()
 
 
 def _wait_for_interpreter_release(ready: Any, release: Any) -> None:
@@ -548,6 +562,110 @@ class PoolCleanupTest(unittest.TestCase):
         finally:
             pool._owner_pid = os.getpid()
             impl._shutdown_pools()
+
+    @unittest.skipIf(
+        sys.platform == "win32", "Windows queues have no shared write lock"
+    )
+    def test_shutdown_does_not_start_feeder_on_abandoned_writer_lock(self) -> None:
+        """A killed remote producer cannot strand a new owner shutdown feeder."""
+        ctx = mp.get_context("spawn")
+        worker_ready, worker_release = ctx.Event(), ctx.Event()
+        backend = _RealProcessBackend(ctx, worker_ready, worker_release)
+        pool = _pool(backend, 1)
+        q: Any = pool._in_qs[0]
+        worker = cast(_ProcessWorker, pool._workers[0])._proc
+        ready = ctx.Event()
+        producer = ctx.Process(target=_fill_input_pipe, args=(q, ready))
+        stranded = False
+        try:
+            self.assertTrue(worker_ready.wait(10))
+            producer.start()
+            self.assertTrue(ready.wait(10))
+            producer.terminate()
+            producer.join(5)
+            self.assertIsNotNone(producer.exitcode)
+            acquired = q._wlock.acquire(False)
+            if acquired:
+                q._wlock.release()
+            stranded = not acquired
+            self.assertTrue(stranded)
+            self.assertIsNone(q._thread)
+            backend.try_put_shutdown(q)
+            self.assertIsNone(q._thread)
+            self.assertFalse(q._wlock.acquire(False))
+            pool.shutdown()
+            self.assertIsNotNone(worker.exitcode)
+            self.assertTrue(pool._retired)
+            self.assertEqual(pool._workers, [])
+            self.assertEqual(pool._in_qs, [])
+            self.assertIsNone(pool._out_q)
+            self.assertEqual(get_pending_pipeline_pool_cleanup_count(), 0)
+            self.assertTrue(q._reader.closed)
+            self.assertTrue(q._writer.closed)
+        finally:
+            if worker.exitcode is None:
+                worker_release.set()
+            self._rescue_input_queue(producer, q, stranded)
+
+    def _rescue_input_queue(self, producer: Any, q: Any, stranded: bool) -> None:
+        """Retire the deliberately stranded fixture even against the unfixed parent."""
+        if producer.pid is not None:
+            if producer.is_alive():
+                producer.kill()
+                producer.join(5)
+            producer.close()
+        q.cancel_join_thread()
+        q._reader.close()
+        if stranded:
+            q._wlock.release()
+        q.close()
+        if q._thread is not None:
+            q._thread.join(3)
+            self.assertFalse(q._thread.is_alive())
+        q._writer.close()
+
+    def test_shutdown_marker_still_reaches_healthy_queue(self) -> None:
+        """Best-effort shutdown still delivers with a new or an existing feeder."""
+        ctx = mp.get_context("spawn")
+        for warm in (False, True):
+            with self.subTest(warm=warm):
+                q: Any = ctx.Queue(2)
+                backend = _ProcessBackend(ctx)
+                try:
+                    if warm:
+                        q.put("warm")
+                        self.assertEqual(q.get(timeout=3), "warm")
+                    backend.try_put_shutdown(q)
+                    self.assertEqual(q.get(timeout=3), (_POOL_SHUTDOWN, None))
+                finally:
+                    backend.close_queue(q)
+                self.assertFalse(q._thread.is_alive())
+
+    def test_shutdown_write_lock_errors_remain_visible(self) -> None:
+        """Only ordinary lock contention can skip a shutdown marker."""
+        for operation in ("acquire", "release"):
+            with self.subTest(operation=operation):
+                q = MagicMock()
+                q._thread = None
+                q._wlock.acquire.return_value = True
+                getattr(q._wlock, operation).side_effect = OSError("lock failed")
+                with self.assertRaisesRegex(OSError, "lock failed"):
+                    _ProcessBackend(None).try_put_shutdown(q)
+                q.put_nowait.assert_not_called()
+                if operation == "acquire":
+                    q._wlock.release.assert_not_called()
+
+    def test_shutdown_marker_without_write_lock(self) -> None:
+        """A queue without a write lock keeps its ordinary best-effort put path."""
+        q = MagicMock()
+        q._thread = None
+        q._wlock = None
+        backend = _ProcessBackend(None)
+        backend.try_put_shutdown(q)
+        q.put_nowait.assert_called_once_with((_POOL_SHUTDOWN, None))
+        q.put_nowait.side_effect = queue.Full
+        backend.try_put_shutdown(q)
+        self.assertEqual(q.put_nowait.call_count, 2)
 
     def test_queue_reader_close_precedes_feeder_sentinel(self) -> None:
         """Concurrent endpoint close cannot consume the sentinel and strand the feeder."""
