@@ -29,5 +29,6 @@ NB_MODULE(SPDL_FFMPEG_EXT_NAME, m) {
   spdl::core::register_encoding(m);
   spdl::core::register_filtering(m);
   spdl::core::register_bsf(m);
+  spdl::core::register_fused(m);
 }
 } // namespace

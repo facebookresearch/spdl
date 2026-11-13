@@ -10,6 +10,8 @@
 
 #include <libspdl/core/frames.h>
 
+#include <algorithm>
+
 #include <fmt/format.h>
 
 #include <nanobind/nanobind.h>
@@ -191,6 +193,11 @@ void register_frames(nb::module_& m) {
           [](const VideoFrames& self, const nb::slice& slice) {
             auto [start, stop, step, len] =
                 slice.compute(self.get_num_frames());
+            // A step larger than the number of frames in magnitude selects
+            // the same frames, and the clamped value fits in `int`.
+            const Py_ssize_t max_step =
+                std::max<Py_ssize_t>(self.get_num_frames(), 1);
+            step = std::clamp(step, -max_step, max_step);
             return self.slice(
                 static_cast<int>(start),
                 static_cast<int>(stop),

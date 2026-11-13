@@ -9,6 +9,7 @@ import math
 from functools import cache
 from typing import Any, TYPE_CHECKING
 
+from . import _fuse
 from .lib import _libspdl
 from .utils import get_ffmpeg_filters
 
@@ -268,19 +269,34 @@ def get_filter_desc(
     Returns:
         The resulting filter expression.
     """
-    match type(packets):
-        case _libspdl.AudioPackets:
+    packets = _fuse._unwrap_materialized(packets)
+    if _fuse._is_symbol(packets):
+        media, timestamp = _fuse._packets_info(packets)
+    else:
+        media = _get_media_type(packets)
+        timestamp = getattr(packets, "timestamp", None)
+    match media:
+        case "audio":
             # When audio packets have `timestamp` attribute, we delegate to `atrim` filter.
-            # pyrefly: ignore [missing-attribute]
-            return get_audio_filter_desc(timestamp=packets.timestamp, **filter_args)
-        case _libspdl.VideoPackets:
+            return get_audio_filter_desc(timestamp=timestamp, **filter_args)
+        case "video" | "image":
             # When video packets have `timestamp` attribute, we manually filter the frame
             # in the decoding logic, so we don't use `trim` filter.
             return get_video_filter_desc(timestamp=None, **filter_args)
-        case _libspdl.ImagePackets:
-            return get_video_filter_desc(timestamp=None, **filter_args)
         case _:
             raise TypeError(f"Unexpected type: {type(packets)}")
+
+
+def _get_media_type(packets: object) -> str | None:
+    match type(packets):
+        case _libspdl.AudioPackets:
+            return "audio"
+        case _libspdl.VideoPackets:
+            return "video"
+        case _libspdl.ImagePackets:
+            return "image"
+        case _:
+            return None
 
 
 ################################################################################

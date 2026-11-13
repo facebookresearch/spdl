@@ -8,6 +8,7 @@
 from types import ModuleType
 from typing import Any, Protocol, runtime_checkable, TYPE_CHECKING
 
+from . import _fuse
 from ._internal import import_utils
 
 torch: ModuleType = import_utils.lazy_import("torch")
@@ -108,6 +109,9 @@ def to_numpy(buffer: ArrayInterface) -> "NDArray":
     See also:
         https://numpy.org/doc/stable/reference/arrays.interface.html
     """
+    buffer = _fuse._unwrap_materialized(buffer)
+    if _fuse._is_symbol(buffer):
+        return _fuse._record_post(buffer, to_numpy)
     if not hasattr(buffer, "__array_interface__"):
         raise RuntimeError(
             "The given object does not have `__array_interface__` attribute."
@@ -125,6 +129,9 @@ def to_torch(buffer: "ArrayInterface | CUDABuffer") -> "Tensor":
     Returns:
         (torch.Tensor): A PyTorch Tensor.
     """
+    buffer = _fuse._unwrap_materialized(buffer)
+    if _fuse._is_symbol(buffer):
+        return _fuse._record_post(buffer, to_torch)
     if (interface := getattr(buffer, "__cuda_array_interface__", None)) is not None:
         # Note: this is to silence pyre errors.
         # Usually, it should be asserting that `buffer` is a CUDABuffer,
@@ -166,6 +173,9 @@ def to_numba(buffer: ArrayInterface | CUDAArrayInterface) -> object:
     See Also:
         https://numba.readthedocs.io/en/stable/cuda/cuda_array_interface.html
     """
+    buffer = _fuse._unwrap_materialized(buffer)
+    if _fuse._is_symbol(buffer):
+        return _fuse._record_post(buffer, to_numba)
     if hasattr(buffer, "__cuda_array_interface__"):
         return cuda.as_cuda_array(buffer)
 
@@ -182,4 +192,7 @@ def to_jax(buffer: ArrayInterface) -> object:
     Returns:
         (jax.Array): A JAX Array.
     """
+    buffer = _fuse._unwrap_materialized(buffer)
+    if _fuse._is_symbol(buffer):
+        return _fuse._record_post(buffer, to_jax)
     return jax.numpy.array(buffer, copy=False)
