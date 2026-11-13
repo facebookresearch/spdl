@@ -65,8 +65,8 @@ jobs:
           echo "=== conda env ==="
           echo "CONDA_PREFIX=$CONDA_PREFIX"
           echo "CONDA_DEFAULT_ENV=$CONDA_DEFAULT_ENV"
-          ls -ld /usr/share/miniconda /usr/share/miniconda/envs /usr/share/miniconda/envs/test 2>/dev/null
-          ls -ld /usr/share/miniconda/envs/test/lib/python*/site-packages 2>/dev/null
+          # setup-miniconda can install under $HOME when the runner has no bundled Conda.
+          ls -ld "$CONDA_PREFIX" "$CONDA_PREFIX"/lib/python*/site-packages
           echo "=== pip view ==="
           pip -V
           pip config list -v
