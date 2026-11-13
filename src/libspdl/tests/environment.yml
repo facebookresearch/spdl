@@ -1,0 +1,11 @@
+name: libspdl-tests
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.12
+  - cmake>=3.24,<4
+  - ninja
+  - ccache
+  # The CLI generates AAC/JPEG/H.264 fixtures; the library ABI is selected in CMake.
+  - ffmpeg=8.*=gpl_*
