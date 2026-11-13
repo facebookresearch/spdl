@@ -1,0 +1,17 @@
+# GPU placement and transfer
+
+Candidates for placing terminal input work and managing host/device transfers in an SPDL pipeline. Validate the actual copy path, ownership, device identity and complete-run outcome; moving work to the GPU can increase transport cost or introduce races.
+
+[Catalog index](../technique_catalog.md)
+
+**`gpu_terminal_collate`: move final batch-wide steps after transfer**
+- Trigger: the last collate steps (concatenation into the packed layout, derived lengths or masks) make another full copy of the batch on CPU workers.
+- Technique: leave row-local decoding in the CPU workers, but consider moving batch-wide concatenation and cheap derived lengths/masks to the trainer after transfer. For example, instead of concatenating several decoded arrays into a second large CPU allocation, transfer their existing buffers and construct the required packed batch on the GPU. Keep the model's final input shape and values unchanged. This shifts assembly to another device; it does not make concatenation free, and the extra transfers or launches can outweigh saved CPU work.
+- Guards: compare the old and new batch construction on representative batches before training, including packed values, shapes, lengths and masks. Custom CUDA streams need readiness and ownership recording for their consumer. Skip the move when data is already packed. In one data-starved small-batch pipeline, a plain background H2D thread regressed, so measure the handoff cost.
+- SPDL reference: Consider a trainer-side {py:meth}`spdl.pipeline.PipelineBuilder.pipe` stage after {py:func}`spdl.io.transfer_tensor_h2d`. In a process-region graph, return to `MAIN_PROCESS` before GPU work. The H2D helper synchronizes its transfer and records default consumer-stream use; custom collation streams still need explicit readiness, `record_stream` and lifetime handling. This is an optional placement comparison, not a reason to split an already-efficient collator.
+
+**`h2d_cache_depth_and_threads`**
+- Trigger: NaNs or GPU memory pressure after moving to a background H2D helper that keeps recent GPU batches referenced.
+- Technique: keep at least as many recent GPU batches referenced as the training framework holds downstream. This is needed when the framework skips `record_stream` on nested batches; one case produced NaNs with a shallow retention window and trained correctly with a deeper one. With large batches, reduce transfer threads until peak GPU memory fits; reducing transfer threads cost almost no speed in the observed case.
+- Guards: Retention is not a substitute for correct stream recording. Hold CPU sources through H2D and device storage through consumption; account for retained-batch memory and verify nested tensor fields.
+- SPDL reference: {py:func}`spdl.io.transfer_tensor_h2d` exposes `num_caches` and uses a thread-local transfer stream. Size retained batches from the actual downstream contract; neither a particular cache count nor adding transfer threads is universally safe or faster. See the API's linked CUDA race-condition note for the ownership rationale.
