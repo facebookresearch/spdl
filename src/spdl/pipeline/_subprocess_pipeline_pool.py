@@ -770,6 +770,12 @@ class _ProcessBackend(_PoolBackend):
         # on a full ``_out_q`` (the bridge stops draining after relaying an ``_ERROR``) and
         # stopped consuming, so a blocking ``put`` would wedge here forever and never reach the
         # terminate/kill escalation. A dropped marker is fine — the worker is reaped anyway.
+        if q._thread is None and (lock := q._wlock) is not None:
+            # The retired remote bridge may have stranded its write lock.
+            # Region workers only read this queue; dropping the marker is safe.
+            if not lock.acquire(False):
+                return
+            lock.release()
         try:
             q.put_nowait((_POOL_SHUTDOWN, None))
         except Exception:
