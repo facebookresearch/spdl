@@ -547,6 +547,9 @@ def _ordered_pipe(
                   │ │
                   └─┘
 
+    At most ``concurrency`` operations run at once: a semaphore of size
+    ``concurrency`` is taken before each task is created and released when the task
+    finishes. The intermediate queue only restores input order.
     """
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different")
@@ -569,6 +572,10 @@ def _ordered_pipe(
         buffer_size=args.concurrency,
     )
     pending_ops: set[asyncio.Task[U]] = set()
+    running_slots = asyncio.Semaphore(args.concurrency)
+
+    def _release_slot(_: asyncio.Task[U]) -> None:
+        running_slots.release()
 
     async def _run(item: T) -> U:
         async with _task_hooks(task_hooks, item):
@@ -586,7 +593,9 @@ def _ordered_pipe(
             if is_eof(item):
                 break
 
+            await running_slots.acquire()
             task = create_task(_run(item), name=f"{info}:{(i := i + 1)}")
+            task.add_done_callback(_release_slot)
             pending_ops.add(task)
             task.add_done_callback(pending_ops.discard)
             await inter_queue.put((task, item))
