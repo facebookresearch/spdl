@@ -24,4 +24,5 @@ void register_conversion(nb::module_&);
 void register_encoding(nb::module_&);
 void register_filtering(nb::module_&);
 void register_bsf(nb::module_&);
+void register_fused(nb::module_&);
 } // namespace spdl::core

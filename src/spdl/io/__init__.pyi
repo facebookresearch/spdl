@@ -64,6 +64,7 @@ from spdl.io._core import (
     transfer_buffer as transfer_buffer,
     transfer_buffer_cpu as transfer_buffer_cpu,
 )
+from spdl.io._fuse import fuse as fuse
 from spdl.io._preprocessing import (
     get_abuffer_desc as get_abuffer_desc,
     get_audio_filter_desc as get_audio_filter_desc,
@@ -165,6 +166,8 @@ __all__ = [
     "NvDecDecoder",
     "transfer_buffer",
     "transfer_buffer_cpu",
+    # From _fuse
+    "fuse",
     # From _preprocessing
     "FilterGraph",
     "get_abuffer_desc",

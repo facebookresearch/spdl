@@ -22,7 +22,7 @@ from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import overload, TYPE_CHECKING
 
-from . import _config, _core, _preprocessing
+from . import _config, _core, _fuse, _preprocessing
 from ._core import _FILTER_DESC_DEFAULT, TimeWindow
 from .lib import _libspdl, _libspdl_cuda
 
@@ -457,14 +457,22 @@ def load_image_batch(
             pix_fmt=pix_fmt,
         )
 
-    frames = []
-    for src in srcs:
-        try:
-            frame = _decode(src, demux_config, decode_config, filter_desc)
-        except Exception as err:
-            _LG.error(_get_err_msg(src, err))
-        else:
-            frames.append(frame)
+    traced = _fuse._is_traced(srcs)
+    if traced and not strict:
+        _fuse._fallback("Skipping images that fail to decode (`strict=False`)")
+    if strict and (traced or _fuse._active_graph() is not None):
+        frames = [_decode(s, demux_config, decode_config, filter_desc) for s in srcs]
+    else:
+        frames = []
+        # Decode eagerly to skip the images that fail to decode.
+        with _fuse._suspend():
+            for src in srcs:
+                try:
+                    frame = _decode(src, demux_config, decode_config, filter_desc)
+                except Exception as err:
+                    _LG.error(_get_err_msg(src, err))
+                else:
+                    frames.append(frame)
 
     if strict and len(frames) != len(srcs):
         raise RuntimeError("Failed to load some images.")
@@ -674,6 +682,13 @@ def _decode_selected(
     return [frames[i] for i in indices]  # type: ignore[arg-type]
 
 
+def _check_indices_order(indices: list[int]) -> None:
+    if sorted(indices) != indices:
+        raise ValueError("Frame indices must be sorted in ascending order.")
+    if len(set(indices)) != len(indices):
+        raise ValueError("Frame indices must be unique.")
+
+
 def sample_decode_video(
     packets: "VideoPackets",
     indices: list[int],
@@ -780,13 +795,25 @@ def sample_decode_video(
     if not indices:
         raise ValueError("Frame indices must be non-empty.")
 
+    packets = _fuse._unwrap_materialized(packets)
+    if _fuse._is_symbol(packets):
+        _check_indices_order(indices)
+        return _fuse._record_sample_decode(
+            packets,
+            indices,
+            filter_desc=(
+                _preprocessing.get_video_filter_desc()
+                if filter_desc == _FILTER_DESC_DEFAULT
+                else filter_desc
+            ),
+            decode_config=decode_config,
+            optimized=_SAMPLE_DECODE_ENABLED,
+        )
+
     num_packets = len(packets)
     if any(not (0 <= i < num_packets) for i in indices):
         raise IndexError(f"Frame index must be [0, {num_packets}).")
-    if sorted(indices) != indices:
-        raise ValueError("Frame indices must be sorted in ascending order.")
-    if len(set(indices)) != len(indices):
-        raise ValueError("Frame indices must be unique.")
+    _check_indices_order(indices)
 
     if filter_desc == _FILTER_DESC_DEFAULT:
         filter_desc = _preprocessing.get_video_filter_desc()

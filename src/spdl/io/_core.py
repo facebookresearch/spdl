@@ -53,7 +53,7 @@ except ImportError:
         pass
 
 
-from . import _preprocessing
+from . import _fuse, _preprocessing
 from ._common import _resolve_src
 from .lib import _libspdl, _libspdl_cuda
 
@@ -176,6 +176,18 @@ class Demuxer:
         name: str | None = None,
         **kwargs: Any,
     ) -> None:
+        if _fuse._is_symbol(src):
+            self._demuxer = _fuse._record_open(
+                src, demux_config=demux_config, name=name, kwargs=kwargs
+            )
+            return
+        if (
+            recorded := _fuse._record_open_source(
+                src, demux_config=demux_config, name=name, kwargs=kwargs
+            )
+        ) is not None:
+            self._demuxer = recorded
+            return
         # pyrefly: ignore [no-matching-overload]
         self._demuxer: _libspdl.Demuxer = _libspdl.make_demuxer(
             _resolve_src(src),  # pyre-ignore[6]
@@ -477,6 +489,7 @@ class BSF(Generic[TCodec, TPackets]):
     """
 
     def __init__(self, codec: TCodec, bsf: str) -> None:
+        codec = _fuse._actual(codec)
         self._bsf: Any = _libspdl.make_bsf(codec, bsf)  # pyre-ignore[6]
 
     def filter(self, packets: TPackets, flush: bool = False) -> TPackets | None:
@@ -491,7 +504,7 @@ class BSF(Generic[TCodec, TPackets]):
             Filtered packet object or ``None`` if the internal filtering mechanism
             holds the packets and does not return any packet.
         """
-        return self._bsf.filter(packets, flush=flush)
+        return self._bsf.filter(_fuse._actual(packets), flush=flush)
 
     def flush(self) -> TPackets | None:
         return self._bsf.flush()
@@ -533,6 +546,9 @@ def apply_bsf(
 
        - :py:class:`BSF`: Same operation but for streaming processing.
     """
+    packets = _fuse._unwrap_materialized(packets)
+    if _fuse._is_symbol(packets):
+        return _fuse._record_bsf(packets, bsf)
     if packets.codec is None:
         raise ValueError("The packets object does not have codec.")
     # pyrefly: ignore [bad-return]
@@ -544,39 +560,52 @@ def apply_bsf(
 ################################################################################
 
 
+def _resolve_filter_body(
+    filter_desc: str,
+    media: str,
+    timestamp: tuple[float, float] | None = None,
+) -> str | None:
+    """Resolve the filter between the buffer source and the sink.
+
+    Shared by eager decoding and :py:mod:`spdl.io._fuse`, which attaches the
+    codec-dependent source and the sink at run time. ``None`` disables filtering.
+    """
+    if filter_desc != _FILTER_DESC_DEFAULT:
+        return filter_desc
+    match media:
+        case "audio":
+            return _preprocessing.get_audio_filter_desc(timestamp=timestamp)
+        case "video":
+            return _preprocessing.get_video_filter_desc(timestamp=timestamp)
+        case "image":
+            return _preprocessing.get_video_filter_desc()
+        case _:
+            raise ValueError(f"Unexpected media type: {media}")
+
+
 def _resolve_filter_graph(
     filter_desc: str,
     codec: "AudioCodec | VideoCodec | ImageCodec",
     timestamp: tuple[float, float] | None = None,
-) -> str:
+) -> str | None:
     match codec:
         case _libspdl.AudioCodec():
-            fd = (
-                _preprocessing.get_audio_filter_desc(timestamp=timestamp)
-                if filter_desc == _FILTER_DESC_DEFAULT
-                else filter_desc
-            )
+            fd = _resolve_filter_body(filter_desc, "audio", timestamp)
             src = _preprocessing.get_abuffer_desc(codec)
             sink = "abuffersink"
         case _libspdl.VideoCodec():
-            fd = (
-                _preprocessing.get_video_filter_desc(timestamp=timestamp)
-                if filter_desc == _FILTER_DESC_DEFAULT
-                else filter_desc
-            )
+            fd = _resolve_filter_body(filter_desc, "video", timestamp)
             src = _preprocessing.get_buffer_desc(codec)
             sink = "buffersink"
         case _libspdl.ImageCodec():
-            fd = (
-                _preprocessing.get_video_filter_desc()
-                if filter_desc == _FILTER_DESC_DEFAULT
-                else filter_desc
-            )
+            fd = _resolve_filter_body(filter_desc, "image")
             src = _preprocessing.get_buffer_desc(codec)
             sink = "buffersink"
         case _:
             raise ValueError(f"Unexpected codec type: {type(codec)}")
 
+    if fd is None:
+        return None
     return f"{src},{fd},{sink}"
 
 
@@ -634,6 +663,8 @@ def Decoder(
 
     """
     log_api_usage_once("spdl.io.Decoder")
+
+    codec = _fuse._actual(codec)
 
     if filter_desc is not None:
         filter_desc = _resolve_filter_graph(filter_desc, codec)
@@ -719,6 +750,19 @@ def decode_packets(
         :doc:`./benchmark_video`.
     """
 
+    packets = _fuse._unwrap_materialized(packets)
+    if _fuse._is_symbol(packets):
+        return _fuse._record_decode(
+            packets,
+            lambda media, ts: (
+                None
+                if filter_desc is None
+                else _resolve_filter_body(filter_desc, media, ts)
+            ),
+            decode_config=decode_config,
+            num_frames=num_frames,
+        )
+
     if filter_desc is not None:
         assert (codec := packets.codec) is not None
         filter_desc = _resolve_filter_graph(
@@ -801,6 +845,7 @@ def decode_packets_nvdec(
         A CUDABuffer object with shape [num_frames, 3, height, width].
     """
     log_api_usage_once("spdl.io.decode_packets_nvdec")
+    packets = _fuse._actual(packets)
 
     valid_pix_fmts = ["rgb", "bgr"]
     if pix_fmt not in valid_pix_fmts:
@@ -1041,6 +1086,9 @@ def convert_frames(
             - ``W``: width
             - ``H``: height
     """
+    frames = _fuse._unwrap_frames(frames)
+    if _fuse._is_traced(frames):
+        return _fuse._record_convert(frames, storage)
     return _libspdl.convert_frames(frames, storage=storage)  # type: ignore[arg-type]
 
 
@@ -1181,6 +1229,7 @@ def transfer_buffer(
     Returns:
         Buffer data on the target GPU device.
     """
+    buffer = _fuse._actual(buffer)
     return _libspdl_cuda.transfer_buffer(buffer, device_config=device_config)
 
 
