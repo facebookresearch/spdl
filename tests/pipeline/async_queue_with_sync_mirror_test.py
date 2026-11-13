@@ -234,7 +234,9 @@ class AsyncQueueWithSyncMirrorTest(unittest.IsolatedAsyncioTestCase):
         error = logs.records[0].exc_info
         self.assertIsNotNone(error)
         if error is not None:
+            # pyrefly: ignore [unsupported-operation]
             self.assertIs(error[0], RuntimeError)
+            # pyrefly: ignore [unsupported-operation]
             self.assertEqual(str(error[1]), "persistent get failure")
         self.assertEqual(len(scheduled), 1)
         self.assertTrue(inner.empty())
@@ -271,7 +273,9 @@ class AsyncQueueWithSyncMirrorTest(unittest.IsolatedAsyncioTestCase):
         error = logs.records[0].exc_info
         self.assertIsNotNone(error)
         if error is not None:
+            # pyrefly: ignore [unsupported-operation]
             self.assertIs(error[0], RuntimeError)
+            # pyrefly: ignore [unsupported-operation]
             self.assertEqual(str(error[1]), "persistent get failure")
         self.assertTrue(inner.empty())
         self.assertEqual(queue._pending_releases, 0)
