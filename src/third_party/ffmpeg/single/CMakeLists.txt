@@ -1,12 +1,14 @@
 # CMake file for searching existing FFmpeg installation and defining ffmpeg TARGET
 
 message(STATUS "Searching existing FFmpeg installation")
-message(STATUS FFMPEG_ROOT=$ENV{FFMPEG_ROOT})
-if (NOT DEFINED ENV{FFMPEG_ROOT})
-  message(FATAL_ERROR "Environment variable FFMPEG_ROOT is not set.")
+if (DEFINED FFMPEG_ROOT AND NOT FFMPEG_ROOT STREQUAL "")
+  set(_root "${FFMPEG_ROOT}")
+elseif (DEFINED ENV{FFMPEG_ROOT})
+  set(_root "$ENV{FFMPEG_ROOT}")
+else()
+  message(FATAL_ERROR "Set FFMPEG_ROOT to an FFmpeg installation prefix.")
 endif()
-
-set(_root $ENV{FFMPEG_ROOT})
+message(STATUS "FFMPEG_ROOT=${_root}")
 set(lib_dirs "${_root}/lib" "${_root}/bin")
 set(include_dir "${_root}/include")
 

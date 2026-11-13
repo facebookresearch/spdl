@@ -1,0 +1,79 @@
+name: "C++ Unit Tests"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/cpp-tests.yml"
+      - "tools/build_cpp_tests.sh"
+      - "src/CMakeLists.txt"
+      - "src/_cmake/**"
+      - "src/libspdl/**"
+      - "src/third_party/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cpp-tests.yml"
+      - "tools/build_cpp_tests.sh"
+      - "src/CMakeLists.txt"
+      - "src/_cmake/**"
+      - "src/libspdl/**"
+      - "src/third_party/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: "${{ matrix.os }} / FFmpeg ${{ matrix.ffmpeg-version }}"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+        ffmpeg-version: [8, 9]
+    defaults:
+      run:
+        shell: bash -el {0}
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: "2"
+      CCACHE_DIR: ${{ github.workspace }}/build/ccache
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: conda-incubator/setup-miniconda@fc2d68f6413eb2d87b895e92f8584b5b94a10167 # v3
+        with:
+          environment-file: src/libspdl/tests/environment.yml
+          activate-environment: libspdl-tests
+          channels: conda-forge
+          conda-remove-defaults: "true"
+
+      - name: Select matching FFmpeg runtime
+        run: |
+          conda install -y --override-channels -c conda-forge \
+            "ffmpeg=${{ matrix.ffmpeg-version }}.*=gpl_*"
+
+      - name: Build and run native tests
+        run: |
+          bash tools/build_cpp_tests.sh "${{ matrix.ffmpeg-version }}" build/libspdl-tests
+
+      - name: Upload test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-tests-${{ matrix.os }}-ffmpeg${{ matrix.ffmpeg-version }}
+          path: |
+            build/libspdl-tests/ctest-*.xml
+            build/libspdl-tests/ffmpeg*/Testing/Temporary/
+            build/libspdl-tests/ffmpeg*/CMakeFiles/CMakeConfigureLog.yaml
+            build/libspdl-tests/deps-build/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: warn
+          retention-days: 7
