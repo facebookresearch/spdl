@@ -82,7 +82,9 @@ class PyTorchDataLoaderTest(unittest.TestCase):
         self.addCleanup(shmem.close)
 
         self.assertGreater(shmem.size, len(pickle.dumps(dataset)))
-        restored = pickle.loads(shmem.buf)
+        buf = shmem.buf
+        assert buf is not None
+        restored = pickle.loads(buf)
         self.assertEqual([restored[i] for i in range(len(restored))], [0, 1, 2])
 
     def test_zero_length_custom_sampler_is_preserved(self) -> None:
