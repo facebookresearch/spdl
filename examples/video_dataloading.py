@@ -133,6 +133,7 @@ def source(
                     return
 
 
+@spdl.io.fuse
 def decode_video(
     src: str | bytes,
     width: int,
@@ -140,6 +141,9 @@ def decode_video(
     device_index: int,
 ) -> Tensor:
     """Decode video and send decoded frames to GPU.
+
+    The decorator :py:func:`spdl.io.fuse` makes demuxing, decoding and
+    conversion execute in one native call.
 
     Args:
         src: Data source. Passed to :py:func:`spdl.io.demux_video`.

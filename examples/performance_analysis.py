@@ -273,8 +273,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+@spdl.io.fuse
 def decode(path: Path, width: int = 128, height: int = 128) -> torch.Tensor:
     """Decode the video from the given path with rescaling.
+
+    The decorator :py:func:`spdl.io.fuse` makes the IO functions execute in one
+    native call.
 
     Args:
         path: The path to the video file.
