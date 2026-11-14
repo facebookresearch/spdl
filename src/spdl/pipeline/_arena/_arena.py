@@ -30,11 +30,13 @@ class _Arena:
     use?" without juggling the endpoint and registry as separate optionals.
     """
 
-    def __init__(self, arena: ArenaProtocol) -> None:
+    def __init__(
+        self, arena: ArenaProtocol, *, registry: _OffloadRegistry | None = None
+    ) -> None:
         self.arena = arena
         self._writer: ArenaWriterProtocol | None = None
         self._reader: ArenaReaderProtocol | None = None
-        self._registry: _OffloadRegistry | None = None
+        self._registry: _OffloadRegistry | None = registry
 
     @property
     def writer(self) -> ArenaWriterProtocol:

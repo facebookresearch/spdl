@@ -30,6 +30,7 @@ from typing import (
     TypeVar,
 )
 
+from spdl.pipeline._arena._protocol import _is_arena_backend
 from spdl.pipeline._common._convert import (
     _is_async_callable,
     _is_asyncgen_callable,
@@ -661,9 +662,44 @@ class PlacementConfig:
     .. versionadded:: 0.7.0
     """
 
+    arena: object | None = None
+    """Borrow a caller-owned arena object or one independent object per worker.
+
+    A sequence is snapshotted to an immutable tuple. Custom storage endpoints
+    conform to ``ArenaProtocol`` structurally; callers provide concrete arena
+    objects, not protocol inheritance or payload lifetime anchors. One object
+    requires one worker; a pool with N workers requires N independent objects.
+    A single SPSC allocation must not serve two directions or concurrently
+    active regions.
+
+    The pipeline never closes or unlinks these objects. After successful stop,
+    callers may reuse them, then close/unlink in their own finally block. Early
+    cancellation may invalidate an arena; blocking custom backends must arrange
+    public close/cancellation before joining a pipeline blocked on their storage.
+
+    .. versionadded:: 0.9.0
+    """
+
+    def __post_init__(self) -> None:
+        if self.arena is None:
+            return
+        if isinstance(self.target, InterpreterPoolExecutorConfig):
+            raise ValueError("Arena transport requires a process region")
+        if _is_arena_backend(self.arena):
+            return
+        if not isinstance(self.arena, Sequence) or isinstance(
+            self.arena, (str, bytes, bytearray)
+        ):
+            raise TypeError("arena must be a transport object or a sequence of objects")
+        objects = tuple(self.arena)
+        if not all(_is_arena_backend(obj) for obj in objects):
+            raise TypeError("Each object must be an arena backend")
+        object.__setattr__(self, "arena", objects)
+
     def __repr__(self) -> str:
         buf = f", buffer_size={self.buffer_size}" if self.buffer_size != 1 else ""
-        return f"{self.name}({self.target!r}{buf})"
+        arena = f", arena={self.arena!r}" if self.arena is not None else ""
+        return f"{self.name}({self.target!r}{buf}{arena})"
 
 
 ################################################################################

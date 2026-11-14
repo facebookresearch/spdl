@@ -44,6 +44,8 @@ from spdl.pipeline._common._convert import (
 )
 from spdl.pipeline._components import _get_global_id, _set_global_id
 from spdl.pipeline._subprocess_pipeline_pool import (
+    _arena_resource_names,
+    _borrow_arena_objects,
     _InterpreterBackend,
     _PoolBackend,
     _ProcessBackend,
@@ -209,6 +211,8 @@ def _build_fused_stage_core(
         continuous=continuous,
         input_buffer_size=input_buffer_size,
         output_buffer_size=output_buffer_size,
+        input_arena=backend._input_arena,
+        output_arena=backend._output_arena,
     )
     name = "subprocess_pipeline(" + "+".join(_stage_name(s) for s in stages) + ")"
     # Surface the transfer granularity in stats output; a buffered boundary changes how this
@@ -227,6 +231,45 @@ def _build_fused_stage_core(
 def _has_executor_markers(pipes: Sequence[object]) -> bool:
     """Whether ``pipes`` contains any ``.to()`` region marker."""
     return any(isinstance(p, PlacementConfig) for p in pipes)
+
+
+def _validate_arena_boundaries(
+    pipes: Sequence[object], identities: set[int], names: set[str]
+) -> None:
+    previous: (
+        ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig | _MainProcess
+    ) = _MainProcess()
+    for marker in pipes:
+        if not isinstance(marker, PlacementConfig):
+            continue
+        if marker.arena is not None:
+            prior_process = isinstance(previous, ProcessPoolExecutorConfig)
+            next_process = isinstance(marker.target, ProcessPoolExecutorConfig)
+            if (
+                isinstance(previous, InterpreterPoolExecutorConfig)
+                or isinstance(marker.target, InterpreterPoolExecutorConfig)
+                or not (prior_process or next_process)
+            ):
+                raise ValueError("Arena transport requires a process-region boundary")
+            if prior_process and next_process:
+                raise ValueError(
+                    "Adjacent regions need an explicit MAIN_PROCESS boundary "
+                    "and separate arena objects"
+                )
+            process = previous if prior_process else marker.target
+            assert isinstance(process, ProcessPoolExecutorConfig)
+            objects = _borrow_arena_objects(
+                marker.arena, process.max_workers or os.cpu_count() or 1
+            )
+            for arena in objects:
+                resources = _arena_resource_names(arena)
+                if id(arena) in identities or names.intersection(resources):
+                    raise ValueError(
+                        "Ingress/egress and regions must borrow independent arena allocations"
+                    )
+                identities.add(id(arena))
+                names.update(resources)
+        previous = marker.target
 
 
 def _fuse_marked_regions(
@@ -260,6 +303,16 @@ def _fuse_marked_regions(
     Returns:
         A tuple ``(new_config, pools)``. ``pools`` is empty when no region is fused.
     """
+    identities: set[int] = set()
+    names: set[str] = set()
+
+    def validate(node: PipelineConfig[Any]) -> None:
+        _validate_arena_boundaries(node.pipes, identities, names)
+        if isinstance(node.src, MergeConfig):
+            for child in node.src.pipeline_configs:
+                validate(child)
+
+    validate(config)
     pipes = list(config.pipes)
     if not _has_executor_markers(pipes):
         return config, []
@@ -274,9 +327,10 @@ def _fuse_marked_regions(
     # it, and the marker that closes it sizes the results coming back. Adjacent regions each
     # get their own, and the marker between them sizes that single handoff for both sides.
     input_buffer_size: int = 1
+    input_arena: object | None = None
     region: list[object] = []
 
-    def _flush(output_buffer_size: int) -> None:
+    def _flush(output_buffer_size: int, output_arena: object | None = None) -> None:
         if not region:
             return
         backend: _PoolBackend
@@ -296,6 +350,8 @@ def _fuse_marked_regions(
             backend = _InterpreterBackend()
         else:  # pragma: no cover -- a main-process target never accumulates a region
             raise AssertionError(f"Unexpected region target: {target!r}")
+        backend._input_arena = input_arena
+        backend._output_arena = output_arena
         fused, pool = target._build(
             region,
             backend,
@@ -314,9 +370,10 @@ def _fuse_marked_regions(
             if isinstance(p, PlacementConfig):
                 # ``p`` both closes the span under the previous target (so it sizes that
                 # region's way out) and opens the next one (sizing its way in).
-                _flush(p.buffer_size)
+                _flush(p.buffer_size, p.arena)
                 target = p.target
                 input_buffer_size = p.buffer_size
+                input_arena = p.arena
             elif isinstance(target, _MainProcess):
                 new_pipes.append(p)
             else:

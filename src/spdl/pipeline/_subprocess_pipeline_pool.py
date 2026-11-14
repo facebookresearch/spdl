@@ -51,8 +51,15 @@ from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass, replace
 from functools import partial
 from multiprocessing.reduction import ForkingPickler
-from typing import Any
+from typing import Any, cast
 
+from spdl.pipeline._arena._protocol import _is_arena_backend, ArenaProtocol
+from spdl.pipeline._arena._region import (
+    _ArenaInputQueue,
+    _ArenaOutputQueue,
+    _ArenaSendingQueue,
+    _RegionChannel,
+)
 from spdl.pipeline._components import (
     _DONE,
     _EPOCH,
@@ -72,6 +79,9 @@ __all__ = [
     "_InterpreterBackend",
     "_PoolBackend",
     "_ProcessBackend",
+    "_borrow_arena_objects",
+    "_arena_resource_names",
+    "_ProcessWorker",
     "_SubprocessPipelineHandle",
     "_SubprocessPipelinePool",
     "_shutdown_pipeline_pools",
@@ -518,7 +528,19 @@ def _run_sessions(
             # consume that marker and emit a second, stray ``_DONE``. ``KeyboardInterrupt`` /
             # ``SystemExit`` are not caught, so they tear the worker down as expected.
             while not session_ended and not exiting:
-                kind, _ = in_q.get()
+                get_discarded = getattr(in_q, "get_discarded", in_q.get)
+                try:
+                    kind, _ = get_discarded()
+                except Exception:
+                    # The session error is already relayed. A corrupt reader cannot
+                    # account for later spans safely, so stop reading this channel;
+                    # completion still balances and teardown retires the worker.
+                    _LG.warning(
+                        "Abandoning a corrupt region input channel after a session error.",
+                        exc_info=True,
+                    )
+                    exiting = True
+                    break
                 if kind == _SESSION_END:
                     session_ended = True
                 elif kind == _POOL_SHUTDOWN:
@@ -585,41 +607,43 @@ def _pipeline_worker_loop(
     initargs: tuple[Any, ...],
     output_serialization_failed: Any,
     output_buffer_size: int,
+    input_arena: ArenaProtocol | None = None,
+    output_arena: ArenaProtocol | None = None,
 ) -> None:
     """Worker entry point: run the initializer, then dispatch to the matching body."""
     if output_serialization_failed is not None:
         out_q = _install_queue_feeder_error_handler(
             out_q, out_q, output_serialization_failed, "output", _RESULT
         )
-    if initializer is not None:
-        try:
+    try:
+        if initializer is not None:
             initializer(*initargs)
-        except Exception as err:
-            # A failed initializer leaves this worker unable to run any session. Relay the error
-            # (followed by a ``_DONE`` so the bridge collector's per-worker accounting stays
-            # balanced) instead of exiting silently — a silent exit would hang the collector
-            # waiting for messages this dead worker can never send. ``KeyboardInterrupt`` /
-            # ``SystemExit`` deliberately propagate so the worker actually exits.
-            out_q.put((_ERROR, _to_picklable_error(err, traceback.format_exc())))
-            out_q.put((_DONE, None))
-            return
-    if continuous:
-        _run_continuous(
-            in_q,
-            out_q,
-            worker_id,
-            sub_config,
-            build_kwargs,
-            output_buffer_size,
-        )
-    else:
-        _run_sessions(
-            in_q,
-            out_q,
-            sub_config,
-            build_kwargs,
-            output_buffer_size,
-        )
+        if input_arena is not None:
+            in_q = _ArenaInputQueue(in_q, _ITEM, _RegionChannel(worker_id, input_arena))
+        if output_arena is not None:
+            out_q = _ArenaSendingQueue(
+                out_q, _RESULT, _RegionChannel(worker_id, output_arena)
+            )
+        if continuous:
+            _run_continuous(
+                in_q,
+                out_q,
+                worker_id,
+                sub_config,
+                build_kwargs,
+                output_buffer_size,
+            )
+        else:
+            _run_sessions(
+                in_q,
+                out_q,
+                sub_config,
+                build_kwargs,
+                output_buffer_size,
+            )
+    except Exception as error:
+        out_q.put((_ERROR, _to_picklable_error(error, traceback.format_exc())))
+        out_q.put((_DONE, None))
 
 
 class _SubprocessPipelineHandle:
@@ -643,6 +667,8 @@ class _SubprocessPipelineHandle:
         output_serialization_failed: Any,
         input_buffer_size: int = 1,
         output_buffer_size: int = 1,
+        input_arenas: list[ArenaProtocol] | None = None,
+        output_arenas: list[ArenaProtocol] | None = None,
     ) -> None:
         self.in_qs = in_qs
         self.out_q = out_q
@@ -654,9 +680,33 @@ class _SubprocessPipelineHandle:
         # in ``aggregate`` takes rows in and returns whole batches).
         self.input_buffer_size = input_buffer_size
         self.output_buffer_size = output_buffer_size
+        self.input_arenas = input_arenas or []
+        self.output_arenas = output_arenas or []
+        self._prepared = False
+        self._raw_in_qs = in_qs
+        self._raw_out_q = out_q
+
+    def __getstate__(self) -> dict[str, Any]:
+        state = dict(self.__dict__)
+        state.update(in_qs=self._raw_in_qs, out_q=self._raw_out_q, _prepared=False)
+        return state
+
+    def stop_arenas(self) -> None:
+        for arena in (*self.input_arenas, *self.output_arenas):
+            shutdown = getattr(arena, "_interrupt_region", None)
+            if callable(shutdown):
+                try:
+                    shutdown()
+                except Exception:
+                    _LG.warning(
+                        "Failed to signal bridge arena shutdown.", exc_info=True
+                    )
 
     def prepare_bridge(self) -> None:
         """Install feeder-error hooks on the bridge's multiprocessing input queues."""
+        if self._prepared:
+            return
+        self._prepared = True
         if self.input_serialization_failed is not None:
             self.in_qs = [
                 _install_queue_feeder_error_handler(
@@ -668,6 +718,21 @@ class _SubprocessPipelineHandle:
                 )
                 for q in self.in_qs
             ]
+        if self.input_arenas:
+            self.in_qs = [
+                _ArenaSendingQueue(q, _ITEM, _RegionChannel(i, arena))
+                for i, (q, arena) in enumerate(
+                    zip(self.in_qs, self.input_arenas, strict=True)
+                )
+            ]
+        if self.output_arenas:
+            self.out_q = _ArenaOutputQueue(
+                self.out_q,
+                [
+                    _RegionChannel(i, arena)
+                    for i, arena in enumerate(self.output_arenas)
+                ],
+            )
 
 
 class _Worker:
@@ -689,6 +754,9 @@ class _PoolBackend:
     The streaming protocol, message kinds, and worker body (:py:func:`_pipeline_worker_loop`)
     are identical across backends; only queue creation, worker spawning, and teardown differ.
     """
+
+    _input_arena: object | None = None
+    _output_arena: object | None = None
 
     def make_queue(self, maxsize: int) -> Any:
         raise NotImplementedError
@@ -737,6 +805,8 @@ class _ProcessWorker(_Worker):
             p.join(5)
         if p.exitcode is None:
             raise TimeoutError("Execution-region process survived kill/join")
+        # Named spawn synchronization stays owned until the child is reaped.
+        p._spdl_spawn_args = None
 
 
 class _ProcessBackend(_PoolBackend):
@@ -760,6 +830,8 @@ class _ProcessBackend(_PoolBackend):
         register: Callable[[_Worker], None],
     ) -> _Worker:
         proc = self._ctx.Process(target=target, args=args, daemon=True)
+        # Named spawn synchronization stays owned until the active child is reaped.
+        proc._spdl_spawn_args = args
         worker = _ProcessWorker(proc)
         register(worker)
         proc.start()
@@ -885,6 +957,38 @@ class _InterpreterBackend(_PoolBackend):
         pass
 
 
+def _arena_resource_names(arena: object) -> tuple[str, ...]:
+    """Recognize existing pool/ring allocation names without a new backend protocol."""
+    control = getattr(arena, "_ctrl_name", None)
+    segments = getattr(arena, "_seg_names", ())
+    if isinstance(control, str) and isinstance(segments, (list, tuple)):
+        if all(isinstance(name, str) for name in segments):
+            return (control, *segments)
+    ring = getattr(arena, "_shm_name", None)
+    return (ring,) if isinstance(ring, str) else ()
+
+
+def _borrow_arena_objects(value: object | None, workers: int) -> list[ArenaProtocol]:
+    if value is None:
+        return []
+    objects = list(value) if type(value) is tuple else [value]
+    if len(objects) != workers:
+        raise ValueError(
+            f"Arena transport needs {workers} independent objects; got {len(objects)}"
+        )
+    identities: set[int] = set()
+    names: set[str] = set()
+    for arena in objects:
+        if not _is_arena_backend(arena):
+            raise TypeError("Arena object must provide storage endpoint hooks")
+        resources = _arena_resource_names(arena)
+        if id(arena) in identities or names.intersection(resources):
+            raise ValueError("Arena transport requires independent SPSC allocations")
+        identities.add(id(arena))
+        names.update(resources)
+    return cast(list[ArenaProtocol], objects)
+
+
 class _SubprocessPipelinePool:
     """Main-process handle to a set of workers running a fused sub-pipeline.
 
@@ -904,6 +1008,8 @@ class _SubprocessPipelinePool:
         continuous: bool = False,
         input_buffer_size: int = 1,
         output_buffer_size: int = 1,
+        input_arena: object | None = None,
+        output_arena: object | None = None,
     ) -> None:
         # Bound the queues so a slow consumer/producer applies backpressure rather than
         # buffering without limit. Sized to keep every worker fed, plus in-flight slack.
@@ -912,6 +1018,8 @@ class _SubprocessPipelinePool:
         # pipelined, and shrinking it in proportion would stall the pool at large sizes.
         size = _fused_queue_capacity(max_workers)
         self._backend = backend
+        self._initializer = initializer
+        self._initargs = initargs
         self._continuous = continuous
         self._input_buffer_size = input_buffer_size
         self._output_buffer_size = output_buffer_size
@@ -925,6 +1033,17 @@ class _SubprocessPipelinePool:
         self._max_workers = max_workers
         self._input_serialization_failed = backend.make_serialization_failure_flag()
         self._output_serialization_failed = backend.make_serialization_failure_flag()
+        self._input_arenas = _borrow_arena_objects(input_arena, max_workers)
+        self._output_arenas = _borrow_arena_objects(output_arena, max_workers)
+        self._borrowed_arenas = (*self._input_arenas, *self._output_arenas)
+        identities: set[int] = set()
+        names: set[str] = set()
+        for arena in self._borrowed_arenas:
+            resources = _arena_resource_names(arena)
+            if id(arena) in identities or names.intersection(resources):
+                raise ValueError("Ingress and egress need independent arena objects")
+            identities.add(id(arena))
+            names.update(resources)
         try:
             self._out_q = backend.make_queue(size)
             # One queue per worker ensures a fast peer cannot steal another's
@@ -946,6 +1065,8 @@ class _SubprocessPipelinePool:
                         initargs,
                         self._output_serialization_failed,
                         output_buffer_size,
+                        self._input_arenas[i] if self._input_arenas else None,
+                        self._output_arenas[i] if self._output_arenas else None,
                     ),
                     self._workers.append,
                 )
@@ -982,6 +1103,8 @@ class _SubprocessPipelinePool:
             self._output_serialization_failed,
             self._input_buffer_size,
             self._output_buffer_size,
+            self._input_arenas,
+            self._output_arenas,
         )
 
     def _broadcast_shutdown(self) -> list[Exception]:
@@ -1035,6 +1158,13 @@ class _SubprocessPipelinePool:
                 errors.extend(self._close_queues())
             if errors:
                 raise ExceptionGroup("Execution-region pool cleanup failed", errors)
+            # Caller-owned arenas and initializer state stay rooted until every
+            # worker and queue has retired; they are never closed or unlinked here.
+            self._borrowed_arenas = ()
+            self._input_arenas = []
+            self._output_arenas = []
+            self._initializer = None
+            self._initargs = ()
             self._retired = True
             _release_pool_cleanup(self)
         finally:

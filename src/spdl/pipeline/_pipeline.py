@@ -1060,7 +1060,13 @@ class _PipelineImpl(Generic[T]):
         # Runs on the event loop thread. Deliberately has no ``await``: it completes within a
         # single loop tick. ``get_item(timeout=0)`` routes through this same primitive so both
         # APIs perform a one-shot poll and never leave a pending consumer behind.
-        return self._publish_output_item(self._output_queue.get_nowait())
+        try:
+            item = self._output_queue.get_nowait()
+        except (asyncio.QueueEmpty, queue.Empty):
+            # Asyncio sinks report ``QueueEmpty``; the mirrored and thread-backed
+            # built-in sinks report ``queue.Empty``. Other errors stay in the Future.
+            return cast(T, _READ_TIMED_OUT)
+        return self._publish_output_item(item)
 
     def _get_item_nowait(self) -> T:
         """Non-blocking counterpart of :py:meth:`_get_item`.
@@ -1077,7 +1083,12 @@ class _PipelineImpl(Generic[T]):
                 return self._get_mirrored_item_nowait()
             except queue.Empty:
                 if self._event_loop.is_task_completed():
-                    self._raise_task_failure_or_eof()
+                    # Final values may publish between the empty poll and completion.
+                    # Completion guarantees no later publication; recheck before EOF.
+                    try:
+                        return self._get_mirrored_item_nowait()
+                    except queue.Empty:
+                        self._raise_task_failure_or_eof()
                 raise
 
         if isinstance(self._output_queue, ThreadOutputQueue):
