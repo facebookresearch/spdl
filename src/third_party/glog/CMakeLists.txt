@@ -2,7 +2,13 @@ message(STATUS "########################################")
 message(STATUS "# Configuring glog")
 message(STATUS "########################################")
 
-set(BUILD_SHARED_LIBS OFF)
+# Native tests register LogSink objects and must share one glog instance with
+# libspdl. Ordinary library/wheel builds retain private, static glog linkage.
+if (SPDL_BUILD_TESTS)
+  set(BUILD_SHARED_LIBS ON)
+else()
+  set(BUILD_SHARED_LIBS OFF)
+endif()
 set(WITH_GFLAGS OFF)
 set(WITH_GTEST OFF)
 

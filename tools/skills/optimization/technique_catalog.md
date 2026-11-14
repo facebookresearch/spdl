@@ -1,0 +1,95 @@
+# Technique Catalog: Symptom-Indexed Candidates
+
+The technique catalog brings together practical ways to improve SPDL input pipelines, along with lessons from approaches that did not help. The entries are organized around symptoms you may encounter, so you can find ideas relevant to your workload.
+
+To choose a useful starting point, begin with the [analysis guidance](analysis.md): it helps you connect pipeline statistics and profiles to the cost limiting your training. Each entry is a **candidate** to test when your measurements match its trigger, rather than a checklist to apply in order.
+
+Every entry has a stable ID for tracking experiments. The entry explains the situation to look for, the proposed change and the checks needed before using it. It is a candidate to compare with your current pipeline, not a promise of a speedup. Source links are optional provenance: consult them when an implementation or correctness detail is missing, not to copy a historical gain. Correctness limits, API versions and illustrative example parameters remain in the shared guidance.
+
+Before using this catalog, establish migration parity ([migrating_to_spdl_pipeline.md](migrating_to_spdl_pipeline.md)). One campaign that applied known optimizations while migrating found no winning combination. Rebuilding the migration around the original fused components first made the same techniques pay off.
+
+## How to use the SPDL references
+
+Where a public SPDL utility fits the mechanism, the area entry includes an **SPDL reference** with an API link or implementation example. These are options to compare with the existing pipeline, not required replacements or promises of a speedup. Check experimental status, the installed API version, data semantics and buffer lifetime before using one. Storage-client, allocator, GC and model-specific changes may still need the existing application's implementation; the catalog does not invent an SPDL API for them.
+
+## How to screen
+
+1. Collect the analysis evidence: SPDL stage stats with minimum sink occupancy across all ranks, holder/native stacks, host memory/page-cache/swap, CPU breakdown (user/system/kernel), GPU memory per rank, and trainer phase timings.
+2. Use the index below to open the matching area files and scan their **Trigger** lines. List the entries whose trigger is present and that the pipeline does not already implement.
+3. Rank them by the size of the exposed cost each one targets. Test independent candidates on separate forks of the validated parent.
+4. Record a screened entry that is not applicable with its ID and the reason, so it is not proposed again for the same evidence.
+
+## ID to area file
+
+Open an area file for each technique's trigger, mechanism and guards. **Trigger** describes when an idea may fit; **Technique** explains what to change and why; **Guards** list correctness requirements and reasons it may not help. An optional **SPDL reference** points to an implementation to compare. [Negative results](techniques/negative_results.md) explain approaches that failed and when retrying may be justified.
+
+### Batch assembly and transport
+
+| ID | File | One-line trigger |
+|---|---|---|
+| `collate_into_shared_memory` | [batch_assembly_transport.md](techniques/batch_assembly_transport.md) | Large worker batches pay private-to-shared copies or serialized array IPC. |
+| `recycled_output_slots` | [batch_assembly_transport.md](techniques/batch_assembly_transport.md) | Fresh shared-output or device-buffer allocation recurs on every batch. |
+| `registered_pinned_slots` | [batch_assembly_transport.md](techniques/batch_assembly_transport.md) | Large subprocess-hop and host-pinning copies delay GPU consumption. |
+| `tail_only_padding` | [batch_assembly_transport.md](techniques/batch_assembly_transport.md) | Padding initializes a full output before rows overwrite most of it. |
+| `batch_indices_before_boundary` | [batch_assembly_transport.md](techniques/batch_assembly_transport.md) | Per-row metadata or cheap item work repeatedly crosses worker/executor boundaries. |
+| `vectorized_collate_steps` | [batch_assembly_transport.md](techniques/batch_assembly_transport.md) | Per-example objects, scalar tensors or row-by-feature loops dominate collation. |
+| `sink_buffer_depth` | [batch_assembly_transport.md](techniques/batch_assembly_transport.md) | Ready-batch jitter empties the sink, or oversized buffers exhaust resident memory. |
+
+### Cache and storage
+
+| ID | File | One-line trigger |
+|---|---|---|
+| `direct_io_cache_reads` | [cache_storage.md](techniques/cache_storage.md) | Local disk-cache pages drive reclaim, swap, OOM, or progressively slower epochs. |
+| `raw_cache_format` | [cache_storage.md](techniques/cache_storage.md) | Generic row serialization or many small reads dominates input CPU and latency. |
+| `zero_copy_decompress` | [cache_storage.md](techniques/cache_storage.md) | Decompression, deserialization, and avoidable buffer copies dominate loader CPU. |
+| `slim_stored_rows` | [cache_storage.md](techniques/cache_storage.md) | Unused fields or unnecessarily wide values inflate acquisition and cache footprint. |
+| `cache_capacity_all_disks` | [cache_storage.md](techniques/cache_storage.md) | Unused dedicated mounts leave the working set larger than active cache capacity. |
+| `lookup_rows_per_call` | [cache_storage.md](techniques/cache_storage.md) | Multiple serial calls each wait for their slowest remote miss. |
+| `lookup_concurrency_from_latency` | [cache_storage.md](techniques/cache_storage.md) | Measured in-flight work and round-trip latency cannot sustain trainer demand. |
+| `serialize_non_thread_safe_client` | [cache_storage.md](techniques/cache_storage.md) | Concurrent callers corrupt or fail a process-local client. |
+| `memoize_deterministic_intermediates` | [cache_storage.md](techniques/cache_storage.md) | Repeated transforms or evaluation recompute identical expensive intermediates. |
+
+### GPU placement and transfer
+
+| ID | File | One-line trigger |
+|---|---|---|
+| `gpu_terminal_collate` | [gpu_placement_transfer.md](techniques/gpu_placement_transfer.md) | Final CPU assembly or frontend transforms duplicate host copies and starve compute. |
+| `h2d_cache_depth_and_threads` | [gpu_placement_transfer.md](techniques/gpu_placement_transfer.md) | Serial IPC/H2D or background-copy lifetime/thread proliferation delays or corrupts training. |
+
+### Training-loop boundaries and scale
+
+| ID | File | One-line trigger |
+|---|---|---|
+| `distributed_evaluation_sharding` | [loop_boundaries_scale.md](techniques/loop_boundaries_scale.md) | Every rank evaluates the full validation set |
+| `epoch_boundary_work_audit` | [loop_boundaries_scale.md](techniques/loop_boundaries_scale.md) | Fixed epoch callback/export/barrier/metric costs exposed |
+| `fewer_gpus_same_global_batch` | [loop_boundaries_scale.md](techniques/loop_boundaries_scale.md) | Loader-fixed job has host headroom; per-GPU cost dominates |
+
+### Model execution after resolving the input path
+
+| ID | File | One-line trigger |
+|---|---|---|
+| `device_resident_matching` | [model_execution.md](techniques/model_execution.md) | On an already-fed path, per-sample CPU matching blocks on device-to-host copies. |
+| `reduced_precision_compute` | [model_execution.md](techniques/model_execution.md) | Compute remains critical after resolving the input path. |
+| `norm_layout_materialization` | [model_execution.md](techniques/model_execution.md) | Layout conversions or strided operands slow an already-fed path. |
+| `fused_copy_widen` | [model_execution.md](techniques/model_execution.md) | Early host widening adds transport bytes and pin-copy work. |
+| `selective_kernel_replacement` | [model_execution.md](techniques/model_execution.md) | A specific operator or shape contends with input preparation after delivery is resolved. |
+
+### Process runtime environment
+
+| ID | File | One-line trigger |
+|---|---|---|
+| `allocator_retain_freed_pages` | [process_runtime.md](techniques/process_runtime.md) | Workers churn hundreds of MB per batch; high page-fault/kernel time |
+| `cap_native_thread_pools` | [process_runtime.md](techniques/process_runtime.md) | Host CPU saturated by per-worker native/OpenMP/intra-op pools |
+| `persistent_pipeline_and_workers` | [process_runtime.md](techniques/process_runtime.md) | Slow warm epochs or per-epoch worker/session startup |
+| `process_workers_for_gil_bound_rows` | [process_runtime.md](techniques/process_runtime.md) | Threads-only path slower; GIL-held decode/serialize/augment or main-process input delays dispatch |
+| `epoch_cycle_collection` | [process_runtime.md](techniques/process_runtime.md) | GPU memory grows via cycles, or GC stalls batch production |
+
+### Transform compute
+
+| ID | File | One-line trigger |
+|---|---|---|
+| `per_row_cpu_generator_seeding` | [transform_compute.md](techniques/transform_compute.md) | Worker scheduling changes augmentation or worker seeding affects device generators. |
+
+## Maintenance
+
+Add a distinct mechanism to the matching area file and update this index with its stable ID and observable trigger. Explain the input/output representation, concrete intervention and guards so a reader without optimization experience can use the idea without opening a source diff. Add a small example when it makes the mechanism clearer. Public SPDL API references are options to compare, not required replacements. Preserve existing IDs and merge supporting sources rather than duplicating entries. Keep useful negative-result and correctness checks, but omit historical gain summaries. Organization-specific source links belong in the deployment source map, with a brief caveat only when it helps decide applicability.

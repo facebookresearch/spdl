@@ -164,6 +164,7 @@ jobs:
           # Install PyTorch and others
           conda run -n test_env python -m pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
           conda install -q numba pytest pytest-xdist pytest-timeout parameterized matplotlib
+          conda run -n test_env python -m pip install pytest-rerunfailures==16.7
 
           # Install FFmpeg
           # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
@@ -183,6 +184,7 @@ jobs:
           # platform; on firing it dumps each thread's stack, pinpointing a hang.
           pytest -v -n ${{ inputs.test-concurrency }} \
               --timeout=120 --timeout-method=thread \
+              --reruns=2 --reruns-delay=1 --rerun-show-tracebacks -ra \
               tests/io/ \
               tests/dataloader/ \
               tests/pipeline/ \

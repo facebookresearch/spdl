@@ -1,0 +1,81 @@
+# Batch assembly and transport
+
+Candidates for reducing batch construction, representation and handoff costs in an SPDL input pipeline. Measure the affected stage and the complete run separately; faster transport is not a guarantee of faster or equivalent training.
+
+[Catalog index](../technique_catalog.md)
+
+## SPDL reference implementations
+
+SPDL's {doc}`shared-memory arena guide </optimization_guide/shared_memory_arenas>` describes two optional transport backends for {py:func}`spdl.pipeline.iterate_in_subprocess`: {py:class}`spdl.pipeline.SharedMemorySegmentPool` returns supported payloads as shared views, while {py:class}`spdl.pipeline.SharedMemoryRingBuffer` copies them into independent receiver-owned buffers. Both reuse bounded transport storage, but both still copy producer payloads into that storage. They are reference paths to compare when allocation or IPC is exposed, not requirements or guaranteed throughput improvements.
+
+The pool does not by itself make an arbitrary collator write directly into a reserved slot. Keep a working caller-owned direct-construction implementation when that is the measured win; do not replace it with copy-in arena transport and call the result copy-free. The public arena classes are experimental. Check the installed SPDL version, budget all local ranks and retained views, and compare the complete pipeline against the original path.
+
+**`collate_into_shared_memory`**
+- Trigger: a multiprocessing reducer copies large collated batches from private memory to shared memory.
+- Technique: choose or allocate the final shared batch storage before collation. For an output shaped `[batch, ...]`, have the worker write each row directly into its assigned output slice rather than build a private batch and copy that batch into shared memory afterwards. Send a storage handle plus shape/dtype metadata to the consumer, which attaches to the same backing storage. This requires an explicit shared-output allocator and consumer protocol; changing queue serialization alone does not implement direct construction.
+- Guards: unbounded fresh shared memory per batch exhausted `/dev/shm` and broke checkpoint staging. Ship it only with a bounded pool (`recycled_output_slots` or `registered_pinned_slots`).
+- SPDL reference: Compare the optional {py:func}`spdl.pipeline.iterate_in_subprocess` + {py:class}`spdl.pipeline.SharedMemorySegmentPool` transport path for large batches. It avoids receiver copy-out for supported views, not the producer-to-arena copy; the migration's direct-to-slot collator is a separate reference implementation, not a behavior this wrapper guarantees.
+
+**`recycled_output_slots`**
+- Trigger: shared-output allocation per batch shows in the collate or transport cost.
+- Technique: allocate a fixed number of shared output buffers once. A producer claims a free slot, fills it and sends `(slot_id, generation, shape, dtype)` instead of its payload. The consumer acknowledges the same generation only after it no longer needs the bytes, including any asynchronous copy. Reuse begins only after that release; the generation identifies stale acknowledgments and prevents confusing an old batch with a newer one in the same slot.
+- Guards: bound total storage across all local workers and ranks. Retained tensor views and aliases count as use, even if the original wrapper is gone. If no slot is free, apply backpressure rather than overwrite live data. Shutdown and error paths must account for claimed slots without invalidating consumers.
+- SPDL reference: {py:class}`spdl.pipeline.SharedMemorySegmentPool` is an experimental bounded reuse option: a segment remains occupied while shared views or storage aliases are live. {py:class}`spdl.pipeline.SharedMemoryRingBuffer` is an alternative when independent owning outputs are preferable, at the cost of receiver copy-out. Neither selects the correct capacity for the workload.
+
+**`registered_pinned_slots`: remove both the hop copy and the pin copy**
+- Trigger: the trainer spends a large share of each step copying a large batch on the host (subprocess hop plus `pin_memory`) while the GPU is mostly idle.
+- Technique: let the trainer allocate and map a bounded shared output pool, then register its own mappings with CUDA so they can be used as pinned H2D sources. CPU workers attach to the same named storage and fill claimed slots without initializing CUDA. They return slot metadata, not a private batch payload. The trainer submits transfer from the registered slot and releases that generation only after H2D and all host aliases are finished. This combines direct construction, transport and pinning lifetimes; it is not a `pin_memory()` call added after an arbitrary private collator.
+- Guards: bound the pool by a fraction of free `/dev/shm`, accounting for every local rank and for checkpoint staging. Register slots on the rank's own device. Make a leaked slot view fail loudly. More slots alone did not help; more workers did, once the pin copy was gone.
+- SPDL reference: Consider {py:class}`spdl.pipeline.SharedMemorySegmentPool` with `pin_memory=True` on a compatible version (added in 0.9.0), passed to {py:func}`spdl.pipeline.iterate_in_subprocess`. It registers mappings once in the consumer on `LOCAL_RANK`; {py:func}`spdl.io.transfer_tensor_h2d` can reuse recognized pinned source storage and synchronizes its copy before returning. This may remove a separate pinning copy, but not arena copy-in or H2D itself. A pinned ring still copies out. Compare pageable controls and keep the existing direct-slot collator when it is better.
+
+**`tail_only_padding`: avoid initializing values that rows will overwrite**
+- Trigger: the collator allocates a padded batch, fills the entire batch with the padding value, then overwrites most of it with real row data. For example, rows have shapes `[length_i, features]` and the output has shape `[batch, max_length, features]`.
+- Technique: allocate the output without initializing it, copy row `i` into `output[i, :length_i]`, and fill only `output[i, length_i:]` with the padding value. The final contents are the same as fill-then-copy, but valid row positions are written once rather than twice. This can reduce memory traffic when rows occupy most of the padded window; it does not eliminate the row copy.
+- Guards: every output element must be written before the batch is published. Preserve dtype, padding value, trailing dimensions, lengths and any original truncation policy. Empty rows need their entire window filled. Do not expose a partially constructed buffer after an error, and do not reuse an output while consumers still reference it. Compare against the original collator, including short and empty rows.
+
+### Tail-only padding example
+
+A NumPy reference implementation for rows of a common dtype and trailing shape:
+
+```python
+import numpy as np
+
+
+def pad_rows(rows, max_length, pad_value=0):
+    rows = list(rows)
+    if not rows or max_length < 0 or rows[0].ndim < 1:
+        raise ValueError("Expected nonempty rows and a nonnegative window")
+    trailing_shape = rows[0].shape[1:]
+    dtype = rows[0].dtype
+    for row in rows:
+        if row.ndim < 1 or row.shape[1:] != trailing_shape or row.dtype != dtype:
+            raise ValueError("Rows must have the same dtype and trailing shape")
+        if len(row) > max_length:
+            raise ValueError("Row exceeds the window; handle truncation explicitly")
+    out = np.empty((len(rows), max_length, *trailing_shape), dtype=dtype)
+    for i, row in enumerate(rows):
+        length = len(row)
+        np.copyto(out[i, :length], row)
+        out[i, length:] = pad_value
+    return out
+```
+
+For rows of lengths three and one, a window of four and a padding value of zero produce `[a, b, c, 0]` and `[d, 0, 0, 0]`. The first row initializes one padding position, not four. This example allocates a private NumPy batch; direct construction in shared or pinned storage requires a separate allocation/ownership contract. There is no dedicated SPDL tail-padding API: a custom collator can be passed to {py:meth}`spdl.pipeline.PipelineBuilder.pipe` after batching, or retain the equivalent baseline implementation.
+
+**`batch_indices_before_boundary`**
+- Trigger: the main process serializes per-row metadata or Python dicts into workers, or materializes rows one at a time.
+- Technique: group compact indices into batches before the process boundary and materialize rows in the worker with one vectorized columnar `take` per batch.
+- Guards: Preserve index order, duplicate samples, empty/tail batches and checkpoint position. Batching dispatch does not automatically vectorize a lookup or justify changing the training batch.
+- SPDL reference: {py:meth}`spdl.pipeline.PipelineBuilder.aggregate` can group compact indices before {py:meth}`spdl.pipeline.PipelineBuilder.to` opens a {py:class}`spdl.pipeline.defs.ProcessPoolExecutorConfig` region. Fetch, transform and collate can stay worker-local; close the region with `MAIN_PROCESS` before the sink. `to(..., buffer_size=...)` groups transport, not training samples, and does not automatically vectorize the row lookup. The [architecture examples](../architectures.md) provide an optional starting point.
+
+**`vectorized_collate_steps`: assemble a whole numeric batch rather than many tiny objects**
+- Trigger: a collator creates a DataFrame or scalar tensor for each example, or repeatedly converts scalars with `.item()` inside row-by-feature loops.
+- Technique: keep compatible values in arrays, select the batch in bulk, and apply the same transform across its leading batch dimension. For fixed-width rows, `np.stack(rows)` followed by one compatible array-to-tensor conversion is a reference shape; for ragged rows, retain flat values and offsets or use a padding collator with explicit length/mask handling. Avoid materializing unused features. This is not permission to change a per-example random transform into one shared random draw.
+- Guards: preserve missing-value rules, dtypes, feature order, padding, masks, augmentation randomness and output ownership. A batch view cannot be mutated as though it were an independent copy. Compare representative outputs against the original collator and measure the whole row-to-batch path, not just one array operation.
+- SPDL reference: For compatible decoded media, {py:func}`spdl.io.convert_frames` accepts a sequence and creates a batch buffer; {py:func}`spdl.io.load_image_batch` combines loading and batch conversion for images. An optional {py:func}`spdl.io.cpu_storage` passed as `storage` can control the destination allocation; {py:func}`spdl.io.to_numpy` / {py:func}`spdl.io.to_torch` expose compatible buffers without an extra conversion copy. These are media-buffer reference paths, not a general replacement for numeric feature packing or baseline collation semantics. `cpu_storage` is not an IPC shared-memory arena.
+
+**`sink_buffer_depth`**
+- Trigger: the final sink is intermittently empty because of delivery jitter, while upstream process-boundary queues stay full.
+- Technique: compare a deeper ready-batch buffer when the producer can keep up on average but delivery is uneven. Extra ready batches can absorb short gaps; the buffer cannot fix sustained underproduction.
+- Guards: this did not help when the least-fed rank was starved upstream. Do not raise buffering on occupancy alone.
+- SPDL reference: {py:meth}`spdl.pipeline.PipelineBuilder.add_sink` with `buffer_size=...` exposes ready-item depth; {py:meth}`spdl.pipeline.PipelineBuilder.to` with its separate `buffer_size` argument controls a different process-boundary buffer. Treat both as experiment knobs rather than prescriptions; count bytes, all in-flight batches and consumer-held aliases.

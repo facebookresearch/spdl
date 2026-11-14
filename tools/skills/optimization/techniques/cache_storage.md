@@ -1,0 +1,52 @@
+# Cache and storage
+
+Candidates for reducing input bytes, repeated work, cache pressure, and read latency in an SPDL input path. Results are scoped observations, not guaranteed gains; distinguish cold acquisition, warm loading, and training end to end.
+
+[Catalog index](../technique_catalog.md)
+
+**`direct_io_cache_reads`: keep the local disk cache out of the page cache**
+- Trigger: page cache grows toward the container memory limit, kswapd reclaim or swap rises, epochs get slower one after another, or the OOM daemon kills hosts. Most likely with large cached rows (MB per row).
+- Technique: read cache hits with `O_DIRECT` into page-aligned per-thread buffers. Write misses to a temp file, then `fdatasync`, `POSIX_FADV_DONTNEED`, close and rename.
+- Guards: change reads and writes together. With direct reads and buffered writes, the written misses stay resident, and one case was slower. Direct reads lose readahead, so read a call's hits concurrently on a reader thread pool; serial direct reads were slower. Avoid per-file `POSIX_FADV_DONTNEED` after buffered reads: it blocked reader threads in the kernel on some hosts. Handle filesystems that reject `O_DIRECT`. A failed cache write must remove its temp file and only cost a refetch.
+
+**`raw_cache_format`: replace generic serializers for cached rows**
+- Trigger: `torch.save`/`torch.load`, zip/pickle parsing or per-file temp-file handling is a large share of per-row CPU or of GIL-holder samples.
+- Technique: store each row in a raw container (magic number, small header with name/dtype/shape/offset/nbytes, 64-byte-aligned tensor bytes), or replace only an outer zip wrapper with NPY and read it with a zero-copy loader (`spdl.io.load_npy`). During rollout, read both formats, detected by magic number. A corrupt file is a miss.
+- Guards: validate every header field before use. Check dtype coverage, writability and view lifetime. Keep the inner payload and the cache identity unchanged unless that change is its own hypothesis.
+- SPDL reference: For an NPY payload, {py:func}`spdl.io.load_npy` with `copy=False` is a zero-copy reader to compare with the original decoder. It retains the source buffer and inherits its writability; request `copy=True` if independent writable storage is needed. This is not a serializer or reader for arbitrary raw/safetensors formats.
+
+**`zero_copy_decompress`: decompress once into the final buffer**
+- Trigger: decompression plus deserialization (for example zstd plus safetensors) dominates loader CPU; profiles show memmove and page faults.
+- Technique: decompress the encoded record directly into one validated output buffer instead of creating a decompressed `bytes` object and then copying its arrays again. Parse each field's dtype, shape and byte range, and expose a NumPy/tensor view over that range for fields the consumer needs. For example, a field with byte offset `o` and size `n` can view the slice `memoryview(buffer)[o:o + n]`; the view must keep `buffer` alive. Some decoders provide a `readinto` operation for this path. Use an aligned copy only when a consumer cannot safely use the original range.
+- Guards: bound the declared decompressed size before allocating, validate that every field fits the buffer and that dtype/shape agree with its byte length, and retain buffer ownership for all returned views. Route unsupported formats and inconsistent headers to the original decoder or report corruption. Check bit identity for every accepted buffer type; the example describes the ownership mechanism, not a complete format parser.
+
+**`slim_stored_rows`: store only what training reads**
+- Trigger: cold epochs or capacity-limited caches are bound by bytes fetched per row, and rows carry fields the training path never uses.
+- Technique: repack the training table offline with only the consumed fields, preserving row order (samplers index by position). Optionally store a lower-precision copy and widen it to the training dtype right after decode.
+- Guards: verify the repack row by row (key plus content hash) and check that a combined read returns the original order. Analyze the precision loss before storing a lower-precision copy. Check retention and expiry of the repacked copy.
+
+**`cache_capacity_all_disks`: use every dedicated local cache disk**
+- Trigger: the dataset exceeds the cache capacity actually in use, so a fixed fraction of rows stays cold every epoch, while unused local NVMe mounts exist.
+- Technique: choose a deterministic mapping from a cache key to an eligible local disk, such as a stable digest modulo the fixed mount list, and apply the same mapping on reads and writes. This uses aggregate capacity instead of placing every row on one disk. Exclude shared or temporary devices and directories that are not mounted.
+- Guards: preserve the mount list and key mapping across epochs, or explicitly invalidate/rebuild the cache when they change. Check per-device free space, concurrent writers and failure handling; a missing entry remains a refetch rather than lost data. More capacity does not imply more read bandwidth.
+
+**`lookup_rows_per_call`: amortize the slowest miss**
+- Trigger: a lookup call returns only when its slowest remote miss returns, and per-batch lookup time is a chain of serial miss latencies at a high hit rate.
+- Technique: replace the chain of short calls with fewer larger calls when the client fetches a call's misses concurrently. For example, four sequential 64-row calls each wait for their own slowest miss; one 256-row call can overlap those misses and pay the slowest-wait boundary once. This does not reduce requested rows or automatically increase concurrency in a client that processes keys serially. Restore the original row order and duplicates in the combined result.
+- Guards: in-flight memory grows with call size; a whole-batch call in a many-worker finetune hit the container memory limit. Larger calls also send more concurrent requests to remote storage on a cold cache. Watch storage throttling and agree on a ceiling with the storage owner.
+
+**`lookup_concurrency_from_latency`: size remote concurrency with Little's law**
+- Trigger: throughput of the remote read stage ≈ concurrency × rows per request / round-trip time, and this is below the rows/s the trainer consumes.
+- Technique: estimate required in-flight requests as `ceil(trainer_rows_per_second * request_latency_seconds / rows_per_request)`. Use this as a starting point, not a universal setting: measure tails and completed throughput, then adjust only the lookup stage within its memory and service budgets. For example, demand of 1,000 rows/s, 0.2 s per request and 50 rows per request needs about four overlapping requests before allowing for variability. Native async requests may provide overlap without a thread per request.
+- Guards: Bound in-flight memory and storage requests. Tail latency, throttling and CPU contention can make higher concurrency slower; measure completed throughput, not just requests issued.
+- SPDL reference: {py:meth}`spdl.pipeline.PipelineBuilder.pipe` exposes per-stage `concurrency`. A native async lookup can be passed directly; synchronous lookup needs an executor with a measured thread budget. Concurrency is in-flight task capacity, not a thread count, and increasing it is only useful within storage and memory limits.
+
+**`serialize_non_thread_safe_client`** (correctness)
+- Trigger: a storage or lookup client fails or corrupts state when called concurrently in one process.
+- Technique: use the client's thread-safe variant, or serialize calls with a per-process lock while keeping safe parallelism across processes.
+- Guards: protect the client's complete mutable operation, not only connection creation. Initialize clients in their owning process and preserve timeout/error behavior; a lock can reduce throughput but must not be removed to hide a correctness failure.
+
+**`memoize_deterministic_intermediates`**
+- Trigger: an augmentation rebuilds the same expensive intermediate (for example a transformation matrix) on every row from a small discrete set of parameters.
+- Technique: cache only a deterministic function of a small repeatable key. For example, if a transformation matrix depends on a discrete geometry configuration, store the matrix under that complete configuration and reuse it when another row requests the same one. Still draw each row's random augmentation parameters independently; do not cache the random choice or the final augmented row.
+- Guards: keys must include every input affecting the intermediate, including dtype/device or versioned configuration where relevant. Bound cache size and prevent mutation of shared cached values. Verify that reuse preserves per-row random behavior and that copying a cached intermediate does not erase the gain.

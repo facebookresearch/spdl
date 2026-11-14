@@ -25,6 +25,7 @@ set(src
   encoding.cpp
   frames.cpp
   filtering.cpp
+  fused.cpp
   packets.cpp
   storage.cpp
   tracing.cpp

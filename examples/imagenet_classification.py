@@ -240,6 +240,8 @@ def get_decode_func(
         pix_fmt="rgb24",
     )
 
+    # Execute loading and batching images in one native call.
+    @spdl.io.fuse
     def decode_images(items: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
         paths = [item for item, _ in items]
         labels = [[item] for _, item in items]

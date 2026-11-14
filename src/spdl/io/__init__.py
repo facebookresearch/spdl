@@ -21,6 +21,7 @@ from . import (
     _config,
     _convert,
     _core,
+    _fuse,
     _preprocessing,
     _tar,
     _transfer,
@@ -36,6 +37,7 @@ _mods = [
     # Low-level APIs
     _core,
     _convert,
+    _fuse,
     _preprocessing,
     _transfer,
     _config,
