@@ -104,6 +104,7 @@ def load_audio(
 ) -> "CUDABuffer": ...
 
 
+@_fuse.fuse(cache=True, sources=("src",))
 def load_audio(
     src: str | bytes,
     timestamp: TimeWindow | None = None,
@@ -123,6 +124,13 @@ def load_audio(
 
     .. versionchanged:: 0.8.0
        Removed unused arbitrary keyword arguments.
+
+    .. versionchanged:: 0.9.0
+       The IO operations are executed with :py:func:`~spdl.io.fuse`, that is,
+       in one native call, and the recorded program is cached for each
+       combination of the arguments other than the source. If decoding fails,
+       the function runs again without fusion to raise the error, so the
+       source is decoded twice.
 
     Args:
         src, timestamp, demux_config: See :py:func:`~spdl.io.demux_audio`.
@@ -179,6 +187,7 @@ def load_video(
 ) -> "CUDABuffer": ...
 
 
+@_fuse.fuse(cache=True, sources=("src",))
 def load_video(
     src: str | bytes,
     timestamp: TimeWindow | None = None,
@@ -198,6 +207,13 @@ def load_video(
 
     .. versionchanged:: 0.8.0
        Removed unused arbitrary keyword arguments.
+
+    .. versionchanged:: 0.9.0
+       The IO operations are executed with :py:func:`~spdl.io.fuse`, that is,
+       in one native call, and the recorded program is cached for each
+       combination of the arguments other than the source. If decoding fails,
+       the function runs again without fusion to raise the error, so the
+       source is decoded twice.
 
     Args:
         src, timestamp, demux_config: See :py:func:`~spdl.io.demux_video`.
@@ -264,6 +280,7 @@ def load_image(
 ) -> "CUDABuffer": ...
 
 
+@_fuse.fuse(cache=True, sources=("src",))
 def load_image(
     src: str | bytes,
     *,
@@ -282,6 +299,13 @@ def load_image(
 
     .. versionchanged:: 0.8.0
        Removed unused arbitrary keyword arguments.
+
+    .. versionchanged:: 0.9.0
+       The IO operations are executed with :py:func:`~spdl.io.fuse`, that is,
+       in one native call, and the recorded program is cached for each
+       combination of the arguments other than the source. If decoding fails,
+       the function runs again without fusion to raise the error, so the
+       source is decoded twice.
 
     Args:
         src, demux_config: See :py:func:`~spdl.io.demux_video`.
@@ -368,6 +392,7 @@ def load_image_batch(
 ) -> "CUDABuffer": ...
 
 
+@_fuse.fuse(cache=True, sources=("srcs",))
 def load_image_batch(
     srcs: Sequence[str | bytes],
     *,
@@ -390,6 +415,15 @@ def load_image_batch(
 
     .. versionchanged:: 0.8.0
        Removed unused arbitrary keyword arguments.
+
+    .. versionchanged:: 0.9.0
+       The IO operations are executed with :py:func:`~spdl.io.fuse`, that is,
+       in one native call, and the recorded program is cached for each
+       combination of the arguments other than the source. If decoding fails,
+       the function runs again without fusion to raise the error, so the
+       source is decoded twice.
+       With ``strict=False``, the images are decoded without fusion, so that
+       the images that fail to decode can be skipped.
 
     Args:
         srcs: List of source identifiers.
