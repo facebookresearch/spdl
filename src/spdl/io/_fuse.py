@@ -50,6 +50,19 @@ from typing import Any, NoReturn, overload, ParamSpec, TypeGuard, TypeVar
 from ._common import _resolve_src
 from .lib import _libspdl
 
+try:
+    from .fb import _is_fusion_disabled
+except ImportError:
+
+    def _is_fusion_disabled(name: str) -> bool:
+        """Whether fusion is disabled at runtime for the function ``name``.
+
+        Builds with internal extensions provide a switch to turn off fusion
+        without changing code. Without them, fusion is always enabled.
+        """
+        return False
+
+
 P = ParamSpec("P")
 T = TypeVar("T")
 
@@ -1241,13 +1254,25 @@ def _try_trace(
         return _LAZY
 
 
+def _qualified_name(fn: Callable[..., Any]) -> str:
+    module = getattr(fn, "__module__", None) or "<unknown>"
+    qualname = getattr(fn, "__qualname__", None) or repr(fn)
+    return f"{module}.{qualname}"
+
+
+def _run_eagerly(name: str) -> bool:
+    """Whether a fused function must run as if it was not decorated."""
+    return _ACTIVE.get() is not None or not _gil_enabled() or _is_fusion_disabled(name)
+
+
 def _cached(fn: Callable[P, T]) -> Callable[P, T]:
     # Argument structure -> how to run. `_TRACE` means trace on the next call.
     cache: OrderedDict[object, object] = OrderedDict()
+    name = _qualified_name(fn)
 
     @functools.wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        if _ACTIVE.get() is not None or not _gil_enabled():
+        if _run_eagerly(name):
             return fn(*args, **kwargs)
         leaves: list[Any] = []
         tree = _flatten((args, kwargs), leaves)
@@ -1289,9 +1314,11 @@ def _cached(fn: Callable[P, T]) -> Callable[P, T]:
 
 
 def _fuse(fn: Callable[P, T]) -> Callable[P, T]:
+    name = _qualified_name(fn)
+
     @functools.wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        if _ACTIVE.get() is not None or not _gil_enabled():
+        if _run_eagerly(name):
             return fn(*args, **kwargs)
         return _run(fn, args, kwargs)[0]
 
