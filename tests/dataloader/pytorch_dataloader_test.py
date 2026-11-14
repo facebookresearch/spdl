@@ -6,12 +6,38 @@
 
 import multiprocessing as mp
 import os
+import pickle
 import time
 import unittest
 from collections.abc import Iterator
+from multiprocessing.shared_memory import SharedMemory
+from unittest.mock import patch
 
 from spdl.dataloader import get_pytorch_dataloader
+from spdl.dataloader._pytorch_dataloader import _serialize_dataset
 from torch.utils.data import Dataset, Sampler
+
+
+class _RangeDataset(Dataset[int]):
+    def __init__(self, size: int) -> None:
+        self._size = size
+
+    def __len__(self) -> int:
+        return self._size
+
+    def __getitem__(self, index: int) -> int:
+        return index
+
+
+class _PageRoundedSharedMemory(SharedMemory):
+    """Mimic platforms (e.g. macOS) that round the block up to the page size."""
+
+    def __init__(
+        self, name: str | None = None, create: bool = False, size: int = 0
+    ) -> None:
+        if create:
+            size += 4096
+        super().__init__(name=name, create=create, size=size)
 
 
 class _SlowUnpickleDataset(Dataset[int]):
@@ -44,6 +70,21 @@ class _SlowUnpickleDataset(Dataset[int]):
 
 
 class PyTorchDataLoaderTest(unittest.TestCase):
+    def test_serialize_dataset_with_larger_shared_memory_block(self) -> None:
+        """The dataset is serialized when the block is larger than requested."""
+        dataset = _RangeDataset(3)
+        with patch(
+            "spdl.dataloader._pytorch_dataloader.SharedMemory",
+            _PageRoundedSharedMemory,
+        ):
+            shmem = _serialize_dataset(dataset)
+        self.addCleanup(shmem.unlink)
+        self.addCleanup(shmem.close)
+
+        self.assertGreater(shmem.size, len(pickle.dumps(dataset)))
+        restored = pickle.loads(shmem.buf)
+        self.assertEqual([restored[i] for i in range(len(restored))], [0, 1, 2])
+
     def test_zero_length_custom_sampler_is_preserved(self) -> None:
         """A falsy custom sampler must not be replaced by the default sampler."""
 

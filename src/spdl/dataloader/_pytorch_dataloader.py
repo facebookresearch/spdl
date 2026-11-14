@@ -100,8 +100,10 @@ def _serialize_dataset(dataset: "torch.utils.data.dataset.Dataset[T]") -> Shared
     t0 = time.monotonic()
     data = pickle.dumps(dataset)
     shmem = SharedMemory(create=True, size=len(data))
+    # The block can be larger than requested (e.g. rounded up to the page size on
+    # macOS), so write only the serialized bytes. pickle ignores the trailing bytes.
     # pyrefly: ignore [unsupported-operation]
-    shmem.buf[:] = data
+    shmem.buf[: len(data)] = data
     elapsed = time.monotonic() - t0
     _LG.info(
         "Written dataset into shared memory %s (%s MB) in %.2f seconds",
