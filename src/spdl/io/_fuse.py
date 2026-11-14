@@ -55,10 +55,11 @@ try:
 except ImportError:
 
     def _is_fusion_disabled(name: str) -> bool:
-        """Whether fusion is disabled at runtime for the function ``name``.
+        """Whether fusion is disabled for the function ``name``.
 
         Builds with internal extensions provide a switch to turn off fusion
-        without changing code. Without them, fusion is always enabled.
+        without changing code. It is read once, when the function is
+        decorated. Without the extensions, fusion is always enabled.
         """
         return False
 
@@ -1260,19 +1261,22 @@ def _qualified_name(fn: Callable[..., Any]) -> str:
     return f"{module}.{qualname}"
 
 
-def _run_eagerly(name: str) -> bool:
-    """Whether a fused function must run as if it was not decorated."""
-    return _ACTIVE.get() is not None or not _gil_enabled() or _is_fusion_disabled(name)
+def _run_eagerly(disabled: bool) -> bool:
+    """Whether a fused function must run as if it was not decorated.
+
+    ``disabled`` is the switch read when the function was decorated.
+    """
+    return disabled or _ACTIVE.get() is not None or not _gil_enabled()
 
 
 def _cached(fn: Callable[P, T]) -> Callable[P, T]:
     # Argument structure -> how to run. `_TRACE` means trace on the next call.
     cache: OrderedDict[object, object] = OrderedDict()
-    name = _qualified_name(fn)
+    disabled = _is_fusion_disabled(_qualified_name(fn))
 
     @functools.wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        if _run_eagerly(name):
+        if _run_eagerly(disabled):
             return fn(*args, **kwargs)
         leaves: list[Any] = []
         tree = _flatten((args, kwargs), leaves)
@@ -1314,11 +1318,11 @@ def _cached(fn: Callable[P, T]) -> Callable[P, T]:
 
 
 def _fuse(fn: Callable[P, T]) -> Callable[P, T]:
-    name = _qualified_name(fn)
+    disabled = _is_fusion_disabled(_qualified_name(fn))
 
     @functools.wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        if _run_eagerly(name):
+        if _run_eagerly(disabled):
             return fn(*args, **kwargs)
         return _run(fn, args, kwargs)[0]
 
