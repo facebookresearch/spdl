@@ -19,6 +19,7 @@ BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 sys.path.append(os.path.abspath("."))  # requried to load custom_directive
 sys.path.append(str(BASE_DIR))  # required to resolve the `import benchmark_util`
 sys.path.append(str(BASE_DIR / "examples"))  # required to use auto_summary on examples
+sys.path.insert(0, str(BASE_DIR / "docs" / "scripts"))
 
 os.environ["SPDL_DOC_SPHINX"] = "1"
 
@@ -41,10 +42,12 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx.ext.napoleon",
     "sphinxcontrib.mermaid",
+    "spdl_docs_knowledge_base",
     "breathe",
     "exhale",
 ]
 autosummary_generate = True
+myst_heading_anchors = 3
 autosummary_imported_members = True
 autosummary_ignore_module_all = False
 autoclass_content = "class"
