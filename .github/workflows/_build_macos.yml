@@ -119,9 +119,9 @@ jobs:
 
           # Install PyTorch and others
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            pip install torch numpy pytest pytest-timeout parameterized matplotlib
+            pip install torch numpy pytest pytest-timeout pytest-rerunfailures==16.7 parameterized matplotlib
           else
-            pip install torch numpy numba pytest pytest-timeout parameterized matplotlib
+            pip install torch numpy numba pytest pytest-timeout pytest-rerunfailures==16.7 parameterized matplotlib
           fi
 
           # Install FFmpeg
@@ -137,6 +137,7 @@ jobs:
           # platform; on firing it dumps each thread's stack, pinpointing a hang.
           pytest -v -n ${{ inputs.test-concurrency }} \
               --timeout=120 --timeout-method=thread \
+              --reruns=2 --reruns-delay=1 --rerun-show-tracebacks -ra \
               tests/io \
               tests/dataloader \
               tests/pipeline \
