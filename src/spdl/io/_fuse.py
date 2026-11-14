@@ -39,9 +39,11 @@ __all__ = [
 import contextlib
 import contextvars
 import functools
+import inspect
 import operator
 import os
 import sys
+import threading
 import weakref
 from collections import OrderedDict
 from collections.abc import Callable, Iterator, Sequence
@@ -1269,10 +1271,49 @@ def _run_eagerly(disabled: bool) -> bool:
     return disabled or _ACTIVE.get() is not None or not _gil_enabled()
 
 
-def _cached(fn: Callable[P, T]) -> Callable[P, T]:
+def _source_mask(
+    sig: inspect.Signature,
+    sources: frozenset[str],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> list[bool]:
+    """Whether each leaf of ``(args, kwargs)`` is a source.
+
+    A leaf is a source if it belongs to a parameter in ``sources``, and its
+    type is a source type. The order is the same as :py:func:`_flatten`.
+    """
+    params = list(sig.parameters.values())
+    positional = [
+        p.name for p in params if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
+    ]
+    var_args = next((p.name for p in params if p.kind == p.VAR_POSITIONAL), None)
+    var_kwargs = next((p.name for p in params if p.kind == p.VAR_KEYWORD), None)
+
+    mask: list[bool] = []
+
+    def add(name: str | None, value: object) -> None:
+        leaves: list[Any] = []
+        _flatten(value, leaves)
+        mask.extend(name in sources and _is_source(leaf) for leaf in leaves)
+
+    for i, value in enumerate(args):
+        add(positional[i] if i < len(positional) else var_args, value)
+    for key, value in kwargs.items():
+        add(key if key in sig.parameters else var_kwargs, value)
+    return mask
+
+
+def _cached(fn: Callable[P, T], sources: Sequence[str] | None = None) -> Callable[P, T]:
     # Argument structure -> how to run. `_TRACE` means trace on the next call.
     cache: OrderedDict[object, object] = OrderedDict()
-    disabled = _is_fusion_disabled(_qualified_name(fn))
+    # The cache is shared by the threads that call the function.
+    lock = threading.Lock()
+    name = _qualified_name(fn)
+    disabled = _is_fusion_disabled(name)
+    sig = inspect.signature(fn)
+    declared = None if sources is None else frozenset(sources)
+    if declared is not None and (unknown := declared - set(sig.parameters)):
+        raise ValueError(f"`sources` must be parameters of {name}. Found: {unknown}")
 
     @functools.wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -1280,7 +1321,10 @@ def _cached(fn: Callable[P, T]) -> Callable[P, T]:
             return fn(*args, **kwargs)
         leaves: list[Any] = []
         tree = _flatten((args, kwargs), leaves)
-        is_src = [_is_source(leaf) for leaf in leaves]
+        if declared is None:
+            is_src = [_is_source(leaf) for leaf in leaves]
+        else:
+            is_src = _source_mask(sig, declared, args, kwargs)
         try:
             key = (
                 tree,
@@ -1291,12 +1335,15 @@ def _cached(fn: Callable[P, T]) -> Callable[P, T]:
             )
         except TypeError:
             return _run(fn, args, kwargs)[0]
-        program = cache.get(key)
+        with lock:
+            program = cache.get(key)
+            if isinstance(program, _Program):
+                cache.move_to_end(key)
         if program is _TRACE:
             program = _try_trace(fn, tree, leaves, is_src)
-            cache[key] = program
+            with lock:
+                cache[key] = program
         if isinstance(program, _Program):
-            cache.move_to_end(key)
             srcs = [
                 _resolve_src(leaf)
                 for leaf, src in zip(leaves, is_src, strict=True)
@@ -1309,11 +1356,13 @@ def _cached(fn: Callable[P, T]) -> Callable[P, T]:
                 return fn(*args, **kwargs)
         result, straight = _run(fn, args, kwargs)
         if program is None and straight is not None:
-            cache[key] = _TRACE if straight else _LAZY
-            if len(cache) > _CACHE_SIZE:
-                cache.popitem(last=False)
+            with lock:
+                cache[key] = _TRACE if straight else _LAZY
+                if len(cache) > _CACHE_SIZE:
+                    cache.popitem(last=False)
         return result
 
+    wrapper._clear_cache = cache.clear  # pyrefly: ignore[missing-attribute]
     return wrapper
 
 
@@ -1330,13 +1379,25 @@ def _fuse(fn: Callable[P, T]) -> Callable[P, T]:
 
 
 @overload
-def fuse(fn: Callable[P, T], /, *, cache: bool = False) -> Callable[P, T]: ...
+def fuse(
+    fn: Callable[P, T],
+    /,
+    *,
+    cache: bool = False,
+    sources: Sequence[str] | None = None,
+) -> Callable[P, T]: ...
 @overload
-def fuse(*, cache: bool = False) -> Callable[[Callable[P, T]], Callable[P, T]]: ...
+def fuse(
+    *, cache: bool = False, sources: Sequence[str] | None = None
+) -> Callable[[Callable[P, T]], Callable[P, T]]: ...
 
 
 def fuse(
-    fn: Callable[P, T] | None = None, /, *, cache: bool = False
+    fn: Callable[P, T] | None = None,
+    /,
+    *,
+    cache: bool = False,
+    sources: Sequence[str] | None = None,
 ) -> Callable[P, T] | Callable[[Callable[P, T]], Callable[P, T]]:
     """**[Experimental]** Execute SPDL IO functions in a function with fewer native calls.
 
@@ -1436,6 +1497,14 @@ def fuse(
             and the cache saved a further 0.2 to 0.6 ms. Without contention,
             it saved 0.1 to 0.7 ms.
 
+        sources: *Optional:* With ``cache=True``, the names of the parameters
+            that receive sources. By default, every argument of a source type
+            (``str``, ``bytes`` and other buffer objects) is a source, so a
+            ``str`` argument such as a filter description makes the call
+            bypass the cache. With ``sources``, the arguments of the other
+            parameters are part of the argument structure, i.e. calls with
+            different values use different programs.
+
     Returns:
         A function with the same signature as ``fn``.
         (If ``fn`` is omitted, a decorator.)
@@ -1454,5 +1523,10 @@ def fuse(
 
           buffer = load_batch([data1, data2])  # One call into C++
     """
-    wrap = _cached if cache else _fuse
+    if sources is not None and not cache:
+        raise ValueError("`sources` can be used only with `cache=True`.")
+    if cache:
+        wrap = functools.partial(_cached, sources=sources)
+    else:
+        wrap = _fuse
     return wrap if fn is None else wrap(fn)  # pyrefly: ignore[bad-return]

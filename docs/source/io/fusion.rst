@@ -167,6 +167,117 @@ decoding, :py:class:`~spdl.io.BSF`, ``load_image_batch(strict=False)``, and
 attributes that are not recorded. The recorded operations are executed
 before them.
 
+Fused loading functions
+-----------------------
+
+:py:func:`~spdl.io.load_audio`, :py:func:`~spdl.io.load_video`,
+:py:func:`~spdl.io.load_image` and :py:func:`~spdl.io.load_image_batch` are
+decorated with ``fuse(cache=True, sources=("src",))`` (``("srcs",)`` for
+:py:func:`~spdl.io.load_image_batch`). Calling them directly executes their
+IO operations in one native call, and calling them in a fused function
+records their operations as part of the function. They depend only on their
+arguments, so the recorded program is cached for each combination of the
+arguments other than the source, e.g. each ``filter_desc``.
+
+``load_image_batch(strict=False)`` decodes the images without fusion, so that
+it can skip the images that fail to decode.
+
+The following table shows the time per call of the loading functions called
+directly (in milliseconds, Python 3.14, mean and 95% confidence interval of
+10 trials of 10 calls; small generated test media). "busy" has another Python
+thread spinning in the background, and "8 threads" is the wall time per call
+when 8 threads load concurrently. "Without fusion" is the undecorated
+function, and ``fuse`` is the function decorated without the cache, for
+comparison.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Function
+     - Condition
+     - Without fusion
+     - ``fuse``
+     - ``fuse(cache=True)``
+   * - ``load_audio``
+     - idle
+     - 1.59 ± 0.01
+     - 1.68 ± 0.01
+     - 1.59 ± 0.01
+   * -
+     - busy
+     - 39.58 ± 1.51
+     - 7.23 ± 0.08
+     - 7.09 ± 0.06
+   * -
+     - 8 threads
+     - 0.27 ± 0.01
+     - 0.28 ± 0.00
+     - 0.26 ± 0.00
+   * - ``load_video``
+     - idle
+     - 2.16 ± 0.01
+     - 2.25 ± 0.01
+     - 2.16 ± 0.01
+   * -
+     - busy
+     - 35.89 ± 1.00
+     - 7.84 ± 0.07
+     - 7.77 ± 0.06
+   * -
+     - 8 threads
+     - 0.35 ± 0.00
+     - 0.36 ± 0.00
+     - 0.37 ± 0.05
+   * - ``load_image``, 640x480 JPEG
+     - idle
+     - 1.12 ± 0.00
+     - 1.20 ± 0.01
+     - 1.13 ± 0.00
+   * -
+     - busy
+     - 33.28 ± 1.30
+     - 6.77 ± 0.08
+     - 6.73 ± 0.06
+   * -
+     - 8 threads
+     - 0.18 ± 0.00
+     - 0.19 ± 0.00
+     - 0.18 ± 0.00
+   * - ``load_image``, 64x48 PNG
+     - idle
+     - 0.16 ± 0.00
+     - 0.24 ± 0.01
+     - 0.17 ± 0.00
+   * -
+     - busy
+     - 33.12 ± 1.56
+     - 5.57 ± 0.05
+     - 5.48 ± 0.04
+   * -
+     - 8 threads
+     - 0.08 ± 0.00
+     - 0.10 ± 0.00
+     - 0.05 ± 0.00
+   * - ``load_image_batch``, 32 PNGs
+     - idle
+     - 13.24 ± 0.05
+     - 12.76 ± 0.07
+     - 12.22 ± 0.06
+   * -
+     - busy
+     - 885.43 ± 33.83
+     - 18.17 ± 0.06
+     - 17.77 ± 0.20
+   * -
+     - 8 threads
+     - 2.20 ± 0.03
+     - 1.73 ± 0.11
+     - 1.62 ± 0.10
+
+With the cache, the loading functions are as fast as without fusion when no
+other Python thread is busy, as the cache saves recording the operations in
+Python. With another busy Python thread, they save 27 to 870 ms per call.
+
 Guidelines
 ----------
 
@@ -306,11 +417,22 @@ arguments. Do not use ``cache=True`` if the function uses random numbers,
 or the state of objects or global variables.
 
 Arguments are classified as sources by their type, so a ``str`` or a NumPy
-array that is not a source is replaced by a placeholder as well. If the
-function uses such an argument in any other way than passing it to SPDL IO
-functions (e.g. formatting it into a string, comparing or indexing it), or
-does not use it, :py:func:`~spdl.io.fuse` detects it, and runs the function
-without the cache for that argument structure.
+array that is not a source is replaced by a placeholder as well. To avoid
+this, declare the parameters that receive sources with ``sources``. Then the
+arguments of the other parameters, including ``str``, are part of the
+argument structure, so each value has its own cached program.
+
+.. code-block:: python
+
+   @spdl.io.fuse(cache=True, sources=("src",))
+   def load(src: bytes, filter_desc: str) -> spdl.io.CPUBuffer:
+       return spdl.io.load_image(src, filter_desc=filter_desc)
+
+Without ``sources``, if the function uses such an argument in any other way
+than passing it to SPDL IO functions (e.g. formatting it into a string,
+comparing or indexing it), or does not use it, :py:func:`~spdl.io.fuse`
+detects it, and runs the function without the cache for that argument
+structure.
 
 Free-threaded Python
 --------------------
