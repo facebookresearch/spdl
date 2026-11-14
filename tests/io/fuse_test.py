@@ -66,8 +66,9 @@ def _normalize(obj: object) -> object:
 
 
 def setUpModule() -> None:
-    # `fuse` does nothing without the GIL, or when it is disabled at runtime.
-    # Test recording on any Python build, regardless of the runtime switch.
+    # `fuse` does nothing without the GIL, or when it is disabled by the switch
+    # read at decoration. Test recording on any Python build, regardless of
+    # the switch.
     for name, value in (("_gil_enabled", True), ("_is_fusion_disabled", False)):
         patcher = mock.patch.object(_fuse, name, return_value=value)
         patcher.start()
@@ -903,8 +904,8 @@ class FuseTracingErrorTest(unittest.TestCase):
 
 
 class FuseRuntimeSwitchTest(unittest.TestCase):
-    def test_disabled_at_runtime(self) -> None:
-        """When fusion is disabled at runtime, the function runs eagerly."""
+    def test_disabled_when_decorated(self) -> None:
+        """When fusion is disabled at decoration, the function runs eagerly."""
         data = _read(_image_samples(1))[0]
 
         def load(src: bytes) -> spdl.io.CPUBuffer:
@@ -913,16 +914,17 @@ class FuseRuntimeSwitchTest(unittest.TestCase):
             return spdl.io.convert_frames(spdl.io.decode_packets(packets))
 
         name = (
-            f"{__name__}.FuseRuntimeSwitchTest.test_disabled_at_runtime.<locals>.load"
+            f"{__name__}.FuseRuntimeSwitchTest.test_disabled_when_decorated"
+            ".<locals>.load"
         )
         for cache in (False, True):
             with self.subTest(cache=cache):
-                fused = fuse(load, cache=cache)
                 with mock.patch.object(
                     _fuse, "_is_fusion_disabled", return_value=True
                 ) as disabled:
-                    results = [fused(data) for _ in range(3)]
-                self.assertEqual(disabled.call_args_list, [mock.call(name)] * 3)
+                    fused = fuse(load, cache=cache)
+                self.assertEqual(disabled.call_args_list, [mock.call(name)])
+                results = [fused(data) for _ in range(3)]
                 for result in results:
                     self.assertIsInstance(result, spdl.io.CPUBuffer)
                     np.testing.assert_array_equal(
@@ -931,20 +933,26 @@ class FuseRuntimeSwitchTest(unittest.TestCase):
                         strict=True,
                     )
 
-    def test_reenabled_at_runtime(self) -> None:
-        """Fusion resumes when the switch is turned off again."""
+    def test_read_once(self) -> None:
+        """The switch is not read when the function is called."""
         data = _read(_image_samples(1))[0]
         seen: list[str] = []
 
-        @fuse
         def load(src: bytes) -> object:
             seen.append(type(spdl.io.demux_image(src)).__name__)
             return None
 
-        for disabled in (False, True, False):
-            with mock.patch.object(_fuse, "_is_fusion_disabled", return_value=disabled):
-                load(data)
-        self.assertEqual(seen, ["_Symbol", "ImagePackets", "_Symbol"])
+        for cache in (False, True):
+            with self.subTest(cache=cache):
+                seen.clear()
+                fused = fuse(load, cache=cache)
+                with mock.patch.object(
+                    _fuse,
+                    "_is_fusion_disabled",
+                    side_effect=AssertionError("read on call"),
+                ):
+                    fused(data)
+                self.assertEqual(seen, ["_Symbol"])
 
 
 class FuseFreeThreadingTest(unittest.TestCase):
