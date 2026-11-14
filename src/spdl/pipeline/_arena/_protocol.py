@@ -25,7 +25,25 @@ from __future__ import annotations
 
 from typing import Protocol
 
-__all__ = ["ArenaProtocol", "ArenaReaderProtocol", "ArenaWriterProtocol"]
+__all__ = [
+    "ArenaProtocol",
+    "ArenaReaderProtocol",
+    "ArenaWriterProtocol",
+    "_is_arena_backend",
+]
+
+
+def _is_arena_backend(arena: object) -> bool:
+    return all(
+        callable(getattr(arena, name, None))
+        for name in (
+            "open_writer",
+            "open_reader",
+            "shutdown_arena",
+            "close",
+            "unlink",
+        )
+    )
 
 
 class ArenaWriterProtocol(Protocol):
