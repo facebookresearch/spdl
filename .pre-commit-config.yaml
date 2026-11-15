@@ -44,3 +44,34 @@ repos:
           - 'mypy $((grep -L "# pyre-unsafe" "$@" 2>/dev/null || printf "%s\n" "$@") | grep -v setup.py) || true'
           - --
         types_or: [python, pyi]
+
+  - repo: local
+    hooks:
+      - id: pyrefly
+        name: Pyrefly (full project, Python 3.12 and 3.14 profiles)
+        entry: bash -c
+        args:
+          - |
+            site_packages=$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])') || exit 1
+            result=0
+            for config in pyrefly312.toml pyrefly.toml; do
+              pyrefly check --config "$config" --skip-interpreter-query \
+                --site-packages-path "$site_packages" --output-format full-text \
+                || result=1
+            done
+            exit "$result"
+        language: python
+        language_version: python3.12
+        pass_filenames: false
+        require_serial: true
+        types: [file]
+        files: '\.(py|pyi)$|(^|/)pyrefly[^/]*\.toml$|^pyproject\.toml$|^\.pre-commit-config\.yaml$'
+        additional_dependencies:
+          - "pyrefly==1.4.1"
+          - "numpy==2.2.6"
+          - "parameterized==0.9.0"
+          - "nanobind==2.13.0"
+          - "typing_extensions==4.16.0"
+          - "--extra-index-url=https://download.pytorch.org/whl/cpu"
+          - "torch==2.15.0+cpu; sys_platform == 'linux' or sys_platform == 'win32'"
+          - "torch==2.15.0; sys_platform == 'darwin'"
