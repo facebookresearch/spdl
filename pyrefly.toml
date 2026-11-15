@@ -1,0 +1,31 @@
+# Diagnostic behavior matches Pyrefly's Buck compatibility mode.
+required-version = "==1.4.1"
+project-includes = [
+  "src/spdl/_internal/**/*.py",
+  "src/spdl/dataloader/**/*.py",
+  "src/spdl/source/**/*.py",
+  "src/spdl/io/**/*.py",
+  "src/spdl/io/**/*.pyi",
+  "tests/io/**/*.py",
+  "tests/cuda/**/*.py",
+]
+search-path = ["src", "."]
+disable-search-path-heuristics = true
+python-version = "3.14"
+python-platform = "linux"
+permissive-ignores = true
+check-unannotated-defs = false
+infer-return-types = "annotated"
+ignore-errors-in-generated-code = true
+
+# These optional initialization hooks are absent from the public distribution.
+# All other unresolved imports remain errors.
+ignore-missing-imports = [
+  "spdl._internal.fb",
+  "spdl.io.fb",
+  "spdl.pipeline.fb",
+]
+
+[errors]
+deprecated = "ignore"
+unused-ignore = "info"

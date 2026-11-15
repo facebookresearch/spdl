@@ -1,0 +1,7 @@
+# Public release; the internal DotSlash checker has a separate release train.
+pyrefly==1.4.1
+# Match the major/minor annotation set selected by fbcode's NumPy alias.
+numpy==2.2.6
+parameterized==0.9.0
+nanobind==2.13.0
+typing_extensions==4.16.0
