@@ -75,7 +75,7 @@ class TestPinMemory(unittest.TestCase):
 
     def test_pin_memory_convert_array(self) -> None:
         """convert_array can handle pinned memory."""
-        vals = np.arange(0, 10)
+        vals = np.arange(0, 10, dtype=np.int64)
         storage = spdl.io.cpu_storage(vals.nbytes, pin_memory=True)
         buffer = spdl.io.convert_array(vals, storage=storage)
         buffer = spdl.io.transfer_buffer(
@@ -91,7 +91,7 @@ class TestPinMemory(unittest.TestCase):
 
     def test_pin_memory_convert_array_invalid_size(self) -> None:
         """convert_array fails if storage is small."""
-        vals = np.arange(0, 10)
+        vals = np.arange(0, 10, dtype=np.int64)
         storage = spdl.io.cpu_storage(vals.nbytes // 2, pin_memory=True)
         with self.assertRaises(RuntimeError):
             spdl.io.convert_array(vals, storage=storage)

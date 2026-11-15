@@ -32,10 +32,13 @@ def create_wav_data(
                                   containing the expected audio samples
     """
 
-    dtype_map = {
+    integer_dtype_map = {
         8: np.uint8,
         16: np.int16,
         32: np.int32,
+    }
+    dtype_map = {
+        **integer_dtype_map,
         64: np.float64,
     }
     dtype = dtype_map[bits_per_sample]
@@ -46,7 +49,7 @@ def create_wav_data(
             reference[:, channel_idx] = np.linspace(-1.0, 1.0, num_samples, dtype=dtype)
     else:
         # For integer types, use linspace to cover full dtype range
-        dtype_info = np.iinfo(dtype)
+        dtype_info = np.iinfo(integer_dtype_map[bits_per_sample])
         for channel_idx in range(num_channels):
             reference[:, channel_idx] = np.linspace(
                 dtype_info.min, dtype_info.max, num_samples, dtype=dtype
@@ -198,8 +201,10 @@ class WAVUtilsTest(unittest.TestCase):
         readonly = spdl.io.to_numpy(spdl.io.load_wav(wav_data))
         writable = spdl.io.to_numpy(spdl.io.load_wav(bytearray(wav_data)))
 
-        self.assertFalse(readonly.flags["WRITEABLE"])
-        self.assertTrue(writable.flags["WRITEABLE"])
+        # @lint-ignore SPELL NumPy spells its public flag `writable`.
+        self.assertFalse(readonly.flags.writeable)
+        # @lint-ignore SPELL NumPy spells its public flag `writable`.
+        self.assertTrue(writable.flags.writeable)
         with self.assertRaises(ValueError):
             readonly[0, 0] = 0
 

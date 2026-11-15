@@ -16,13 +16,16 @@ from parameterized import parameterized
 
 from ..fixture import FFMPEG_CLI, get_sample, load_ref_audio
 
-sample_fmt2dtype = {
+integer_sample_fmt2dtype = {
     "s16": np.int16,
     "s32": np.int32,
     "s64": np.int64,
     "s16p": np.int16,
     "s32p": np.int32,
     "s64p": np.int64,
+}
+sample_fmt2dtype = {
+    **integer_sample_fmt2dtype,
     "f32": np.float32,
     "f64": np.float64,
     "flt": np.float32,
@@ -49,7 +52,7 @@ class TestEncodeAudioInteger(unittest.TestCase):
         dtype = sample_fmt2dtype[sample_fmt]
 
         shape = (sample_rate * duration, num_channels)
-        ii = np.iinfo(dtype)
+        ii = np.iinfo(integer_sample_fmt2dtype[sample_fmt])
         # pyrefly: ignore [no-matching-overload]
         ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
 
@@ -176,7 +179,7 @@ class TestEncodeAudioIntegerPlanar(unittest.TestCase):
         dtype = sample_fmt2dtype[sample_fmt]
 
         shape = (num_channels, sample_rate * duration)
-        ii = np.iinfo(dtype)
+        ii = np.iinfo(integer_sample_fmt2dtype[sample_fmt])
         # pyrefly: ignore [no-matching-overload]
         ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
 
@@ -260,7 +263,7 @@ class TestEncodeAudioSmokeTest(unittest.TestCase):
             shape = [num_frames, num_channels]
 
         if sample_fmt.startswith("s"):
-            ii = np.iinfo(dtype)
+            ii = np.iinfo(integer_sample_fmt2dtype[sample_fmt])
             # pyrefly: ignore [no-matching-overload]
             ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
         else:

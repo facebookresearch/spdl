@@ -1093,7 +1093,7 @@ def convert_frames(
 
 
 def convert_array(
-    vals: "UintArray", storage: "CPUStorage | None" = None
+    vals: "NDArray[np.int64]", storage: "CPUStorage | None" = None
 ) -> "CPUBuffer":
     """Convert the given array to buffer.
 
@@ -1113,7 +1113,7 @@ def convert_array(
 
 
 def create_reference_audio_frame(
-    array: "UintArray", sample_fmt: str, sample_rate: int, pts: int
+    array: "NDArray", sample_fmt: str, sample_rate: int, pts: int
 ) -> "AudioFrames":
     """Create an AudioFrame object which refers to the given array/tensor.
 
@@ -1166,7 +1166,7 @@ def create_reference_audio_frame(
 
 
 def create_reference_video_frame(
-    array: "UintArray", pix_fmt: str, frame_rate: tuple[int, int], pts: int
+    array: "NDArray", pix_fmt: str, frame_rate: tuple[int, int], pts: int
 ) -> "VideoFrames":
     """Create an VideoFrame object which refers to the given array/tensor.
 
@@ -1216,7 +1216,7 @@ def create_reference_video_frame(
 # Device data transfer
 ################################################################################
 def transfer_buffer(
-    buffer: "CPUBuffer",
+    buffer: "CPUBuffer | NDArray",
     *,
     device_config: "CUDAConfig",
 ) -> "CUDABuffer":
