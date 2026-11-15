@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
     # pyrefly: ignore [bad-specialization]
     FloatArray: TypeAlias = NDArray[np.floating[Any]]
+    IndexArray: TypeAlias = NDArray[np.int64]
 
 
 else:
@@ -28,6 +29,7 @@ else:
 
     np = lazy_import("numpy")
     FloatArray = object
+    IndexArray = object
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -159,7 +161,7 @@ def _weighted_choice(
     weights: FloatArray | None,
     replace: bool = True,
     seed: int = 0,
-) -> FloatArray:
+) -> IndexArray:
     """Generate indices using weighted random sampling.
 
     Args:

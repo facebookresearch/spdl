@@ -20,8 +20,10 @@ import argparse
 import re
 from pathlib import Path
 from types import ModuleType
+from typing import cast
 
 from nanobind.stubgen import StubGen
+from spdl.io._internal.import_utils import _LazilyImportedModule
 from spdl.io.lib import _archive, _libspdl, _libspdl_cuda, _wav  # pyre-ignore[21]
 
 
@@ -83,12 +85,16 @@ def write_stub_file(stub_content: str, output_dir: Path, output_name: str) -> No
 def run(output_dir: Path) -> None:
     print(f"Output directory: {output_dir}")
 
-    _libspdl._import_once()
-    _libspdl_cuda._import_once()
+    core = cast(_LazilyImportedModule, _libspdl)
+    cuda = cast(_LazilyImportedModule, _libspdl_cuda)
+    core._import_once()
+    cuda._import_once()
+    assert core.module is not None
+    assert cuda.module is not None
 
     modules = [
-        (_libspdl.module, "_libspdl"),
-        (_libspdl_cuda.module, "_libspdl_cuda"),
+        (core.module, "_libspdl"),
+        (cuda.module, "_libspdl_cuda"),
         (_archive, "_archive"),
         (_wav, "_wav"),
     ]
