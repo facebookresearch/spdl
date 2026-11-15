@@ -100,7 +100,7 @@ class TestLoadNpy(unittest.TestCase):
         src = np.frombuffer(_dump_npy(ref), dtype=np.uint8).copy()
         src_ref = weakref.ref(src)
 
-        arr = spdl.io.load_npy(src)
+        arr = spdl.io.load_npy(src.data)
         del src
         gc.collect()
 
