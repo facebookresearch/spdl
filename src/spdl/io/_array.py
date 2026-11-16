@@ -18,6 +18,7 @@ from numpy.typing import NDArray
 # Importing `spdl.io.lib` instead of `spdl.io.lilb._archive`
 # so as to delay the import of C++ extension module
 from . import lib as _libspdl
+from ._convert import ArrayInterface
 
 Buffer: TypeAlias = "bytes | bytearray | memoryview"
 
@@ -39,7 +40,7 @@ class _OwnedArrayInterface:
     long as the array is.
     """
 
-    def __init__(self, obj: object, owner: Buffer) -> None:
+    def __init__(self, obj: ArrayInterface, owner: Buffer) -> None:
         self._obj = obj
         self._owner = owner
         self._readonly = memoryview(owner).readonly
@@ -123,7 +124,7 @@ def load_npy(data: Buffer, *, copy: bool = False) -> NDArray:
     return np.array(_OwnedArrayInterface(buffer, owner), copy=copy)
 
 
-class NpzFile(Mapping):
+class NpzFile(Mapping[str, NDArray]):
     """NpzFile()
     A class mimics the behavior of :py:class:`numpy.lib.npyio.NpzFile`.
 
@@ -283,7 +284,7 @@ class NpzFile(Mapping):
                     "Compression method other than DEFLATE is not supported."
                 )
 
-    def __contains__(self, key: str) -> bool:  # pyre-ignore[14]
+    def __contains__(self, key: object) -> bool:
         return key in self._meta or key in self.files
 
     def __repr__(self) -> str:

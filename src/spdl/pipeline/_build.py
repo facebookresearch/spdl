@@ -22,7 +22,10 @@ from contextlib import ExitStack
 from fractions import Fraction
 from functools import partial
 from types import TracebackType
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, overload, TYPE_CHECKING, TypeVar
+
+if TYPE_CHECKING:
+    from ._builder import PipelineBuilder
 
 from spdl.pipeline._bg_task import (
     BackgroundTaskFactory,
@@ -33,7 +36,6 @@ from spdl.pipeline._components import (
     _get_global_id,
     _resolve_thread_output_queue_selection,
     _set_global_id,
-    AsyncQueue,
     StageInfo,
     TaskHook,
     ThreadOutputQueue,
@@ -51,6 +53,7 @@ from spdl.pipeline._subprocess_worker_pool import (
 )
 from spdl.pipeline.defs import MergeConfig, PipelineConfig, SourceConfig
 
+from ._components._queue import _QueueFactory
 from ._pipeline import Pipeline
 
 T = TypeVar("T")
@@ -169,7 +172,7 @@ def _build_pipeline(
     num_threads: int,
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue] | None = None,
+    queue_class: _QueueFactory | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
@@ -234,7 +237,7 @@ def build_pipeline(
     num_threads: int,
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue] | None = None,
+    queue_class: _QueueFactory | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: list[BackgroundTaskFactory] | None = None,
@@ -376,7 +379,7 @@ class _Wrapper(Generic[U]):
         num_threads: int,
         max_failures: int | Fraction,
         report_stats_interval: float,
-        queue_class: type[AsyncQueue] | None,
+        queue_class: _QueueFactory | None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         background_tasks: list[BackgroundTaskFactory] | None = None,
         use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
@@ -441,14 +444,46 @@ def _get_initializer(
     return initializer
 
 
+@overload
 def run_pipeline_in_subprocess(
     config_or_builder: PipelineConfig[T],
     /,
     *,
     num_threads: int,
+    max_failures: int | Fraction = ...,
+    report_stats_interval: float = ...,
+    queue_class: _QueueFactory | None = ...,
+    task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = ...,
+    background_tasks: list[BackgroundTaskFactory] | None = ...,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] | None = ...,
+    **kwargs: Any,
+) -> Iterable[T]: ...
+
+
+@overload
+def run_pipeline_in_subprocess(
+    config_or_builder: "PipelineBuilder[U, T]",
+    /,
+    *,
+    num_threads: int,
+    max_failures: int | Fraction = ...,
+    report_stats_interval: float = ...,
+    queue_class: _QueueFactory | None = ...,
+    task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = ...,
+    background_tasks: list[BackgroundTaskFactory] | None = ...,
+    use_thread_output_queue: bool | type[ThreadOutputQueue] | None = ...,
+    **kwargs: Any,
+) -> Iterable[T]: ...
+
+
+def run_pipeline_in_subprocess(
+    config_or_builder: "PipelineConfig[T] | PipelineBuilder[U, T]",
+    /,
+    *,
+    num_threads: int,
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue] | None = None,
+    queue_class: _QueueFactory | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool | type[ThreadOutputQueue] | None = None,
@@ -755,7 +790,7 @@ def run_pipeline_in_subinterpreter(
     num_threads: int,
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue] | None = None,
+    queue_class: _QueueFactory | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     background_tasks: list[BackgroundTaskFactory] | None = None,
     use_thread_output_queue: bool | type[ThreadOutputQueue] | None = None,

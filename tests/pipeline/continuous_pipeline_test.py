@@ -786,13 +786,15 @@ class TestContinuousSubprocessPipelineReuse(unittest.TestCase):
 
 
 def _has_interpreter_pool_executor() -> bool:
-    if sys.version_info < (3, 14):
-        return False
-    try:
-        from concurrent.futures.interpreter import InterpreterPoolExecutor  # noqa: F401
-    except ImportError:
-        return False
-    return True
+    if sys.version_info >= (3, 14):
+        try:
+            from concurrent.futures.interpreter import (  # noqa: F401
+                InterpreterPoolExecutor,
+            )
+        except ImportError:
+            return False
+        return True
+    return False
 
 
 _HAS_INTERPRETER: bool = _has_interpreter_pool_executor()

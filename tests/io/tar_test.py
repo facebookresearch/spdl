@@ -41,10 +41,10 @@ class TestIterTarfile(unittest.TestCase):
             self.assertEqual(content, ref_content)
 
         # file-like object
-        outputs = list(spdl.io.iter_tarfile(io.BytesIO(tar_data)))  # pyre-ignore
-        self.assertEqual(len(outputs), len(ref_data))
+        file_outputs = list(spdl.io.iter_tarfile(io.BytesIO(tar_data)))  # pyre-ignore
+        self.assertEqual(len(file_outputs), len(ref_data))
         for (ref_path, ref_content), (path, content) in zip(
-            ref_data, outputs, strict=True
+            ref_data, file_outputs, strict=True
         ):
             self.assertEqual(path, ref_path)
             self.assertEqual(content, ref_content)
@@ -65,7 +65,7 @@ class TestIterTarfile(unittest.TestCase):
 
     def test_iter_tar_empty_archive(self) -> None:
         """Test iter_tar with an empty TAR archive."""
-        ref_data = []
+        ref_data: list[tuple[str, bytes]] = []
 
         tar_data = _create_test_tar(ref_data)
         self._test(ref_data, tar_data)

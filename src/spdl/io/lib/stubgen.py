@@ -14,17 +14,52 @@ modules in spdl.io.lib.
 
 Usage:
     python stubgen.py --output-dir /path/to/output
+
+Schema-only normalization of existing generated outputs (no native modules):
+    python stubgen.py --normalize-existing /path/to/stubs --output-dir /path/to/output
 """
 
 import argparse
+import ast
 import re
 from pathlib import Path
 from types import ModuleType
 from typing import cast
 
-from nanobind.stubgen import StubGen
-from spdl.io._internal.import_utils import _LazilyImportedModule
-from spdl.io.lib import _archive, _libspdl, _libspdl_cuda, _wav  # pyre-ignore[21]
+
+def _normalize_stub_content(stub_content: str) -> str:
+    """Normalize native names and model TAR file objects by their read method."""
+    stub_content = re.sub(r"_spdl_ffmpeg\d?", "_libspdl", stub_content)
+    stub_content = stub_content.replace('"spdl::core::SourceAdaptor"', "object")
+    file_reader = "def parse_tar(arg: object, /) -> FileObjectTarParser:"
+    if file_reader in stub_content:
+        stub_content = stub_content.replace(
+            file_reader,
+            "def parse_tar(arg: _BinaryReaderProtocol, /) -> FileObjectTarParser:",
+        )
+        lines = stub_content.splitlines(keepends=True)
+        import_position = 0
+        for statement in ast.parse(stub_content).body:
+            is_docstring = (
+                isinstance(statement, ast.Expr)
+                and isinstance(statement.value, ast.Constant)
+                and isinstance(statement.value.value, str)
+            )
+            is_future = (
+                isinstance(statement, ast.ImportFrom)
+                and statement.module == "__future__"
+            )
+            if not (is_docstring or is_future):
+                break
+            assert statement.end_lineno is not None
+            import_position = statement.end_lineno
+        lines.insert(import_position, "from typing import Protocol\n")
+        stub_content = "".join(lines)
+        stub_content += (
+            "\n\nclass _BinaryReaderProtocol(Protocol):\n"
+            "    def read(self, size: int, /) -> bytes: ...\n"
+        )
+    return stub_content
 
 
 def generate_stub_content(module: ModuleType) -> str:
@@ -38,7 +73,9 @@ def generate_stub_content(module: ModuleType) -> str:
     """
     print(f"Generating stub for module: {module.__name__}")
 
-    sg = StubGen(module)
+    from nanobind.stubgen import StubGen
+
+    sg = StubGen(module, include_private=True)
     sg.put(module)
     stub_content = sg.get()
 
@@ -83,6 +120,9 @@ def write_stub_file(stub_content: str, output_dir: Path, output_name: str) -> No
 
 
 def run(output_dir: Path) -> None:
+    from spdl.io._internal.import_utils import _LazilyImportedModule
+    from spdl.io.lib import _archive, _libspdl, _libspdl_cuda, _wav
+
     print(f"Output directory: {output_dir}")
 
     core = cast(_LazilyImportedModule, _libspdl)
@@ -101,10 +141,24 @@ def run(output_dir: Path) -> None:
 
     for module, output_name in modules:
         stub_content = generate_stub_content(module)
-        stub_content = re.sub(r"_spdl_ffmpeg\d?", "_libspdl", stub_content)
+        stub_content = _normalize_stub_content(stub_content)
         write_stub_file(stub_content, output_dir, output_name)
 
     print("All stubs generated successfully!")
+
+
+def _normalize_existing_stubs(input_dir: Path, output_dir: Path) -> None:
+    """Apply only schema normalization to existing generated native stubs."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for name in ("_libspdl", "_libspdl_cuda", "_archive", "_wav"):
+        source = (input_dir / f"{name}.pyi").read_text()
+        lines = source.splitlines(keepends=True)
+        first_statement = ast.parse(source).body[0].lineno - 1
+        header = "".join(lines[:first_statement])
+        body = "".join(lines[first_statement:])
+        target = output_dir / f"{name}.pyi"
+        target.write_text(header + _normalize_stub_content(body))
+        print(f"Normalized existing stub: {target}")
 
 
 def main(args_: list[str] | None = None) -> None:
@@ -120,8 +174,16 @@ def main(args_: list[str] | None = None) -> None:
         type=Path,
     )
 
+    parser.add_argument(
+        "--normalize-existing",
+        type=Path,
+        help="Normalize schemas in existing generated stubs without loading native modules",
+    )
     args = parser.parse_args(args_)
-    run(args.output_dir)
+    if args.normalize_existing is not None:
+        _normalize_existing_stubs(args.normalize_existing, args.output_dir)
+    else:
+        run(args.output_dir)
 
 
 if __name__ == "__main__":

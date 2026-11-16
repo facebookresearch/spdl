@@ -13,7 +13,7 @@ from collections.abc import Iterator
 from multiprocessing.shared_memory import SharedMemory
 from unittest.mock import patch
 
-from spdl.dataloader import get_pytorch_dataloader
+from spdl.dataloader import get_pytorch_dataloader, PyTorchDataLoader
 from spdl.dataloader._pytorch_dataloader import _serialize_dataset
 from torch.utils.data import Dataset, Sampler
 
@@ -27,6 +27,32 @@ class _RangeDataset(Dataset[int]):
 
     def __getitem__(self, index: int) -> int:
         return index
+
+
+class _KeyedDataset(Dataset[str]):
+    def __getitem__(self, index: str) -> str:
+        return index.upper()
+
+
+class _KeySampler(Sampler[str]):
+    def __iter__(self) -> Iterator[str]:
+        return iter(("a", "b", "c"))
+
+    def __len__(self) -> int:
+        return 3
+
+
+class _BatchedKeyedDataset(_KeyedDataset):
+    def __getitems__(self, indices: list[str]) -> list[str]:
+        return [f"batch:{index}" for index in indices]
+
+
+def _collate_strings(values: list[str]) -> tuple[str, ...]:
+    return tuple(values)
+
+
+def _convert_string(value: str) -> str:
+    return f"item:{value}"
 
 
 class _PageRoundedSharedMemory(SharedMemory):
@@ -70,6 +96,51 @@ class _SlowUnpickleDataset(Dataset[int]):
 
 
 class PyTorchDataLoaderTest(unittest.TestCase):
+    def test_generic_keys_and_collation_in_spawned_workers(self) -> None:
+        """Custom keys and collated output types survive the worker boundary."""
+        loader: PyTorchDataLoader[tuple[str, ...]] = get_pytorch_dataloader(
+            _KeyedDataset(),
+            sampler=_KeySampler(),
+            batch_size=2,
+            collate_fn=_collate_strings,
+            multiprocessing_context="spawn",
+            timeout=30,
+            in_order=True,
+        )
+        self.addCleanup(loader._shmem.unlink)
+        self.addCleanup(loader._shmem.close)
+        self.assertEqual(list(loader), [("A", "B"), ("C",)])
+
+    def test_batched_dataset_fetch_in_spawned_workers(self) -> None:
+        """Batch fetching uses the dataset's optional getitems implementation."""
+        loader: PyTorchDataLoader[tuple[str, ...]] = get_pytorch_dataloader(
+            _BatchedKeyedDataset(),
+            sampler=_KeySampler(),
+            batch_size=2,
+            collate_fn=_collate_strings,
+            multiprocessing_context="spawn",
+            timeout=30,
+            in_order=True,
+        )
+        self.addCleanup(loader._shmem.unlink)
+        self.addCleanup(loader._shmem.close)
+        self.assertEqual(list(loader), [("batch:a", "batch:b"), ("batch:c",)])
+
+    def test_scalar_collation_in_spawned_workers(self) -> None:
+        """Disabling batching passes each sample to the conversion callback."""
+        loader: PyTorchDataLoader[str] = get_pytorch_dataloader(
+            _KeyedDataset(),
+            sampler=_KeySampler(),
+            batch_size=None,
+            collate_fn=_convert_string,
+            multiprocessing_context="spawn",
+            timeout=30,
+            in_order=True,
+        )
+        self.addCleanup(loader._shmem.unlink)
+        self.addCleanup(loader._shmem.close)
+        self.assertEqual(list(loader), ["item:A", "item:B", "item:C"])
+
     def test_serialize_dataset_with_larger_shared_memory_block(self) -> None:
         """The dataset is serialized when the block is larger than requested."""
         dataset = _RangeDataset(3)
@@ -100,13 +171,15 @@ class PyTorchDataLoaderTest(unittest.TestCase):
         dataset = _SlowUnpickleDataset(None, None, None, size=3)
         sampler = _EmptySampler()
 
-        loader = get_pytorch_dataloader(
+        loader: PyTorchDataLoader[object] = get_pytorch_dataloader(
             dataset,
             batch_size=1,
             sampler=sampler,
             num_workers=0,
         )
 
+        self.addCleanup(loader._shmem.unlink)
+        self.addCleanup(loader._shmem.close)
         self.assertEqual(list(loader), [])
 
     def test_rejects_nonpositive_worker_init_concurrency(self) -> None:
@@ -127,7 +200,7 @@ class PyTorchDataLoaderTest(unittest.TestCase):
             lock = manager.Lock()
             process_ids = manager.list()
             dataset = _SlowUnpickleDataset(state, lock, process_ids)
-            loader = get_pytorch_dataloader(
+            loader: PyTorchDataLoader[object] = get_pytorch_dataloader(
                 dataset,
                 batch_size=1,
                 num_workers=4,
@@ -136,6 +209,8 @@ class PyTorchDataLoaderTest(unittest.TestCase):
                 worker_init_concurrency=2,
             )
 
+            self.addCleanup(loader._shmem.unlink)
+            self.addCleanup(loader._shmem.close)
             self.assertEqual(len(list(loader)), len(dataset))
             self.assertEqual(len(set(process_ids)), 4)
             self.assertLessEqual(state["peak"], 2)

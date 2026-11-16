@@ -15,10 +15,10 @@ import time
 import warnings
 from collections.abc import Callable, Iterable, Iterator
 from concurrent.futures import ProcessPoolExecutor
-from contextlib import nullcontext
+from contextlib import AbstractContextManager, nullcontext
 from multiprocessing.shared_memory import SharedMemory
 from types import ModuleType
-from typing import Any, cast, Sized, TYPE_CHECKING, TypeVar
+from typing import cast, Protocol, Sized, TYPE_CHECKING, TypeVar
 
 from spdl._internal import import_utils, log_api_usage_once
 from spdl.pipeline import Pipeline, PipelineBuilder
@@ -41,42 +41,51 @@ _LG: logging.Logger = logging.getLogger(__name__)
 # ProcessExecutor
 ################################################################################
 
-_DATASET: "torch.utils.data.dataset.Dataset[T]" = None  # pyre-ignore: [15]
-_COLLATE_FN: Callable = None  # pyre-ignore: [15]
+
+class _DatasetProtocol(Protocol):
+    def __getitem__(self, index: object, /) -> object: ...
 
 
-# pyrefly: ignore [invalid-annotation]
-def _get_item(index: K) -> ...:
-    global _DATASET, _COLLATE_FN
+class _BatchedDatasetProtocol(Protocol):
+    def __getitems__(self, indices: list[object], /) -> list[object]: ...
+
+
+_DATASET: _DatasetProtocol | None = None
+_COLLATE_FN: Callable[[object], object] | None = None
+
+
+def _get_item(index: object) -> object:
+    assert _DATASET is not None and _COLLATE_FN is not None
     return _COLLATE_FN(_DATASET[index])
 
 
-# pyrefly: ignore [invalid-annotation]
-def _get_items(indices: list[K]) -> ...:
-    global _DATASET, _COLLATE_FN
+def _get_items(indices: list[object]) -> object:
+    assert _DATASET is not None and _COLLATE_FN is not None
     if hasattr(_DATASET, "__getitems__"):
-        return _COLLATE_FN(_DATASET.__getitems__(indices))  # pyre-ignore: [16]
+        dataset = cast(_BatchedDatasetProtocol, _DATASET)
+        return _COLLATE_FN(dataset.__getitems__(indices))
     return _COLLATE_FN([_DATASET[index] for index in indices])
 
 
 def _init_dataset(
     name: str,
-    collate_fn: Callable,
-    worker_init_semaphore: Any | None,
+    collate_fn: Callable[[object], object],
+    worker_init_semaphore: AbstractContextManager[object] | None,
 ) -> None:
     _LG.info("[%s] Initializing dataset.", os.getpid())
     shmem = SharedMemory(name=name)
     global _DATASET, _COLLATE_FN
     ctx = nullcontext() if worker_init_semaphore is None else worker_init_semaphore
     with ctx:
-        # pyrefly: ignore [bad-argument-type]
-        _DATASET = pickle.loads(shmem.buf)
+        buffer = shmem.buf
+        assert buffer is not None
+        _DATASET = pickle.loads(buffer)
     _COLLATE_FN = collate_fn
 
 
 def _get_executor(
     name: str,
-    collate_fn: Callable[[list[T]], U],
+    collate_fn: Callable[[object], U],
     num_workers: int,
     mp_ctx: mp.context.BaseContext,
     worker_init_concurrency: int | None,
@@ -102,8 +111,9 @@ def _serialize_dataset(dataset: "torch.utils.data.dataset.Dataset[T]") -> Shared
     shmem = SharedMemory(create=True, size=len(data))
     # The block can be larger than requested (e.g. rounded up to the page size on
     # macOS), so write only the serialized bytes. pickle ignores the trailing bytes.
-    # pyrefly: ignore [unsupported-operation]
-    shmem.buf[: len(data)] = data
+    buffer = shmem.buf
+    assert buffer is not None
+    buffer[: len(data)] = data
     elapsed = time.monotonic() - t0
     _LG.info(
         "Written dataset into shared memory %s (%s MB) in %.2f seconds",
@@ -159,10 +169,10 @@ class PyTorchDataLoader(Iterable[V]):
         *,
         dataset: "torch.utils.data.dataset.Dataset[T]",
         shmem: SharedMemory,  # to keep the reference alive
-        sampler: "torch.utils.data.sampler.Sampler[K]",
-        fetch_fn: Callable[[K], U],
-        collate_fn: Callable[[list[U]], V],
-        transfer_fn: Callable[[V], V],
+        sampler: Iterable[K],
+        fetch_fn: Callable[[K], V],
+        collate_fn: Callable[[object], V],
+        transfer_fn: Callable[[V], V] | None,
         mp_ctx: mp.context.BaseContext,
         num_workers: int,
         timeout: float | None,
@@ -172,14 +182,10 @@ class PyTorchDataLoader(Iterable[V]):
     ) -> None:
         log_api_usage_once("spdl.dataloader.PyTorchDataLoader")
 
-        # pyrefly: ignore [invalid-type-var]
-        self.dataset = dataset  # For external access.
+        self.dataset: "torch.utils.data.dataset.Dataset[object]" = dataset
         self._shmem: SharedMemory = shmem
-        # pyrefly: ignore [invalid-type-var]
-        self._sampler = sampler
-        # pyrefly: ignore [invalid-type-var]
-        self._fetch_fn = fetch_fn
-        # pyrefly: ignore [invalid-type-var]
+        self._sampler: Iterable[object] = sampler
+        self._fetch_fn = cast(Callable[[object], V], fetch_fn)
         self._collate_fn = collate_fn
         self._transfer_fn = transfer_fn
         self._mp_ctx = mp_ctx
@@ -193,7 +199,7 @@ class PyTorchDataLoader(Iterable[V]):
         """Returns the number of samples/batches this data loader returns."""
         return len(cast(Sized, self._sampler))
 
-    def _get_pipeline(self) -> tuple[ProcessPoolExecutor, Pipeline]:
+    def _get_pipeline(self) -> tuple[ProcessPoolExecutor, Pipeline[V]]:
         executor = _get_executor(
             self._shmem.name,
             self._collate_fn,
@@ -202,7 +208,7 @@ class PyTorchDataLoader(Iterable[V]):
             self._worker_init_concurrency,
         )
         builder = (
-            PipelineBuilder()
+            PipelineBuilder[object, V]()
             .add_source(self._sampler)
             .pipe(
                 self._fetch_fn,
@@ -211,7 +217,7 @@ class PyTorchDataLoader(Iterable[V]):
                 concurrency=self._num_workers,
             )
         )
-        if self._transfer_fn:
+        if self._transfer_fn is not None:
             builder.pipe(
                 self._transfer_fn,
                 output_order=self._output_order,
@@ -254,10 +260,10 @@ def _resolve_sampler(
     shuffle: bool = False,
     sampler: "torch.utils.data.sampler.Sampler[K] | None" = None,
     batch_sampler: "torch.utils.data.sampler.Sampler[list[K]] | None" = None,
-    collate_fn: Callable[[list[T]], U] | None = None,
+    collate_fn: Callable[[list[T]], U] | Callable[[T], U] | None = None,
     drop_last: bool = False,
     generator: "torch.Generator | None" = None,
-) -> "tuple[torch.utils.data.sampler.Sampler[K], Callable[[K], U], Callable[[list[T]], U]]":
+) -> tuple[Iterable[object], Callable[[object], U], Callable[[object], U]]:
     from torch.utils.data.dataloader import default_collate, default_convert
     from torch.utils.data.sampler import BatchSampler
 
@@ -278,6 +284,8 @@ def _resolve_sampler(
     if batch_size is None and drop_last:
         raise ValueError("`drop_last` must be False when `batch_size` is None.")
 
+    _sampler: Iterable[object]
+    _fetch_fn: Callable[[object], object] | Callable[[list[object]], object]
     if batch_sampler is not None:
         _sampler = batch_sampler
         _fetch_fn = _get_items
@@ -286,7 +294,7 @@ def _resolve_sampler(
         # PyTorch's BatchSampler stub hard-codes integer indices even though a
         # custom Sampler can yield the generic dataset key type K.
         batch_sampler_input = cast(
-            Any,
+            Iterable[int],
             sampler
             if sampler is not None
             else _get_sampler(dataset, shuffle, generator),
@@ -307,8 +315,11 @@ def _resolve_sampler(
         _fetch_fn = _get_item
         _collate_fn = collate_fn or default_convert
 
-    # pyrefly: ignore [bad-return]
-    return _sampler, _fetch_fn, _collate_fn
+    return (
+        _sampler,
+        cast(Callable[[object], U], _fetch_fn),
+        cast(Callable[[object], U], _collate_fn),
+    )
 
 
 ################################################################################
@@ -349,7 +360,7 @@ def get_pytorch_dataloader(
     sampler: "torch.utils.data.sampler.Sampler[K] | None" = None,
     batch_sampler: "torch.utils.data.sampler.Sampler[list[K]] | None" = None,
     num_workers: int = 1,
-    collate_fn: Callable[[list[T]], U] | None = None,
+    collate_fn: Callable[[list[T]], U] | Callable[[T], U] | None = None,
     pin_memory: bool = False,
     drop_last: bool = False,
     timeout: float | None = None,
@@ -457,7 +468,7 @@ def get_pytorch_dataloader(
             "then device pinned memory won't be used."
         )
 
-    transfer_fn = (
+    transfer_fn: Callable[[U], U] | None = (
         pin_memory_fn if pin_memory and torch.accelerator.is_available() else None
     )
 
@@ -473,10 +484,8 @@ def get_pytorch_dataloader(
         dataset=dataset,
         shmem=shmem,
         sampler=_sampler,
-        fetch_fn=_fetch_fn,  # pyre-ignore: [6]
-        # pyrefly: ignore [bad-argument-type]
+        fetch_fn=_fetch_fn,
         collate_fn=_collate_fn,
-        # pyrefly: ignore [bad-argument-type]
         transfer_fn=transfer_fn,
         mp_ctx=mp_ctx,
         num_workers=num_workers,

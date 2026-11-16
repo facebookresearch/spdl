@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     WAVHeader = _libspdl._wav.WAVHeader
 
 
-_Buffer: TypeAlias = "bytes | bytearray | memoryview[bytes]"
+_Buffer: TypeAlias = "bytes | bytearray | memoryview"
 
 
 def __dir__() -> list[str]:

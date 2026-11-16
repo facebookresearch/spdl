@@ -105,6 +105,8 @@ class NvDecDecoder:
        - :py:mod:`streaming_nvdec_decoding`: Tutorial for streaming video decode
     """
 
+    def _reset(self) -> None: ...
+
     def init_decoder(self, device_config: CUDAConfig, codec: spdl.io.lib._libspdl.VideoCodec, *, crop_left: int = 0, crop_top: int = 0, crop_right: int = 0, crop_bottom: int = 0, scale_width: int = -1, scale_height: int = -1) -> None:
         """
         Initialize the decoder.

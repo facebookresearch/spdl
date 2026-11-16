@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, cast, TypeVar
 
 from spdl.pipeline._common._misc import _get_env_bool
 from spdl.pipeline.defs import (
@@ -31,7 +31,7 @@ from spdl.pipeline.defs import (
 )
 
 from . import _build
-from ._components import StatsQueue
+from ._components import _AsyncQueueWithSyncMirror, StatsQueue
 from ._pipeline import Pipeline
 
 __all__ = [
@@ -96,6 +96,7 @@ def _build_pipeline_config(
     cfg: PipeConfig[T, U] | AggregateConfig[T] | DisaggregateConfig[T],
     concurrency: int,
 ) -> PipelineConfig[U]:
+    pipe: PipeConfig[T, U] | AggregateConfig[T] | DisaggregateConfig[T]
     match cfg:
         case PipeConfig() as cfg_:
             pipe = PipeConfig(
@@ -209,7 +210,7 @@ def _profile_pipe(
         concurrencies = [32, 16, 8, 4, 1]
 
     stats = []
-    outputs = []
+    outputs: list[U] = []
     for concurrency in concurrencies:
         cfg_ = _build_pipeline_config(inputs, pipe, concurrency)
         # Profiling consumes queue occupancy statistics, so it must not inherit a
@@ -224,7 +225,9 @@ def _profile_pipe(
             qps_, outputs = _run(pipeline)
 
         occupancy_rate = (
-            pipeline._impl._output_queue._get_lap_stats().occupancy_rate  # pyre-ignore[16]
+            cast(_AsyncQueueWithSyncMirror, pipeline._impl._output_queue)
+            ._get_lap_stats()
+            .occupancy_rate
         )
         _LG.info(" - Concurrency: %d", concurrency)
         _LG.info(" - QPS: %.2f", qps_)
@@ -261,7 +264,7 @@ def _profile_pipeline(
 ) -> tuple[list[U], list[ProfileResult]]:
     """Internal function that performs the actual profiling of pipeline stages."""
     _LG.info("Fetching %d inputs.", num_inputs)
-    results = []
+    results: list[ProfileResult] = []
     if isinstance(cfg.src, SourceConfig):
         inputs = _fetch_inputs(cfg.src, num_inputs)
     elif isinstance(cfg.src, MergeConfig):

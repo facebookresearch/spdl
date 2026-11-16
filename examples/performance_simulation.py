@@ -51,37 +51,47 @@ from collections.abc import Iterable
 from functools import partial
 from pathlib import Path
 from queue import Queue
-from typing import Any, TypeVar
+from typing import Any, TYPE_CHECKING, TypeVar
 
 from spdl.pipeline import Pipeline, PipelineBuilder, StageInfo
 
-try:
-    from examples.sqlite_stats_logger import (  # pyre-ignore[21]
+if TYPE_CHECKING:
+    from .performance_analysis import StatsQueueWithLogging, TaskStatsHookWithLogging
+    from .sqlite_stats_logger import (
         EventLogEntry,
         log_stats_summary,
         QueueStatsLogEntry,
         SQLiteStatsWriter,
         TaskStatsLogEntry,
     )
-except ImportError:
-    from spdl.examples.sqlite_stats_logger import (
-        EventLogEntry,
-        log_stats_summary,
-        QueueStatsLogEntry,
-        SQLiteStatsWriter,
-        TaskStatsLogEntry,
-    )
+else:
+    try:
+        from examples.sqlite_stats_logger import (  # pyre-ignore[21]
+            EventLogEntry,
+            log_stats_summary,
+            QueueStatsLogEntry,
+            SQLiteStatsWriter,
+            TaskStatsLogEntry,
+        )
+    except ImportError:
+        from spdl.examples.sqlite_stats_logger import (
+            EventLogEntry,
+            log_stats_summary,
+            QueueStatsLogEntry,
+            SQLiteStatsWriter,
+            TaskStatsLogEntry,
+        )
 
-try:
-    from examples.performance_analysis import (  # pyre-ignore[21]
-        StatsQueueWithLogging,
-        TaskStatsHookWithLogging,
-    )
-except ImportError:
-    from spdl.examples.performance_analysis import (
-        StatsQueueWithLogging,
-        TaskStatsHookWithLogging,
-    )
+    try:
+        from examples.performance_analysis import (  # pyre-ignore[21]
+            StatsQueueWithLogging,
+            TaskStatsHookWithLogging,
+        )
+    except ImportError:
+        from spdl.examples.performance_analysis import (
+            StatsQueueWithLogging,
+            TaskStatsHookWithLogging,
+        )
 
 
 __all__ = [

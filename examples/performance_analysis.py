@@ -137,22 +137,33 @@ from spdl.pipeline import (
     TaskStatsHook,
 )
 
-try:
-    from examples.sqlite_stats_logger import (  # pyre-ignore[21]
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .sqlite_stats_logger import (
         EventLogEntry,
         log_stats_summary,
         QueueStatsLogEntry,
         SQLiteStatsWriter,
         TaskStatsLogEntry,
     )
-except ImportError:
-    from spdl.examples.sqlite_stats_logger import (
-        EventLogEntry,
-        log_stats_summary,
-        QueueStatsLogEntry,
-        SQLiteStatsWriter,
-        TaskStatsLogEntry,
-    )
+else:
+    try:
+        from examples.sqlite_stats_logger import (  # pyre-ignore[21]
+            EventLogEntry,
+            log_stats_summary,
+            QueueStatsLogEntry,
+            SQLiteStatsWriter,
+            TaskStatsLogEntry,
+        )
+    except ImportError:
+        from spdl.examples.sqlite_stats_logger import (
+            EventLogEntry,
+            log_stats_summary,
+            QueueStatsLogEntry,
+            SQLiteStatsWriter,
+            TaskStatsLogEntry,
+        )
 
 
 __all__ = [

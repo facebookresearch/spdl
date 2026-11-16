@@ -90,6 +90,7 @@ class ArenaProcessLivenessTest(unittest.TestCase):
                 kernel.WaitForSingleObject.return_value = result
                 with (
                     patch.object(_sync.os, "name", "nt"),
+                    patch("sys.platform", "win32"),
                     patch.dict("sys.modules", {"_winapi": kernel}),
                     patch.object(_sync.os, "kill") as kill,
                 ):
@@ -109,6 +110,7 @@ class ArenaProcessLivenessTest(unittest.TestCase):
                 kernel.OpenProcess.side_effect = error
                 with (
                     patch.object(_sync.os, "name", "nt"),
+                    patch("sys.platform", "win32"),
                     patch.dict("sys.modules", {"_winapi": kernel}),
                 ):
                     self.assertEqual(_sync._process_exists(42), exists)
@@ -125,6 +127,7 @@ class ArenaProcessLivenessTest(unittest.TestCase):
                 getattr(kernel, operation).side_effect = OSError("unknown HANDLE state")
                 with (
                     patch.object(_sync.os, "name", "nt"),
+                    patch("sys.platform", "win32"),
                     patch.dict("sys.modules", {"_winapi": kernel}),
                 ):
                     self.assertTrue(_sync._process_exists(42))
@@ -135,6 +138,7 @@ class ArenaProcessLivenessTest(unittest.TestCase):
         kernel = Mock()
         with (
             patch.object(_sync.os, "name", "nt"),
+            patch("sys.platform", "win32"),
             patch.dict("sys.modules", {"_winapi": kernel}),
         ):
             self.assertTrue(_sync._process_exists(-1))

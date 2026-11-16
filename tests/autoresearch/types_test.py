@@ -13,7 +13,33 @@ from spdl.autoresearch.core import (
     FailurePhase,
     FailureRecord,
     HypothesisNode,
+    TaskSpec,
 )
+
+
+class TaskSpecTest(unittest.TestCase):
+    def test_priority_deserialization_preserves_float_conversion(self) -> None:
+        """Numeric values and numeric strings retain the existing priority conversion."""
+        cases: list[tuple[object, float]] = [
+            (3, 3.0),
+            (2.5, 2.5),
+            ("1.25", 1.25),
+            (b"4.5", 4.5),
+            (bytearray(b"6.5"), 6.5),
+        ]
+        for value, expected in cases:
+            with self.subTest(value=value):
+                spec = TaskSpec.from_dict({"id": "task", "priority": value})
+                self.assertEqual(spec.priority, expected)
+        self.assertEqual(TaskSpec.from_dict({"id": "task"}).priority, 0.0)
+
+    def test_priority_deserialization_rejects_invalid_values(self) -> None:
+        """The float conversion still rejects nonnumeric input instead of defaulting it."""
+        with self.assertRaises(ValueError):
+            TaskSpec.from_dict({"id": "task", "priority": "invalid"})
+        for value in [None, object()]:
+            with self.subTest(value=value), self.assertRaises(TypeError):
+                TaskSpec.from_dict({"id": "task", "priority": value})
 
 
 class FailureRecordTest(unittest.TestCase):

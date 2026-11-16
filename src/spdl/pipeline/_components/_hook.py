@@ -14,7 +14,10 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager, AsyncExitStack
 from dataclasses import dataclass
-from typing import Any, AsyncContextManager, TypeVar
+from typing import Any, AsyncContextManager, TYPE_CHECKING, TypeVar
+
+if TYPE_CHECKING:
+    from contextlib import _AsyncGeneratorContextManager
 
 from spdl.pipeline._common._misc import create_task
 
@@ -207,7 +210,7 @@ async def _enter_hook_contexts(
         yield
 
 
-def _stage_hooks(hooks: Sequence[TaskHook]) -> AsyncContextManager[None]:
+def _stage_hooks(hooks: Sequence[TaskHook]) -> _AsyncGeneratorContextManager[None]:
     raw: list[AsyncContextManager[None]] = [hook.stage_hook() for hook in hooks]
 
     if not all(hasattr(h, "__aenter__") and hasattr(h, "__aexit__") for h in raw):
@@ -226,7 +229,7 @@ def _stage_hooks(hooks: Sequence[TaskHook]) -> AsyncContextManager[None]:
 
 def _task_hooks(
     hooks: Sequence[TaskHook], input_item: Any = None
-) -> AsyncContextManager[None]:
+) -> _AsyncGeneratorContextManager[None]:
     hs: list[AsyncContextManager[None]] = [hook.task_hook(input_item) for hook in hooks]
 
     if not all(hasattr(h, "__aenter__") or hasattr(h, "__aexit__") for h in hs):

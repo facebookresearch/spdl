@@ -38,7 +38,7 @@ _MAX_RANDRANGE_BITS = 256
 def _ordered_iter(iterators: list[Iterator[T]], stop_after: float) -> Iterable[T]:
     num_items = 0
     while iterators:
-        remove = []
+        remove: list[int] = []
 
         for i, iterator in enumerate(iterators):
             try:

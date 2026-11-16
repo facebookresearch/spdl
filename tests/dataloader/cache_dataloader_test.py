@@ -82,6 +82,12 @@ class TestCacheIterator(unittest.TestCase):
 
 
 class TestCacheDataLoader(unittest.TestCase):
+    def test_unsized_source_keeps_length_error(self) -> None:
+        """Length forwarding still rejects sources without a length protocol."""
+        loader = CacheDataLoader(iter(range(3)), 1, 1, stop_after=3)
+        with self.assertRaises(TypeError):
+            len(loader)
+
     def test_CacheDataLoader(self) -> None:
         """Smoke test"""
 

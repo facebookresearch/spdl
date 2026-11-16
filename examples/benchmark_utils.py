@@ -47,13 +47,13 @@ from concurrent.futures import (
     ProcessPoolExecutor,
     ThreadPoolExecutor,
 )
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, Field
 from datetime import datetime, timezone
 from enum import Enum
 from functools import partial
 from sys import version_info
 from types import TracebackType
-from typing import Any, Generic, TypeVar
+from typing import Any, cast, ClassVar, Generic, Protocol, TypeVar
 
 import numpy as np
 import psutil
@@ -63,10 +63,15 @@ T = TypeVar("T")
 ConfigT = TypeVar("ConfigT")
 
 
+class _DataclassProtocol(Protocol):
+    __dataclass_fields__: ClassVar[dict[str, Field[Any]]]
+
+
 def _is_free_threaded() -> bool:
     """Check if Python is running with free-threaded ABI."""
     try:
-        return not sys._is_gil_enabled()  # pyre-ignore[16]
+        is_gil_enabled = getattr(sys, "_is_gil_enabled", None)
+        return not is_gil_enabled() if callable(is_gil_enabled) else False
     except AttributeError:
         return False
 
@@ -151,9 +156,11 @@ def _create_executor(executor_type: ExecutorType, max_workers: int) -> Executor:
         case ExecutorType.PROCESS:
             return ProcessPoolExecutor(max_workers=max_workers)
         case ExecutorType.INTERPRETER:
-            from concurrent.futures import InterpreterPoolExecutor  # pyre-ignore[21]
+            if sys.version_info >= (3, 14):
+                from concurrent.futures import InterpreterPoolExecutor
 
-            return InterpreterPoolExecutor(max_workers=max_workers)
+                return InterpreterPoolExecutor(max_workers=max_workers)
+            raise ImportError("InterpreterPoolExecutor requires Python 3.14+")
         case _:
             raise ValueError(f"Unsupported executor type: {executor_type}")
 
@@ -435,7 +442,7 @@ def load_results_from_csv(
     """
     if not hasattr(config_type, "__dataclass_fields__"):
         raise ValueError(f"config_type must be a dataclass, got {config_type}")
-    fields: dict[str, Any] = config_type.__dataclass_fields__  # pyre-ignore[16]
+    fields = cast(_DataclassProtocol, config_type).__dataclass_fields__
 
     # Normalize input path and resolve symbolic links
     input_file = os.path.realpath(input_file)
@@ -478,7 +485,7 @@ def load_results_from_csv(
                     config_dict[key] = value
 
             # Convert string values to appropriate types for config
-            typed_config_dict = {}
+            typed_config_dict: dict[str, str | int | float | bool] = {}
             for field_name, field_info in fields.items():
                 if field_name not in config_dict:
                     continue

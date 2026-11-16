@@ -118,6 +118,7 @@ class H2DLifecycleTest(unittest.TestCase):
         transfer = module._get_transfer_func(0)
         pending = transfer._pending
         self.assertIsNotNone(pending)
+        assert pending is not None
         self.assertEqual(len(pending.sources), 1)
         self.assertEqual(len(pending.destinations), 1)
         destination_ref = weakref.ref(next(iter(pending.destinations)))

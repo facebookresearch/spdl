@@ -158,22 +158,34 @@ import soundfile as sf
 import spdl.io
 from numpy.typing import NDArray
 
-try:
-    from examples.benchmark_utils import (  # pyre-ignore[21]
+from functools import partial
+from typing import cast, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .benchmark_utils import (
         BenchmarkResult,
         BenchmarkRunner,
         ExecutorType,
         get_default_result_path,
         save_results_to_csv,
     )
-except ImportError:
-    from spdl.examples.benchmark_utils import (
-        BenchmarkResult,
-        BenchmarkRunner,
-        ExecutorType,
-        get_default_result_path,
-        save_results_to_csv,
-    )
+else:
+    try:
+        from examples.benchmark_utils import (  # pyre-ignore[21]
+            BenchmarkResult,
+            BenchmarkRunner,
+            ExecutorType,
+            get_default_result_path,
+            save_results_to_csv,
+        )
+    except ImportError:
+        from spdl.examples.benchmark_utils import (
+            BenchmarkResult,
+            BenchmarkRunner,
+            ExecutorType,
+            get_default_result_path,
+            save_results_to_csv,
+        )
 
 
 DEFAULT_RESULT_PATH: str = get_default_result_path(__file__)
@@ -245,7 +257,10 @@ def create_wav_data(
     t = np.linspace(0, duration_seconds, num_samples)
     frequencies = np.asarray(440.0 + np.arange(num_channels) * 110.0)
     sine_waves = np.sin(2 * np.pi * frequencies[:, np.newaxis] * t)
-    samples = (sine_waves.T * max_amplitude).astype(dtype)
+    samples = cast(
+        np.ndarray[tuple[int, int], np.dtype[np.int16 | np.int32]],
+        (sine_waves.T * max_amplitude).astype(dtype),
+    )
 
     wav_buffer = io.BytesIO()
     scipy.io.wavfile.write(wav_buffer, sample_rate, samples)
@@ -388,7 +403,7 @@ def main() -> None:
 
                     result, output = runner.run(
                         config,
-                        lambda fn=function, data=wav_data: fn(data),
+                        partial(function, wav_data),
                         config.iterations,
                         num_runs=config.num_runs,
                     )

@@ -17,11 +17,11 @@ from numpy.typing import DTypeLike, NDArray
 FFMPEG_CLI: str = "ffmpeg"
 
 try:
-    from . import fb
+    from .fb import FFMPEG_CLI as _FB_FFMPEG_CLI
 except ImportError:
     pass
 else:
-    FFMPEG_CLI = fb.FFMPEG_CLI
+    FFMPEG_CLI = _FB_FFMPEG_CLI
 
 
 __all__ = [

@@ -17,6 +17,7 @@ import inspect
 import sys
 from collections.abc import (
     AsyncGenerator,
+    AsyncIterable,
     AsyncIterator,
     Awaitable,
     Callable,
@@ -25,7 +26,7 @@ from collections.abc import (
 )
 from contextlib import asynccontextmanager
 from fractions import Fraction
-from typing import Any, NoReturn, TypeVar
+from typing import Any, cast, NoReturn, TypeVar
 
 from spdl.pipeline._common._convert import convert_to_async
 from spdl.pipeline._common._misc import create_task
@@ -400,25 +401,30 @@ def _pipe(
     if input_queue is output_queue:
         raise ValueError("input queue and output queue must be different.")
 
-    afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
-        # pyrefly: ignore [bad-assignment]
-        convert_to_async(args.op, args.executor)
-    )
+    afunc = convert_to_async(args.op, args.executor)
 
     hooks: list[TaskHook] = [*task_hooks, fail_counter]
 
     if inspect.iscoroutinefunction(afunc):
 
-        def _wrap(coro: Awaitable[U], item: Any = None) -> Coroutine:
+        def _wrap(coro: Awaitable[U] | AsyncIterable[U], item: Any = None) -> Coroutine:
             return _wrap_afunc(
-                coro, hooks, output_queue, item, fail_counter=fail_counter
+                cast(Awaitable[U], coro),
+                hooks,
+                output_queue,
+                item,
+                fail_counter=fail_counter,
             )
 
     elif inspect.isasyncgenfunction(afunc):
 
-        def _wrap(coro: AsyncIterator[U], item: Any = None) -> Coroutine:
+        def _wrap(coro: Awaitable[U] | AsyncIterable[U], item: Any = None) -> Coroutine:
             return _wrap_agen(
-                coro, hooks, output_queue, item, fail_counter=fail_counter
+                cast(AsyncIterator[U], coro),
+                hooks,
+                output_queue,
+                item,
+                fail_counter=fail_counter,
             )
 
     else:
@@ -557,10 +563,7 @@ def _ordered_pipe(
     # This has been checked in `PipelineBuilder.pipe()`
     assert not inspect.isasyncgenfunction(args.op)
 
-    afunc: Callable[[T], Awaitable[U]] = (  # pyre-ignore: [9]
-        # pyrefly: ignore [bad-assignment]
-        convert_to_async(args.op, args.executor)
-    )
+    afunc = cast(Callable[[T], Awaitable[U]], convert_to_async(args.op, args.executor))
 
     inter_queue: AsyncQueue = AsyncQueue(
         StageInfo(

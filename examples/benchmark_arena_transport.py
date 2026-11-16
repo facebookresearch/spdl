@@ -103,7 +103,7 @@ import time
 from collections.abc import Iterator
 from dataclasses import asdict, dataclass, fields
 from itertools import product
-from typing import Any
+from typing import Any, cast, Literal
 
 import numpy as np
 import spdl.io
@@ -114,6 +114,10 @@ from spdl.pipeline import (
     SharedMemoryRingBuffer,
     SharedMemorySegmentPool,
 )
+
+_IsolatedSuccess = tuple[Literal["ok"], list[float], float, float]
+_IsolatedFailure = tuple[Literal["err"], str, float, float]
+_IsolatedResult = _IsolatedSuccess | _IsolatedFailure
 
 _KINDS = ("bytes", "numpy", "torch", "packets")
 _TRANSPORTS = ("no-arena", "ring", "pool")
@@ -487,7 +491,7 @@ def _isolated_worker(
     buffer_size: int,
     runs: int,
     vb: bytes | None,
-    q: "mp.Queue[tuple[str, object, float, float]]",
+    q: "mp.Queue[_IsolatedResult]",
 ) -> None:
     """Run one config in this fresh process; report samples + CPU + peak RSS.
 
@@ -531,8 +535,12 @@ def _run_isolated(
     vb: bytes | None,
 ) -> tuple[list[float], float, float]:
     """Run ``_isolated_worker`` in a fresh process; return ``(samples, cpu, rss)``."""
-    q: "mp.Queue[tuple[str, object, float, float]]" = mp_ctx.Queue()
-    p = mp_ctx.Process(  # pyre-ignore[16]
+    q: "mp.Queue[_IsolatedResult]" = mp_ctx.Queue()
+    context = cast(
+        "mp.context.SpawnContext | mp.context.ForkContext | mp.context.ForkServerContext",
+        mp_ctx,
+    )
+    p = context.Process(
         target=_isolated_worker,
         args=(
             kind,
@@ -547,11 +555,11 @@ def _run_isolated(
         ),
     )
     p.start()
-    status, payload, cpu, rss = q.get()
+    result = q.get()
     p.join()
-    if status != "ok":
-        raise RuntimeError(str(payload))
-    return payload, cpu, rss  # pyre-ignore[7]
+    if result[0] != "ok":
+        raise RuntimeError(str(result[1]))
+    return result[1], result[2], result[3]
 
 
 def _run_config_isolated(

@@ -95,6 +95,6 @@ __all__ = [
 
 
 try:
-    from . import fb  # noqa: F401
+    from .fb import __name__ as _fb_name  # noqa: F401
 except ImportError:
     pass

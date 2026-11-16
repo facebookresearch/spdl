@@ -49,22 +49,34 @@ from dataclasses import dataclass
 
 import spdl.io
 
-try:
-    from examples.benchmark_utils import (  # pyre-ignore[21]
+from functools import partial
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .benchmark_utils import (
         BenchmarkResult,
         BenchmarkRunner,
         ExecutorType,
         get_default_result_path,
         save_results_to_csv,
     )
-except ImportError:
-    from spdl.examples.benchmark_utils import (
-        BenchmarkResult,
-        BenchmarkRunner,
-        ExecutorType,
-        get_default_result_path,
-        save_results_to_csv,
-    )
+else:
+    try:
+        from examples.benchmark_utils import (  # pyre-ignore[21]
+            BenchmarkResult,
+            BenchmarkRunner,
+            ExecutorType,
+            get_default_result_path,
+            save_results_to_csv,
+        )
+    except ImportError:
+        from spdl.examples.benchmark_utils import (
+            BenchmarkResult,
+            BenchmarkRunner,
+            ExecutorType,
+            get_default_result_path,
+            save_results_to_csv,
+        )
 
 
 DEFAULT_RESULT_PATH: str = get_default_result_path(__file__)
@@ -232,8 +244,7 @@ def main() -> None:
 
                     result, output = runner.run(
                         config,
-                        lambda data=video_data,
-                        threads=decoder_threads: load_video_with_config(data, threads),
+                        partial(load_video_with_config, video_data, decoder_threads),
                         config.iterations,
                         num_runs=config.num_runs,
                     )

@@ -21,9 +21,13 @@ import threading
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import ExitStack
 from dataclasses import dataclass, field
+from multiprocessing.process import BaseProcess
 from multiprocessing.util import Finalize
 from types import TracebackType
-from typing import Any, cast, Generic, TypeVar
+from typing import Any, cast, Generic, TYPE_CHECKING, TypeVar
+
+if TYPE_CHECKING:
+    from multiprocessing.queues import Queue as _MultiprocessingQueue
 
 from spdl.pipeline._arena import _Arena, ArenaProtocol
 from spdl.pipeline._iter_utils._common import (
@@ -45,7 +49,7 @@ _LG: logging.Logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-def _join(process: mp.Process) -> None:
+def _join(process: BaseProcess) -> None:
     process.join(3)
 
     if process.exitcode is None:
@@ -166,17 +170,17 @@ class _IPCResourceCleanup:
 
 @dataclass
 class _ipc(Generic[T]):
-    process: mp.Process
-    cmd_q: queue.Queue[_Cmd] | None
-    data_q: queue.Queue[_Msg[T]] | None
+    process: BaseProcess
+    cmd_q: _MultiprocessingQueue[_Cmd] | None
+    data_q: _MultiprocessingQueue[_Msg[T]] | None
     timeout: float
     arena: ArenaProtocol | None = None
     closed: threading.Event = field(default_factory=threading.Event)
 
     def _prepare_process_for_shutdown(
         self,
-        cmd_q: queue.Queue[_Cmd],
-        data_q: queue.Queue[_Msg[T]],
+        cmd_q: _MultiprocessingQueue[_Cmd],
+        data_q: _MultiprocessingQueue[_Msg[T]],
         arena: ArenaProtocol | None,
         *,
         force: bool,
@@ -246,7 +250,7 @@ class _ipc(Generic[T]):
 
 
 def _iterate_results_until_closed(
-    interface: _ipc[T], data_q: queue.Queue[_Msg[T]]
+    interface: _ipc[T], data_q: _MultiprocessingQueue[_Msg[T]]
 ) -> Iterable[T]:
     """Iterate results until teardown requests cancellation."""
     try:
@@ -414,11 +418,11 @@ def iterate_in_subprocess(
 
     ctx = mp.get_context(mp_context)
     # pyrefly: ignore [bad-assignment]
-    cmd_q: queue.Queue[_Cmd] = ctx.Queue()
+    cmd_q: _MultiprocessingQueue[_Cmd] = ctx.Queue()
     # pyrefly: ignore [bad-assignment]
-    data_q: queue.Queue[_Msg[T]] = ctx.Queue(maxsize=buffer_size)
-    # pyrefly: ignore [missing-attribute]
-    process = ctx.Process(
+    data_q: _MultiprocessingQueue[_Msg[T]] = ctx.Queue(maxsize=buffer_size)
+    process_factory = cast(type[BaseProcess], getattr(ctx, "Process"))  # noqa: B009
+    process = process_factory(
         target=_execute_iterable,
         args=(cmd_q, data_q, fn, initializers, arena),
         daemon=daemon,

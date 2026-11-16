@@ -87,6 +87,7 @@ class TestFractionalTimestamp(unittest.TestCase):
         self.assertGreater(len(packets), 0)
         # Verify timestamp attribute is stored as doubles
         self.assertIsNotNone(packets.timestamp)
+        assert packets.timestamp is not None
         start, end = packets.timestamp
         self.assertAlmostEqual(start, 1.0 / 3.0, places=5)
         self.assertAlmostEqual(end, 10.0 / 3.0, places=5)
@@ -109,6 +110,7 @@ class TestFractionalTimestamp(unittest.TestCase):
         self.assertGreater(len(packets), 0)
         # Verify timestamp is converted to doubles
         self.assertIsNotNone(packets.timestamp)
+        assert packets.timestamp is not None
         start, end = packets.timestamp
         self.assertAlmostEqual(start, 0.5, places=5)
         self.assertAlmostEqual(end, 2.5, places=5)
@@ -146,6 +148,7 @@ class TestFractionalTimestamp(unittest.TestCase):
         self.assertGreater(len(packets), 0)
         # Verify timestamp attribute is stored as doubles
         self.assertIsNotNone(packets.timestamp)
+        assert packets.timestamp is not None
         start, end = packets.timestamp
         self.assertAlmostEqual(start, 0.5, places=5)
         self.assertAlmostEqual(end, 2.5, places=5)
@@ -164,6 +167,7 @@ class TestFractionalTimestamp(unittest.TestCase):
         self.assertIsNotNone(packets)
         self.assertGreater(len(packets), 0)
         self.assertIsNotNone(packets.timestamp)
+        assert packets.timestamp is not None
         start, end = packets.timestamp
         self.assertAlmostEqual(start, 1.0 / 3.0, places=5)
         self.assertAlmostEqual(end, 2.0 / 3.0, places=5)
@@ -186,6 +190,7 @@ class TestFractionalTimestamp(unittest.TestCase):
         self.assertIsNotNone(packets)
         self.assertGreater(len(packets), 0)
         self.assertIsNotNone(packets.timestamp)
+        assert packets.timestamp is not None
         start, end = packets.timestamp
         self.assertAlmostEqual(start, 0.25, places=5)
         self.assertAlmostEqual(end, 0.75, places=5)
@@ -205,6 +210,7 @@ class TestFractionalTimestamp(unittest.TestCase):
         self.assertIsNotNone(packets)
         self.assertGreater(len(packets), 0)
         self.assertIsNotNone(packets.timestamp)
+        assert packets.timestamp is not None
         start, end = packets.timestamp
         self.assertAlmostEqual(start, 0.2, places=5)
         self.assertAlmostEqual(end, 0.8, places=5)
@@ -269,6 +275,7 @@ class TestDemuxerNameParameter(unittest.TestCase):
         )
         sample = get_sample(cmd)
 
+        src: str | bytes
         if use_bytes:
             with open(sample.path, "rb") as f:
                 src = f.read()
@@ -294,6 +301,7 @@ class TestDemuxerNameParameter(unittest.TestCase):
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i sine=frequency=1000:duration=1 sample.wav"
         sample = get_sample(cmd)
 
+        src: str | bytes
         if use_bytes:
             with open(sample.path, "rb") as f:
                 src = f.read()
@@ -315,6 +323,7 @@ class TestDemuxerNameParameter(unittest.TestCase):
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 5 sample.mp4"
         sample = get_sample(cmd)
 
+        src: str | bytes
         if use_bytes:
             with open(sample.path, "rb") as f:
                 src = f.read()
@@ -336,6 +345,7 @@ class TestDemuxerNameParameter(unittest.TestCase):
         cmd = f"{FFMPEG_CLI} -hide_banner -y -f lavfi -i testsrc -frames:v 1 sample.jpg"
         sample = get_sample(cmd)
 
+        src: str | bytes
         if use_bytes:
             with open(sample.path, "rb") as f:
                 src = f.read()

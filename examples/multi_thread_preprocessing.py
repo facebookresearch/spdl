@@ -226,13 +226,13 @@ def exp_spdl(
     if normalize:
         transform = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
-        def normalize(item):
+        def normalize_item(item):
             tensor, cls = item
             tensor = tensor.float() / 255
             tensor = transform(tensor)
             return tensor, cls
 
-        builder = builder.pipe(normalize)
+        builder = builder.pipe(normalize_item)
 
     if transfer:
         builder = builder.pipe(lambda item: (item[0].cuda(), item[1]))

@@ -18,7 +18,6 @@ Usage:
 import argparse
 import json
 import logging
-import sys
 import urllib.request
 from pathlib import Path
 
@@ -69,4 +68,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

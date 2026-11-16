@@ -13,6 +13,7 @@
 
 
 """TAR file iterator for Python"""
+from typing import Protocol
 
 from collections.abc import Iterator
 from typing import overload
@@ -35,7 +36,11 @@ class InMemoryTarParser:
 def parse_tar(arg: memoryview, /) -> InMemoryTarParser: ...
 
 @overload
-def parse_tar(arg: object, /) -> FileObjectTarParser: ...
+def parse_tar(arg: _BinaryReaderProtocol, /) -> FileObjectTarParser: ...
 
 class FileObjectTarParser:
     def __iter__(self) -> Iterator[tuple]: ...
+
+
+class _BinaryReaderProtocol(Protocol):
+    def read(self, size: int, /) -> bytes: ...

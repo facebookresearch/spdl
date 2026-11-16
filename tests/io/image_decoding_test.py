@@ -12,6 +12,7 @@ import numpy as np
 import spdl.io
 import spdl.io.utils
 from spdl.io import get_video_filter_desc
+from spdl.io.lib import _libspdl
 from spdl.io.utils import get_ffmpeg_versions
 
 from ..fixture import FFMPEG_CLI, get_sample, get_samples, load_ref_data, load_ref_image
@@ -34,6 +35,29 @@ def _assert_all_le(x, val) -> None:
 
 
 class TestDecodeImage(unittest.TestCase):
+    def test_private_image_decoder_factory_matches_one_shot(self) -> None:
+        """The private image factory returns a usable decoder with matching frames."""
+        sample = get_sample(
+            f"{FFMPEG_CLI} -hide_banner -y -f lavfi "
+            "-i testsrc=size=16x12 -frames:v 1 sample.png"
+        )
+        packets = spdl.io.demux_image(sample.path)
+        codec = packets.codec
+        assert codec is not None
+        decoder = _libspdl.make_decoder(codec, filter_desc=None)
+        self.assertEqual(type(decoder).__name__, "ImageDecoder")
+
+        reference = spdl.io.decode_packets(
+            spdl.io.demux_image(sample.path), filter_desc=None
+        )
+        frames = decoder.decode_packets(packets)
+        self.assertIsInstance(frames, spdl.io.ImageFrames)
+        self.assertEqual((frames.width, frames.height), (16, 12))
+        self.assertEqual(frames.pix_fmt, reference.pix_fmt)
+        actual = spdl.io.to_numpy(spdl.io.convert_frames(frames))
+        expected = spdl.io.to_numpy(spdl.io.convert_frames(reference))
+        np.testing.assert_array_equal(actual, expected, strict=True)
+
     def test_decode_image_gray16_native(self) -> None:
         """Can decode gray16 PNG image (16be) as-is"""
         # fmt: off
@@ -229,7 +253,7 @@ class TestDecodeImage(unittest.TestCase):
 
         shape = (1, h + h // 2, w)
         # fmt: off
-        cmd = [
+        ref_cmd = [
             f"{FFMPEG_CLI}", "-hide_banner",
             "-f", "rawvideo",
             "-pixel_format", "nv12",
@@ -238,7 +262,7 @@ class TestDecodeImage(unittest.TestCase):
             "-f", "rawvideo", "pipe:"
         ]
         # fmt: on
-        ref = load_ref_data(cmd, shape)
+        ref = load_ref_data(ref_cmd, shape)
 
         # from PIL import Image
         # Image.fromarray(hyp[0]).save("hyp.png")
@@ -273,7 +297,7 @@ class TestDecodeImage(unittest.TestCase):
 
         shape = (h, w, 3)
         # fmt: off
-        cmd = [
+        ref_cmd = [
             f"{FFMPEG_CLI}", "-hide_banner",
             "-f", "rawvideo",
             "-pixel_format", "nv12",
@@ -284,7 +308,7 @@ class TestDecodeImage(unittest.TestCase):
             "pipe:"
         ]
         # fmt: on
-        ref = load_ref_data(cmd, shape)
+        ref = load_ref_data(ref_cmd, shape)
 
         # from PIL import Image
         # Image.fromarray(hyp[0]).save("hyp.png")

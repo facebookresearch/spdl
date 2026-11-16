@@ -174,7 +174,7 @@ class TestNvjpegDecode(unittest.TestCase):
 
     def test_rejects_partially_specified_resize_dimensions(self) -> None:
         """Resize dimensions must be provided together when either is set."""
-        sources = {
+        sources: dict[str, bytes | list[bytes]] = {
             "single": b"invalid JPEG data",
             "batch": [b"invalid JPEG data"],
         }

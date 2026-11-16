@@ -223,6 +223,8 @@ class VideoPackets:
             A clone of the packets.
         """
 
+def _extract_packets_at_indices(packets: VideoPackets, indices: Sequence[int], h264_idr_split: bool = True) -> list[tuple[VideoPackets, list[int]]]: ...
+
 class ImagePackets:
     """
     Packets object contain an image frame.
@@ -689,8 +691,10 @@ class Demuxer:
 
     def streaming_demux(self, indices: Set[int], *, num_packets: int, duration: float) -> PacketsIterator: ...
 
+    def _drop(self) -> None: ...
+
 @overload
-def make_demuxer(src: str, *, demux_config: DemuxConfig | None = None, _adaptor: "spdl::core::SourceAdaptor" | None = None, name: str | None = None) -> Demuxer: ...
+def make_demuxer(src: str, *, demux_config: DemuxConfig | None = None, _adaptor: object | None = None, name: str | None = None) -> Demuxer: ...
 
 @overload
 def make_demuxer(src: memoryview, *, demux_config: DemuxConfig | None = None, name: str | None = None) -> Demuxer: ...
@@ -722,6 +726,12 @@ class VideoDecoder:
     def flush(self) -> VideoFramesIterator:
         """Flush the decoder and yield remaining frames"""
 
+class ImageDecoder:
+    """Decode image packets using the one-shot decoder."""
+
+    def decode_packets(self, packets: ImagePackets, *, num_frames: int = -1) -> ImageFrames:
+        """Decode image packets and flush the decoder into image frames."""
+
 @overload
 def make_decoder(codec: AudioCodec, *, decode_config: DecodeConfig | None = None, filter_desc: str | None = None) -> AudioDecoder: ...
 
@@ -729,7 +739,7 @@ def make_decoder(codec: AudioCodec, *, decode_config: DecodeConfig | None = None
 def make_decoder(codec: VideoCodec, *, decode_config: DecodeConfig | None = None, filter_desc: str | None = None) -> VideoDecoder: ...
 
 @overload
-def make_decoder(codec: ImageCodec, *, decode_config: DecodeConfig | None = None, filter_desc: str | None = None) -> "spdl::core::Decoder<(spdl::core::MediaType)2>": ...
+def make_decoder(codec: ImageCodec, *, decode_config: DecodeConfig | None = None, filter_desc: str | None = None) -> ImageDecoder: ...
 
 class AudioFramesIterator:
     def __iter__(self) -> AudioFramesIterator: ...

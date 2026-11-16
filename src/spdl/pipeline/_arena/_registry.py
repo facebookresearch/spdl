@@ -35,7 +35,7 @@ objects never trigger the import.
 from __future__ import annotations
 
 from types import ModuleType
-from typing import Any, Protocol
+from typing import Any, cast, Protocol
 
 from spdl._internal.import_utils import lazy_import
 
@@ -84,7 +84,7 @@ class _OffloadHandlerProtocol(Protocol):
 
     def get_buffer(
         self, obj: object
-    ) -> tuple["bytes | bytearray | memoryview[bytes]", tuple[object, ...]]:
+    ) -> tuple["bytes | bytearray | memoryview", tuple[object, ...]]:
         """Expose ``obj``'s payload as one source buffer plus rebuild metadata.
 
         Should not copy: return a flat, contiguous view over the object's own
@@ -105,7 +105,7 @@ class _OffloadHandlerProtocol(Protocol):
         ...
 
     def from_buffer(
-        self, buf: "memoryview[bytes]", meta: tuple[object, ...], zero_copy: bool
+        self, buf: "memoryview", meta: tuple[object, ...], zero_copy: bool
     ) -> tuple[object, object | None]:
         """Reconstruct the object from its payload bytes in the arena.
 
@@ -159,19 +159,17 @@ class _BytesHandler:
 
     def get_buffer(
         self, obj: object
-    ) -> tuple["bytes | bytearray | memoryview[bytes]", tuple[object, ...]]:
+    ) -> tuple["bytes | bytearray | memoryview[int]", tuple[object, ...]]:
         # Expose the input's bytes as a flat, contiguous byte view — no copy for
         # the common contiguous case (write_binary performs the single copy into
         # shared memory); a non-contiguous memoryview is flattened into a copy.
         # meta carries the original type so the ring backend can reconstruct it.
-        # pyrefly: ignore [bad-argument-type]
-        mv = memoryview(obj)
+        mv = memoryview(cast("bytes | bytearray | memoryview", obj))
         src = mv.cast("B") if mv.contiguous else memoryview(mv.tobytes())
-        # pyrefly: ignore [bad-return]
         return src, (type(obj),)
 
     def from_buffer(
-        self, buf: "memoryview[bytes]", meta: tuple[object, ...], zero_copy: bool
+        self, buf: "memoryview", meta: tuple[object, ...], zero_copy: bool
     ) -> tuple[object, object | None]:
         if zero_copy:
             # Segment pool: defer the copy — hand back a zero-copy memoryview into
@@ -206,15 +204,14 @@ class _NumpyHandler:
 
     def get_buffer(
         self, obj: object
-    ) -> tuple["bytes | bytearray | memoryview[bytes]", tuple[object, ...]]:
+    ) -> tuple["bytes | bytearray | memoryview[int]", tuple[object, ...]]:
         arr: Any = np.ascontiguousarray(obj)
         # memoryview over the array's own buffer — no copy (the single copy into
         # shared memory happens in the arena's write_binary).
-        # pyrefly: ignore [bad-return]
         return memoryview(arr).cast("B"), (arr.dtype.str, tuple(arr.shape))
 
     def from_buffer(
-        self, buf: "memoryview[bytes]", meta: tuple[object, ...], zero_copy: bool
+        self, buf: "memoryview", meta: tuple[object, ...], zero_copy: bool
     ) -> tuple[object, object | None]:
         dtype_str, shape = meta
         arr: Any = np.frombuffer(buf, dtype=np.dtype(dtype_str))
@@ -236,15 +233,14 @@ class _TorchHandler:
 
     def get_buffer(
         self, obj: object
-    ) -> tuple["bytes | bytearray | memoryview[bytes]", tuple[object, ...]]:
+    ) -> tuple["bytes | bytearray | memoryview[int]", tuple[object, ...]]:
         t: Any = obj.detach().contiguous().cpu()  # type: ignore[attr-defined]
         # t.numpy() shares the tensor's storage (no copy for a contiguous CPU
         # tensor); memoryview over it stays a view.
-        # pyrefly: ignore [bad-return]
         return memoryview(t.numpy()).cast("B"), (str(t.dtype), tuple(t.shape))
 
     def from_buffer(
-        self, buf: "memoryview[bytes]", meta: tuple[object, ...], zero_copy: bool
+        self, buf: "memoryview", meta: tuple[object, ...], zero_copy: bool
     ) -> tuple[object, object | None]:
         dtype_str, shape = meta
         dtype = getattr(torch, str(dtype_str).split(".")[-1])
@@ -307,7 +303,7 @@ class _PacketsHandler:
             return False
         if not hasattr(cls, "deserialize_view"):
             return False
-        data: bytes = obj.__getstate__()  # type: ignore[attr-defined]
+        data = cast(bytes, obj.__getstate__())
         if len(data) < threshold:
             # Below the offload threshold: leave it inline and do NOT cache —
             # get_buffer will not run, so caching would only pin these bytes
@@ -319,22 +315,21 @@ class _PacketsHandler:
 
     def get_buffer(
         self, obj: object
-    ) -> tuple["bytes | bytearray | memoryview[bytes]", tuple[object, ...]]:
+    ) -> tuple["bytes | bytearray | memoryview[int]", tuple[object, ...]]:
         if self._cache is not None and self._cache[0] == id(obj):
             data = self._cache[1]
         else:
             # Defensive: matches always runs first and caches, but re-serialize
             # rather than rely on it (the bytes own their memory either way).
-            data = obj.__getstate__()  # type: ignore[attr-defined]
+            data = cast(bytes, obj.__getstate__())
         self._cache = None
         # memoryview over the bytes — no copy; write_binary performs the single
         # copy into shared memory. meta carries the class so restore can call
         # its ``deserialize_view`` (pickled by reference in the marker).
-        # pyrefly: ignore [bad-argument-type, bad-return]
         return memoryview(data), (type(obj),)
 
     def from_buffer(
-        self, buf: "memoryview[bytes]", meta: tuple[object, ...], zero_copy: bool
+        self, buf: "memoryview", meta: tuple[object, ...], zero_copy: bool
     ) -> tuple[object, object | None]:
         (cls,) = meta
         if zero_copy:

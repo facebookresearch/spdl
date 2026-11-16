@@ -46,10 +46,24 @@ import sys
 import weakref
 from collections import OrderedDict
 from collections.abc import Callable, Iterator, Sequence
-from typing import Any, NoReturn, overload, ParamSpec, TypeGuard, TypeVar
+from typing import (
+    Any,
+    cast,
+    NoReturn,
+    overload,
+    ParamSpec,
+    TYPE_CHECKING,
+    TypeGuard,
+    TypeVar,
+)
 
 from ._common import _resolve_src
 from .lib import _libspdl
+
+if TYPE_CHECKING:
+    from collections.abc import Buffer
+
+    _Frames = _libspdl.AudioFrames | _libspdl.VideoFrames | _libspdl.ImageFrames
 
 try:
     from .fb import _is_fusion_disabled
@@ -602,7 +616,9 @@ class _Graph:
     ############################################################################
     def convert(self, frames: object, storage: object) -> _Symbol:
         batch = not isinstance(frames, _Symbol)
-        items = [frames] if isinstance(frames, _Symbol) else list(_as_sequence(frames))
+        items: list[object] = (
+            [frames] if isinstance(frames, _Symbol) else list(_as_sequence(frames))
+        )
         if not items:
             raise ValueError("`frames` must not be empty.")
         syms = [self.use(f, "frames") for f in items]
@@ -967,16 +983,18 @@ def _unwrap_materialized(obj: T) -> T:
     return obj
 
 
-def _unwrap_frames(frames: T) -> T:
+def _unwrap_frames(
+    frames: "_Frames | Sequence[_Frames]",
+) -> "_Frames | Sequence[_Frames]":
     """:py:func:`_unwrap_materialized` for (a sequence of) frames.
 
     If only a part of the frames are materialized, all of them are.
     """
     if isinstance(frames, _Symbol) or not isinstance(frames, Sequence):
-        return _unwrap_materialized(frames)
+        return _unwrap_materialized(cast("_Frames", frames))
     syms = [f for f in frames if isinstance(f, _Symbol)]
     if syms and not all(_is_symbol(f) for f in syms):
-        return [_unwrap(f) for f in frames]  # pyrefly: ignore[bad-return]
+        return [cast("_Frames", _unwrap(f)) for f in frames]
     return frames
 
 
@@ -1106,7 +1124,7 @@ def _is_source(obj: object) -> bool:
     if hasattr(obj, "numpy"):  # torch tensor
         return True
     try:
-        memoryview(obj)  # pyrefly: ignore[bad-argument-type]
+        memoryview(cast("Buffer", obj))
     except TypeError:
         return False
     return True
@@ -1256,7 +1274,7 @@ def _run(fn: Callable[..., T], args: Any, kwargs: Any) -> tuple[T, bool | None]:
         with _activate(g):
             result = fn(*args, **kwargs)
             straight = g.num_executions == g.num_post_executions
-            result = g.finish(result)
+            result = cast(T, g.finish(result))
         if not g.failed:
             return result, straight  # pyrefly: ignore[bad-return]
     except Exception:

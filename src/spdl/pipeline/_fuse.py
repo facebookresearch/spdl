@@ -36,7 +36,7 @@ import warnings
 from collections.abc import Sequence
 from dataclasses import replace
 from functools import partial
-from typing import Any
+from typing import Any, cast, TypeVar
 
 from spdl.pipeline._common._convert import (
     _is_async_callable,
@@ -52,6 +52,7 @@ from spdl.pipeline._subprocess_pipeline_pool import (
 from spdl.pipeline.defs._defs import (
     _MainProcess,
     _SubprocessPipelineConfig,
+    _TStage,
     InterpreterPoolExecutorConfig,
     MergeConfig,
     PathVariantsConfig,
@@ -76,6 +77,7 @@ _FUSED_SINK_BUFFER: int = 3
 # concurrency. The source blocks on the worker's input queue, so it must never compete with the
 # ops for the last thread. See :py:func:`_build_fused_stage_core`.
 _SOURCE_THREADS: int = 1
+_StageT = TypeVar("_StageT", bound=_TStage)
 
 
 def _has_continuous_source(config: PipelineConfig[Any]) -> bool:
@@ -88,7 +90,7 @@ def _has_continuous_source(config: PipelineConfig[Any]) -> bool:
     return False
 
 
-def _strip_executor(cfg: object) -> object:
+def _strip_executor(cfg: _StageT) -> _StageT:
     """Strip a stage's executor(s) so it runs on the worker's own pool.
 
     Recurses into a path-variants stage, stripping every branch pipe's executor (the branch ops
@@ -96,12 +98,12 @@ def _strip_executor(cfg: object) -> object:
     ships to the worker, so any live executor — pool or thread — must be removed regardless.
     """
     if isinstance(cfg, PipeConfig):
-        return replace(cfg, _args=replace(cfg._args, executor=None))
+        return cast(_StageT, replace(cfg, _args=replace(cfg._args, executor=None)))
     if isinstance(cfg, PathVariantsConfig):
         new_paths = tuple(
             tuple(_strip_executor(stage) for stage in path) for path in cfg.paths
         )
-        return replace(cfg, paths=new_paths)
+        return cast(_StageT, replace(cfg, paths=new_paths))
     return cfg
 
 
@@ -156,7 +158,7 @@ def _warn_fork_with_threads(ctx: Any, stacklevel: int) -> None:
 
 
 def _build_fused_stage_core(
-    stages: Sequence[object],
+    stages: Sequence[_TStage],
     *,
     spec: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig,
     backend: _PoolBackend,
@@ -266,7 +268,7 @@ def _fuse_marked_regions(
 
     continuous = _has_continuous_source(config)
     pools: list[_SubprocessPipelinePool] = []
-    new_pipes: list[object] = []
+    new_pipes: list[_TStage] = []
     target: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig | _MainProcess = (
         _MainProcess()
     )
@@ -274,7 +276,7 @@ def _fuse_marked_regions(
     # it, and the marker that closes it sizes the results coming back. Adjacent regions each
     # get their own, and the marker between them sizes that single handoff for both sides.
     input_buffer_size: int = 1
-    region: list[object] = []
+    region: list[_TStage] = []
 
     def _flush(output_buffer_size: int) -> None:
         if not region:

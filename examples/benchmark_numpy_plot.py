@@ -23,15 +23,21 @@ import os
 
 import matplotlib.pyplot as plt
 
-try:
-    from examples.benchmark_numpy import (  # pyre-ignore[21]
-        BenchmarkConfig,
-        DEFAULT_RESULT_PATH,
-    )
-    from examples.benchmark_utils import load_results_from_csv  # pyre-ignore[21]
-except ImportError:
-    from spdl.examples.benchmark_numpy import BenchmarkConfig, DEFAULT_RESULT_PATH
-    from spdl.examples.benchmark_utils import load_results_from_csv
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .benchmark_numpy import BenchmarkConfig, DEFAULT_RESULT_PATH
+    from .benchmark_utils import load_results_from_csv
+else:
+    try:
+        from examples.benchmark_numpy import (  # pyre-ignore[21]
+            BenchmarkConfig,
+            DEFAULT_RESULT_PATH,
+        )
+        from examples.benchmark_utils import load_results_from_csv  # pyre-ignore[21]
+    except ImportError:
+        from spdl.examples.benchmark_numpy import BenchmarkConfig, DEFAULT_RESULT_PATH
+        from spdl.examples.benchmark_utils import load_results_from_csv
 
 
 def plot_results(

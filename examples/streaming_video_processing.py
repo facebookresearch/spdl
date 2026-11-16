@@ -68,6 +68,7 @@ __all__ = [
 
 import argparse
 from pathlib import Path
+from typing import cast
 
 import spdl.io
 from spdl.io import (
@@ -155,11 +156,11 @@ def process(
     streaming_demuxing = demuxer.streaming_demux([video_index, audio_index], duration=1)
     with muxer.open():
         num_video_frames = 0
-        for packets in streaming_demuxing:
-            if (audio_packets := packets.get(audio_index)) is not None:
-                muxer.write(1, audio_packets)
+        for packet_group in streaming_demuxing:
+            if (audio_packets := packet_group.get(audio_index)) is not None:
+                muxer.write(1, cast(spdl.io.AudioPackets, audio_packets))
 
-            if (video_packets := packets.get(video_index)) is None:
+            if (video_packets := packet_group.get(video_index)) is None:
                 continue
 
             assert isinstance(video_packets, VideoPackets)
@@ -181,9 +182,11 @@ def process(
 
                 filter_graph.add_frames(frames)
 
-                if (frames := filter_graph.get_frames()) is not None:
+                if (filtered_frames := filter_graph.get_frames()) is not None:
                     if (
-                        packets := video_encoder.encode(frames)  # pyre-ignore
+                        packets := video_encoder.encode(
+                            cast(spdl.io.VideoFrames, filtered_frames)
+                        )
                     ) is not None:
                         muxer.write(0, packets)
 
@@ -209,14 +212,16 @@ def process(
             num_video_frames += len(frames)
 
             filter_graph.add_frames(frames)
-            if (frames := filter_graph.get_frames()) is not None:
-                if (packets := video_encoder.encode(frames)) is not None:  # pyre-ignore
+            if (filtered_frames := filter_graph.get_frames()) is not None:
+                if (
+                    packets := video_encoder.encode(
+                        cast(spdl.io.VideoFrames, filtered_frames)
+                    )
+                ) is not None:
                     muxer.write(0, packets)
 
         # Flush filter graph
-        if (frames := filter_graph.flush()) is not None:
-            if (packets := video_encoder.encode(frames)) is not None:
-                muxer.write(0, packets)
+        filter_graph.flush()
 
         # Flush encoder
         if (packets := video_encoder.flush()) is not None:

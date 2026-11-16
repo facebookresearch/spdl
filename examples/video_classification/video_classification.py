@@ -50,22 +50,33 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torchvision.models.video import r3d_18
 
-try:
-    from examples.video_classification.utils import (  # pyre-ignore[21]
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .utils import (
         add_dataset_args,
         build_pipeline,
         create_dataset,
         get_label_to_index,
         report_progress,
     )
-except ImportError:
-    from spdl.examples.video_classification.utils import (
-        add_dataset_args,
-        build_pipeline,
-        create_dataset,
-        get_label_to_index,
-        report_progress,
-    )
+else:
+    try:
+        from examples.video_classification.utils import (  # pyre-ignore[21]
+            add_dataset_args,
+            build_pipeline,
+            create_dataset,
+            get_label_to_index,
+            report_progress,
+        )
+    except ImportError:
+        from spdl.examples.video_classification.utils import (
+            add_dataset_args,
+            build_pipeline,
+            create_dataset,
+            get_label_to_index,
+            report_progress,
+        )
 
 _LG: logging.Logger = logging.getLogger(__name__)
 

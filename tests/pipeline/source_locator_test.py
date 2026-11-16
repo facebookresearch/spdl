@@ -13,6 +13,7 @@ import asyncio
 import functools
 import inspect
 import unittest
+from collections.abc import Callable
 from typing import Any
 
 from spdl.pipeline._common._source_locator import locate_source
@@ -49,8 +50,8 @@ class SimpleCallable:
         return x * 3
 
 
-def _ln(target: object) -> int:
-    return inspect.getsourcelines(target)[1]  # pyre-ignore[6]
+def _ln(target: Callable[..., object]) -> int:
+    return inspect.getsourcelines(target)[1]
 
 
 class TestSourceLocator(unittest.TestCase):
@@ -128,6 +129,7 @@ class TestSourceLocator(unittest.TestCase):
         self.assertEqual(loc.name, f"{__name__}.regular_function")
         self.assertEqual(loc.file_path, __file__)
         self.assertIsNotNone(loc.line_number)
+        assert loc.line_number is not None
         self.assertGreater(loc.line_number, 0)
         self.assertEqual(loc.partial_args, (5,))
         self.assertEqual(loc.partial_kwargs, {})
@@ -143,6 +145,7 @@ class TestSourceLocator(unittest.TestCase):
         self.assertEqual(loc.name, f"{__name__}.regular_function")
         self.assertEqual(loc.file_path, __file__)
         self.assertIsNotNone(loc.line_number)
+        assert loc.line_number is not None
         self.assertGreater(loc.line_number, 0)
         self.assertEqual(loc.partial_args, ())
         self.assertEqual(loc.partial_kwargs, {"y": 10})
@@ -159,6 +162,7 @@ class TestSourceLocator(unittest.TestCase):
         self.assertEqual(loc.name, f"{__name__}.SimpleCallable")
         self.assertEqual(loc.file_path, __file__)
         self.assertIsNotNone(loc.line_number)
+        assert loc.line_number is not None
         self.assertGreater(loc.line_number, 0)
         self.assertEqual(loc.partial_args, (7,))
         self.assertEqual(loc.partial_kwargs, {})
@@ -172,6 +176,7 @@ class TestSourceLocator(unittest.TestCase):
         self.assertEqual(loc.name, f"{__name__}.regular_function")
         self.assertEqual(loc.file_path, __file__)
         self.assertIsNotNone(loc.line_number)
+        assert loc.line_number is not None
         self.assertGreater(loc.line_number, 0)
         self.assertEqual(loc.partial_args, (3,))
         self.assertEqual(loc.partial_kwargs, {"y": 8})

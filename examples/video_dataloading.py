@@ -166,7 +166,7 @@ def decode_video(
         ),
     )
     buffer = spdl.io.convert_frames(frames)
-    buffer = spdl.io.transfer_buffer(
+    cuda_buffer = spdl.io.transfer_buffer(
         buffer,
         device_config=spdl.io.cuda_config(
             device_index=device_index,
@@ -176,7 +176,7 @@ def decode_video(
             ),
         ),
     )
-    return spdl.io.to_torch(buffer).permute(0, 2, 3, 1)
+    return spdl.io.to_torch(cuda_buffer).permute(0, 2, 3, 1)
 
 
 def decode_video_nvdec(

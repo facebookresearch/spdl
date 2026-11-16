@@ -34,17 +34,18 @@ T = TypeVar("T")
 S = TypeVar("S")
 
 
-def _recursive_apply(fn: Callable[[T], T], obj: T) -> T:
+def _recursive_apply(fn: Callable[[S], S], obj: T) -> T:
     """Recursively apply the given function to the given (container) object.
 
     Args:
-        fn: The function to apply.
+        fn: The function to apply to leaves. It must preserve their types;
+            all non-container leaves in ``obj`` must be accepted by ``fn``.
         obj: The object to which the function is applied.
 
     Returns:
         The result of applying the function.
     """
-    Class = type(obj)
+    Class = cast(Callable[..., T], type(obj))
     match obj:
         case list():
             return Class(_recursive_apply(fn, v) for v in obj)
@@ -75,15 +76,14 @@ def _recursive_apply(fn: Callable[[T], T], obj: T) -> T:
             return new_obj
 
         case _:
-            return fn(obj)  # pyre-ignore: [6]
+            return cast(T, fn(cast(S, obj)))
 
 
 def _transfer(obj: T, device: "TDevice", pinned_memory_cache: "set[Tensor]") -> T:
     if isinstance(obj, torch.Tensor) and obj.is_cpu:
         pinned = obj.pin_memory()
         pinned_memory_cache.add(pinned)
-        # pyrefly: ignore [bad-assignment]
-        obj = pinned.to(device, non_blocking=True)
+        return cast(T, pinned.to(device, non_blocking=True))
     return obj
 
 

@@ -169,10 +169,10 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
             cast(Any, view.obj).__setattr__("owner", None)
 
         class Holder:
-            view: "memoryview[bytes]"
+            view: memoryview
             cycle: Holder | None
 
-            def __init__(self, view: memoryview[bytes]) -> None:
+            def __init__(self, view: memoryview) -> None:
                 self.view = view
                 self.cycle: Holder | None = self
 
@@ -215,7 +215,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
         span = writer.commit_unit()
         first = [reader.read_binary(offset, size)] if first_normal else []
         root = MemoryError("after actual native exporter construction")
-        captured = []
+        captured: list[memoryview] = []
         self.addCleanup(setattr, root, "__traceback__", None)
         self.addCleanup(captured.clear)
         self.addCleanup(first.clear)

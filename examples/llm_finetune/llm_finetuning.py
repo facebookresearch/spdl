@@ -77,28 +77,36 @@ import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-try:
-    from examples.llm_finetune.utils.dataloader import (  # pyre-ignore[21]
-        build_pytorch_dataloader,
-    )
-    from examples.llm_finetune.utils.pipeline import (  # pyre-ignore[21]
-        build_spdl_dataloader,
-    )
-    from examples.llm_finetune.utils.utils import (  # pyre-ignore[21]
-        load_data,
-        report_progress,
-        resolve_model_path,
-    )
-except ImportError:
-    from spdl.examples.llm_finetune.utils.dataloader import build_pytorch_dataloader
-    from spdl.examples.llm_finetune.utils.pipeline import (
-        build_spdl_dataloader,
-    )
-    from spdl.examples.llm_finetune.utils.utils import (
-        load_data,
-        report_progress,
-        resolve_model_path,
-    )
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .utils.dataloader import build_pytorch_dataloader
+    from .utils.pipeline import build_spdl_dataloader
+    from .utils.utils import load_data, report_progress, resolve_model_path
+    from peft import PeftModel
+else:
+    try:
+        from examples.llm_finetune.utils.dataloader import (  # pyre-ignore[21]
+            build_pytorch_dataloader,
+        )
+        from examples.llm_finetune.utils.pipeline import (  # pyre-ignore[21]
+            build_spdl_dataloader,
+        )
+        from examples.llm_finetune.utils.utils import (  # pyre-ignore[21]
+            load_data,
+            report_progress,
+            resolve_model_path,
+        )
+    except ImportError:
+        from spdl.examples.llm_finetune.utils.dataloader import build_pytorch_dataloader
+        from spdl.examples.llm_finetune.utils.pipeline import (
+            build_spdl_dataloader,
+        )
+        from spdl.examples.llm_finetune.utils.utils import (
+            load_data,
+            report_progress,
+            resolve_model_path,
+        )
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -114,13 +122,13 @@ def build_model(
     lora_r: int,
     lora_alpha: int,
     lora_dropout: float,
-) -> torch.nn.Module:
+) -> PeftModel:
     """Load LLaMA model and apply LoRA."""
     from peft import get_peft_model, LoraConfig, TaskType
     from transformers import AutoModelForCausalLM
 
     _LG.info("Loading model from %s", model_path)
-    model = AutoModelForCausalLM.from_pretrained(
+    base_model = AutoModelForCausalLM.from_pretrained(
         model_path,
         torch_dtype=torch.bfloat16,
         attn_implementation="sdpa",
@@ -133,7 +141,7 @@ def build_model(
         lora_dropout=lora_dropout,
         target_modules=["q_proj", "v_proj"],
     )
-    model = get_peft_model(model, lora_config)
+    model = get_peft_model(base_model, lora_config)
     model.print_trainable_parameters()
 
     model = model.to(device)
@@ -204,6 +212,7 @@ def train(
         lora_alpha=lora_alpha,
         lora_dropout=lora_dropout,
     )
+    ddp_model: torch.nn.Module
     if dist.is_initialized():
         ddp_model = DDP(
             model,
@@ -322,7 +331,7 @@ def train(
     if rank == 0 and output_dir:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
-        model.save_pretrained(output_path)  # pyre-ignore[29]
+        model.save_pretrained(str(output_path))
         tokenizer.save_pretrained(output_path)
         _LG.info("Model saved to %s", output_path)
 

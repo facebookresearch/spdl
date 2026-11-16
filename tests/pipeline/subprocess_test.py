@@ -17,10 +17,11 @@ import unittest
 import warnings
 from collections.abc import Iterable, Iterator
 from functools import partial
+from multiprocessing.queues import Queue as MPQueue
 from unittest.mock import MagicMock
 
 from spdl.pipeline import iterate_in_subprocess as _iterate_in_subprocess
-from spdl.pipeline._iter_utils._common import _Cmd, _execute_iterable, _Status
+from spdl.pipeline._iter_utils._common import _Cmd, _execute_iterable, _Msg, _Status
 from spdl.pipeline._iter_utils._subprocess import _close_queue, _ipc
 
 
@@ -78,7 +79,7 @@ class TestIterateInSubprocess(unittest.TestCase):
         data_q = MagicMock()
         data_q.get_nowait.side_effect = queue.Empty
 
-        interface = _ipc(
+        interface: _ipc[int] = _ipc(
             process=process,
             cmd_q=cmd_q,
             data_q=data_q,
@@ -101,7 +102,7 @@ class TestIterateInSubprocess(unittest.TestCase):
         data_q.put_nowait.side_effect = queue.Full
         arena = MagicMock()
 
-        interface = _ipc(
+        interface: _ipc[int] = _ipc(
             process=process,
             cmd_q=cmd_q,
             data_q=data_q,
@@ -132,7 +133,7 @@ class TestIterateInSubprocess(unittest.TestCase):
             "resource_sharer socket disappeared"
         )
 
-        interface = _ipc(
+        interface: _ipc[int] = _ipc(
             process=process,
             cmd_q=cmd_q,
             data_q=data_q,
@@ -241,7 +242,7 @@ class TestIterateInSubprocessBufferSize(unittest.TestCase):
         N = 10
 
         # Use queue for synchronization between processes
-        sync_queue = mp.Queue()
+        sync_queue: MPQueue[int] = mp.Queue()
 
         src = iterate_in_subprocess(
             fn=partial(iter_range_and_store_with_sync, n=N, sync_queue=sync_queue),
@@ -276,7 +277,7 @@ class TestIterateInSubprocessBufferSize(unittest.TestCase):
         N = 10
 
         # Use queue for synchronization between processes
-        sync_queue = mp.Queue()
+        sync_queue: MPQueue[int] = mp.Queue()
 
         src = iterate_in_subprocess(
             fn=partial(iter_range_and_store_with_sync, n=N, sync_queue=sync_queue),
@@ -319,7 +320,8 @@ def noop() -> None:
 
 class TestExecuteIterable(unittest.TestCase):
     def test_execute_iterable_initializer_failure(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue: MPQueue[_Cmd] = mp.Queue()
+        data_queue: MPQueue[_Msg[int]] = mp.Queue()
 
         def src_fn() -> Iterable[int]:
             return SourceIterable(10)
@@ -333,11 +335,13 @@ class TestExecuteIterable(unittest.TestCase):
 
         result = data_queue.get(timeout=1)
         self.assertEqual(result.status, _Status.INITIALIZATION_FAILED)
+        assert isinstance(result.message, str)
         self.assertIn("Failed!", result.message)
         self.assertTrue(data_queue.empty())
 
     def test_execute_iterable_iterator_initialize_failure(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue: MPQueue[_Cmd] = mp.Queue()
+        data_queue: MPQueue[_Msg[int]] = mp.Queue()
 
         def src_fn() -> Iterator[int]:
             raise ValueError("Failed!")
@@ -348,11 +352,13 @@ class TestExecuteIterable(unittest.TestCase):
         self.assertTrue(msg_queue.empty())
         result = data_queue.get(timeout=1)
         self.assertEqual(result.status, _Status.INITIALIZATION_FAILED)
+        assert isinstance(result.message, str)
         self.assertIn("Failed!", result.message)
         self.assertTrue(data_queue.empty())
 
     def test_execute_iterable_quite_immediately(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue: MPQueue[_Cmd] = mp.Queue()
+        data_queue: MPQueue[_Msg[int]] = mp.Queue()
 
         msg_queue.put(_Cmd.ABORT)
         time.sleep(1)
@@ -369,7 +375,8 @@ class TestExecuteIterable(unittest.TestCase):
         self.assertTrue(data_queue.empty())
 
     def test_execute_iterable_generator_fail(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue: MPQueue[_Cmd] = mp.Queue()
+        data_queue: MPQueue[_Msg[int]] = mp.Queue()
 
         class SourceIterableFails(SourceIterable):
             def __iter__(self) -> Iterator[int]:
@@ -391,11 +398,13 @@ class TestExecuteIterable(unittest.TestCase):
 
         result = data_queue.get(timeout=1)
         self.assertEqual(result.status, _Status.ITERATOR_FAILED)
+        assert isinstance(result.message, str)
         self.assertIn("Failed!", result.message)
         self.assertTrue(data_queue.empty())
 
     def test_execute_iterable_generator_fail_after_n(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue: MPQueue[_Cmd] = mp.Queue()
+        data_queue: MPQueue[_Msg[int]] = mp.Queue()
 
         class SourceIterableFails(SourceIterable):
             def __iter__(self) -> Iterator[int]:
@@ -423,11 +432,13 @@ class TestExecuteIterable(unittest.TestCase):
 
         result = data_queue.get(timeout=1)
         self.assertEqual(result.status, _Status.ITERATOR_FAILED)
+        assert isinstance(result.message, str)
         self.assertIn("Failed!", result.message)
         self.assertTrue(data_queue.empty())
 
     def test_execute_iterator_generator_success(self) -> None:
-        msg_queue, data_queue = mp.Queue(), mp.Queue()
+        msg_queue: MPQueue[_Cmd] = mp.Queue()
+        data_queue: MPQueue[_Msg[int]] = mp.Queue()
 
         def src_fn() -> Iterable[int]:
             return SourceIterable(3)

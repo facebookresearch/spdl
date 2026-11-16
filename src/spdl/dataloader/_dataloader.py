@@ -11,8 +11,9 @@ from collections.abc import (
     Awaitable,
     Callable,
     Iterable,
+    Iterator,
 )
-from typing import Generic, TypeAlias, TypeVar
+from typing import cast, Generic, TypeAlias, TypeVar
 
 from spdl._internal import log_api_usage_once
 from spdl.pipeline import Pipeline, PipelineBuilder
@@ -200,13 +201,11 @@ class DataLoader(Generic[Source, Output]):
         src: Iterable[Source] | AsyncIterable[Source],
         *,
         # Pre-processing
-        # pyrefly: ignore [invalid-param-spec]
-        preprocessor: Callables[[Source], T] | None = None,
+        preprocessor: Callables[Source, T] | None = None,
         # Aggregation
         batch_size: int | None = None,
         drop_last: bool = False,
-        # pyrefly: ignore [invalid-param-spec]
-        aggregator: Functions[[list[T]], Output] | None = None,
+        aggregator: Functions[list[T], Output] | None = None,
         # Device transfer
         transfer_fn: Callable[[Output], Output] | None = None,
         # Buffering
@@ -219,9 +218,8 @@ class DataLoader(Generic[Source, Output]):
         log_api_usage_once("spdl.dataloader.DataLoader")
 
         self._src = src
-        # pyrefly: ignore [invalid-type-var]
-        self._preprocessor = preprocessor
-        self._aggregator = aggregator
+        self._preprocessor: Callables[Source, object] | None = preprocessor
+        self._aggregator = cast(Functions[list[object], Output] | None, aggregator)
         self._transfer_fn = transfer_fn
 
         self._batch_size = batch_size
@@ -231,8 +229,8 @@ class DataLoader(Generic[Source, Output]):
         self._timeout = timeout
         self._output_order = output_order
 
-    def _get_pipeline(self) -> Pipeline:
-        builder = PipelineBuilder().add_source(self._src)
+    def _get_pipeline(self) -> Pipeline[Output]:
+        builder = PipelineBuilder[Source, Output]().add_source(self._src)
         if self._preprocessor:
             builder.pipe(
                 self._preprocessor,
@@ -260,7 +258,7 @@ class DataLoader(Generic[Source, Output]):
 
         return builder.build(num_threads=self._num_threads)
 
-    def __iter__(self) -> Iterable[Output]:
+    def __iter__(self) -> Iterator[Output]:
         """Run the data loading pipeline in background.
 
         Yields:

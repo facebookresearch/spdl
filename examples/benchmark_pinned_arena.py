@@ -170,7 +170,11 @@ def make_payload(size: int, kind: str, dtype: str, sequence: int) -> Any:
         .reshape(-1)
         for i, n in enumerate(_leaf_sizes(size, kind, dtype))
     ]
-    leaves = arrays if kind == "numpy" else [torch.from_numpy(a) for a in arrays]
+    leaves: list[np.ndarray] | list[torch.Tensor]
+    if kind == "numpy":
+        leaves = arrays
+    else:
+        leaves = [torch.from_numpy(a) for a in arrays]
     if kind == "nested":
         return {"main": leaves[0], "nested": [leaves[1], (leaves[2],)]}
     return leaves[0]
@@ -827,10 +831,11 @@ def main(argv: list[str] | None = None) -> None:
         ...       '--items', '2', '--repeats', '1', '--output', 'cpu-results.json'])
     """
     args = _parse_args(argv)
+    report: dict[str, object]
     if args.source_receipt:
         report = {"schema": _SCHEMA, "source_receipt": _source_receipt()}
     else:
-        rows = []
+        rows: list[dict[str, Any]] = []
         sizes = args.sizes_bytes or [size << 20 for size in args.sizes]
         for size, kind, dtype, repeat in product(
             sizes, args.kinds, args.dtypes, range(args.repeats)

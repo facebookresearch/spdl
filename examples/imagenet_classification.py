@@ -26,10 +26,12 @@ To run the benchmark,  pass it to the script like the following.
 import argparse
 import contextlib
 import logging
+import os
 import time
 from argparse import Namespace
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable
 from pathlib import Path
+from typing import cast
 
 import spdl.io
 import spdl.io.utils
@@ -100,8 +102,9 @@ class Preprocessing(torch.nn.Module):
             The normalized image batch.
         """
         x = x.float() / 255.0
-        # pyrefly: ignore [unsupported-operation]
-        return (x - self.mean) / self.std
+        mean = cast(Tensor, self.mean)
+        std = cast(Tensor, self.std)
+        return (x - mean) / std
 
 
 class Classification(torch.nn.Module):
@@ -133,8 +136,8 @@ class ModelBundle(torch.nn.Module):
 
     def __init__(
         self,
-        model: torch.nn.Module,
-        preprocessing: Preprocessing,
+        model: Callable[[Tensor], Tensor],
+        preprocessing: Callable[[Tensor], Tensor],
         classification: Classification,
         use_bf16: bool,
     ) -> None:
@@ -198,27 +201,28 @@ def get_model(
     if use_bf16:
         model = model.to(dtype=torch.bfloat16)
 
-    preprocessing = Preprocessing(
+    preprocessing: Callable[[Tensor], Tensor] = Preprocessing(
         mean=_expand([0.4850, 0.4560, 0.4060], batch_size, 224),
         std=_expand([0.2290, 0.2240, 0.2250], batch_size, 224),
     ).to(device)
 
     classification = Classification().to(device)
+    model_fn: Callable[[Tensor], Tensor] = model
 
     if compile:
         with torch.no_grad():
             mode = "max-autotune"
-            model = torch.compile(model, mode=mode)
+            model_fn = torch.compile(model, mode=mode)
             preprocessing = torch.compile(preprocessing, mode=mode)
 
-    return ModelBundle(model, preprocessing, classification, use_bf16)  # pyre-ignore[6]
+    return ModelBundle(model_fn, preprocessing, classification, use_bf16)
 
 
 def get_decode_func(
     device_index: int,
     width: int = 224,
     height: int = 224,
-) -> Callable[[list[tuple[str, int]]], tuple[Tensor, Tensor]]:
+) -> Callable[[list[tuple[str | Path, int]]], tuple[Tensor, Tensor]]:
     """Get a function to decode images from a list of paths.
 
     Args:
@@ -242,10 +246,10 @@ def get_decode_func(
 
     # Execute loading and batching images in one native call.
     @spdl.io.fuse
-    def decode_images(items: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
+    def decode_images(items: list[tuple[str | Path, int]]) -> tuple[Tensor, Tensor]:
         paths = [item for item, _ in items]
-        labels = [[item] for _, item in items]
-        labels = torch.tensor(labels, dtype=torch.int64).to(device)
+        label_values = [[item] for _, item in items]
+        labels = torch.tensor(label_values, dtype=torch.int64).to(device)
         buffer = spdl.io.load_image_batch(
             paths,
             width=None,
@@ -272,7 +276,7 @@ def _get_experimental_nvjpeg_decode_function(
     device_index: int,
     width: int = 224,
     height: int = 224,
-) -> Callable[[list[tuple[str, int]]], tuple[Tensor, Tensor]]:
+) -> Callable[[list[tuple[str | Path, int]]], tuple[Tensor, Tensor]]:
     device: torch.device = torch.device(f"cuda:{device_index}")
     device_config: spdl.io.CUDAConfig = spdl.io.cuda_config(
         device_index=device_index,
@@ -283,11 +287,11 @@ def _get_experimental_nvjpeg_decode_function(
     )
 
     def decode_images_nvjpeg(
-        items: list[tuple[str, int]],
+        items: list[tuple[str | Path, int]],
     ) -> tuple[Tensor, Tensor]:
-        paths = [item for item, _ in items]
-        labels = [[item] for _, item in items]
-        labels = torch.tensor(labels, dtype=torch.int64).to(device)
+        paths = [os.fspath(item) for item, _ in items]
+        label_values = [[item] for _, item in items]
+        labels = torch.tensor(label_values, dtype=torch.int64).to(device)
         buffer = spdl.io.load_image_batch_nvjpeg(
             paths,
             device_config=device_config,
@@ -303,12 +307,12 @@ def _get_experimental_nvjpeg_decode_function(
 
 
 def get_dataloader(
-    src: Iterator[tuple[str, int]],
+    src: Iterable[tuple[str | Path, int]],
     batch_size: int,
-    decode_func: Callable[[list[tuple[str, int]]], tuple[Tensor, Tensor]],
+    decode_func: Callable[[list[tuple[str | Path, int]]], tuple[Tensor, Tensor]],
     buffer_size: int,
     num_threads: int,
-) -> Iterator[tuple[Tensor, Tensor]]:
+) -> Iterable[tuple[Tensor, Tensor]]:
     """Build the dataloader for the ImageNet classification task.
 
     The dataloader uses the ``decode_func`` for decoding images concurrently and
@@ -334,7 +338,7 @@ def get_dataloader(
 
 
 def benchmark(
-    dataloader: Iterator[tuple[Tensor, Tensor]],
+    dataloader: Iterable[tuple[Tensor, Tensor]],
     model: ModelBundle,
     max_batches: float = float("nan"),
 ) -> None:
@@ -347,7 +351,9 @@ def benchmark(
     """
 
     _LG.info("Running inference.")
-    num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
+    num_frames = 0
+    num_correct_top1: float | Tensor = 0
+    num_correct_top5: float | Tensor = 0
     t0 = time.monotonic()
     try:
         for i, (batch, labels) in enumerate(dataloader):
@@ -370,9 +376,8 @@ def benchmark(
     finally:
         elapsed = time.monotonic() - t0
         if num_frames != 0:
-            num_correct_top1 = num_correct_top1.item()  # pyre-ignore[16]
-            # pyrefly: ignore [missing-attribute]
-            num_correct_top5 = num_correct_top5.item()
+            num_correct_top1 = cast(Tensor, num_correct_top1).item()
+            num_correct_top5 = cast(Tensor, num_correct_top5).item()
             fps = num_frames / elapsed
             _LG.info(f"FPS={fps:.2f} ({num_frames}/{elapsed:.2f})")
             acc1 = 0 if num_frames == 0 else num_correct_top1 / num_frames
@@ -383,7 +388,7 @@ def benchmark(
 
 def _get_dataloader(
     args: Namespace, device_index: int
-) -> Iterator[tuple[Tensor, Tensor]]:
+) -> Iterable[tuple[Tensor, Tensor]]:
     src = ImageNet(args.root_dir, split=args.split)
 
     if args.use_nvjpeg:
@@ -423,7 +428,7 @@ def entrypoint(args_: list[str] | None = None) -> None:
         benchmark(dataloader, model, args.max_batches)
 
     if args.trace:
-        # pyrefly: ignore [missing-attribute]
+        assert prof is not None
         prof.export_chrome_trace(f"{trace_path}.json")
 
 

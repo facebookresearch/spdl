@@ -8,6 +8,7 @@
 import threading
 import time
 import unittest
+from collections.abc import AsyncIterator
 
 from spdl.dataloader import DataLoader
 
@@ -20,6 +21,47 @@ def get_dl(*args, timeout=3, num_threads=2, **kwargs):
 
 
 class TestDataLoader(unittest.TestCase):
+    def test_typed_preprocessor_and_aggregator(self) -> None:
+        """Preprocessing and aggregation preserve distinct stage output types."""
+
+        def preprocess(value: int) -> float:
+            return value / 2
+
+        def aggregate(values: list[float]) -> str:
+            return str(sum(values))
+
+        loader = DataLoader[int, str](
+            range(4),
+            preprocessor=preprocess,
+            batch_size=2,
+            aggregator=aggregate,
+            output_order="input",
+            num_threads=2,
+            timeout=3,
+        )
+        self.assertEqual(list(loader), ["0.5", "2.5"])
+
+    def test_typed_async_generator_preprocessor(self) -> None:
+        """Async generator preprocessing emits its items before aggregation."""
+
+        async def preprocess(value: int) -> AsyncIterator[float]:
+            yield value / 2
+            yield value / 2 + 0.5
+
+        def aggregate(values: list[float]) -> str:
+            return str(sum(values))
+
+        loader = DataLoader[int, str](
+            range(2),
+            preprocessor=preprocess,
+            batch_size=2,
+            aggregator=aggregate,
+            output_order="completion",
+            num_threads=1,
+            timeout=3,
+        )
+        self.assertEqual(list(loader), ["0.5", "1.5"])
+
     def test_dataloader_iterable(self) -> None:
         src = list(range(10))
 

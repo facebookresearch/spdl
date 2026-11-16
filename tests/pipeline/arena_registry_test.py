@@ -40,7 +40,7 @@ def _demux_video() -> Any:
     return spdl.io.demux_video(sample.path)
 
 
-def _copy_view(buf: "memoryview[bytes] | bytes | bytearray") -> "memoryview[bytes]":
+def _copy_view(buf: "memoryview | bytes | bytearray") -> "memoryview":
     """A writable, private copy of ``buf`` as a memoryview (models arena bytes)."""
     return memoryview(bytearray(buf))
 

@@ -78,8 +78,8 @@ def _check_host_budget(nbytes: int, *, shared: bool) -> None:
 class _HostRegistration:
     """One full shared mapping registered on the consumer's selected device."""
 
-    def __init__(self, view: "memoryview[bytes]", device: object) -> None:
-        self._view: "memoryview[bytes] | None" = memoryview(view)
+    def __init__(self, view: "memoryview[int]", device: object) -> None:
+        self._view: "memoryview[int] | None" = memoryview(view)
         self.address = ctypes.addressof(ctypes.c_ubyte.from_buffer(view))
         self.nbytes = view.nbytes
         self._device = device
@@ -128,7 +128,7 @@ class _HostRegistration:
         self._view = None
 
 
-def _allocate_pinned(nbytes: int) -> "memoryview[bytes]":
+def _allocate_pinned(nbytes: int) -> "memoryview[int]":
     if nbytes < 0:
         raise ValueError("nbytes must be non-negative")
     import importlib
@@ -150,5 +150,5 @@ def _allocate_pinned(nbytes: int) -> "memoryview[bytes]":
     with torch.cuda.device(device):
         storage = torch.empty(nbytes, dtype=torch.uint8, device="cpu", pin_memory=True)
     return cast(
-        "memoryview[bytes]", buffer._export_owned(storage.data_ptr(), nbytes, storage)
+        "memoryview[int]", buffer._export_owned(storage.data_ptr(), nbytes, storage)
     )

@@ -87,22 +87,33 @@ from functools import partial
 
 import spdl.io
 
-try:
-    from examples.benchmark_utils import (  # pyre-ignore[21]
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .benchmark_utils import (
         BenchmarkResult,
         BenchmarkRunner,
         ExecutorType,
         get_default_result_path,
         save_results_to_csv,
     )
-except ImportError:
-    from spdl.examples.benchmark_utils import (
-        BenchmarkResult,
-        BenchmarkRunner,
-        ExecutorType,
-        get_default_result_path,
-        save_results_to_csv,
-    )
+else:
+    try:
+        from examples.benchmark_utils import (  # pyre-ignore[21]
+            BenchmarkResult,
+            BenchmarkRunner,
+            ExecutorType,
+            get_default_result_path,
+            save_results_to_csv,
+        )
+    except ImportError:
+        from spdl.examples.benchmark_utils import (
+            BenchmarkResult,
+            BenchmarkRunner,
+            ExecutorType,
+            get_default_result_path,
+            save_results_to_csv,
+        )
 
 
 DEFAULT_RESULT_PATH: str = get_default_result_path(__file__)

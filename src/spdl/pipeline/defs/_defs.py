@@ -7,10 +7,11 @@
 import abc
 from collections.abc import (
     AsyncIterable,
+    AsyncIterator,
     Awaitable,
     Callable,
     Iterable,
-    Mapping,
+    Iterator,
     Sequence,
 )
 from concurrent.futures import Executor
@@ -26,6 +27,7 @@ from typing import (
     overload,
     Protocol,
     runtime_checkable,
+    TYPE_CHECKING,
     TypeAlias,
     TypeVar,
 )
@@ -40,11 +42,21 @@ from spdl.pipeline._common._types import _TCallables, _TMergeOp
 
 T = TypeVar("T")
 U = TypeVar("U")
+_T_contra = TypeVar("_T_contra", contravariant=True)
+_U_co = TypeVar("_U_co", covariant=True)
+
+if TYPE_CHECKING:
+    from typing_extensions import TypeVar as _DefaultTypeVar
+
+    _ConfigOutput = _DefaultTypeVar("_ConfigOutput", default=Any)
+else:
+    _ConfigOutput = TypeVar("_ConfigOutput")
 
 __all__ = [
     "_PipeArgs",
     "_PipeType",
     "_TPipeInputs",
+    "_TStage",
     "MergeConfig",
     "PipeConfig",
     "AggregateConfig",
@@ -86,7 +98,7 @@ class SourceConfig(Generic[T]):
           Illustrates how to build a complex pipeline.
     """
 
-    source: Iterable | AsyncIterable
+    source: Iterable[T] | AsyncIterable[T]
     """Generates the series of source data. See
     :py:meth:`~spdl.pipeline.PipelineBuilder.add_source` for source ownership and
     iterator cleanup timing."""
@@ -132,7 +144,7 @@ class MergeConfig:
           Illustrates how to build a complex pipeline.
     """
 
-    pipeline_configs: "tuple[PipelineConfig[Any]]"
+    pipeline_configs: "tuple[PipelineConfig[Any], ...]"
     """The pipeline configurations to merge."""
 
     op: _TMergeOp | None = None
@@ -478,7 +490,7 @@ class ExecutorConfig:
 
     def _build(
         self,
-        stages: Sequence[object],
+        stages: "Sequence[_TStage]",
         backend: Any,
         report_stats_interval: float,
         fail_fast: bool,
@@ -541,7 +553,7 @@ class ProcessPoolExecutorConfig(ExecutorConfig):
 
     def _build(
         self,
-        stages: Sequence[object],
+        stages: "Sequence[_TStage]",
         backend: Any,
         report_stats_interval: float,
         fail_fast: bool,
@@ -580,7 +592,7 @@ class InterpreterPoolExecutorConfig(ExecutorConfig):
 
     def _build(
         self,
-        stages: Sequence[object],
+        stages: "Sequence[_TStage]",
         backend: Any,
         report_stats_interval: float,
         fail_fast: bool,
@@ -810,10 +822,12 @@ class PathVariantsConfig(Generic[T]):
 # Sink
 ################################################################################
 @dataclass(frozen=True)
-class SinkConfig(Generic[T]):
+class SinkConfig(Generic[_ConfigOutput]):
     """A sink configuration.
 
     The sink is where the final result of pipeline is buffered.
+    Its item type is supplied explicitly; capacity alone does not determine it.
+    Unparameterized sink configurations retain dynamic item types.
 
     .. seealso::
 
@@ -837,11 +851,24 @@ class SinkConfig(Generic[T]):
 ##############################################################################
 # Top-level Config
 ##############################################################################
+_TStage: TypeAlias = (
+    PipeConfig[Any, Any]
+    | AggregateConfig[Any]
+    | DisaggregateConfig[Any]
+    | PathVariantsConfig[Any]
+    | _SubprocessPipelineConfig
+    | PlacementConfig
+)
+
+
 @dataclass(frozen=True)
-class PipelineConfig(Generic[U]):
+class PipelineConfig(Generic[_ConfigOutput]):
     """A pipeline configuration.
 
     A pipeline consists of source, a series of pipes and sink.
+    The heterogeneous stage list does not infer the final output type.
+    Unparameterized configurations retain dynamic output types; parameterize
+    or annotate the configuration when an explicit output type is needed.
 
     You can use :py:func:`spdl.pipeline.build_pipeline` to build a
     :py:class:`spdl.pipeline.Pipeline` object.
@@ -855,17 +882,10 @@ class PipelineConfig(Generic[U]):
     src: SourceConfig[Any] | MergeConfig
     """Source configuration."""
 
-    pipes: Sequence[
-        PipeConfig[Any, Any]
-        | AggregateConfig[Any]
-        | DisaggregateConfig[Any]
-        | PathVariantsConfig[Any]
-        | _SubprocessPipelineConfig
-        | PlacementConfig
-    ]
+    pipes: Sequence[_TStage]
     """Pipe configurations."""
 
-    sink: SinkConfig[U]
+    sink: SinkConfig[_ConfigOutput]
     """Sink configuration."""
 
     def __repr__(self) -> str:
@@ -985,15 +1005,78 @@ def _get_op_name(op: Callable) -> str:
 
 
 @runtime_checkable
-class SupportsGetItem(Protocol[T, U]):
+class SupportsGetItem(Protocol[_T_contra, _U_co]):
     """Protocol for classes with ``__getitem__`` method, such as ``dict`` and ``list``."""
 
-    def __getitem__(self, key: T) -> U: ...
+    def __getitem__(self, key: _T_contra, /) -> _U_co: ...
 
 
-_TPipeInputs: TypeAlias = (
-    _TCallables[T, U] | SupportsGetItem[T, U] | Mapping[T, U] | Sequence[T]
-)
+_TPipeInputs: TypeAlias = _TCallables[T, U] | SupportsGetItem[T, U]
+
+
+@overload
+def Pipe(
+    op: Callable[[T], AsyncIterator[U]],
+    /,
+    *,
+    concurrency: int = ...,
+    executor: Executor | None = ...,
+    name: str | None = ...,
+    output_order: str = ...,
+    max_failures: int | Fraction | None = ...,
+) -> PipeConfig[T, U]: ...
+
+
+@overload
+def Pipe(
+    op: Callable[[T], Awaitable[U]],
+    /,
+    *,
+    concurrency: int = ...,
+    executor: Executor | None = ...,
+    name: str | None = ...,
+    output_order: str = ...,
+    max_failures: int | Fraction | None = ...,
+) -> PipeConfig[T, U]: ...
+
+
+@overload
+def Pipe(
+    op: Callable[[T], Iterator[U]],
+    /,
+    *,
+    concurrency: int = ...,
+    executor: Executor | None = ...,
+    name: str | None = ...,
+    output_order: str = ...,
+    max_failures: int | Fraction | None = ...,
+) -> PipeConfig[T, U]: ...
+
+
+@overload
+def Pipe(
+    op: Callable[[T], U] | SupportsGetItem[T, U],
+    /,
+    *,
+    concurrency: int = ...,
+    executor: Executor | None = ...,
+    name: str | None = ...,
+    output_order: str = ...,
+    max_failures: int | Fraction | None = ...,
+) -> PipeConfig[T, U]: ...
+
+
+@overload
+def Pipe(
+    op: _TPipeInputs[T, U],
+    /,
+    *,
+    concurrency: int = ...,
+    executor: Executor | None = ...,
+    name: str | None = ...,
+    output_order: str = ...,
+    max_failures: int | Fraction | None = ...,
+) -> PipeConfig[T, U]: ...
 
 
 def Pipe(
@@ -1302,6 +1385,7 @@ def Aggregate(
        :ref:`Example: Pipeline definitions <example-pipeline-definitions>`
           Illustrates how to build a complex pipeline.
     """
+    op: Aggregator
     match input:
         case int():  # Standard batching
             op = Collate(input)

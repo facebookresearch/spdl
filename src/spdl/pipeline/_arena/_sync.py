@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from multiprocessing.synchronize import Semaphore
 
 __all__ = ["_process_exists", "_signal_space"]
@@ -17,7 +18,7 @@ __all__ = ["_process_exists", "_signal_space"]
 def _process_exists(pid: int) -> bool:
     if not pid:
         return False
-    if os.name == "nt":
+    if sys.platform == "win32":
         import _winapi
 
         if not 0 < pid <= 0xFFFFFFFF:

@@ -56,6 +56,7 @@ class LiveProcMonitorTest(unittest.TestCase):
         if result.pss_bytes is not None:
             self.assertGreater(result.pss_bytes, 0)
             self.assertIsNotNone(result.private_bytes)
+            assert result.private_bytes is not None
             self.assertGreater(result.private_bytes, 0)
 
     def test_collect_pgrp_stats_returns_complete_snapshot(self) -> None:

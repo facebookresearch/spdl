@@ -18,7 +18,7 @@ import weakref
 from collections.abc import Callable
 from concurrent.futures import Executor, Future, ThreadPoolExecutor
 from queue import Empty
-from typing import Type, TypeVar
+from typing import ParamSpec, Type, TypeVar
 
 from spdl.pipeline import (
     PipelineBuilder,
@@ -29,13 +29,14 @@ from spdl.pipeline import (
 )
 from spdl.pipeline._priority_executor import _OWNER_REGISTRY, _PriorityQueueAdapter
 
-_F = TypeVar("_F", bound=Callable[..., object])
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 _C = TypeVar("_C", bound=Type[object])
 
 
-def _ignore_fork_warning(fn: _F) -> _F:
+def _ignore_fork_warning(fn: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(fn)
-    def wrapper(*args: object, **kwargs: object) -> object:
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
@@ -47,7 +48,6 @@ def _ignore_fork_warning(fn: _F) -> _F:
             )
             return fn(*args, **kwargs)
 
-    # pyre-ignore[7]
     return wrapper
 
 
@@ -233,9 +233,11 @@ class TestPriorityThreadPoolExecutorOrdering(unittest.TestCase):
         executor.shutdown()
 
     def test_submit_after_shutdown_raises(self) -> None:
+        """Submitting through an existing entrypoint fails after executor shutdown."""
         executor = PriorityThreadPoolExecutor(max_workers=1)
         stage = executor.get_executor()
         executor.shutdown()
+        self.assertIsNotNone(stage)
         with self.assertRaises(RuntimeError):
             executor._submit_with_priority((0, 0), lambda: None, (), {})
 
@@ -865,19 +867,21 @@ class TestPriorityExecutorGarbageCollection(unittest.TestCase):
 
 
 def _has_interpreter_pool_executor() -> bool:
-    if sys.version_info < (3, 14):
-        return False
-    try:
-        from concurrent.futures.interpreter import InterpreterPoolExecutor  # noqa: F401
-    except ImportError:
-        return False
-    return True
+    if sys.version_info >= (3, 14):
+        try:
+            from concurrent.futures.interpreter import (  # noqa: F401
+                InterpreterPoolExecutor,
+            )
+        except ImportError:
+            return False
+        return True
+    return False
 
 
 _HAS_INTERPRETER: bool = _has_interpreter_pool_executor()
 
 
-if _HAS_INTERPRETER:
+if sys.version_info >= (3, 14) and _HAS_INTERPRETER:
 
     class TestPriorityInterpreterPoolExecutor(unittest.TestCase):
         def test_basic_execution(self) -> None:

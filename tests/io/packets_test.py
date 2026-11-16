@@ -9,7 +9,8 @@ import gc
 import time
 import unittest
 import warnings
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from typing import cast
 from unittest import mock
 
 import numpy as np
@@ -68,19 +69,21 @@ class TestDemuxWithoutCodec(unittest.TestCase):
         a_bsf = spdl.io.BSF(demuxer.audio_codec, "null")
         num_packets = 0
         for packets in demuxer.streaming_demux(num_packets=5):
+            filtered: spdl.io.AudioPackets | spdl.io.VideoPackets | None
             num_packets += 1
             codec = packets.codec
             self.assertIsNone(codec)
 
-            if packets.__class__.__name__ == "AudioPackets":
-                packets = a_bsf.filter(packets)
-            elif packets.__class__.__name__ == "VideoPackets":
-                packets = v_bsf.filter(packets)
+            if isinstance(packets, spdl.io.AudioPackets):
+                filtered = a_bsf.filter(packets)
+            elif isinstance(packets, spdl.io.VideoPackets):
+                filtered = v_bsf.filter(packets)
             else:
                 raise RuntimeError("Unexpected packet type")
 
-            # pyrefly: ignore [missing-attribute]
-            codec = packets.codec
+            self.assertIsNotNone(filtered)
+            assert filtered is not None
+            codec = filtered.codec
             self.assertIsNone(codec)
         self.assertGreater(num_packets, 10)
 
@@ -155,11 +158,18 @@ class TestClonePackets(unittest.TestCase):
         cmd = CMDS[media_type]
         sample = get_sample(cmd)
 
-        demux_func = {
+        demux_funcs: dict[
+            str,
+            Callable[
+                [str],
+                spdl.io.AudioPackets | spdl.io.VideoPackets | spdl.io.ImagePackets,
+            ],
+        ] = {
             "audio": spdl.io.demux_audio,
             "video": spdl.io.demux_video,
             "image": spdl.io.demux_image,
-        }[media_type]
+        }
+        demux_func = demux_funcs[media_type]
 
         packets1 = demux_func(sample.path)
         packets2 = packets1.clone()
@@ -181,6 +191,7 @@ class TestClonePackets(unittest.TestCase):
         cmd = CMDS[media_type]
         sample = get_sample(cmd)
 
+        packets: spdl.io.AudioPackets | spdl.io.VideoPackets | spdl.io.ImagePackets
         if media_type == "audio":
             packets = spdl.io.demux_audio(sample.path)
             _ = spdl.io.decode_packets(packets)
@@ -215,11 +226,18 @@ class TestClonePackets(unittest.TestCase):
         sample = get_sample(cmd)
         N = 100
 
-        demux_func = {
+        demux_funcs: dict[
+            str,
+            Callable[
+                [str],
+                spdl.io.AudioPackets | spdl.io.VideoPackets | spdl.io.ImagePackets,
+            ],
+        ] = {
             "audio": spdl.io.demux_audio,
             "video": spdl.io.demux_video,
             "image": spdl.io.demux_image,
-        }[media_type]
+        }
+        demux_func = demux_funcs[media_type]
 
         packets = demux_func(sample.path)
         clones = [packets.clone() for _ in range(N)]
@@ -250,6 +268,7 @@ class TestSampleDecodingTime(unittest.TestCase):
 
         packets = spdl.io.demux_video(sample.path)
         t0 = time.monotonic()
+        frames: spdl.io.VideoFrames | list[spdl.io.ImageFrames]
         frames = spdl.io.decode_packets(packets.clone())
         frames = frames[indices]
         elapsed_ref = time.monotonic() - t0
@@ -286,6 +305,7 @@ class TestSampleDecodingTime(unittest.TestCase):
 
         packets = spdl.io.demux_video(sample.path)
         t0 = time.monotonic()
+        frames: spdl.io.VideoFrames | list[spdl.io.ImageFrames]
         frames = spdl.io.decode_packets(packets.clone())
         frames = frames[indices]
         elapsed_ref = time.monotonic() - t0
@@ -458,11 +478,10 @@ class TestSparseRgbSelection(unittest.TestCase):
                     [0, 4, 14] if desc != "fps=5,format=pix_fmts=rgb24" else [0, 2, 4]
                 )
                 packets = spdl.io.demux_video(sample.path, timestamp=(0.55, 2.05))
-                expected = []
-                # pyrefly: ignore [missing-attribute]
-                for split, local in _composite._libspdl._extract_packets_at_indices(
-                    packets.clone(), indices
-                ):
+                expected: list[spdl.io.ImageFrames] = []
+                for split, local in cast(
+                    _composite._PacketExtractionProtocol, _composite._libspdl
+                )._extract_packets_at_indices(packets.clone(), indices):
                     prefix = spdl.io.decode_packets(
                         split, filter_desc=desc, num_frames=max(local) + 1
                     )
@@ -495,6 +514,7 @@ class TestSampleDecodingWindow(unittest.TestCase):
         self.assertEqual(len(packets), 25)
 
         # decode all to verify the pre-condition
+        frames: spdl.io.VideoFrames | list[spdl.io.ImageFrames]
         frames = spdl.io.decode_packets(packets.clone())
         self.assertEqual(len(frames), 25)
         array = spdl.io.to_numpy(spdl.io.convert_frames(frames))
@@ -526,6 +546,7 @@ class TestSampleDecodingWindow(unittest.TestCase):
         self.assertEqual(len(packets), 25)
 
         # decode all to verify the pre-condition
+        frames: spdl.io.VideoFrames | list[spdl.io.ImageFrames]
         frames = spdl.io.decode_packets(packets.clone())
         self.assertEqual(len(frames), 25)
         array = spdl.io.to_numpy(spdl.io.convert_frames(frames))

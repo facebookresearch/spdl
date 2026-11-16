@@ -153,15 +153,16 @@ def main() -> None:
     print("SPDL Pipeline Thread Output Queue Handoff Benchmark")
     print("=" * 90)
 
+    selections: list[tuple[bool | type[ThreadOutputQueue], str]] = [
+        (False, "False"),
+        (ThreadOutputQueue, "ThreadOutputQueue"),
+        (StatsThreadOutputQueue, "StatsThreadOutputQueue"),
+    ]
     results: list[BenchResult] = []
     for work_ms in range(0, 31, 3):
         label = f"{work_ms}ms foreground work"
         print(f"\n--- {label} ({n_items} items, buffer_size={buffer_size}) ---")
-        for selection, tag in [
-            (False, "False"),
-            (ThreadOutputQueue, "ThreadOutputQueue"),
-            (StatsThreadOutputQueue, "StatsThreadOutputQueue"),
-        ]:
+        for selection, tag in selections:
             result = run_benchmark(
                 f"{tag}, {label}",
                 n_items,

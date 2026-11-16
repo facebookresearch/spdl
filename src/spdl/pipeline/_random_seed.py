@@ -76,7 +76,7 @@ def _imported(name: str) -> Any:
     return sys.modules.get(name)
 
 
-def _restore_random_state(state: object) -> None:
+def _restore_random_state(state: tuple[object, ...]) -> None:
     """Restore the stdlib :py:mod:`random` global state (runs in the subprocess)."""
     random.setstate(state)  # pyre-ignore[6]: round-tripped from random.getstate()
 

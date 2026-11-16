@@ -24,15 +24,21 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 
-try:
-    from examples.benchmark_utils import load_results_from_csv  # pyre-ignore[21]
-    from examples.benchmark_wav import (  # pyre-ignore[21]
-        BenchmarkConfig,
-        DEFAULT_RESULT_PATH,
-    )
-except ImportError:
-    from spdl.examples.benchmark_utils import load_results_from_csv
-    from spdl.examples.benchmark_wav import BenchmarkConfig, DEFAULT_RESULT_PATH
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .benchmark_utils import load_results_from_csv
+    from .benchmark_wav import BenchmarkConfig, DEFAULT_RESULT_PATH
+else:
+    try:
+        from examples.benchmark_utils import load_results_from_csv  # pyre-ignore[21]
+        from examples.benchmark_wav import (  # pyre-ignore[21]
+            BenchmarkConfig,
+            DEFAULT_RESULT_PATH,
+        )
+    except ImportError:
+        from spdl.examples.benchmark_utils import load_results_from_csv
+        from spdl.examples.benchmark_wav import BenchmarkConfig, DEFAULT_RESULT_PATH
 
 
 def plot_benchmark_results(

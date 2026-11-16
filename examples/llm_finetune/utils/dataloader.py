@@ -93,11 +93,13 @@ def build_pytorch_dataloader(
     device, if any, so no manual ``to(device)`` call is needed.
     """
     dataset = _InstructDataset(samples, tokenizer, max_seq_len)
-    sampler = torch.utils.data.DistributedSampler(
-        dataset,
-        num_replicas=world_size,
-        rank=rank,
-        shuffle=True,
+    sampler: torch.utils.data.DistributedSampler[_TSample] = (
+        torch.utils.data.DistributedSampler(
+            dataset,
+            num_replicas=world_size,
+            rank=rank,
+            shuffle=True,
+        )
     )
     dl = torch.utils.data.DataLoader(
         dataset,

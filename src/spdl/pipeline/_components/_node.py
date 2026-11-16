@@ -11,7 +11,7 @@ from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass, field
 from fractions import Fraction
 from functools import partial
-from typing import Any, TypeAlias, TypeVar
+from typing import Any, cast, overload, Protocol, TypeAlias, TypeVar
 
 from spdl.pipeline._bg_task import BackgroundTaskFactory
 from spdl.pipeline._common._misc import create_task
@@ -43,6 +43,7 @@ from ._pipe import (
 )
 from ._queue import (
     _AsyncQueueWithSyncMirror,
+    _QueueFactory,
     AsyncQueue,
     get_default_queue_class,
     StatsQueue,
@@ -55,9 +56,21 @@ from ._variants import _batched_path_variants_merge, _path_variants_router
 
 T = TypeVar("T")
 S = TypeVar("S")
+_ExceptionT = TypeVar("_ExceptionT", bound=Exception)
+_BaseExceptionT = TypeVar("_BaseExceptionT", bound=BaseException)
 
 
 _LG: logging.Logger = logging.getLogger(__name__)
+
+
+class _ReportingQueueFactory(Protocol):
+    def __call__(
+        self, info: StageInfo, /, *, buffer_size: int = 1, interval: float = -1
+    ) -> AsyncQueue: ...
+
+
+class _ReportingHookFactory(Protocol):
+    def __call__(self, info: StageInfo, /, *, interval: float = -1) -> TaskHook: ...
 
 
 __all__ = [
@@ -322,7 +335,7 @@ def _convert_pipes(
         | PlacementConfig
     ],
     n: _TNodes,
-    q_class: type[AsyncQueue],
+    q_class: _QueueFactory,
     pipeline_id: int,
     stage_id: _MutableInt,
     path_idx: int = -1,
@@ -368,7 +381,7 @@ def _convert_pipes(
 def _convert_path_variants(
     cfg: PathVariantsConfig,
     n: _TNodes,
-    q_class: type[AsyncQueue],
+    q_class: _QueueFactory,
     pipeline_id: int,
     stage_id: _MutableInt,
     path_idx: int = -1,
@@ -451,7 +464,7 @@ def _convert_path_variants(
 
 def _convert_config(
     plc: PipelineConfig[T],
-    q_class: type[AsyncQueue],
+    q_class: _QueueFactory,
     pipeline_id: int,
     stage_id: _MutableInt,
     disable_sink: bool = False,
@@ -479,6 +492,7 @@ def _convert_config(
     info = _get_stage_info(plc.src, pipeline_id, stage_id)
     stage_id += 1
     q = q_class(info, buffer_size=_BUFFER_SIZE)
+    n: _TOutputNodes
     match cfg := plc.src:
         case SourceConfig():
             n = _SourceNode(info, cfg, output_queue=q)
@@ -496,6 +510,7 @@ def _convert_config(
         n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
 
     if not disable_sink:
+        sink_out_q: AsyncQueue | ThreadOutputQueue
         info = _get_stage_info(plc.sink, pipeline_id, stage_id)
         stage_id += 1
         if use_thread_output_queue:
@@ -573,6 +588,16 @@ def _build_node(
             return
         raise RuntimeError(f"[Internal Error] coroutine cannot be built twice. {node}")
 
+    cfg: (
+        MergeConfig
+        | _PathVariantsMergeConfig
+        | PipeConfig
+        | SinkConfig
+        | AggregateConfig
+        | DisaggregateConfig
+        | PathVariantsConfig
+        | _SubprocessPipelineConfig
+    )
     match node:
         case _SourceNode():
             fn = _source_continuous if node.cfg.continuous else _source
@@ -659,7 +684,9 @@ def _build_node(
                     in_q, out_q = node.input_queue, node.output_queue
                     hooks = task_hook_factory(node.info)
                     fc = fc_class(max_failures)
-                    args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
+                    args = cast(
+                        _PipeArgs[list[object], object], _PipeArgs(op=_disaggregate)
+                    )
                     node._coro = _pipe(node.info, in_q, out_q, args, fc, hooks, False)
 
                 case _SubprocessPipelineConfig():
@@ -718,23 +745,23 @@ def _set_global_id(val: int) -> None:
     _PIPELINE_ID = val
 
 
-def _default_q(interval: float) -> type[AsyncQueue]:
-    queue_class = get_default_queue_class()
-    return partial(queue_class, interval=interval)  # pyre-ignore[7]
+def _default_q(interval: float) -> _QueueFactory:
+    queue_class = cast(_ReportingQueueFactory, get_default_queue_class())
+    return partial(queue_class, interval=interval)
 
 
 def _default_hook_factory(
     report_stats_interval: float,
 ) -> Callable[[StageInfo], list[TaskHook]]:
     if (hook_class := get_default_hook_class()) is not None:
+        hook_factory = cast(_ReportingHookFactory, hook_class)
 
         def _hook_factory(stage_info: StageInfo) -> list[TaskHook]:
-            # pyrefly: ignore [bad-argument-count, unexpected-keyword]
-            return [hook_class(stage_info, interval=report_stats_interval)]
+            return [hook_factory(stage_info, interval=report_stats_interval)]
 
     else:
 
-        def _hook_factory(_: StageInfo) -> list[TaskHook]:
+        def _hook_factory(stage_info: StageInfo) -> list[TaskHook]:
             return []
 
     return _hook_factory
@@ -746,7 +773,7 @@ def _build_pipeline_node(
     *,
     max_failures: int | Fraction,
     report_stats_interval: float,
-    queue_class: type[AsyncQueue] | None,
+    queue_class: _QueueFactory | None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None,
     stage_id: int,
     use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
@@ -886,6 +913,8 @@ def _gather_error(
     task = node.task
     errs = []
     if not task.cancelled() and (err := task.exception()) is not None:
+        if not isinstance(err, Exception):
+            raise err
         errs.append((task.get_name(), err))
 
     for n in node.upstream:
@@ -920,10 +949,27 @@ class PipelineFailure(ExceptionGroup[Exception]):
     def __init__(self, errs: list[tuple[str, Exception]]) -> None:
         pass
 
-    def derive(  # pyre-ignore[14]
-        self, excs: Sequence[Exception]
-    ) -> "PipelineFailure":
-        return super().__new__(type(self), self.message, excs)
+    @overload
+    def derive(self, excs: Sequence[_ExceptionT], /) -> ExceptionGroup[_ExceptionT]: ...
+
+    @overload
+    def derive(
+        self,
+        excs: Sequence[_BaseExceptionT],
+        /,  # noqa: W504
+    ) -> BaseExceptionGroup[_BaseExceptionT]: ...
+
+    def derive(
+        self,
+        excs: Sequence[BaseException],
+        /,  # noqa: W504
+    ) -> BaseExceptionGroup[BaseException]:
+        exceptions = list(excs)
+        if all(isinstance(exc, Exception) for exc in exceptions):
+            return super().__new__(
+                type(self), self.message, cast(Sequence[Exception], exceptions)
+            )
+        return BaseExceptionGroup(self.message, exceptions)
 
 
 async def _run_pipeline_coroutines(
@@ -1020,7 +1066,7 @@ def _build_pipeline_coro(
     *,
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue] | None = None,
+    queue_class: _QueueFactory | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: Sequence[BackgroundTaskFactory] | None = None,

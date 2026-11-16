@@ -33,8 +33,10 @@ from pathlib import Path
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 
-try:
-    from examples.sqlite_stats_logger import (  # pyre-ignore[21]
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .sqlite_stats_logger import (
         log_stats_summary,
         query_event_stats,
         query_queue_stats,
@@ -42,15 +44,25 @@ try:
         QueueStatsQueryResult,
         TaskStatsQueryResult,
     )
-except ImportError:
-    from spdl.examples.sqlite_stats_logger import (
-        log_stats_summary,
-        query_event_stats,
-        query_queue_stats,
-        query_task_stats,
-        QueueStatsQueryResult,
-        TaskStatsQueryResult,
-    )
+else:
+    try:
+        from examples.sqlite_stats_logger import (  # pyre-ignore[21]
+            log_stats_summary,
+            query_event_stats,
+            query_queue_stats,
+            query_task_stats,
+            QueueStatsQueryResult,
+            TaskStatsQueryResult,
+        )
+    except ImportError:
+        from spdl.examples.sqlite_stats_logger import (
+            log_stats_summary,
+            query_event_stats,
+            query_queue_stats,
+            query_task_stats,
+            QueueStatsQueryResult,
+            TaskStatsQueryResult,
+        )
 
 __all__ = [
     "parse_args",

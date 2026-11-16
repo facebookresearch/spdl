@@ -93,6 +93,17 @@ void register_decoding(nb::module_& m) {
           nb::call_guard<nb::gil_scoped_release>(),
           "Flush the decoder and yield remaining frames");
 
+  nb::class_<Decoder<MediaType::Image>>(
+      m, "ImageDecoder", "Decode image packets using the one-shot decoder.")
+      .def(
+          "decode_packets",
+          &Decoder<MediaType::Image>::decode_packets,
+          nb::call_guard<nb::gil_scoped_release>(),
+          nb::arg("packets"),
+          nb::kw_only(),
+          nb::arg("num_frames") = -1,
+          "Decode image packets and flush the decoder into image frames.");
+
   m.def(
       "make_decoder",
       &_make_decoder<MediaType::Audio>,

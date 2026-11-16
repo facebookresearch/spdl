@@ -31,10 +31,15 @@ import argparse
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 
-try:
-    from examples.benchmark_arena_transport import read_csv, Row  # pyre-ignore[21]
-except ImportError:
-    from spdl.examples.benchmark_arena_transport import read_csv, Row
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .benchmark_arena_transport import read_csv, Row
+else:
+    try:
+        from examples.benchmark_arena_transport import read_csv, Row  # pyre-ignore[21]
+    except ImportError:
+        from spdl.examples.benchmark_arena_transport import read_csv, Row
 
 _TRANSPORTS = ("no-arena", "ring", "pool")
 _KIND_ORDER = ("bytes", "numpy", "torch", "packets")

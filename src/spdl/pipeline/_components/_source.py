@@ -196,10 +196,10 @@ async def _source(
             return
 
         runner = _SyncSourceThread(cast(Iterable[T], src), continuous=False)
-        async with aclosing(runner.iterate()) as items:
-            async for item in items:
-                await queue.put(item)
-                del item
+        async with aclosing(runner.iterate()) as sync_items:
+            async for sync_item in sync_items:
+                await queue.put(sync_item)
+                del sync_item
                 num_items += 1
                 if max_items is not None and num_items >= max_items:
                     return
@@ -238,7 +238,7 @@ async def _source_continuous(
                     await _close_async_source(async_items)
 
         runner = _SyncSourceThread(cast(Iterable[T], src), continuous=True)
-        async with aclosing(runner.iterate()) as items:
-            async for item in items:
-                await queue.put(item)
-                del item
+        async with aclosing(runner.iterate()) as sync_items:
+            async for sync_item in sync_items:
+                await queue.put(sync_item)
+                del sync_item

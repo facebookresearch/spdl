@@ -21,6 +21,8 @@ import os
 import signal
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from multiprocessing.process import BaseProcess
+from typing import cast
 
 from spdl.pipeline._bg_task import BackgroundTask
 
@@ -649,8 +651,8 @@ class ProcessGroupStatsMonitor(BackgroundTask):
             )
             return
         ctx = self._mp_context or multiprocessing.get_context()
-        # pyrefly: ignore [missing-attribute]
-        proc = ctx.Process(
+        process_factory = cast(type[BaseProcess], getattr(ctx, "Process"))  # noqa: B009
+        proc = process_factory(
             target=_pgrp_monitor_subprocess,
             args=(self._interval, self._callback),
             daemon=True,

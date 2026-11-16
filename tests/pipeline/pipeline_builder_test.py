@@ -18,7 +18,7 @@ import threading
 import time
 import unittest
 import warnings
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Iterable, Iterator
 from concurrent.futures import (
     BrokenExecutor,
     Future,
@@ -697,8 +697,7 @@ class TestPipelineHook(unittest.TestCase):
             .add_source(range(10))
             .pipe(passthrough)
             .add_sink(1000)
-            # pyre-ignore[6]
-            .build(num_threads=1, task_hook_factory=lambda _: hooks)
+            .build(num_threads=1, task_hook_factory=lambda _: list(hooks))
         )
 
         with pipeline.auto_stop():
@@ -716,7 +715,7 @@ class TestPipelineHook(unittest.TestCase):
         """If enter_stage fails, the pipeline is aborted."""
 
         class _enter_stage_fail(TaskHook):
-            @asynccontextmanager
+            @asynccontextmanager  # type: ignore[arg-type]
             async def stage_hook(self):
                 raise RuntimeError("failing")
 
@@ -733,7 +732,7 @@ class TestPipelineHook(unittest.TestCase):
             .build(num_threads=1, task_hook_factory=lambda _: [_enter_stage_fail()])
         )
 
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
@@ -763,7 +762,7 @@ class TestPipelineHook(unittest.TestCase):
             # pyre-ignore[6]
             .build(num_threads=1, task_hook_factory=lambda _: [_exit_stage_fail()])
         )
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
@@ -774,7 +773,7 @@ class TestPipelineHook(unittest.TestCase):
         """If enter_task fails, the pipeline does not fail."""
 
         class _hook(TaskHook):
-            @asynccontextmanager
+            @asynccontextmanager  # type: ignore[arg-type]
             async def task_hook(self, input_item=None):
                 raise RuntimeError("failing enter_task")
 
@@ -1656,7 +1655,7 @@ class TestPipelineSource(unittest.TestCase):
             .build(num_threads=1)
         )
 
-        results = []
+        results: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 results.extend(pipeline.get_iterator(timeout=30))
@@ -1674,13 +1673,13 @@ class TestPipelineType(unittest.TestCase):
         pipeline = (
             PipelineBuilder()
             .add_source(range(10))
-            # pyrefly: ignore [bad-argument-type]
-            .pipe(wrong_sig)
+            # pyrefly: ignore [no-matching-overload]
+            .pipe(wrong_sig)  # type: ignore[arg-type, call-overload]
             .add_sink(1000)
             .build(num_threads=1)
         )
 
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
@@ -1768,8 +1767,8 @@ class TestPipelineFail(unittest.TestCase):
             PipelineBuilder()
             .add_source(range(10))
             .pipe(passthrough)
-            # pyrefly: ignore [bad-argument-type]
-            .pipe(fail)
+            # pyrefly: ignore [no-matching-overload]
+            .pipe(fail)  # type: ignore[arg-type, call-overload]
             .pipe(pwc)
             .add_sink(1)
             .build(num_threads=1)
@@ -2422,7 +2421,7 @@ class TestPipelinebuilderPicklable(unittest.TestCase):
             .add_sink(10)
         )
 
-        results = list(
+        results: list[int] = list(
             run_pipeline_in_subprocess(
                 # pyre-ignore[6]
                 builder,
@@ -2612,7 +2611,7 @@ class TestPipelineMax(unittest.TestCase):
         pipeline1 = builder.build(num_threads=1, max_failures=2)
         pipeline2 = builder.build(num_threads=1, max_failures=3)
 
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline2.auto_stop():
                 vals.extend(pipeline2.get_iterator(timeout=30))
@@ -2650,7 +2649,7 @@ class TestPipelineMax(unittest.TestCase):
         )
 
         pipeline = builder.build(num_threads=1, max_failures=-1)
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
@@ -2721,7 +2720,7 @@ class TestPipelineMax(unittest.TestCase):
         # it should shutdown the pipeline.
 
         pipeline = builder.build(num_threads=1, max_failures=2)
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
@@ -2756,7 +2755,7 @@ class TestIterableWithShuffle:
         self.vals = list(range(n))
         self.seed = 0
 
-    def shuffle(self, *, seed: int) -> None:
+    def shuffle(self, seed: int) -> None:
         self.vals = self.vals[1:] + self.vals[:1]
         self.seed = seed
 
@@ -2770,11 +2769,11 @@ class TestRunPipeline(unittest.TestCase):
         """The status of the source is maintained and propagated properly in subprocess"""
         n = 5
 
-        # pyre-ignore[6]
-        src = embed_shuffle(TestIterableWithShuffle(n))
+        source = TestIterableWithShuffle(n)
+        src = embed_shuffle(source)
         builder = PipelineBuilder().add_source(src).add_sink()
         # pyre-ignore[6]
-        iterable = run_pipeline_in_subprocess(builder, num_threads=1)
+        iterable: Iterable[int] = run_pipeline_in_subprocess(builder, num_threads=1)
 
         self.assertEqual([1, 2, 3, 4, 0], list(iterable))
         self.assertEqual([2, 3, 4, 0, 1], list(iterable))
@@ -2783,12 +2782,11 @@ class TestRunPipeline(unittest.TestCase):
         # since the src is copied to the subprocess iterating it yields the original state
 
         self.assertEqual([1, 2, 3, 4, 0], list(src))
-        # pyre-ignore[16]
-        self.assertEqual(0, src.src.seed)
+        self.assertEqual(0, source.seed)
         self.assertEqual([2, 3, 4, 0, 1], list(src))
-        self.assertEqual(1, src.src.seed)
+        self.assertEqual(1, source.seed)
         self.assertEqual([3, 4, 0, 1, 2], list(src))
-        self.assertEqual(2, src.src.seed)
+        self.assertEqual(2, source.seed)
 
     @_ignore_warnings(_RUN_PIPELINE_DEPRECATION, _FORK_WARNING, _UNAWAITED_COROUTINE)
     def test_run_pipeline_in_subprocess_pipeline_id(self) -> None:
@@ -2801,20 +2799,22 @@ class TestRunPipeline(unittest.TestCase):
         builder = PipelineBuilder().add_source(_ValidatePipelineId(ref)).add_sink()
 
         # pyre-ignore[6]
-        iterable = run_pipeline_in_subprocess(builder, num_threads=1)
+        iterable: Iterable[int] = run_pipeline_in_subprocess(builder, num_threads=1)
 
         for _ in iterable:
             pass
 
 
 def _has_interpreter_pool_executor() -> bool:
-    if sys.version_info < (3, 14):
-        return False
-    try:
-        from concurrent.futures.interpreter import InterpreterPoolExecutor  # noqa: F401
-    except ImportError:
-        return False
-    return True
+    if sys.version_info >= (3, 14):
+        try:
+            from concurrent.futures.interpreter import (  # noqa: F401
+                InterpreterPoolExecutor,
+            )
+        except ImportError:
+            return False
+        return True
+    return False
 
 
 _HAS_INTERPRETER: bool = _has_interpreter_pool_executor()
@@ -3302,8 +3302,9 @@ class TestOverrideStage(unittest.TestCase):
 
             def __init__(self, name, *, buffer_size: int = 1) -> None:
                 print(name)
-                # pyrefly: ignore [missing-attribute]
-                id = re.match(r"\d+:(\d+):.*", str(name)).group(1)
+                match = re.match(r"\d+:(\d+):.*", str(name))
+                assert match is not None
+                id = match.group(1)
                 assert id == str(self.index)
                 CheckNameQueue.index += 1
                 super().__init__(name, buffer_size=buffer_size)
@@ -3395,6 +3396,7 @@ class TestPipelineFailureStructure(unittest.TestCase):
         pf = ctx.exception
         sub = pf.subgroup(ValueError)
         self.assertIsNotNone(sub)
+        assert sub is not None
         self.assertIsInstance(sub, PipelineFailure)
         self.assertTrue(all(isinstance(e, ValueError) for e in sub.exceptions))
 
@@ -3506,7 +3508,7 @@ class TestStageFinalizationCancellation(unittest.TestCase):
             PipelineBuilder()
             .add_source(range(10))
             # pyre-ignore[6]
-            .pipe(wrong_sig)
+            .pipe(wrong_sig)  # type: ignore[arg-type, call-overload]
             .add_sink(1)
             .build(
                 num_threads=1,

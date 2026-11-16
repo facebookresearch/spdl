@@ -232,10 +232,14 @@ class SharedMemorySegmentPool:
         self._seg_names: list[str] = [s.name for s in segs]
         self._ctrl: shared_memory.SharedMemory | None = ctrl
         self._segs: list[shared_memory.SharedMemory] | None = segs
-        self._ctrl_buf: "memoryview[bytes] | None" = cast("memoryview[bytes]", ctrl.buf)
-        self._seg_bufs: "list[memoryview[bytes]] | None" = [
-            cast("memoryview[bytes]", segment.buf) for segment in segs
-        ]
+        self._ctrl_buf: "memoryview[int] | None" = ctrl.buf
+        seg_bufs: list["memoryview[int]"] = []
+        for segment in segs:
+            view = segment.buf
+            if view is None:
+                raise RuntimeError("Shared segment mapping is closed")
+            seg_bufs.append(view)
+        self._seg_bufs: "list[memoryview[int]] | None" = seg_bufs
         self._closed = False
         self._closing = False
         self._reader: _PoolReader | None = None
@@ -281,7 +285,7 @@ class SharedMemorySegmentPool:
         self._seg_bufs = None
         self._closed = False
         self._closing = False
-        self._reader: _PoolReader | None = None
+        self._reader = None
         self._close_lock = threading.RLock()
         self._registrations = {}
         self._mapping_exports = {}
@@ -294,25 +298,31 @@ class SharedMemorySegmentPool:
         self._owns_names = False
         self._retirement_error = None
 
-    def _ctrl_view(self) -> "memoryview[bytes]":
+    def _ctrl_view(self) -> "memoryview[int]":
         if self._closed:
             raise RuntimeError("segment pool is closed")
         if self._ctrl_buf is None:
             self._ctrl = _attach(self._ctrl_name)
-            # pyrefly: ignore [bad-assignment]
             self._ctrl_buf = self._ctrl.buf
-        # pyrefly: ignore [bad-return]
-        return self._ctrl_buf
+        buf = self._ctrl_buf
+        if buf is None:
+            raise RuntimeError("segment pool is closed")
+        return buf
 
-    def _segment(self, index: int) -> "memoryview[bytes]":
+    def _segment(self, index: int) -> "memoryview[int]":
         if self._closed:
             raise RuntimeError("segment pool is closed")
-        if self._seg_bufs is None:
+        seg_bufs = self._seg_bufs
+        if seg_bufs is None:
             self._segs = [_attach(n) for n in self._seg_names]
-            # pyrefly: ignore [bad-assignment]
-            self._seg_bufs = [s.buf for s in self._segs]
-        # pyrefly: ignore [unsupported-operation]
-        return self._seg_bufs[index % self._count]
+            seg_bufs = []
+            for segment in self._segs:
+                view = segment.buf
+                if view is None:
+                    raise RuntimeError("Shared segment mapping is closed")
+                seg_bufs.append(view)
+            self._seg_bufs = seg_bufs
+        return seg_bufs[index % self._count]
 
     def _ensure_pinned(self) -> None:
         if not self._pin_memory:
@@ -338,9 +348,7 @@ class SharedMemorySegmentPool:
                 view = segment.buf
                 if view is None:
                     raise RuntimeError("Shared segment mapping is closed")
-                registration = _HostRegistration(
-                    cast("memoryview[bytes]", view), device
-                )
+                registration = _HostRegistration(view, device)
                 self._registrations[segment.name] = registration
                 registration.register()
             self._pin_ready = True
@@ -735,9 +743,7 @@ class _PoolWriter:
                     )
             expired = not p._wait_space(deadline, control_deadline)
 
-    def write_binary(
-        self, data: "bytes | bytearray | memoryview[bytes]"
-    ) -> tuple[int, int]:
+    def write_binary(self, data: "bytes | bytearray | memoryview") -> tuple[int, int]:
         """Copy one binary into the current segment; return ``(offset, nbytes)``."""
         mv = memoryview(data).cast("B")
         n = mv.nbytes
@@ -842,7 +848,7 @@ class _PoolReader:
                 error.add_note(f"Export acquisition rollback failed: {cleanup_error!r}")
             raise
 
-    def read_binary(self, offset: int, nbytes: int) -> "memoryview[bytes]":
+    def read_binary(self, offset: int, nbytes: int) -> "memoryview[int]":
         """Return a storage-owned view into the current unit's segment."""
         if offset < 0 or nbytes < 0 or offset + nbytes > self.pool._segment_size:
             raise ValueError("binary is outside the segment")

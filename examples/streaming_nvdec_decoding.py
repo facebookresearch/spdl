@@ -76,7 +76,7 @@ def parse_args(args: list[str] | None = None) -> tuple[argparse.Namespace, list[
 def decode(
     src: str,
     device_config: CUDAConfig,
-    post_processing_params: dict[str, int],
+    post_processing_params: dict[str, int | bool],
     profiler: torch.profiler.profile | None,
     plot_dir: pathlib.Path | None,
 ) -> None:
@@ -140,9 +140,9 @@ def torch_cuda_warmup(device_index: int | None) -> tuple[int, torch.cuda.Stream]
 def run(
     src: str,
     device_index: int | None,
-    post_processing_params: dict[str, int],
-    profiler: torch.profiler.profile,
-    plot_dir: pathlib.Path,
+    post_processing_params: dict[str, int | bool],
+    profiler: torch.profiler.profile | None,
+    plot_dir: pathlib.Path | None,
 ) -> None:
     """Run the benchmark."""
     cuda_index, stream = torch_cuda_warmup(device_index)
@@ -168,10 +168,11 @@ def main(args: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO)
 
     prof = None
-    post_process = {
-        "scale_width": ns.width if ns.width > 0 else None,
-        "scale_height": ns.height if ns.height > 0 else None,
-    }
+    post_process: dict[str, int | bool] = {}
+    if ns.width > 0:
+        post_process["scale_width"] = ns.width
+    if ns.height > 0:
+        post_process["scale_height"] = ns.height
     with contextlib.ExitStack() as stack:
         if ns.trace_path:
             prof = stack.enter_context(

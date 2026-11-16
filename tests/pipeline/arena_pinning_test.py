@@ -160,6 +160,7 @@ class ArenaPinningTest(unittest.TestCase):
         gc.collect()
         retained = reference()
         self.assertIsNotNone(retained)
+        assert retained is not None
         with self.assertLogs("spdl.pipeline._arena._pool", level="ERROR"):
             retained.close()
         self.assertIsNotNone(retained._segs)
@@ -189,6 +190,7 @@ class ArenaPinningTest(unittest.TestCase):
         gc.collect()
         retained = reference()
         self.assertIsNotNone(retained)
+        assert retained is not None
         self.assertIsNotNone(retained._segs)
         registration.close.side_effect = None
         retained.close()
@@ -214,6 +216,7 @@ class ArenaPinningTest(unittest.TestCase):
         gc.collect()
         retained = reference()
         self.assertIsNotNone(retained)
+        assert retained is not None
         first.close.side_effect = None
         retained.close()
         retained.unlink()

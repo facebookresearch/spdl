@@ -14,7 +14,7 @@ import warnings
 from collections import Counter
 from collections.abc import Callable, Iterable
 from functools import partial
-from typing import TypeVar
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 from parameterized import parameterized
@@ -27,12 +27,13 @@ from spdl.source import (
 )
 from spdl.source.utils import embed_shuffle
 
-_F = TypeVar("_F", bound=Callable[..., object])
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 
-def _ignore_fork_warning(fn: _F) -> _F:
+def _ignore_fork_warning(fn: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(fn)
-    def wrapper(*args: object, **kwargs: object) -> object:
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
@@ -44,7 +45,6 @@ def _ignore_fork_warning(fn: _F) -> _F:
             )
             return fn(*args, **kwargs)
 
-    # pyre-ignore[7]
     return wrapper
 
 
@@ -133,7 +133,7 @@ class TestDistributedSamplerDeterministic(unittest.TestCase):
             for world_size in range(1, N + 1):
                 len_ = N // world_size
                 max_ = len_ * world_size
-                c = Counter()
+                c: Counter[int] = Counter()
                 for rank in range(world_size):
                     print(f"{N=}, {world_size=}, {rank=}, {len_=}, {max_=}")
                     sampler = DistributedDeterministicSampler(
@@ -316,7 +316,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
         ]
 
         for epoch in range(10):
-            c = Counter()
+            c: Counter[int] = Counter()
             for sampler in samplers:
                 sampler.shuffle(seed=epoch)
                 c.update(sampler)
@@ -339,7 +339,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
 
         weights = None if w is None else [1.0] * N
         for rank in range(world_size):
-            previous = []
+            previous: list[int] = []
             for i in range(100):
                 sampler = DistributedRandomSampler(
                     N, rank=rank, world_size=world_size, weights=weights
@@ -363,7 +363,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
         world_size = 8
 
         for epoch in range(100):
-            c = Counter()
+            c: Counter[int] = Counter()
             for rank in range(world_size):
                 sampler = DistributedRandomSampler(N, rank=rank, world_size=world_size)
                 if shuffle:
@@ -379,7 +379,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
         """Retaining the tail preserves the full random draw count."""
         N = 26
         world_size = 4
-        c = Counter()
+        c: Counter[int] = Counter()
         per_rank_counts: list[int] = []
         for rank in range(world_size):
             sampler = DistributedRandomSampler(
@@ -403,7 +403,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
         """Retaining the tail permits datasets smaller than world size."""
         N = 3
         world_size = 5
-        c = Counter()
+        c: Counter[int] = Counter()
         per_rank_counts: list[int] = []
         for rank in range(world_size):
             sampler = DistributedRandomSampler(
@@ -427,7 +427,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
         """Default random sampler preserves floor/drop tail behavior."""
         N = 26
         world_size = 4
-        c = Counter()
+        c: Counter[int] = Counter()
         for rank in range(world_size):
             sampler = DistributedRandomSampler(N, rank=rank, world_size=world_size)
             self.assertEqual(len(sampler), N // world_size)
@@ -450,7 +450,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
         world_size = 8
 
         for epoch in range(100):
-            c = Counter()
+            c: Counter[int] = Counter()
             for rank in range(world_size):
                 sampler = DistributedRandomSampler(
                     N, rank=rank, world_size=world_size, num_draws=num_draws
@@ -469,7 +469,7 @@ class TestDistributedSamplerRandom(unittest.TestCase):
         N = 10
         num_draws = 3
         world_size = 5
-        c = Counter()
+        c: Counter[int] = Counter()
         per_rank_counts: list[int] = []
         for rank in range(world_size):
             sampler = DistributedRandomSampler(
@@ -522,11 +522,11 @@ class TestDistributedSamplerEmbedShuffle(unittest.TestCase):
         weights = [1.0 for _ in range(N)]
 
         s0 = DistributedRandomSampler(N, rank=0, world_size=1, weights=weights)
-        s1 = DistributedRandomSampler(N, rank=0, world_size=1, weights=weights)
+        s1 = embed_shuffle(
+            DistributedRandomSampler(N, rank=0, world_size=1, weights=weights)
+        )
 
-        s1 = embed_shuffle(s1)
-
-        previous = []
+        previous: list[int] = []
         for i in range(100):
             hyp = list(s1)
             print(f"{hyp=}")
@@ -549,13 +549,13 @@ class TestDistributedSamplerIterateInSubprocess(unittest.TestCase):
 
         sampler = DistributedRandomSampler(N, rank=0, world_size=1, weights=weights)
         sampler_sub = iterate_in_subprocess(partial(embed_shuffle, sampler))
-        sampler = embed_shuffle(sampler)
+        sampler_shuffled = embed_shuffle(sampler)
 
-        previous = []
+        previous: list[int] = []
         for _ in range(100):
             hyp = list(sampler_sub)
             print(f"{hyp=}")
-            ref = list(sampler)
+            ref = list(sampler_shuffled)
             print(f"{ref=}")
 
             self.assertEqual(hyp, ref)
