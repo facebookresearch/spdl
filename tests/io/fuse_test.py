@@ -900,7 +900,135 @@ class FuseTracingErrorTest(unittest.TestCase):
             np.testing.assert_array_equal(
                 spdl.io.to_numpy(pair.image), ref, strict=True
             )
+            self.assertIsInstance(sample.image, spdl.io.CPUBuffer)
             np.testing.assert_array_equal(np.asarray(sample.image), ref, strict=True)
+
+
+_Pair = collections.namedtuple("_Pair", ["src", "width"])
+
+
+@dataclasses.dataclass
+class _Sample:
+    image: object
+    label: str
+    extra: list[Any] = dataclasses.field(default_factory=list)
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class _FrozenSample:
+    image: object
+    nested: _Sample | None = None
+
+
+class FuseContainerTest(_FuseTestCase):
+    """Containers in arguments and results keep their types."""
+
+    def _assert_calls(
+        self,
+        fused: Callable[..., Any],
+        args: tuple[object, ...],
+        expected: list[int],
+    ) -> list[Any]:
+        results, counts = [], []
+        for _ in expected:
+            with mock.patch.object(
+                _fuse._LazyGraph, "_execute", autospec=True, side_effect=_EXECUTE
+            ) as execute:
+                results.append(fused(*args))
+            counts.append(execute.call_count)
+        self.assertEqual(counts, expected)
+        return results
+
+    def test_namedtuple_result_with_cache(self) -> None:
+        """A namedtuple result stays a namedtuple when the program is cached."""
+        data = _read(_image_samples(1))[0]
+
+        def load(src: bytes) -> _Pair:
+            return _Pair(spdl.io.load_image(src), 32)
+
+        ref = load(data)
+        # Recorded, traced, then cached.
+        for result in self._assert_calls(fuse(load, cache=True), (data,), [1, 0, 0]):
+            self.assertIs(type(result), _Pair)
+            self.assertEqual(result.width, 32)
+            self.assert_same(result.src, ref.src)
+
+    def test_namedtuple_argument_with_cache(self) -> None:
+        """A namedtuple argument is passed as a namedtuple when tracing.
+
+        The type is part of the argument structure, so a plain tuple with the
+        same values uses a different program.
+        """
+        data = _read(_image_samples(1))[0]
+
+        def load(arg: tuple[bytes, int]) -> object:
+            width = arg.width if isinstance(arg, _Pair) else 16
+            return spdl.io.load_image(arg[0], filter_desc=f"scale={width}:-1")
+
+        fused = fuse(load, cache=True)
+        for arg in (_Pair(data, 32), (data, 32)):
+            with self.subTest(type=type(arg).__name__):
+                ref = load(arg)
+                for result in self._assert_calls(fused, (arg,), [1, 0, 0]):
+                    self.assert_same(result, ref)
+
+    def test_same_value_returned_twice(self) -> None:
+        """A value returned more than once is the same object, as without fuse."""
+        data = _read(_image_samples(1))[0]
+
+        def load(src: bytes) -> tuple[Any, list[Any], dict[str, Any]]:
+            buffer = spdl.io.load_image(src)
+            return buffer, [buffer], {"buffer": buffer}
+
+        ref = load(data)[0]
+        for cache in (False, True):
+            with self.subTest(cache=cache):
+                fused = fuse(load, cache=cache)
+                for _ in range(3):
+                    buffer, items, mapping = fused(data)
+                    self.assertIsInstance(buffer, spdl.io.CPUBuffer)
+                    self.assertIs(items[0], buffer)
+                    self.assertIs(mapping["buffer"], buffer)
+                    self.assert_same(buffer, ref)
+
+    def test_dataclass_fields(self) -> None:
+        """Placeholders in dataclass fields are replaced with actual values."""
+        data = _read(_image_samples(2))
+
+        @fuse
+        def load(srcs: list[bytes]) -> tuple[_Sample, _FrozenSample]:
+            images = [spdl.io.load_image(s) for s in srcs]
+            sample = _Sample(images[0], "a", [images[1], {"image": images[1]}])
+            return sample, _FrozenSample(images[1], nested=sample)
+
+        refs = [spdl.io.to_numpy(spdl.io.load_image(s)) for s in data]
+        for _ in range(2):
+            sample, frozen = load(data)
+            self.assertIsInstance(sample, _Sample)
+            self.assertIsInstance(sample.image, spdl.io.CPUBuffer)
+            self.assertEqual(sample.label, "a")
+            self.assertIsInstance(sample.extra[0], spdl.io.CPUBuffer)
+            self.assertIs(sample.extra[1]["image"], sample.extra[0])
+            self.assertIsInstance(frozen.image, spdl.io.CPUBuffer)
+            self.assertIs(frozen.nested, sample)
+            np.testing.assert_array_equal(
+                spdl.io.to_numpy(sample.image), refs[0], strict=True
+            )
+            np.testing.assert_array_equal(
+                spdl.io.to_numpy(frozen.image), refs[1], strict=True
+            )
+
+    def test_dataclass_metadata(self) -> None:
+        """Metadata in dataclass fields is replaced with the actual values."""
+        data = _read(_image_samples(1))[0]
+
+        @fuse
+        def load(src: bytes) -> _Sample:
+            packets = spdl.io.demux_image(src)
+            return _Sample(packets.width, "a")
+
+        self.assertEqual(load(data).image, spdl.io.demux_image(data).width)
+        self.assertIs(type(load(data).image), int)
 
 
 class FuseRuntimeSwitchTest(unittest.TestCase):

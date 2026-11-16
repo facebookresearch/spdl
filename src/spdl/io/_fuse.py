@@ -38,6 +38,7 @@ __all__ = [
 
 import contextlib
 import contextvars
+import dataclasses
 import functools
 import operator
 import os
@@ -844,21 +845,18 @@ class _LazyGraph(_Graph):
     def finish(self, result: object) -> object:
         """Execute the remaining operations and return the result of the function.
 
-        The values in lists, tuples and dicts are replaced with the actual values.
-        Other symbols that are still referenced (e.g. as attributes of
-        the result) are materialized, so that they keep working.
+        The values in lists, tuples, namedtuples, dicts and in the fields of
+        dataclass instances are replaced with the actual values. Other symbols
+        that are still referenced (e.g. as attributes of other objects) are
+        materialized, so that they keep working.
         """
         leaves: list[Any] = []
-        tree = _flatten_exact(result, leaves)
+        tree = _flatten(result, leaves)
         pending: dict[int, _Symbol] = {}
         for o in leaves:
             if isinstance(o, _Symbol) and o._reg not in self.values:
                 if o._graph is not self:
                     raise ValueError(f"{o!r} belongs to a different fused function.")
-                if o._reg in pending:
-                    raise ValueError(
-                        "The same value cannot be returned more than once."
-                    )
                 pending[o._reg] = o
         for ref in self.symbols.values():
             sym = ref()
@@ -871,8 +869,40 @@ class _LazyGraph(_Graph):
             ):
                 pending[sym._reg] = sym
         self.materialize(list(pending.values()))
-        results = [self.values[o._reg] if isinstance(o, _Symbol) else o for o in leaves]
+        visited: set[int] = set()
+        results = [self._replace(o, visited) for o in leaves]
         return _unflatten(tree, iter(results))
+
+    def _replace(self, obj: object, visited: set[int]) -> object:
+        """Replace placeholders with their actual values.
+
+        In dataclass instances, the fields are replaced in place, so the
+        instance keeps its identity (and the same instance referenced from
+        elsewhere sees the actual values).
+        """
+        if isinstance(obj, _Symbol):
+            return self.values[obj._reg] if obj._reg in self.values else obj
+        if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+            if id(obj) not in visited:
+                visited.add(id(obj))
+                for field in dataclasses.fields(obj):
+                    value = getattr(obj, field.name)
+                    replaced = self._replace_tree(value, visited)
+                    if replaced is not value:
+                        # `object.__setattr__` also works for frozen dataclasses.
+                        object.__setattr__(obj, field.name, replaced)
+            return obj
+        return obj
+
+    def _replace_tree(self, obj: object, visited: set[int]) -> object:
+        leaves: list[Any] = []
+        tree = _flatten(obj, leaves)
+        if tree is None:
+            return self._replace(obj, visited)
+        replaced = [self._replace(o, visited) for o in leaves]
+        if all(r is o for r, o in zip(replaced, leaves, strict=True)):
+            return obj
+        return _unflatten(tree, iter(replaced))
 
     def post(self, buffer: _Symbol, fn: Callable[[Any], Any]) -> Any:
         before = self.num_executions
@@ -1038,30 +1068,25 @@ _TreeDef = Any
 
 
 def _flatten(obj: object, leaves: list[Any]) -> _TreeDef:
-    if isinstance(obj, (list, tuple)):
-        typ = list if isinstance(obj, list) else tuple
-        return (typ, tuple(_flatten(o, leaves) for o in obj))
-    if isinstance(obj, dict):
+    """Flatten lists, tuples, namedtuples and dicts into ``leaves``.
+
+    Only these exact types are flattened, and they are rebuilt as the same
+    type. Other objects, including subclasses of these types, are leaves, so
+    that they are not rebuilt as a different type.
+    """
+    if isinstance(obj, (list, tuple)) and (
+        type(obj) in (list, tuple) or _is_namedtuple(type(obj))
+    ):
+        return (type(obj), tuple(_flatten(o, leaves) for o in obj))
+    if isinstance(obj, dict) and type(obj) is dict:
         keys = tuple(obj)
         return (dict, keys, tuple(_flatten(obj[k], leaves) for k in keys))
     leaves.append(obj)
     return None
 
 
-def _flatten_exact(obj: object, leaves: list[Any]) -> _TreeDef:
-    """Flatten like :py:func:`_flatten`, but treat subclasses as leaves.
-
-    ``namedtuple`` is the exception, which is flattened and rebuilt.
-    """
-    if isinstance(obj, (list, tuple)) and (
-        type(obj) in (list, tuple) or hasattr(type(obj), "_fields")
-    ):
-        return (type(obj), tuple(_flatten_exact(o, leaves) for o in obj))
-    if isinstance(obj, dict) and type(obj) is dict:
-        keys = tuple(obj)
-        return (dict, keys, tuple(_flatten_exact(obj[k], leaves) for k in keys))
-    leaves.append(obj)
-    return None
+def _is_namedtuple(typ: type) -> bool:
+    return hasattr(typ, "_fields")
 
 
 def _unflatten(tree: _TreeDef, leaves: Any) -> Any:
@@ -1072,7 +1097,7 @@ def _unflatten(tree: _TreeDef, leaves: Any) -> Any:
         return {k: _unflatten(c, leaves) for k, c in zip(keys, children, strict=True)}
     typ, children = tree
     values = [_unflatten(c, leaves) for c in children]
-    return typ(*values) if hasattr(typ, "_fields") else typ(values)
+    return typ(*values) if _is_namedtuple(typ) else typ(values)
 
 
 def _is_source(obj: object) -> bool:
@@ -1118,15 +1143,16 @@ class _Program:
         self.out_tree = out_tree
 
     def run(self, srcs: list[Any]) -> Any:
-        values = iter(self.plan.run(srcs))
+        values = self.plan.run(srcs)
         results = []
         for kind, value in self.slots:
             if kind == "const":
                 results.append(value)
-            elif value is not None:
-                results.append(value(next(values)))
+            elif kind == "same":
+                results.append(results[value])
             else:
-                results.append(next(values))
+                i, fn = value
+                results.append(values[i] if fn is None else fn(values[i]))
         return _unflatten(self.out_tree, iter(results))
 
 
@@ -1140,21 +1166,33 @@ def _check_output(g: _Graph, o: object) -> _Symbol:
 
 
 def _resolve_outputs(g: _Graph, outputs: list[Any]) -> tuple[list[int], list[_OutSlot]]:
-    regs, slots = [], []
+    """Map the leaves of the result to the outputs of the plan.
+
+    An object that appears more than once in the result is produced once,
+    and the same object is returned at each position, as without ``fuse``.
+    """
+    regs: list[int] = []
+    slots: list[_OutSlot] = []
+    first: dict[int, int] = {}
     for o in outputs:
         if isinstance(o, _CONSTANT_TYPES):
             slots.append(("const", o))
         elif not isinstance(o, _Symbol):
             # A Python object, which must be created on every call.
             raise _GraphBreak(f"returning {type(o)}")
-        elif isinstance(o, _PostSymbol):
-            regs.append(o._base._reg)
-            slots.append(("out", o._fn))
+        elif id(o) in first:
+            slots.append(("same", first[id(o)]))
         else:
-            regs.append(_check_output(g, o)._reg)
-            slots.append(("out", None))
-    if len(set(regs)) != len(regs):
-        raise ValueError("The same value cannot be returned more than once.")
+            first[id(o)] = len(slots)
+            if isinstance(o, _PostSymbol):
+                reg, fn = o._base._reg, o._fn
+            else:
+                reg, fn = _check_output(g, o)._reg, None
+            if reg in regs:
+                # E.g. a buffer and its conversion: the buffer is consumed.
+                raise _GraphBreak("returning a value and its conversion")
+            regs.append(reg)
+            slots.append(("out", (len(regs) - 1, fn)))
     return regs, slots
 
 
@@ -1356,7 +1394,8 @@ def fuse(
     operations recorded so far are executed in one native call. Operations
     that cannot be recorded (e.g. streaming demuxing and decoding, transfer
     to CUDA devices) run as usual with the actual values. The placeholders
-    in the returned value are replaced with the actual values.
+    in the returned value (in lists, tuples, namedtuples, dicts and fields of
+    dataclass instances) are replaced with the actual values.
 
     The recorded functions are :py:class:`~spdl.io.Demuxer`,
     :py:func:`~spdl.io.demux_audio`, :py:func:`~spdl.io.demux_video`,
@@ -1422,8 +1461,9 @@ def fuse(
             arguments (``str``, ``bytes`` and other buffer objects) with
             placeholders. The program is used for the subsequent calls with
             the same argument structure, without executing the function.
-            The argument structure is the nesting of lists, tuples and dicts,
-            and the values of non-source arguments. The programs for the last
+            The argument structure is the nesting of lists, tuples,
+            namedtuples and dicts (exact types), and the values of non-source
+            arguments. The programs for the last
             128 argument structures are kept. This saves the cost of
             executing the function in Python, but it is only correct if
             the function depends only on its arguments. (If an argument
