@@ -5,9 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import collections
+import contextlib
 import dataclasses
+import inspect
+import pickle
 import unittest
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -75,7 +79,33 @@ def setUpModule() -> None:
         unittest.addModuleCleanup(patcher.stop)
 
 
+_LOADERS = (
+    spdl.io.load_audio,
+    spdl.io.load_video,
+    spdl.io.load_image,
+    spdl.io.load_image_batch,
+)
+
+
+@contextlib.contextmanager
+def _eager() -> Iterator[None]:
+    """Run without fusion, for reference results.
+
+    The loading functions of `spdl.io` are fused themselves, so a reference
+    that calls them must disable fusion to be eager. `fuse` does nothing
+    without the GIL, which is checked on every call.
+    """
+    with mock.patch.object(_fuse, "_gil_enabled", return_value=False):
+        yield
+
+
 class _FuseTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        # The loaders cache programs across calls. Start each test fresh,
+        # so that the number of native calls does not depend on test order.
+        for loader in _LOADERS:
+            loader._clear_cache()  # pyrefly: ignore[missing-attribute]
+
     def assert_same(self, hyp: object, ref: object) -> None:
         hyp, ref = _normalize(hyp), _normalize(ref)
         if isinstance(ref, dict):
@@ -97,7 +127,8 @@ class _FuseTestCase(unittest.TestCase):
         self, fn: Callable[..., Any], *args: object
     ) -> object:
         """Run ``fn`` eagerly and fused (recorded, traced and cached), and compare."""
-        ref = fn(*args)
+        with _eager():
+            ref = fn(*args)
         fused = fuse(fn)
         for _ in range(3):
             self.assert_same(fused(*args), ref)
@@ -230,9 +261,9 @@ class FuseImageTest(_FuseTestCase):
         self.assertIsInstance(array, np.ndarray)
         self.assertIsInstance(tensor, torch.Tensor)
         np.testing.assert_array_equal(tensor.numpy(), array, strict=True)
-        np.testing.assert_array_equal(
-            array, spdl.io.to_numpy(spdl.io.load_image(data)), strict=True
-        )
+        with _eager():
+            ref = spdl.io.to_numpy(spdl.io.load_image(data))
+        np.testing.assert_array_equal(array, ref, strict=True)
 
 
 class FuseVideoTest(_FuseTestCase):
@@ -372,7 +403,8 @@ class FuseVideoTest(_FuseTestCase):
         with mock.patch.object(
             _core, "_resolve_filter_body", wraps=_core._resolve_filter_body
         ) as resolve:
-            ref = run(data)
+            with _eager():
+                ref = run(data)
             eager_calls = list(resolve.call_args_list)
             resolve.reset_mock()
             hyp = fuse(run)(data)
@@ -413,10 +445,12 @@ class FuseVideoTest(_FuseTestCase):
 
         fused = fuse(run)
         for start in (0.0, 0.3, 1.1, 2.0):
+            with _eager():
+                ref = run(data, start)
             with mock.patch.object(
                 _fuse._LazyGraph, "_execute", autospec=True, side_effect=_EXECUTE
             ) as execute:
-                self.assert_same(fused(data, start), run(data, start))
+                self.assert_same(fused(data, start), ref)
             self.assertEqual(execute.call_count, 1)
 
     def test_composite_loaders(self) -> None:
@@ -483,7 +517,8 @@ class FuseLazyTest(_FuseTestCase):
         The plan of a traced function is not counted, as it is executed
         without `_LazyGraph`.
         """
-        ref = fn(*args)
+        with _eager():
+            ref = fn(*args)
         fused = fuse(fn, cache=cache)
         counts = []
         for _ in expected:
@@ -673,7 +708,9 @@ class FuseFallbackTest(_FuseTestCase):
         ((args, kwargs),) = cuda.transfer_buffer.call_args_list
         self.assertIsInstance(args[0], spdl.io.CPUBuffer)
         self.assertIs(kwargs["device_config"], mock.sentinel.device_config)
-        self.assert_same(buffer, spdl.io.load_image(data))
+        with _eager():
+            ref = spdl.io.load_image(data)
+        self.assert_same(buffer, ref)
 
     def test_non_strict_image_batch(self) -> None:
         """`load_image_batch(strict=False)` skips images that fail to decode."""
@@ -779,7 +816,9 @@ class FuseErrorTest(_FuseTestCase):
             with self.subTest(cache=cache):
                 fused = fuse(load, cache=cache)
                 for _ in range(3):
-                    self.assert_same(fused(data), load(data))
+                    with _eager():
+                        ref = load(data)
+                    self.assert_same(fused(data), ref)
                 calls.clear()
                 self.assertIsNone(fused(b"invalid"))
                 # The function runs again without recording.
@@ -799,6 +838,58 @@ class FuseErrorTest(_FuseTestCase):
         self.assertEqual(len(logs.records), 1)
 
 
+class FuseSourcesTest(_FuseTestCase):
+    """`sources` declares the parameters that receive sources."""
+
+    def test_str_argument_is_part_of_the_key(self) -> None:
+        """A `str` argument of other parameters makes a separate program."""
+        data = _read(_image_samples(1))[0]
+
+        def run(src: bytes, pix_fmt: str) -> object:
+            return spdl.io.load_image(src, filter_desc=f"format=pix_fmts={pix_fmt}")
+
+        fused = fuse(run, cache=True, sources=("src",))
+        for pix_fmt in ("rgb24", "gray", "rgb24", "gray", "rgb24", "gray"):
+            with _eager():
+                ref = run(data, pix_fmt)
+            self.assert_same(fused(data, pix_fmt), ref)
+        # Without `sources`, the `str` is classified as a source, and the
+        # function is not cached. With `sources`, each value is cached.
+        with mock.patch.object(
+            _fuse._LazyGraph, "_execute", autospec=True, side_effect=_EXECUTE
+        ) as execute:
+            fused(data, "gray")
+        self.assertEqual(execute.call_count, 0)
+
+    def test_sources_in_containers(self) -> None:
+        """Sources nested in lists are sources, other values are constants."""
+        images = _read(_image_samples(2))
+
+        def run(srcs: list[bytes], sizes: list[str]) -> object:
+            return [
+                spdl.io.load_image(s, filter_desc=f"scale={z}")
+                for s, z in zip(srcs, sizes, strict=True)
+            ]
+
+        fused = fuse(run, cache=True, sources=("srcs",))
+        for _ in range(3):
+            for sizes in (["16:12", "8:6"], ["8:6", "16:12"]):
+                with _eager():
+                    ref = run(images, sizes)
+                self.assert_same(fused(images, sizes), ref)
+
+    def test_invalid_sources(self) -> None:
+        """`sources` must name parameters, and requires `cache=True`."""
+
+        def run(src: bytes) -> object:
+            return spdl.io.load_image(src)
+
+        with self.assertRaisesRegex(ValueError, "must be parameters"):
+            fuse(run, cache=True, sources=("data",))
+        with self.assertRaisesRegex(ValueError, "only with `cache=True`"):
+            fuse(run, sources=("src",))
+
+
 class FuseCacheSourceTest(_FuseTestCase):
     """Arguments classified as sources by mistake are not cached."""
 
@@ -815,7 +906,9 @@ class FuseCacheSourceTest(_FuseTestCase):
         for _ in range(2):
             for window in ((0.0, 0.5), (1.0, 2.0), (0.3, 1.1)):
                 arg = np.array(window)
-                self.assert_same(fused(data, arg), run(data, arg))
+                with _eager():
+                    ref = run(data, arg)
+                self.assert_same(fused(data, arg), ref)
 
     def test_str_argument_that_is_not_a_source(self) -> None:
         """A `str` formatted into a filter is not baked into the program."""
@@ -827,14 +920,17 @@ class FuseCacheSourceTest(_FuseTestCase):
         fused = fuse(run, cache=True)
         for _ in range(3):
             for pix_fmt in ("rgb24", "gray"):
-                self.assert_same(fused(data, pix_fmt), run(data, pix_fmt))
+                with _eager():
+                    ref = run(data, pix_fmt)
+                self.assert_same(fused(data, pix_fmt), ref)
 
     def test_source_types(self) -> None:
         """`bytes`, `bytearray`, `memoryview`, `str` and `Path` are sources."""
         samples = _image_samples(1)
         data = _read(samples)[0]
         path = samples[0].path
-        ref = spdl.io.load_image(data)
+        with _eager():
+            ref = spdl.io.load_image(data)
 
         def load(src: Any) -> object:
             # `load_image` accepts any source type that `Demuxer` accepts.
@@ -846,6 +942,174 @@ class FuseCacheSourceTest(_FuseTestCase):
                 with self.subTest(cache=cache, src=type(src)):
                     for _ in range(3):
                         self.assert_same(fused(src), ref)
+
+
+class FuseLoaderTest(_FuseTestCase):
+    """The loading functions of `spdl.io` are fused."""
+
+    def test_direct_call_is_one_native_call(self) -> None:
+        """A direct call matches the unfused function, in one native call."""
+        data = _read_sample(_VIDEO_CMD)
+        images = _read(_image_samples(3))
+        cases: list[tuple[Callable[..., Any], tuple[object, ...], dict[str, Any]]] = [
+            (spdl.io.load_audio, (data,), {}),
+            (spdl.io.load_audio, (data,), {"timestamp": (0.5, 1.5)}),
+            (spdl.io.load_video, (data,), {"timestamp": (0.5, 1.5)}),
+            (spdl.io.load_video, (data,), {"filter_desc": "scale=32:24,format=gray"}),
+            (spdl.io.load_image, (images[0],), {}),
+            (spdl.io.load_image, (images[0],), {"filter_desc": None}),
+            (spdl.io.load_image_batch, (images,), {"width": 32, "height": 24}),
+        ]
+        for loader, args, kwargs in cases:
+            with self.subTest(loader=loader.__name__, kwargs=kwargs):
+                ref = inspect.unwrap(loader)(*args, **kwargs)
+                with mock.patch.object(
+                    _fuse._LazyGraph, "_execute", autospec=True, side_effect=_EXECUTE
+                ) as execute:
+                    hyp = loader(*args, **kwargs)
+                self.assertEqual(execute.call_count, 1)
+                self.assert_same(hyp, ref)
+
+    def test_errors_are_raised_as_without_fuse(self) -> None:
+        """A failed decoding raises the same error as the unfused function."""
+        for loader in (spdl.io.load_audio, spdl.io.load_video, spdl.io.load_image):
+            with self.subTest(loader=loader.__name__):
+                with self.assertRaises(RuntimeError) as ref:
+                    inspect.unwrap(loader)(b"invalid")
+                with self.assertRaises(RuntimeError) as hyp:
+                    loader(b"invalid")
+                self.assertEqual(str(hyp.exception), str(ref.exception))
+
+    def test_image_batch_failures(self) -> None:
+        """`load_image_batch` logs each failed image once, as without `fuse`."""
+        good = _read(_image_samples(2))
+        srcs = [good[0], b"invalid", good[1]]
+
+        with self.assertLogs("spdl.io._composite", level="ERROR") as logs:
+            with self.assertRaisesRegex(RuntimeError, "Failed to load some images"):
+                spdl.io.load_image_batch(srcs, width=32, height=24)
+        self.assertEqual(len(logs.records), 1)
+
+        with self.assertLogs("spdl.io._composite", level="ERROR") as logs:
+            hyp = spdl.io.load_image_batch(srcs, width=32, height=24, strict=False)
+        self.assertEqual(len(logs.records), 1)
+        ref = inspect.unwrap(spdl.io.load_image_batch)(
+            [good[0], good[1]], width=32, height=24
+        )
+        self.assert_same(hyp, ref)
+
+    def test_runtime_switch(self) -> None:
+        """The switch receives the name of the loader, and disables it."""
+        image = _read(_image_samples(1))[0]
+        names: list[str] = []
+
+        def disabled(name: str) -> bool:
+            names.append(name)
+            return True
+
+        # The switch is read when the loader is decorated, so decorate again.
+        with mock.patch.object(_fuse, "_is_fusion_disabled", side_effect=disabled):
+            loader = fuse(
+                inspect.unwrap(spdl.io.load_image), cache=True, sources=("src",)
+            )
+        with mock.patch.object(
+            _fuse._LazyGraph, "_execute", autospec=True, side_effect=_EXECUTE
+        ) as execute:
+            hyp = loader(image)
+        self.assertEqual(names, ["spdl.io._composite.load_image"])
+        self.assertEqual(execute.call_count, 0)
+        self.assert_same(hyp, inspect.unwrap(spdl.io.load_image)(image))
+
+    def test_cached(self) -> None:
+        """Repeated calls run the cached program, for each set of arguments."""
+        data = _read_sample(_VIDEO_CMD)
+        images = _read(_image_samples(3))
+        cases: list[tuple[Callable[..., Any], tuple[object, ...], dict[str, Any]]] = [
+            (spdl.io.load_audio, (data,), {"timestamp": (0.5, 1.5)}),
+            (spdl.io.load_video, (data, (0.5, 1.5)), {}),
+            (spdl.io.load_image, (images[0],), {"filter_desc": "format=gray"}),
+            (spdl.io.load_image, (images[0],), {"filter_desc": "format=rgb24"}),
+            (spdl.io.load_image_batch, (images,), {"width": 32, "height": 24}),
+            (spdl.io.load_image_batch, (images[:2],), {"width": 16, "height": 12}),
+        ]
+        for loader, args, kwargs in cases:
+            with self.subTest(loader=loader.__name__, args=len(args), kwargs=kwargs):
+                with _eager():
+                    ref = loader(*args, **kwargs)
+                counts = []
+                for _ in range(4):
+                    with mock.patch.object(
+                        _fuse._LazyGraph,
+                        "_execute",
+                        autospec=True,
+                        side_effect=_EXECUTE,
+                    ) as execute:
+                        self.assert_same(loader(*args, **kwargs), ref)
+                    counts.append(execute.call_count)
+                # Recorded, traced, then cached.
+                self.assertEqual(counts, [1, 0, 0, 0])
+
+    def test_cached_with_different_sources(self) -> None:
+        """A cached program is used for different sources."""
+        images = _read(_image_samples(3))
+        for image in images:
+            spdl.io.load_image(image, filter_desc="scale=16:12")
+        for image in images:
+            with _eager():
+                ref = spdl.io.load_image(image, filter_desc="scale=16:12")
+            with mock.patch.object(
+                _fuse._LazyGraph, "_execute", autospec=True, side_effect=_EXECUTE
+            ) as execute:
+                self.assert_same(
+                    spdl.io.load_image(image, filter_desc="scale=16:12"), ref
+                )
+            self.assertEqual(execute.call_count, 0)
+
+    def test_cache_from_multiple_threads(self) -> None:
+        """Calls from multiple threads, which evict programs, are correct."""
+        images = _read(_image_samples(2))
+        filters = [f"scale={8 * (i + 1)}:{6 * (i + 1)}" for i in range(6)]
+        with _eager():
+            refs = {
+                (i, f): spdl.io.load_image(images[i], filter_desc=f)
+                for i in range(2)
+                for f in filters
+            }
+        work = [(i, f) for _ in range(10) for i in range(2) for f in filters]
+        with (
+            mock.patch.object(_fuse, "_CACHE_SIZE", 2),
+            ThreadPoolExecutor(8) as pool,
+        ):
+            results = list(
+                pool.map(
+                    lambda w: spdl.io.load_image(images[w[0]], filter_desc=w[1]), work
+                )
+            )
+        for w, result in zip(work, results, strict=True):
+            self.assert_same(result, refs[w])
+
+    def test_reference_is_eager(self) -> None:
+        """`_eager` disables fusion, so that references do not record."""
+        image = _read(_image_samples(1))[0]
+        with (
+            _eager(),
+            mock.patch.object(
+                _fuse._LazyGraph, "_execute", autospec=True, side_effect=_EXECUTE
+            ) as execute,
+        ):
+            spdl.io.load_image(image)
+        self.assertEqual(execute.call_count, 0)
+
+    def test_signature_and_pickle(self) -> None:
+        """The loaders keep their signatures, docs and pickling by reference."""
+        for loader in _LOADERS:
+            with self.subTest(loader=loader.__name__):
+                original = inspect.unwrap(loader)
+                self.assertIsNot(loader, original)
+                self.assertEqual(inspect.signature(loader), inspect.signature(original))
+                self.assertEqual(loader.__doc__, original.__doc__)
+                self.assertEqual(loader.__module__, "spdl.io._composite")
+                self.assertIs(pickle.loads(pickle.dumps(loader)), loader)
 
 
 class FuseTracingErrorTest(unittest.TestCase):
@@ -891,7 +1155,8 @@ class FuseTracingErrorTest(unittest.TestCase):
                 Sample(spdl.io.load_image(src)),
             )
 
-        ref = spdl.io.to_numpy(spdl.io.load_image(data))
+        with _eager():
+            ref = spdl.io.to_numpy(spdl.io.load_image(data))
         for _ in range(2):
             pair, sample = load(data)
             self.assertIsInstance(pair, Pair)
