@@ -2,6 +2,25 @@
 We want to make contributing to this project as easy and transparent as
 possible.
 
+## Checks
+
+Install Python 3.12 first; pre-commit creates a cached environment but does not
+install Python itself. Set up the contributor checks with:
+
+```bash
+python -m pip install pre-commit
+pre-commit install
+pre-commit run pyrefly --all-files
+```
+
+The first Pyrefly run installs the pinned CPU typing dependencies automatically;
+later runs reuse the cache. No manual Torch installation or native build is
+needed. Both full-project profiles run through the hook and the existing lint
+CI job; the mypy reference hook remains optional. Python 3.12 must be installed
+and discoverable by pre-commit. The pinned Torch wheels support Linux/Windows
+CPU installations and Apple Silicon Macs with macOS 14 or newer; there is no
+matching Python 3.12 Intel Mac wheel.
+
 ## Pull Requests
 We actively welcome your pull requests.
 
