@@ -193,10 +193,13 @@ Packets are consumed by decoding
 
 Returned values
    The placeholders in the returned value are replaced with the actual
-   values if they are in lists, tuples, named tuples and dicts. Placeholders
-   in other objects (e.g. dataclasses) are executed, and they behave like
-   the actual values, but they are not instances of the actual classes.
-   Return the results in such containers when the type matters.
+   values if they are in lists, tuples, named tuples and dicts, or in the
+   fields of dataclass instances (in place, so the instance stays the same
+   object). Placeholders in other objects (e.g. subclasses of ``dict``) are
+   executed, and they behave like the actual values, but they are not
+   instances of the actual classes. Return the results in such containers
+   when the type matters. Returning the same value more than once returns
+   the same object at each position.
 
 Caching the recorded program
 ----------------------------
@@ -298,8 +301,9 @@ with the same argument structure records the function as a program, with
 the source arguments (``str``, ``bytes`` and other buffer objects) replaced
 by placeholders. The subsequent calls with the same argument structure run
 the program without executing the function. The argument structure is the
-nesting of lists, tuples and dicts, and the values of the arguments that are
-not sources. The programs for the last 128 argument structures are kept.
+nesting of lists, tuples, named tuples and dicts (exact types, which are
+passed with the same types when tracing), and the values of the arguments
+that are not sources. The programs for the last 128 argument structures are kept.
 
 This is correct only if the result of the function depends only on its
 arguments. Do not use ``cache=True`` if the function uses random numbers,
