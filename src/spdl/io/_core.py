@@ -32,7 +32,6 @@ __all__ = [
     "nv12_to_bgr",
     # ENCODING
     "Muxer",
-    "encode_image",
     "create_reference_audio_frame",
     "create_reference_video_frame",
 ]
@@ -1512,74 +1511,3 @@ class Muxer:
         """
         self.flush()
         self.close()
-
-
-Array = TypeVar("Array")
-
-
-def encode_image(
-    path: str,
-    data: Array,
-    pix_fmt: str = "rgb24",
-    *,
-    encode_config: "DecodeConfig | None" = None,
-) -> None:
-    """Save the given image array/tensor to file.
-
-    Args:
-        path: The path to which the data are written.
-
-        data (NumPy NDArray, PyTorch Tensor):
-            Image data in array format. The data  must be ``uint8`` type,
-            either on CPU or CUDA device.
-
-            The shape must be one of the following and must match the
-            value of ``pix_fmt``.
-
-            - ``(height, width, channel==3)`` when ``pix_fmt="rgb24"``
-            - ``(height, width)`` when ``pix_fmt=gray8``
-            - ``(channel==3, height, width)`` when ``pix_fmt="yuv444p"``
-
-        pix_fmt: See above.
-
-        encode_config (EncodeConfig): Customize the encoding.
-
-    Example - Save image as PNG with resizing
-
-        >>> import numpy as np
-        >>> import spdl.io
-        >>>
-        >>> data = np.random.randint(255, size=(32, 16, 3), dtype=np.uint8)
-        >>> img = spdl.io.encode_image(
-        ...     "foo.png",
-        ...     data,
-        ...     pix_fmt="rgb24",
-        ...     encode_config=spdl.io.encode_config(
-        ...         width=198,
-        ...         height=96,
-        ...         scale_algo="neighbor",
-        ...     ),
-        ... )
-        >>>
-
-    Example - Save CUDA tensor as image
-
-        >>> import torch
-        >>>
-        >>> data = torch.randint(255, size=(32, 16, 3), dtype=torch.uint8, device="cuda")
-        >>>
-        >>> def encode(data):
-        ...     buffer = spdl.io.transfer_buffer_cpu(data)
-        ...     return spdl.io.encode_image(
-        ...         "foo.png",
-        ...         buffer,
-        ...         pix_fmt="rgb24",
-        ...     )
-        ...
-        >>> encode(data)
-        >>>
-    """
-    # pyrefly: ignore [missing-attribute]
-    return _libspdl.encode_image(
-        path, data, pix_fmt=pix_fmt, encode_config=encode_config
-    )
