@@ -30,46 +30,57 @@ waiting for the GIL after each of these calls adds up.
 :py:func:`~spdl.io.fuse` records the SPDL IO calls in a function and executes
 them in one native call, so the GIL is re-acquired only once.
 
-The following table shows the time per call (in milliseconds) of loading
-functions with small test media (Python 3.14, x86 server). "idle" is a
-single thread, "busy" has another Python thread spinning in the background,
-and "8 threads" is the wall time per call when 8 threads load concurrently.
+The following figure and table show the time per call of loading functions with
+small test media as GIL contention grows from 0% to 100% (Python 3.14 and its
+free-threaded build 3.14t, mean and 95% confidence interval of 10 trials, in
+milliseconds). GIL contention is the share of time another Python thread runs
+Python code: it runs a Python loop for that share of each 10 ms period and
+sleeps for the rest, like a training loop that runs Python code between other
+work. Without fusion, every native call has to re-acquire the GIL while the
+other thread may hold it, so the time grows quickly with the contention. With
+fusion, a call re-acquires the GIL about once, so its time grows much more
+slowly. On the free-threaded build, which has no GIL, the time does not change.
+The dotted line in the figure is the time without contention, and its y-axis is
+in log scale. (The figure and the table also show ``fuse(cache=True)``,
+explained below.)
 
-.. list-table::
-   :header-rows: 1
+.. image:: /_static/data/fuse_benchmark.png
+   :alt: Time per call of the functions without fusion, with fuse, with
+         fuse(cache=True), and without fusion on the free-threaded build,
+         as GIL contention grows from 0% to 100%.
 
-   * - Function
-     - Condition
-     - Eager
-     - Fused
-   * - Decode 32 PNG images and batch them
-     - idle
-     - 5.08
-     - 4.64
-   * -
-     - busy
-     - 891.31
-     - 10.11
-   * -
-     - 8 threads
-     - 2.75
-     - 0.87
-   * - Demux 4 windows of a video, decode, batch and read PTS
-     - idle
-     - 7.90
-     - 7.93
-   * -
-     - busy
-     - 88.31
-     - 13.40
-   * - :py:func:`~spdl.io.load_audio` and :py:func:`~spdl.io.to_numpy`
-     - idle
-     - 1.63
-     - 1.71
-   * -
-     - busy
-     - 37.57
-     - 7.24
+===============  ==========  ==============  ============  ==============  ===========
+Function         Contention  Eager           ``fuse``      ``cache=True``  3.14t eager
+===============  ==========  ==============  ============  ==============  ===========
+32 PNG images    0%          5.05 ± 0.03     4.59 ± 0.02   3.92 ± 0.02     5.20 ± 0.06
+32 PNG images    10%         5.59 ± 0.03     4.79 ± 0.12   4.03 ± 0.02     5.14 ± 0.02
+32 PNG images    25%         6.95 ± 0.06     5.00 ± 0.04   5.00 ± 0.03     5.17 ± 0.06
+32 PNG images    50%         10.65 ± 0.12    5.36 ± 0.33   5.01 ± 0.02     5.18 ± 0.06
+32 PNG images    75%         22.34 ± 0.53    9.87 ± 0.16   7.98 ± 0.09     5.20 ± 0.05
+32 PNG images    90%         63.56 ± 3.25    9.88 ± 0.13   8.51 ± 0.13     5.16 ± 0.06
+32 PNG images    100%        839.74 ± 24.37  10.03 ± 0.04  9.32 ± 0.03     5.10 ± 0.02
+4 video windows  0%          3.39 ± 0.01     3.46 ± 0.02   3.24 ± 0.02     3.46 ± 0.01
+4 video windows  10%         3.64 ± 0.03     3.48 ± 0.02   3.29 ± 0.04     3.45 ± 0.01
+4 video windows  25%         4.54 ± 0.07     3.69 ± 0.10   3.34 ± 0.02     3.48 ± 0.03
+4 video windows  50%         6.93 ± 0.08     5.05 ± 0.03   5.02 ± 0.02     3.48 ± 0.04
+4 video windows  75%         12.44 ± 0.46    7.40 ± 0.11   6.76 ± 0.12     3.44 ± 0.03
+4 video windows  90%         29.96 ± 1.71    7.60 ± 0.10   7.12 ± 0.23     3.42 ± 0.03
+4 video windows  100%        81.04 ± 4.39    8.91 ± 0.03   8.63 ± 0.05     3.42 ± 0.03
+``load_audio``   0%          1.62 ± 0.01     1.72 ± 0.01   1.59 ± 0.01     1.64 ± 0.01
+``load_audio``   10%         1.71 ± 0.03     1.75 ± 0.03   1.65 ± 0.01     1.64 ± 0.01
+``load_audio``   25%         2.11 ± 0.08     2.05 ± 0.05   2.01 ± 0.03     1.65 ± 0.02
+``load_audio``   50%         3.29 ± 0.11     3.40 ± 0.06   2.99 ± 0.18     1.64 ± 0.01
+``load_audio``   75%         6.55 ± 0.05     3.92 ± 0.07   3.50 ± 0.12     1.63 ± 0.01
+``load_audio``   90%         16.04 ± 1.49    5.03 ± 0.00   5.03 ± 0.00     1.66 ± 0.02
+``load_audio``   100%        36.86 ± 1.63    7.15 ± 0.08   6.98 ± 0.06     1.63 ± 0.01
+Metadata used    0%          2.45 ± 0.01     2.61 ± 0.01   2.61 ± 0.01     2.48 ± 0.02
+Metadata used    10%         2.52 ± 0.03     2.70 ± 0.02   2.71 ± 0.02     2.47 ± 0.04
+Metadata used    25%         3.08 ± 0.07     3.36 ± 0.05   3.35 ± 0.05     2.46 ± 0.03
+Metadata used    50%         4.91 ± 0.10     5.09 ± 0.08   5.04 ± 0.02     2.46 ± 0.02
+Metadata used    75%         9.62 ± 0.22     10.01 ± 0.04  10.04 ± 0.03    2.46 ± 0.02
+Metadata used    90%         15.33 ± 2.09    10.07 ± 0.00  10.07 ± 0.00    2.46 ± 0.02
+Metadata used    100%        33.72 ± 0.98    18.69 ± 0.09  18.67 ± 0.07    2.47 ± 0.04
+===============  ==========  ==============  ============  ==============  ===========
 
 When nothing else competes for the GIL, fusing makes no difference, or adds
 a small overhead for recording the calls. The benefit comes only from
@@ -207,88 +218,13 @@ Caching the recorded program
 With ``cache=True``, :py:func:`~spdl.io.fuse` saves running the function in
 Python as well.
 
-Compared to the gain of fusing itself, the difference that ``cache=True``
-makes is marginal. The following table shows the time per call (in
-milliseconds) with Python 3.14, as the mean and the 95% confidence interval
-of 10 trials. Each trial is 20 calls (240 calls for "8 threads"), and the
-three variants are measured in alternating order. The conditions are the same
-as in the table above.
-
-.. list-table::
-   :header-rows: 1
-
-   * - Function
-     - Condition
-     - Eager
-     - ``fuse``
-     - ``fuse(cache=True)``
-   * - Decode 32 PNG images and batch them
-     - idle
-     - 5.08 ± 0.03
-     - 4.64 ± 0.03
-     - 3.92 ± 0.01
-   * -
-     - busy
-     - 891.31 ± 30.27
-     - 10.11 ± 0.09
-     - 9.47 ± 0.08
-   * -
-     - 8 threads
-     - 2.75 ± 0.13
-     - 0.87 ± 0.10
-     - 0.54 ± 0.03
-   * - Demux 4 windows of a video, decode, batch and read PTS
-     - idle
-     - 7.90 ± 0.03
-     - 7.93 ± 0.03
-     - 7.70 ± 0.01
-   * -
-     - busy
-     - 88.31 ± 1.89
-     - 13.40 ± 0.04
-     - 13.08 ± 0.02
-   * -
-     - 8 threads
-     - 1.06 ± 0.01
-     - 1.12 ± 0.01
-     - 1.05 ± 0.01
-   * - :py:func:`~spdl.io.load_audio` and :py:func:`~spdl.io.to_numpy`
-     - idle
-     - 1.63 ± 0.01
-     - 1.71 ± 0.01
-     - 1.58 ± 0.01
-   * -
-     - busy
-     - 37.57 ± 0.55
-     - 7.24 ± 0.05
-     - 7.05 ± 0.02
-   * -
-     - 8 threads
-     - 0.25 ± 0.00
-     - 0.26 ± 0.00
-     - 0.23 ± 0.00
-   * - Filter computed from ``packets.width``, check ``num_frames`` (not cached)
-     - idle
-     - 2.78 ± 0.01
-     - 2.94 ± 0.01
-     - 2.95 ± 0.01
-   * -
-     - busy
-     - 37.70 ± 0.69
-     - 19.09 ± 0.05
-     - 19.11 ± 0.04
-   * -
-     - 8 threads
-     - 0.39 ± 0.00
-     - 0.44 ± 0.00
-     - 0.44 ± 0.01
-
-With another busy Python thread, fusing saves 19 to 880 ms per call, while
-the cache saves a further 0.2 to 0.6 ms. Without contention, the cache saves
-0.1 to 0.7 ms, the time to run the function in Python. The last function uses
-metadata in Python, so it cannot be cached, and ``cache=True`` makes no
-difference. Prefer the default unless profiling
-shows otherwise.
+Compared to the gain of fusing itself, the difference that ``cache=True`` makes
+is marginal (see the figure and the table in `Why fuse IO calls`_). At 100% GIL
+contention, fusing saves 15 to 830 ms per call, while the cache saves a further
+0.2 to 0.7 ms. Without contention, the cache saves 0.1 to 0.7 ms, the time to
+run the function in Python. The last function uses metadata in Python, so it
+cannot be cached, and ``cache=True`` makes no difference. Prefer the default
+unless profiling shows otherwise.
 
 .. code-block:: python
 
@@ -323,37 +259,23 @@ Free-threaded Python
 function runs eagerly. Without the GIL, a native call does not wait for
 other threads when it returns, so recording only adds overhead.
 
-The following table shows the same measurement as the one above, with
-Python 3.14 and its free-threaded build (3.14t). The fused function was
+The free-threaded series in `Why fuse IO calls`_ shows the time without the
+GIL: it does not change with GIL contention. The following table compares
+both builds in two other conditions (time per call in milliseconds, one
+measurement each). "1 busy thread" is the time per call while another Python
+thread runs a Python loop all the time, which is 100% GIL contention.
+"8 loading threads" is the wall time per call while 8 threads call the
+function concurrently, with no other Python thread, so it is the total time
+divided by the number of calls of all 8 threads. The fused function was
 measured before making :py:func:`~spdl.io.fuse` do nothing without the GIL.
 
-.. list-table::
-   :header-rows: 1
-
-   * - Function
-     - Condition
-     - 3.14, Eager
-     - 3.14, Fused
-     - 3.14t, Eager
-     - 3.14t, Fused
-   * - Decode 32 PNG images and batch them
-     - busy
-     - 796.69
-     - 13.91
-     - 3.47
-     - 3.59
-   * -
-     - 8 threads
-     - 1.22
-     - 0.51
-     - 0.46
-     - 0.56
-   * - :py:func:`~spdl.io.load_audio` and :py:func:`~spdl.io.to_numpy`
-     - busy
-     - 36.07
-     - 11.78
-     - 1.31
-     - 1.40
+==============  =================  ===========  ===========  ============  ============
+Function        Condition          3.14, Eager  3.14, Fused  3.14t, Eager  3.14t, Fused
+==============  =================  ===========  ===========  ============  ============
+32 PNG images   1 busy thread      796.69       13.91        3.47          3.59
+``load_audio``  1 busy thread      36.07        11.78        1.31          1.40
+32 PNG images   8 loading threads  1.22         0.51         0.46          0.56
+==============  =================  ===========  ===========  ============  ============
 
 The check is made on every call, because free-threaded Python enables the
 GIL when it imports an extension module that does not support running
