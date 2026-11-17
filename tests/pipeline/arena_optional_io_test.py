@@ -112,6 +112,6 @@ class ArenaOptionalIOTest(unittest.TestCase):
                     ImportError("undefined native symbol"),
                 ):
                     with patch("importlib.import_module", side_effect=error):
-                        with self.assertRaises(type(error)) as raised:
+                        with self.assertRaises(type(error)) as original_raised:
                             operation()
-                        self.assertIs(raised.exception, error)
+                        self.assertIs(original_raised.exception, error)

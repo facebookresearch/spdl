@@ -160,10 +160,8 @@ class SharedMemoryRingBuffer:
         shm = shared_memory.SharedMemory(create=True, size=_HEADER_SIZE + capacity)
         self._shm_name: str = shm.name
         self._shm: shared_memory.SharedMemory | None = shm
-        # pyrefly: ignore [bad-assignment]
-        self._buf: "memoryview[bytes] | None" = shm.buf
-        # pyrefly: ignore [bad-argument-type]
-        _HEADER.pack_into(shm.buf, 0, 0, 0, 0, 0, 0)
+        self._buf: "memoryview[int] | None" = shm.buf
+        _HEADER.pack_into(cast("memoryview[int]", shm.buf), 0, 0, 0, 0, 0, 0)
         self._closed = False
         self._closing = False
         self._shutdown_sent = False
@@ -199,7 +197,7 @@ class SharedMemoryRingBuffer:
         self._closed = False
         self._closing = False
         self._shutdown_sent = False
-        self._reader: _RingReader | None = None
+        self._reader = None
         self._close_lock = threading.RLock()
         self._pid = os.getpid()
         self._creator_pid = state["creator_pid"]
@@ -211,7 +209,7 @@ class SharedMemoryRingBuffer:
         """Name of the underlying shared-memory segment."""
         return self._shm_name
 
-    def _ensure(self) -> "memoryview[bytes]":
+    def _ensure(self) -> "memoryview[int]":
         if self._closed:
             raise RuntimeError("shared-memory ring is closed")
         if self._buf is None:
@@ -220,10 +218,8 @@ class SharedMemoryRingBuffer:
                     "Ring retirement is pending; control is not reopened"
                 )
             self._shm = _attach(self._shm_name)
-            # pyrefly: ignore [bad-assignment]
             self._buf = self._shm.buf
-        # pyrefly: ignore [bad-return]
-        return self._buf
+        return cast("memoryview[int]", self._buf)
 
     @property
     def _head(self) -> int:
@@ -459,7 +455,7 @@ class SharedMemoryRingBuffer:
 class _RingWriter:
     """Writer endpoint. Used as the last step in the worker process."""
 
-    def __init__(self, buf: SharedMemoryRingBuffer, mv: "memoryview[bytes]") -> None:
+    def __init__(self, buf: SharedMemoryRingBuffer, mv: "memoryview[int]") -> None:
         self._b = buf
         self._mv = mv
         self._cap: int = buf._capacity
@@ -476,9 +472,7 @@ class _RingWriter:
         """Start a new unit at the current published head."""
         self._ustart = self._wpos = self._b._head
 
-    def write_binary(
-        self, data: "bytes | bytearray | memoryview[bytes]"
-    ) -> tuple[int, int]:
+    def write_binary(self, data: bytes | bytearray | memoryview) -> tuple[int, int]:
         """Copy one binary into the arena; return its ``(offset, nbytes)``.
 
         Blocks (up to ``acquire_timeout``) on the arena's process-shared
@@ -559,7 +553,7 @@ class _RingReader:
     # reuses its space immediately), so restored values never alias shared memory.
     zero_copy: bool = False
 
-    def __init__(self, buf: SharedMemoryRingBuffer, mv: "memoryview[bytes]") -> None:
+    def __init__(self, buf: SharedMemoryRingBuffer, mv: "memoryview[int]") -> None:
         self._b = buf
         self.pending_unit = False
         self._mv = mv
@@ -570,7 +564,7 @@ class _RingReader:
     def reset(self) -> None:
         """No-op: the writer resets both cursors at the iteration boundary."""
 
-    def read_binary(self, offset: int, nbytes: int) -> "memoryview[bytes]":
+    def read_binary(self, offset: int, nbytes: int) -> "memoryview[int]":
         """Copy ``nbytes`` out of the arena starting at physical ``offset``.
 
         The ring reuses its space immediately, so it cannot hand out a live view;
@@ -599,7 +593,7 @@ class _RingReader:
             if first < nbytes:
                 result[first:] = buf[d : d + nbytes - first]
             self.pending_unit = True
-            return cast("memoryview[bytes]", result)
+            return result
 
     def end_unit(self, span: int, anchors: list[object] | None = None) -> None:
         """Return the unit's region in bulk after independent copy-out.

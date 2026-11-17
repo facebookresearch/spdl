@@ -19,7 +19,9 @@ def _load_buffer_helper() -> ModuleType:
     import importlib
 
     try:
-        return importlib.import_module("spdl.io.lib._buffer")
+        return importlib.import_module(
+            "spdl.io.lib._buffer"
+        )  # @manual=//spdl/io/lib:_buffer
     except ModuleNotFoundError as error:
         if error.name not in (
             "spdl.io",
@@ -50,8 +52,8 @@ class _ExportGuard:
 
 
 def _export_buffer(
-    view: "memoryview[bytes]", release: Callable[[], None] | _ExportGuard
-) -> "memoryview[bytes]":
+    view: "memoryview[int]", release: Callable[[], None] | _ExportGuard
+) -> "memoryview[int]":
     """Export storage through optional SPDL IO, retaining native alias lifetime.
 
     Native ticket adoption precedes returning the view, including fallible Python
@@ -60,4 +62,4 @@ def _export_buffer(
     """
     buffer = _load_buffer_helper()
     ticket = release._ticket if isinstance(release, _ExportGuard) else release
-    return cast("memoryview[bytes]", buffer._export(view, ticket))
+    return cast("memoryview[int]", buffer._export(view, ticket))

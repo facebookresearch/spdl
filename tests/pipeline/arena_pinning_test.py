@@ -15,6 +15,7 @@ import weakref
 from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import Mock, patch
 
 from spdl.pipeline._arena import _pinning
@@ -158,7 +159,7 @@ class ArenaPinningTest(unittest.TestCase):
         del pool
         del value
         gc.collect()
-        retained = reference()
+        retained = cast(SharedMemorySegmentPool, reference())
         self.assertIsNotNone(retained)
         with self.assertLogs("spdl.pipeline._arena._pool", level="ERROR"):
             retained.close()
@@ -187,7 +188,7 @@ class ArenaPinningTest(unittest.TestCase):
             pool.unlink()
         del pool
         gc.collect()
-        retained = reference()
+        retained = cast(SharedMemorySegmentPool, reference())
         self.assertIsNotNone(retained)
         self.assertIsNotNone(retained._segs)
         registration.close.side_effect = None
@@ -212,7 +213,7 @@ class ArenaPinningTest(unittest.TestCase):
             pool.unlink()
         del pool
         gc.collect()
-        retained = reference()
+        retained = cast(SharedMemorySegmentPool, reference())
         self.assertIsNotNone(retained)
         first.close.side_effect = None
         retained.close()

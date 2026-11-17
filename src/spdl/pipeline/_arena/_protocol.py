@@ -76,9 +76,7 @@ class ArenaWriterProtocol(Protocol):
         """
         ...
 
-    def write_binary(
-        self, data: "bytes | bytearray | memoryview[bytes]"
-    ) -> tuple[int, int]:
+    def write_binary(self, data: bytes | bytearray | memoryview) -> tuple[int, int]:
         """Copy one binary into the arena and return its placement.
 
         Performs the single copy from ``data`` into shared memory; the
@@ -174,7 +172,7 @@ class ArenaReaderProtocol(Protocol):
         """
         ...
 
-    def read_binary(self, offset: int, nbytes: int) -> "memoryview[bytes]":
+    def read_binary(self, offset: int, nbytes: int) -> memoryview:
         """Return the bytes for one offloaded binary.
 
         Args:

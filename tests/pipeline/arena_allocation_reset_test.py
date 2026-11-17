@@ -18,7 +18,7 @@ class ArenaAllocationResetTest(unittest.TestCase):
     def test_partial_pool_allocation_unlinks_all_created_segments(self) -> None:
         """Failure creating a later segment releases the control and earlier data segments."""
         real = shared_memory.SharedMemory
-        created = []
+        created: list[shared_memory.SharedMemory] = []
 
         def allocate(*args, **kwargs):
             if len(created) == 2:
@@ -37,7 +37,7 @@ class ArenaAllocationResetTest(unittest.TestCase):
         for segment in created:
             with self.assertRaises(FileNotFoundError):
                 real(name=segment.name)
-            self.assertIsNone(segment._mmap)
+            self.assertIsNone(getattr(segment, "_mmap"))  # noqa: B009
 
     def test_allocation_rollback_preserves_root_and_attempts_every_cleanup(
         self,
