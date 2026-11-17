@@ -141,8 +141,8 @@ def run(
     src: str,
     device_index: int | None,
     post_processing_params: dict[str, int],
-    profiler: torch.profiler.profile,
-    plot_dir: pathlib.Path,
+    profiler: torch.profiler.profile | None,
+    plot_dir: pathlib.Path | None,
 ) -> None:
     """Run the benchmark."""
     cuda_index, stream = torch_cuda_warmup(device_index)
