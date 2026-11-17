@@ -147,7 +147,7 @@ def _analyze_job(
     (run_dir / "analysis.md").write_text(analysis)
 
     structured = _parse_agent_result(platform.agent, analysis).json
-    duration = platform.execution.duration(job_id) if job_id else None
+    duration: float | None = platform.execution.duration(job_id) if job_id else None
     if duration is None:
         duration = node.duration
 
@@ -186,7 +186,7 @@ def _append_master_result_row(
     status: str,
     duration: float | None,
     structured: dict | None,
-    terminal_failure: FailureRecord | None,
+    terminal_failure: "FailureRecord | None",
 ) -> None:
     row: dict[str, str | float] = {
         "run_id": node.node_id,
