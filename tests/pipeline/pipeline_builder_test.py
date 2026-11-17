@@ -3172,6 +3172,7 @@ class TestHoistProcessPools(unittest.TestCase):
             def Queue(self, *args: Any, **kwargs: Any) -> object:
                 return real_ctx.Queue(*args, **kwargs)
 
+            # pyrefly: ignore [not-a-type]
             def Process(self, *args: Any, **kwargs: Any) -> Process:
                 proc = real_ctx.Process(*args, **kwargs)
 
