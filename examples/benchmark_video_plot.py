@@ -31,8 +31,13 @@ try:
         DEFAULT_RESULT_PATH,
     )
 except ImportError:
-    from spdl.examples.benchmark_utils import load_results_from_csv
-    from spdl.examples.benchmark_video import BenchmarkConfig, DEFAULT_RESULT_PATH
+    from spdl.examples.benchmark_utils import (  # type: ignore[import-not-found, no-redef]
+        load_results_from_csv,
+    )
+    from spdl.examples.benchmark_video import (  # type: ignore[import-not-found, no-redef]
+        BenchmarkConfig,
+        DEFAULT_RESULT_PATH,
+    )
 
 
 def plot_benchmark_results(

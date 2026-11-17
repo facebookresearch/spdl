@@ -490,12 +490,12 @@ class SQLiteStatsWriter:
 
         try:
             cursor = conn.cursor()
-            if entries := [e for e in batch if isinstance(e, TaskStatsLogEntry)]:
-                _insert_task_stats(cursor, entries)
-            if entries := [e for e in batch if isinstance(e, QueueStatsLogEntry)]:
-                _insert_queue_stats(cursor, entries)
-            if entries := [e for e in batch if isinstance(e, EventLogEntry)]:
-                _insert_event_stats(cursor, entries)
+            if task_entries := [e for e in batch if isinstance(e, TaskStatsLogEntry)]:
+                _insert_task_stats(cursor, task_entries)
+            if queue_entries := [e for e in batch if isinstance(e, QueueStatsLogEntry)]:
+                _insert_queue_stats(cursor, queue_entries)
+            if event_entries := [e for e in batch if isinstance(e, EventLogEntry)]:
+                _insert_event_stats(cursor, event_entries)
             conn.commit()
             _LG.debug(f"Flushed {len(batch)} entries to SQLite")
 
@@ -732,21 +732,21 @@ def log_stats_summary(db_path: str | Path) -> None:
         # Group by name
         queue_names: set[str] = {stat["name"] for stat in queue_stats}
         for name in sorted(queue_names):
-            name_stats = [s for s in queue_stats if s["name"] == name]
-            if name_stats:
+            queue_name_stats = [s for s in queue_stats if s["name"] == name]
+            if queue_name_stats:
                 # Calculate totals across all log entries
-                total_items = sum(s["num_items"] for s in name_stats)
-                total_elapsed: float = sum(s["elapsed"] for s in name_stats)
+                total_items = sum(s["num_items"] for s in queue_name_stats)
+                total_elapsed: float = sum(s["elapsed"] for s in queue_name_stats)
 
                 # Calculate weighted averages (weighted by num_items)
                 weighted_put_time = sum(
-                    s["ave_put_time"] * s["num_items"] for s in name_stats
+                    s["ave_put_time"] * s["num_items"] for s in queue_name_stats
                 )
                 weighted_get_time = sum(
-                    s["ave_get_time"] * s["num_items"] for s in name_stats
+                    s["ave_get_time"] * s["num_items"] for s in queue_name_stats
                 )
                 weighted_occupancy = sum(
-                    s["occupancy_rate"] * s["num_items"] for s in name_stats
+                    s["occupancy_rate"] * s["num_items"] for s in queue_name_stats
                 )
 
                 avg_put_time = (
@@ -771,7 +771,7 @@ def log_stats_summary(db_path: str | Path) -> None:
                 _LG.info("    Average put time: %.4fs", avg_put_time)
                 _LG.info("    Average get time: %.4fs", avg_get_time)
                 _LG.info("    Average occupancy rate: %.1f%%", avg_occupancy * 100)
-                _LG.info("    Number of log entries: %d", len(name_stats))
+                _LG.info("    Number of log entries: %d", len(queue_name_stats))
 
     _LG.info("")
     _LG.info("=" * 80)

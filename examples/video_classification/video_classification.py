@@ -59,7 +59,7 @@ try:
         report_progress,
     )
 except ImportError:
-    from spdl.examples.video_classification.utils import (
+    from spdl.examples.video_classification.utils import (  # type: ignore[import-not-found, no-redef]
         add_dataset_args,
         build_pipeline,
         create_dataset,

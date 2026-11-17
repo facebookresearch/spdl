@@ -146,7 +146,7 @@ try:
         TaskStatsLogEntry,
     )
 except ImportError:
-    from spdl.examples.sqlite_stats_logger import (
+    from spdl.examples.sqlite_stats_logger import (  # type: ignore[import-not-found, no-redef]
         EventLogEntry,
         log_stats_summary,
         QueueStatsLogEntry,

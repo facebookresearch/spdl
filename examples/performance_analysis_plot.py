@@ -43,7 +43,7 @@ try:
         TaskStatsQueryResult,
     )
 except ImportError:
-    from spdl.examples.sqlite_stats_logger import (
+    from spdl.examples.sqlite_stats_logger import (  # type: ignore[import-not-found, no-redef]
         log_stats_summary,
         query_event_stats,
         query_queue_stats,

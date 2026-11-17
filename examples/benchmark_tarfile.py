@@ -96,7 +96,7 @@ try:
         save_results_to_csv,
     )
 except ImportError:
-    from spdl.examples.benchmark_utils import (
+    from spdl.examples.benchmark_utils import (  # type: ignore[import-not-found, no-redef]
         BenchmarkResult,
         BenchmarkRunner,
         ExecutorType,
