@@ -42,7 +42,15 @@ from collections.abc import Iterator, Sequence
 from decimal import Decimal
 from fractions import Fraction
 from pathlib import Path
-from typing import Any, Generic, overload, TYPE_CHECKING, TypeAlias, TypeVar
+from typing import (
+    Any,
+    Generic,
+    overload,
+    Protocol,
+    TYPE_CHECKING,
+    TypeAlias,
+    TypeVar,
+)
 
 try:
     from spdl._internal import log_api_usage_once
@@ -175,6 +183,7 @@ class Demuxer:
         name: str | None = None,
         **kwargs: Any,
     ) -> None:
+        self._demuxer: _libspdl.Demuxer
         if _fuse._is_symbol(src):
             self._demuxer = _fuse._record_open(
                 src, demux_config=demux_config, name=name, kwargs=kwargs
@@ -188,7 +197,7 @@ class Demuxer:
             self._demuxer = recorded
             return
         # pyrefly: ignore [no-matching-overload]
-        self._demuxer: _libspdl.Demuxer = _libspdl.make_demuxer(
+        self._demuxer = _libspdl.make_demuxer(
             _resolve_src(src),  # pyre-ignore[6]
             demux_config=demux_config,
             name=name,
@@ -348,7 +357,7 @@ class Demuxer:
         return self
 
     def __exit__(self, exc_type: Any, exc_value: Any, exc_traceback: Any) -> None:
-        self._demuxer._drop()  # pyre-ignore[16]
+        self._demuxer._drop()  # type: ignore[attr-defined]
 
 
 class _StreamingDemuxer:
@@ -420,7 +429,7 @@ def demux_video(
 
 
 def demux_image(
-    src: "str | bytes | UintArray | Tensor",
+    src: "str | Path | bytes | UintArray | Tensor",
     *,
     demux_config: "DemuxConfig | None" = None,
     bsf: str | None = None,
@@ -446,8 +455,13 @@ def demux_image(
 # Bit stream filtering
 ################################################################################
 
-TCodec = TypeVar("TCodec")
-TPackets = TypeVar("TPackets")
+TCodec = TypeVar("TCodec", "AudioCodec", "VideoCodec", "ImageCodec")
+TPackets = TypeVar("TPackets", "AudioPackets", "VideoPackets", "ImagePackets")
+
+
+class _BSFProtocol(Protocol[TPackets]):
+    def filter(self, packets: TPackets, *, flush: bool = False) -> TPackets | None: ...
+    def flush(self) -> TPackets | None: ...
 
 
 class BSF(Generic[TCodec, TPackets]):
@@ -487,9 +501,22 @@ class BSF(Generic[TCodec, TPackets]):
         codec: The input codec.
     """
 
-    def __init__(self, codec: TCodec, bsf: str) -> None:
+    @overload
+    def __init__(
+        self: "BSF[AudioCodec, AudioPackets]", codec: "AudioCodec", bsf: str
+    ) -> None: ...
+    @overload
+    def __init__(
+        self: "BSF[VideoCodec, VideoPackets]", codec: "VideoCodec", bsf: str
+    ) -> None: ...
+    @overload
+    def __init__(
+        self: "BSF[ImageCodec, ImagePackets]", codec: "ImageCodec", bsf: str
+    ) -> None: ...
+
+    def __init__(self, codec: "AudioCodec | VideoCodec | ImageCodec", bsf: str) -> None:
         codec = _fuse._actual(codec)
-        self._bsf: Any = _libspdl.make_bsf(codec, bsf)  # pyre-ignore[6]
+        self._bsf: _BSFProtocol[TPackets] = _libspdl.make_bsf(codec, bsf)  # type: ignore[assignment]
 
     def filter(self, packets: TPackets, flush: bool = False) -> TPackets | None:
         """Apply the filter to the input packets
@@ -510,16 +537,14 @@ class BSF(Generic[TCodec, TPackets]):
 
 
 @overload
-def apply_bsf(packets: "AudioPackets", bsf: str) -> "AudioPackets": ...
+def apply_bsf(packets: "AudioPackets", bsf: str) -> "AudioPackets | None": ...
 @overload
-def apply_bsf(packets: "VideoPackets", bsf: str) -> "VideoPackets": ...
+def apply_bsf(packets: "VideoPackets", bsf: str) -> "VideoPackets | None": ...
 @overload
-def apply_bsf(packets: "ImagePackets", bsf: str) -> "ImagePackets": ...
+def apply_bsf(packets: "ImagePackets", bsf: str) -> "ImagePackets | None": ...
 
 
-def apply_bsf(
-    packets: "AudioPackets | VideoPackets | ImagePackets", bsf: str
-) -> "AudioPackets | VideoPackets | ImagePackets":
+def apply_bsf(packets: TPackets, bsf: str) -> TPackets | None:
     """Apply bit stream filter to packets.
 
     The primal usecase of BFS in SPDL is to convert the H264 video packets to
@@ -534,6 +559,9 @@ def apply_bsf(
     Args:
         packets: Packets (audio/video/image) object
         bsf: A bitstream filter description.
+
+    Returns:
+        Filtered packet object, or ``None`` if the filter produces no packets.
 
     .. seealso::
 
@@ -550,8 +578,7 @@ def apply_bsf(
         return _fuse._record_bsf(packets, bsf)
     if packets.codec is None:
         raise ValueError("The packets object does not have codec.")
-    # pyrefly: ignore [bad-return]
-    return BSF(packets.codec, bsf).filter(packets, flush=True)
+    return BSF(packets.codec, bsf).filter(packets, flush=True)  # type: ignore[arg-type, return-value]
 
 
 ################################################################################
@@ -868,11 +895,12 @@ def decode_packets_nvdec(
             "NvDecDecoder object manually."
         )
 
+    filtered_packets: VideoPackets | None = packets
     match codec.name:
         case "h264":
-            packets = apply_bsf(packets, "h264_mp4toannexb")
+            filtered_packets = apply_bsf(packets, "h264_mp4toannexb")
         case "hevc":
-            packets = apply_bsf(packets, "hevc_mp4toannexb")
+            filtered_packets = apply_bsf(packets, "hevc_mp4toannexb")
         case _:
             pass
 
@@ -886,7 +914,8 @@ def decode_packets_nvdec(
         scale_width=scale_width,
         scale_height=scale_height,
     )
-    buffer = decoder.decode_packets(packets)
+    # Preserve the existing native-boundary handling of a no-output filter result.
+    buffer = decoder.decode_packets(filtered_packets)  # type: ignore[arg-type]
 
     # Convert NV12 to RGB/BGR using batched function
     match pix_fmt:
@@ -899,7 +928,7 @@ def decode_packets_nvdec(
     raise AssertionError(f"[SPDL Internal Error] Unexpected {pix_fmt=}")
 
 
-def _resolve_src2(obj: object) -> "memoryview[bytes]":
+def _resolve_src2(obj: object) -> memoryview:
     src = _resolve_src(obj)
     if isinstance(src, str):
         with open(src, "rb") as f:
@@ -909,7 +938,7 @@ def _resolve_src2(obj: object) -> "memoryview[bytes]":
 
 
 def decode_image_nvjpeg(
-    src: "str | bytes | memoryview | Sequence[bytes | memoryview]",
+    src: str | bytes | memoryview | Sequence[bytes | memoryview],
     *,
     device_config: "CUDAConfig | None" = None,
     scale_width: int = -1,
@@ -946,7 +975,7 @@ def decode_image_nvjpeg(
     if device_config is None:
         raise ValueError("device_config must be provided.")
 
-    data: "memoryview[bytes] | Sequence[memoryview[bytes]]"
+    data: memoryview | Sequence[memoryview]
     if isinstance(src, Sequence) and not isinstance(src, (str, bytes, memoryview)):
         data = [_resolve_src2(s) for s in src]
     else:
@@ -1032,7 +1061,7 @@ def nvdec_decoder(
 
     if use_cache:
         decoder = _get_decoder()
-        decoder._reset()  # pyre-ignore[16]
+        decoder._reset()  # type: ignore[attr-defined]
     else:
         _del_cached_decoder()
         decoder = _get_decoder()
@@ -1085,10 +1114,10 @@ def convert_frames(
             - ``W``: width
             - ``H``: height
     """
-    frames = _fuse._unwrap_frames(frames)
-    if _fuse._is_traced(frames):
-        return _fuse._record_convert(frames, storage)
-    return _libspdl.convert_frames(frames, storage=storage)  # type: ignore[arg-type]
+    frames_ = _fuse._unwrap_frames(frames)
+    if _fuse._is_traced(frames_):
+        return _fuse._record_convert(frames_, storage)
+    return _libspdl.convert_frames(frames_, storage=storage)  # type: ignore[arg-type]
 
 
 def convert_array(
@@ -1112,7 +1141,7 @@ def convert_array(
 
 
 def create_reference_audio_frame(
-    array: "NDArray", sample_fmt: str, sample_rate: int, pts: int
+    array: "NDArray | Tensor", sample_fmt: str, sample_rate: int, pts: int
 ) -> "AudioFrames":
     """Create an AudioFrame object which refers to the given array/tensor.
 
@@ -1154,18 +1183,18 @@ def create_reference_audio_frame(
        Frames object that references the memory region of the input data.
     """
     frame = _libspdl.create_reference_audio_frame(
-        # pyrefly: ignore [bad-argument-type]
-        array=array,
+        # The native binding accepts the documented array/tensor interface.
+        array=array,  # type: ignore[arg-type]
         sample_fmt=sample_fmt,
         sample_rate=sample_rate,
         pts=pts,
     )
-    frame._array_ref = array  # pyre-ignore[16]
+    frame._array_ref = array  # type: ignore[attr-defined]
     return frame
 
 
 def create_reference_video_frame(
-    array: "NDArray", pix_fmt: str, frame_rate: tuple[int, int], pts: int
+    array: "NDArray | Tensor", pix_fmt: str, frame_rate: tuple[int, int], pts: int
 ) -> "VideoFrames":
     """Create an VideoFrame object which refers to the given array/tensor.
 
@@ -1201,13 +1230,12 @@ def create_reference_video_frame(
        Frames object that references the memory region of the input data.
     """
     frame = _libspdl.create_reference_video_frame(
-        # pyrefly: ignore [bad-argument-type]
-        array=array,
+        array=array,  # type: ignore[arg-type]
         pix_fmt=pix_fmt,
         frame_rate=frame_rate,
         pts=pts,
     )
-    frame._array_ref = array  # pyre-ignore[16]
+    frame._array_ref = array  # type: ignore[attr-defined]
     return frame
 
 
@@ -1215,7 +1243,7 @@ def create_reference_video_frame(
 # Device data transfer
 ################################################################################
 def transfer_buffer(
-    buffer: "CPUBuffer | NDArray",
+    buffer: "CPUBuffer | NDArray | Tensor",
     *,
     device_config: "CUDAConfig",
 ) -> "CUDABuffer":
@@ -1229,10 +1257,10 @@ def transfer_buffer(
         Buffer data on the target GPU device.
     """
     buffer = _fuse._actual(buffer)
-    return _libspdl_cuda.transfer_buffer(buffer, device_config=device_config)
+    return _libspdl_cuda.transfer_buffer(buffer, device_config=device_config)  # type: ignore[arg-type]
 
 
-def transfer_buffer_cpu(buffer: "CUDABuffer") -> "CPUBuffer":
+def transfer_buffer_cpu(buffer: "CUDABuffer | Tensor") -> "CPUBuffer":
     """Move the given CUDA buffer to CPU.
 
     Args:
@@ -1241,8 +1269,7 @@ def transfer_buffer_cpu(buffer: "CUDABuffer") -> "CPUBuffer":
     Returns:
         Buffer data on CPU.
     """
-    # pyrefly: ignore [bad-argument-type]
-    return _libspdl_cuda.transfer_buffer_cpu(buffer)
+    return _libspdl_cuda.transfer_buffer_cpu(buffer)  # type: ignore[arg-type]
 
 
 ################################################################################
@@ -1461,14 +1488,12 @@ class Muxer:
         self._open = True
         return self
 
-    def write(
-        self, stream_index: int, packets: "AudioPackets | VideoPackets | ImagePackets"
-    ) -> None:
+    def write(self, stream_index: int, packets: "AudioPackets | VideoPackets") -> None:
         """Write packets to muxer.
 
         Args:
             stream_index: The stream to write to.
-            packets: Audio/video/image data.
+            packets: Audio/video data.
         """
         self._muxer.write(stream_index, packets)  # pyre-ignore[6]
 

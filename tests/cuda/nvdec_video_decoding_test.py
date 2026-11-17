@@ -425,12 +425,15 @@ class TestNvdecThreadLocalCaching(unittest.TestCase):
         """A cached decoder uses the latest allocator and CUDA stream."""
         sample = _get_h264_sample()
         packets = spdl.io.demux_video(sample.path)
-        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        filtered_packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        assert filtered_packets is not None
+        packets = filtered_packets
         codec = packets.codec
         self.assertIsNotNone(codec)
+        assert codec is not None
 
-        first_allocations = []
-        second_allocations = []
+        first_allocations: list[tuple[int, int]] = []
+        second_allocations: list[tuple[int, int]] = []
 
         def make_allocator(allocations):
             def allocate(size, device, stream):
@@ -633,7 +636,9 @@ class TestDecodePackets(unittest.TestCase):
         packets = spdl.io.demux_video(h264.path, timestamp=(0, 1.0))
 
         # Apply BSF for H264
-        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        filtered_packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        assert filtered_packets is not None
+        packets = filtered_packets
 
         # Execute: Use nvdec_decoder with decode_packets
         codec = packets.codec
@@ -661,7 +666,9 @@ class TestDecodePackets(unittest.TestCase):
 
         # Execute: Decode using decode_packets (batch decode)
         packets = spdl.io.demux_video(h264.path)
-        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        filtered_packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        assert filtered_packets is not None
+        packets = filtered_packets
         codec = packets.codec
         assert codec is not None
         decoder = spdl.io.nvdec_decoder(cuda_config, codec, use_cache=False)
@@ -695,7 +702,9 @@ class TestDecodePackets(unittest.TestCase):
         cuda_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
 
         packets = spdl.io.demux_video(h264.path)
-        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        filtered_packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        assert filtered_packets is not None
+        packets = filtered_packets
         codec = packets.codec
         assert codec is not None
         decoder = spdl.io.nvdec_decoder(cuda_config, codec, use_cache=False)
@@ -703,7 +712,9 @@ class TestDecodePackets(unittest.TestCase):
 
         # decode with timestamp.
         packets = spdl.io.demux_video(h264.path, timestamp=(1.0, 2.0))
-        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        filtered_packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        assert filtered_packets is not None
+        packets = filtered_packets
         codec = packets.codec
         assert codec is not None
         decoder = spdl.io.nvdec_decoder(cuda_config, codec, use_cache=True)
@@ -712,7 +723,9 @@ class TestDecodePackets(unittest.TestCase):
         # it must be internally reset before the next decoding.
 
         packets = spdl.io.demux_video(h264.path)
-        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        filtered_packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        assert filtered_packets is not None
+        packets = filtered_packets
         codec = packets.codec
         assert codec is not None
         decoder = spdl.io.nvdec_decoder(cuda_config, codec, use_cache=True)

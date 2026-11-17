@@ -157,7 +157,7 @@ def process(
         num_video_frames = 0
         for packets in streaming_demuxing:
             if (audio_packets := packets.get(audio_index)) is not None:
-                muxer.write(1, audio_packets)
+                muxer.write(1, audio_packets)  # type: ignore[arg-type]
 
             if (video_packets := packets.get(video_index)) is None:
                 continue
