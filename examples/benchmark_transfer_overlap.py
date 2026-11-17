@@ -381,12 +381,12 @@ def _collect_samples(
     """Collect randomized, paired timing blocks for every transfer method."""
     for _ in range(num_warmup):
         run_compute()
-        for method in methods.values():
-            _time_transfer(executor, method, device)
-            _time_concurrent(executor, method, run_compute, device)
+        for transfer_fn in methods.values():
+            _time_transfer(executor, transfer_fn, device)
+            _time_concurrent(executor, transfer_fn, run_compute, device)
 
     rng = random.Random(seed)
-    samples = {method: [] for method in methods}
+    samples: dict[str, list[OverlapSample]] = {method: [] for method in methods}
     cases = [("compute", "")]
     cases.extend(
         (method, schedule)
@@ -575,8 +575,8 @@ def _run_benchmarks(
         )
 
     created_utc = datetime.now(timezone.utc).isoformat()
-    summaries = []
-    raw_records = []
+    summaries: list[BenchmarkSummary] = []
+    raw_records: list[RawSampleRecord] = []
     scenarios = [
         (total_mib * 1024 * 1024, num_tensors)
         for total_mib in config.total_mib

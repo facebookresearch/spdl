@@ -166,7 +166,7 @@ def main() -> None:
                 f"{tag}, {label}",
                 n_items,
                 buffer_size,
-                use_thread_output_queue=selection,
+                use_thread_output_queue=selection,  # type: ignore[arg-type]
                 work_us=work_ms * 1000.0,
             )
             results.append(result)
