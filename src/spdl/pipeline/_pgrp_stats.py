@@ -649,8 +649,8 @@ class ProcessGroupStatsMonitor(BackgroundTask):
             )
             return
         ctx = self._mp_context or multiprocessing.get_context()
-        # pyrefly: ignore [missing-attribute]
-        proc = ctx.Process(
+        process_factory = ctx.Process  # type: ignore[attr-defined]
+        proc = process_factory(
             target=_pgrp_monitor_subprocess,
             args=(self._interval, self._callback),
             daemon=True,

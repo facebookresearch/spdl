@@ -12,7 +12,6 @@ and iterate_in_subinterpreter implementations.
 """
 
 import enum
-import multiprocessing as mp
 import queue
 import time
 from collections.abc import Callable, Iterable, Sequence
@@ -25,6 +24,7 @@ __all__ = [
     "_Cmd",
     "_Status",
     "_Msg",
+    "_Queue",
     "_drain",
     "_wait_for_init",
     "_enter_iteration_mode",
@@ -46,7 +46,7 @@ class _Queue(Protocol[T]):
     and subinterpreter implementations.
     """
 
-    def put(self, item: T, block: bool = True, timeout: float | None = None) -> None:
+    def put(self, item: T, /, block: bool = True, timeout: float | None = None) -> None:
         """Put an item into the queue."""
         ...
 
@@ -205,8 +205,8 @@ def _get_worker_message(
 
 
 def _execute_iterable(
-    cmd_q: mp.Queue,
-    data_q: mp.Queue,
+    cmd_q: _Queue[_Cmd],
+    data_q: _Queue[_Msg[T]],
     fn: Callable[[], Iterable[T]],
     initializers: Sequence[Callable[[], None]] | None,
     arena: ArenaProtocol | None = None,
@@ -547,7 +547,7 @@ def _iterate_results(
         else:
             match item.status:
                 case _Status.ITERATOR_SUCCESS:
-                    yield item.message  # pyre-ignore: [7]
+                    yield item.message  # type: ignore[misc]
                 case _Status.ITERATION_FINISHED:
                     return
                 case _Status.ITERATOR_FAILED:
