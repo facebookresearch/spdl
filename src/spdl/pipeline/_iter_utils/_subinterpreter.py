@@ -250,9 +250,9 @@ else:
         )
 
         cmd_q: _Queue[_Cmd] = concurrent.interpreters.create_queue()  # type: ignore[assignment]
-        data_q: _Queue[_Msg[T]] = concurrent.interpreters.create_queue(
+        data_q: _Queue[_Msg[T]] = concurrent.interpreters.create_queue(  # type: ignore[assignment]
             maxsize=buffer_size
-        )  # type: ignore[assignment]
+        )
         interp = concurrent.interpreters.create()
 
         try:
