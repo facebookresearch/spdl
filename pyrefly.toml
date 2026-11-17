@@ -6,6 +6,9 @@ project-includes = [
   "src/spdl/source/**/*.py",
   "src/spdl/io/**/*.py",
   "src/spdl/io/**/*.pyi",
+  "src/spdl/pipeline/**/*.py",
+  "tests/pipeline/**/*.py",
+  "tests/dataloader/**/*.py",
   "tests/io/**/*.py",
   "tests/cuda/**/*.py",
 ]
