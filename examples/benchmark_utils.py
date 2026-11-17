@@ -66,7 +66,7 @@ ConfigT = TypeVar("ConfigT")
 def _is_free_threaded() -> bool:
     """Check if Python is running with free-threaded ABI."""
     try:
-        return not sys._is_gil_enabled()  # pyre-ignore[16]
+        return not sys._is_gil_enabled()  # type: ignore[attr-defined]
     except AttributeError:
         return False
 
@@ -435,7 +435,7 @@ def load_results_from_csv(
     """
     if not hasattr(config_type, "__dataclass_fields__"):
         raise ValueError(f"config_type must be a dataclass, got {config_type}")
-    fields: dict[str, Any] = config_type.__dataclass_fields__  # pyre-ignore[16]
+    fields: dict[str, Any] = config_type.__dataclass_fields__  # type: ignore[attr-defined]
 
     # Normalize input path and resolve symbolic links
     input_file = os.path.realpath(input_file)
@@ -478,7 +478,7 @@ def load_results_from_csv(
                     config_dict[key] = value
 
             # Convert string values to appropriate types for config
-            typed_config_dict = {}
+            typed_config_dict: dict[str, str | int | float | bool] = {}
             for field_name, field_info in fields.items():
                 if field_name not in config_dict:
                     continue
