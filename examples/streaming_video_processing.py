@@ -68,6 +68,7 @@ __all__ = [
 
 import argparse
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import spdl.io
 from spdl.io import (
@@ -78,6 +79,9 @@ from spdl.io import (
     VideoEncoder,
     VideoPackets,
 )
+
+if TYPE_CHECKING:
+    from spdl.io import AudioPackets, ImagePackets
 
 
 def parse_args() -> argparse.Namespace:
@@ -147,6 +151,10 @@ def process(
         video_encoder: Encode the processed video array.
         muxer: Multiplexer for remuxing audio packets and processed video packets.
     """
+    frames: spdl.io.AudioFrames | spdl.io.VideoFrames | spdl.io.ImageFrames | None
+    packets: (
+        "dict[int, AudioPackets | VideoPackets | ImagePackets] | VideoPackets | None"
+    )
     src_pix_fmt = "rgb24"
     frame_rate = demuxer.video_codec.frame_rate
     video_index = demuxer.video_stream_index
@@ -183,7 +191,9 @@ def process(
 
                 if (frames := filter_graph.get_frames()) is not None:
                     if (
-                        packets := video_encoder.encode(frames)  # pyre-ignore
+                        packets := video_encoder.encode(
+                            frames  # type: ignore[arg-type]
+                        )
                     ) is not None:
                         muxer.write(0, packets)
 
@@ -210,11 +220,13 @@ def process(
 
             filter_graph.add_frames(frames)
             if (frames := filter_graph.get_frames()) is not None:
-                if (packets := video_encoder.encode(frames)) is not None:  # pyre-ignore
+                if (
+                    packets := video_encoder.encode(frames)  # type: ignore[arg-type]
+                ) is not None:
                     muxer.write(0, packets)
 
         # Flush filter graph
-        if (frames := filter_graph.flush()) is not None:
+        if (frames := filter_graph.flush()) is not None:  # type: ignore[func-returns-value]
             if (packets := video_encoder.encode(frames)) is not None:
                 muxer.write(0, packets)
 
