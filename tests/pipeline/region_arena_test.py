@@ -26,7 +26,7 @@ from multiprocessing import shared_memory
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, cast, TYPE_CHECKING
 from unittest.mock import patch
 
 import numpy as np
@@ -93,6 +93,9 @@ from spdl.pipeline.defs import (
 )
 
 from ._defaults import _DefaultsTestCase
+
+if TYPE_CHECKING:
+    from spdl.pipeline.defs._defs import _TStage
 
 
 def _disable_network_hooks() -> None:
@@ -253,7 +256,7 @@ class BorrowedArenaConfigTest(_RegionTestCase):
         class Custom(ProcessPoolExecutorConfig):
             def _build(
                 self,
-                stages: Sequence[object],
+                stages: Sequence["_TStage"],
                 backend: Any,
                 report_stats_interval: float,
                 fail_fast: bool,

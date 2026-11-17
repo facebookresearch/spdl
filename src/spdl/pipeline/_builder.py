@@ -7,13 +7,26 @@
 
 import logging
 import sys
-from collections.abc import AsyncIterable, Callable, Iterable, Sequence
+from collections.abc import (
+    AsyncIterable,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Iterable,
+    Iterator,
+    Sequence,
+)
 from concurrent.futures import Executor
 from fractions import Fraction
-from typing import Any, Generic, TYPE_CHECKING, TypeVar
+from typing import Any, Generic, Never, overload, TYPE_CHECKING, TypeVar
 
 from spdl._internal import log_api_usage_once
-from spdl.pipeline._components import AsyncQueue, StageInfo, TaskHook, ThreadOutputQueue
+from spdl.pipeline._components import (
+    _QueueFactory,
+    StageInfo,
+    TaskHook,
+    ThreadOutputQueue,
+)
 from spdl.pipeline.defs import (
     _MainProcess,
     _PipeType,
@@ -44,6 +57,8 @@ __all__ = [
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
+# TODO: Revisit this split after the checker moves to Python 3.14;
+# keep Python 3.11/3.12 runtime compatibility when merging the declarations.
 if TYPE_CHECKING:
     T = TypeVar("T", default=Any)
     U = TypeVar("U", default=Any)
@@ -156,6 +171,10 @@ def _validate_executor_regions(
 class PipelineBuilder(Generic[T, U]):
     """Build :py:class:`Pipeline` object.
 
+    Unparameterized builders retain dynamic input and output types. Explicit
+    ``PipelineBuilder[Source, Output]`` specialization declares boundary types;
+    it does not statically compose a heterogeneous stage graph.
+
     .. note::
 
        ``PipelineBuilder`` supports only chain of operations.
@@ -239,9 +258,74 @@ class PipelineBuilder(Generic[T, U]):
         self._src = SourceConfig(source, continuous=continuous)
         return self
 
+    @overload
+    def pipe(
+        self,
+        op: Callable[[T_], AsyncIterator[U_]],
+        /,
+        *,
+        concurrency: int = ...,
+        executor: Executor | None = ...,
+        name: str | None = ...,
+        output_order: str = ...,
+        max_failures: int | Fraction | None = ...,
+    ) -> "PipelineBuilder[T, U]": ...
+
+    @overload
+    def pipe(
+        self,
+        op: Callable[[T_], Awaitable[U_]],
+        /,
+        *,
+        concurrency: int = ...,
+        executor: Executor | None = ...,
+        name: str | None = ...,
+        output_order: str = ...,
+        max_failures: int | Fraction | None = ...,
+    ) -> "PipelineBuilder[T, U]": ...
+
+    @overload
+    def pipe(
+        self,
+        op: Callable[[T_], Iterator[U_]],
+        /,
+        *,
+        concurrency: int = ...,
+        executor: Executor | None = ...,
+        name: str | None = ...,
+        output_order: str = ...,
+        max_failures: int | Fraction | None = ...,
+    ) -> "PipelineBuilder[T, U]": ...
+
+    @overload
+    def pipe(
+        self,
+        op: Callable[[T_], U_],
+        /,
+        *,
+        concurrency: int = ...,
+        executor: Executor | None = ...,
+        name: str | None = ...,
+        output_order: str = ...,
+        max_failures: int | Fraction | None = ...,
+    ) -> "PipelineBuilder[T, U]": ...
+
+    @overload
     def pipe(
         self,
         op: _TPipeInputs[T_, U_],
+        /,
+        *,
+        concurrency: int = ...,
+        executor: Executor | None = ...,
+        name: str | None = ...,
+        output_order: str = ...,
+        max_failures: int | Fraction | None = ...,
+    ) -> "PipelineBuilder[T, U]": ...
+
+    def pipe(
+        self,
+        op: _TPipeInputs[Never, object],
         /,
         *,
         concurrency: int = 1,
@@ -550,9 +634,8 @@ class PipelineBuilder(Generic[T, U]):
                 source into batches upstream of this stage. See
                 :py:func:`~spdl.pipeline.defs.PathVariants`.
         """
-        self._process_args.append(
-            PathVariants(router, paths, name=name, batched=batched)
-        )
+        cfg = PathVariants(router, paths, name=name, batched=batched)  # type: ignore[call-overload]
+        self._process_args.append(cfg)
         return self
 
     def add_sink(
@@ -599,7 +682,7 @@ class PipelineBuilder(Generic[T, U]):
         num_threads: int,
         max_failures: int | Fraction = -1,
         report_stats_interval: float = -1,
-        queue_class: type[AsyncQueue] | None = None,
+        queue_class: _QueueFactory | None = None,
         task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
         stage_id: int = 0,
         use_thread_output_queue: bool | type[ThreadOutputQueue] | None = None,

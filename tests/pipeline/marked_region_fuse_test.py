@@ -27,8 +27,10 @@ from spdl.pipeline import (
 from spdl.pipeline._fuse import _fuse_marked_regions
 from spdl.pipeline._subprocess_pipeline_pool import (
     _ProcessBackend,
+    _ProcessWorker,
     _SubprocessPipelinePool,
 )
+from spdl.pipeline._subprocess_worker_pool import _IterableWithPoolShutdown
 from spdl.pipeline.config import set_default_queue_class
 from spdl.pipeline.defs import (
     Aggregate,
@@ -42,7 +44,7 @@ from spdl.pipeline.defs import (
     SinkConfig,
     SourceConfig,
 )
-from spdl.pipeline.defs._defs import _SubprocessPipelineConfig
+from spdl.pipeline.defs._defs import _SubprocessPipelineConfig, _TStage
 
 
 def add_one(x: int) -> int:
@@ -147,7 +149,7 @@ class MarkedRegionFuseTest(unittest.TestCase):
 
         class CustomPoolConfig(ProcessPoolExecutorConfig):
             def _build(
-                self, stages: Sequence[object], *args: Any, **kwargs: Any
+                self, stages: Sequence[_TStage], *args: Any, **kwargs: Any
             ) -> tuple[_SubprocessPipelineConfig, _SubprocessPipelinePool]:
                 return super()._build([*stages, Pipe(_stamp_branch)], *args, **kwargs)
 
@@ -777,15 +779,26 @@ class ContinuousRegionTest(unittest.TestCase):
             .get_config()
         )
         src = run_pipeline_in_subprocess(config, num_threads=4)
-        pools = src._pools  # pyrefly: ignore [missing-attribute]
-        workers = [worker._proc for pool in pools for worker in pool._workers]
+        self.assertIsInstance(src, _IterableWithPoolShutdown)
+        assert isinstance(src, _IterableWithPoolShutdown)
+        pools: list[_SubprocessPipelinePool] = []
+        for candidate in src._pools:
+            self.assertIsInstance(candidate, _SubprocessPipelinePool)
+            assert isinstance(candidate, _SubprocessPipelinePool)
+            pools.append(candidate)
+        workers = []
+        for pool in pools:
+            for worker in pool._workers:
+                self.assertIsInstance(worker, _ProcessWorker)
+                assert isinstance(worker, _ProcessWorker)
+                workers.append(worker._proc)
         it = iter(src)
         next(it)  # consume a couple of items so the queues stay backed up
         next(it)
         torn_down = threading.Event()
 
         def _teardown() -> None:
-            src._finalizer()  # pyre-ignore[16]: documented teardown handle
+            src._finalizer()
             torn_down.set()
 
         t = threading.Thread(target=_teardown, daemon=True)

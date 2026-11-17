@@ -46,7 +46,7 @@ class _RegionBytesHandler:
         return self._original.get_buffer(obj)
 
     def from_buffer(
-        self, buf: "memoryview[bytes]", meta: tuple[object, ...], zero_copy: bool
+        self, buf: memoryview, meta: tuple[object, ...], zero_copy: bool
     ) -> tuple[object, object | None]:
         if meta[0] in (bytes, bytearray):
             return self._original.from_buffer(buf, meta, False)

@@ -36,7 +36,7 @@ import warnings
 from collections.abc import Sequence
 from dataclasses import replace
 from functools import partial
-from typing import Any
+from typing import Any, TypeVar
 
 from spdl.pipeline._common._convert import (
     _is_async_callable,
@@ -54,6 +54,7 @@ from spdl.pipeline._subprocess_pipeline_pool import (
 from spdl.pipeline.defs._defs import (
     _MainProcess,
     _SubprocessPipelineConfig,
+    _TStage,
     InterpreterPoolExecutorConfig,
     MergeConfig,
     PathVariantsConfig,
@@ -78,6 +79,7 @@ _FUSED_SINK_BUFFER: int = 3
 # concurrency. The source blocks on the worker's input queue, so it must never compete with the
 # ops for the last thread. See :py:func:`_build_fused_stage_core`.
 _SOURCE_THREADS: int = 1
+_StageT = TypeVar("_StageT", bound=_TStage)
 
 
 def _has_continuous_source(config: PipelineConfig[Any]) -> bool:
@@ -90,7 +92,7 @@ def _has_continuous_source(config: PipelineConfig[Any]) -> bool:
     return False
 
 
-def _strip_executor(cfg: object) -> object:
+def _strip_executor(cfg: _StageT) -> _StageT:
     """Strip a stage's executor(s) so it runs on the worker's own pool.
 
     Recurses into a path-variants stage, stripping every branch pipe's executor (the branch ops
@@ -158,7 +160,7 @@ def _warn_fork_with_threads(ctx: Any, stacklevel: int) -> None:
 
 
 def _build_fused_stage_core(
-    stages: Sequence[object],
+    stages: Sequence[_TStage],
     *,
     spec: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig,
     backend: _PoolBackend,
@@ -319,7 +321,7 @@ def _fuse_marked_regions(
 
     continuous = _has_continuous_source(config)
     pools: list[_SubprocessPipelinePool] = []
-    new_pipes: list[object] = []
+    new_pipes: list[_TStage] = []
     target: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig | _MainProcess = (
         _MainProcess()
     )
@@ -328,7 +330,7 @@ def _fuse_marked_regions(
     # get their own, and the marker between them sizes that single handoff for both sides.
     input_buffer_size: int = 1
     input_arena: object | None = None
-    region: list[object] = []
+    region: list[_TStage] = []
 
     def _flush(output_buffer_size: int, output_arena: object | None = None) -> None:
         if not region:
