@@ -27,7 +27,7 @@ from ._core import _FILTER_DESC_DEFAULT, TimeWindow
 from .lib import _libspdl, _libspdl_cuda
 
 try:
-    from .fb import _is_sample_decode_enabled
+    from .fb import _is_sample_decode_enabled  # type: ignore[import-not-found]
 except ImportError:
 
     def _is_sample_decode_enabled() -> bool:

@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     _Frames = _libspdl.AudioFrames | _libspdl.VideoFrames | _libspdl.ImageFrames
 
 try:
-    from .fb import _is_fusion_disabled
+    from .fb import _is_fusion_disabled  # type: ignore[import-not-found]
 except ImportError:
 
     def _is_fusion_disabled(name: str) -> bool:

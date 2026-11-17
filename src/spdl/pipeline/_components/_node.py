@@ -891,8 +891,7 @@ def _gather_error(
     for n in node.upstream:
         errs.extend(_gather_error(n, _visited))
     errs.sort(key=lambda i: i[0])
-    # pyrefly: ignore [bad-return]
-    return errs
+    return errs  # type: ignore[return-value]
 
 
 class PipelineFailure(ExceptionGroup[Exception]):
@@ -920,7 +919,7 @@ class PipelineFailure(ExceptionGroup[Exception]):
     def __init__(self, errs: list[tuple[str, Exception]]) -> None:
         pass
 
-    def derive(  # pyre-ignore[14]
+    def derive(  # type: ignore[override]
         self, excs: Sequence[Exception]
     ) -> "PipelineFailure":
         return super().__new__(type(self), self.message, excs)
