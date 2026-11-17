@@ -30,7 +30,7 @@ from collections.abc import (
     Iterator,
 )
 from concurrent.futures import Executor, ProcessPoolExecutor
-from typing import Any, TypeVar
+from typing import Any, cast, TypeVar
 
 from ._types import _TAsyncCallables, _TCallables
 
@@ -154,7 +154,7 @@ def _func_in_subprocess(func: Callable[[T], U], item: T) -> U:
 
 def _to_async(
     func: Callable[[T], U],
-    executor: type[Executor] | None,
+    executor: Executor | None,
 ) -> Callable[[T], Awaitable[U]]:
     if _is_process_pool(executor):
 
@@ -286,7 +286,7 @@ def convert_to_async(
     if _is_async_callable(op):
         # op is async function. No need to convert.
         assert executor is None  # This has been checked in `PipelineBuilder.pipe()`
-        return op  # pyre-ignore: [7]
+        return cast(_TAsyncCallables[T, U], op)
 
     if inspect.isgeneratorfunction(op):
         # op is sync generator. Convert to async generator.
@@ -298,4 +298,4 @@ def convert_to_async(
         return _to_async_gen(op, executor=executor)
 
     # Convert a regular sync function to async function.
-    return _to_async(op, executor=executor)  # pyre-ignore: [7]
+    return _to_async(cast(Callable[[T], U], op), executor=executor)
