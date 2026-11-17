@@ -12,12 +12,13 @@ import unittest
 import warnings
 from collections.abc import AsyncIterator, Callable
 from fractions import Fraction
-from typing import Type, TypeVar
+from typing import ParamSpec, Type, TypeVar
 
 from parameterized import parameterized
 from spdl.pipeline import AsyncQueue, PipelineBuilder, PipelineFailure
 
-_F = TypeVar("_F", bound=Callable[..., object])
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 _C = TypeVar("_C", bound=Type[object])
 
 
@@ -51,7 +52,7 @@ class _ThresholdBackpressureQueue(AsyncQueue):
         await super().put(item)
 
 
-def _ignore_intentional_warnings(fn: _F) -> _F:
+def _ignore_intentional_warnings(fn: Callable[_P, _R]) -> Callable[_P, _R]:
     """Suppress warnings emitted intentionally by failure-rate tests:
 
     - the fork() multi-threaded DeprecationWarning from the subprocess
@@ -62,7 +63,7 @@ def _ignore_intentional_warnings(fn: _F) -> _F:
     """
 
     @functools.wraps(fn)
-    def wrapper(*args: object, **kwargs: object) -> object:
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
@@ -79,7 +80,6 @@ def _ignore_intentional_warnings(fn: _F) -> _F:
             )
             return fn(*args, **kwargs)
 
-    # pyre-ignore[7]
     return wrapper
 
 
@@ -132,7 +132,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         )
         expected = [x for x in range(100) if x % 7 != 0]
         expected_prefix = [x for x in expected if x <= 93]
-        vals = []
+        vals: list[int] = []
 
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
@@ -170,7 +170,7 @@ class PipelineFailureRateTest(unittest.TestCase):
         )
         expected = [*range(15, 57), 99]
         expected_prefix = list(range(15, 53))
-        vals = []
+        vals: list[int] = []
 
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
@@ -214,7 +214,7 @@ class PipelineFailureRateTest(unittest.TestCase):
             .build(num_threads=1, max_failures=Fraction(1, 1000))
         )
 
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
@@ -322,7 +322,7 @@ class PipelineFailureRateTest(unittest.TestCase):
             .build(num_threads=1, max_failures=Fraction(9, 100))
         )
 
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
@@ -399,7 +399,7 @@ class PipelineFailureRateTest(unittest.TestCase):
             .build(num_threads=1, max_failures=Fraction(19, 100))
         )
 
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
@@ -530,7 +530,7 @@ class PipelineFailureRateTest(unittest.TestCase):
             .build(num_threads=1)
         )
 
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
@@ -758,7 +758,7 @@ class PipelineFailureRateTest(unittest.TestCase):
             .build(num_threads=1, max_failures=Fraction(1, 1000))
         )
 
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
@@ -910,7 +910,7 @@ class PipelineFailureRateTest(unittest.TestCase):
             .build(num_threads=1, max_failures=Fraction(1, 10))
         )
 
-        vals = []
+        vals: list[int] = []
         with self.assertRaises(PipelineFailure):
             with pipeline.auto_stop():
                 vals.extend(pipeline.get_iterator(timeout=30))
