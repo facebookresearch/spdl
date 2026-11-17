@@ -163,6 +163,7 @@ class TestRemuxVideo(unittest.TestCase):
 
             with muxer.open():
                 for packets in demuxer.streaming_demux(duration=1):
+                    assert isinstance(packets, spdl.io.VideoPackets)
                     muxer.write(0, packets)
 
             ref = load_ref_video(

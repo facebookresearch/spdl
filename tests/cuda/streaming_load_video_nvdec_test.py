@@ -232,14 +232,18 @@ class TestStreamingLoadVideoNvdec(unittest.TestCase):
         cuda_config = spdl.io.cuda_config(device_index=DEFAULT_CUDA)
 
         packets = spdl.io.demux_video(h264.path)
-        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        filtered_packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        assert filtered_packets is not None
+        packets = filtered_packets
         codec = packets.codec
         assert codec is not None
         decoder = spdl.io.nvdec_decoder(cuda_config, codec, use_cache=False)
         ref = spdl.io.to_torch(decoder.decode_packets(packets.clone()))
 
         packets = spdl.io.demux_video(h264.path, timestamp=(1.0, 2.0))
-        packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        filtered_packets = spdl.io.apply_bsf(packets, "h264_mp4toannexb")
+        assert filtered_packets is not None
+        packets = filtered_packets
         codec = packets.codec
         assert codec is not None
         decoder = spdl.io.nvdec_decoder(cuda_config, codec, use_cache=False)

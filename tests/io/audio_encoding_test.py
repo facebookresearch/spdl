@@ -12,11 +12,14 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import spdl.io
+from numpy.typing import NDArray
 from parameterized import parameterized
 
 from ..fixture import FFMPEG_CLI, get_sample, load_ref_audio
 
-integer_sample_fmt2dtype = {
+integer_sample_fmt2dtype: dict[
+    str, type[np.int16] | type[np.int32] | type[np.int64]
+] = {
     "s16": np.int16,
     "s32": np.int32,
     "s64": np.int64,
@@ -24,7 +27,14 @@ integer_sample_fmt2dtype = {
     "s32p": np.int32,
     "s64p": np.int64,
 }
-sample_fmt2dtype = {
+sample_fmt2dtype: dict[
+    str,
+    type[np.int16]
+    | type[np.int32]
+    | type[np.int64]
+    | type[np.float32]
+    | type[np.float64],
+] = {
     **integer_sample_fmt2dtype,
     "f32": np.float32,
     "f64": np.float64,
@@ -54,7 +64,9 @@ class TestEncodeAudioInteger(unittest.TestCase):
         shape = (sample_rate * duration, num_channels)
         ii = np.iinfo(integer_sample_fmt2dtype[sample_fmt])
         # pyrefly: ignore [no-matching-overload]
-        ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
+        ref = np.random.randint(
+            ii.min, ii.max, size=shape, dtype=integer_sample_fmt2dtype[sample_fmt]
+        )
 
         with NamedTemporaryFile(suffix=".wav") as f:
             f.close()  # for windows
@@ -181,7 +193,9 @@ class TestEncodeAudioIntegerPlanar(unittest.TestCase):
         shape = (num_channels, sample_rate * duration)
         ii = np.iinfo(integer_sample_fmt2dtype[sample_fmt])
         # pyrefly: ignore [no-matching-overload]
-        ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
+        ref = np.random.randint(
+            ii.min, ii.max, size=shape, dtype=integer_sample_fmt2dtype[sample_fmt]
+        )
 
         with NamedTemporaryFile(suffix=".nut") as f:
             f.close()  # windows
@@ -262,10 +276,13 @@ class TestEncodeAudioSmokeTest(unittest.TestCase):
         else:
             shape = [num_frames, num_channels]
 
+        ref: NDArray[np.generic]
         if sample_fmt.startswith("s"):
             ii = np.iinfo(integer_sample_fmt2dtype[sample_fmt])
             # pyrefly: ignore [no-matching-overload]
-            ref = np.random.randint(ii.min, ii.max, size=shape, dtype=dtype)
+            ref = np.random.randint(
+                ii.min, ii.max, size=shape, dtype=integer_sample_fmt2dtype[sample_fmt]
+            )
         else:
             ref = np.random.random(shape).astype(dtype)
 
@@ -330,6 +347,7 @@ class TestRemuxAudio(unittest.TestCase):
 
             with muxer.open():
                 for packets in demuxer.streaming_demux(duration=1):
+                    assert isinstance(packets, spdl.io.AudioPackets)
                     muxer.write(0, packets)
 
             ref = load_ref_audio(

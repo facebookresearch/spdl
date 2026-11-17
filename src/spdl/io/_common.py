@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 
-def _resolve_src(obj: object) -> "str | memoryview[bytes]":
+def _resolve_src(obj: object) -> str | memoryview:
     if hasattr(obj, "numpy"):  # torch tensor
         obj = obj.numpy()  # pyre-ignore: [16]
 
@@ -30,8 +30,7 @@ def _resolve_src(obj: object) -> "str | memoryview[bytes]":
             return os.fspath(obj)
         case _:
             try:
-                # pyrefly: ignore [bad-argument-type, bad-return]
-                return memoryview(obj)
+                return memoryview(obj)  # type: ignore[arg-type]
             except TypeError as e:
                 raise TypeError(
                     "The source must be either path-like object or buffer-like object. "

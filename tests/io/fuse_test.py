@@ -220,7 +220,7 @@ class FuseImageTest(_FuseTestCase):
         data = _read(_image_samples(1))[0]
 
         @fuse
-        def load(src: bytes) -> tuple[object, object]:
+        def load(src: bytes) -> tuple[np.ndarray, torch.Tensor]:
             return (
                 spdl.io.to_numpy(spdl.io.load_image(src)),
                 spdl.io.to_torch(spdl.io.load_image(src)),
@@ -350,6 +350,7 @@ class FuseVideoTest(_FuseTestCase):
 
         def run(src: bytes) -> spdl.io.CPUBuffer:
             packets = spdl.io.apply_bsf(spdl.io.demux_video(src), "null")
+            assert packets is not None
             return spdl.io.convert_frames(spdl.io.decode_packets(packets))
 
         self.assert_fused_matches_eager(run, data)
@@ -1011,6 +1012,8 @@ class FuseContainerTest(_FuseTestCase):
             self.assertIs(sample.extra[1]["image"], sample.extra[0])
             self.assertIsInstance(frozen.image, spdl.io.CPUBuffer)
             self.assertIs(frozen.nested, sample)
+            assert isinstance(sample.image, spdl.io.CPUBuffer)
+            assert isinstance(frozen.image, spdl.io.CPUBuffer)
             np.testing.assert_array_equal(
                 spdl.io.to_numpy(sample.image), refs[0], strict=True
             )

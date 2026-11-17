@@ -41,6 +41,7 @@ _LG: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray as Array
+    from torch import Tensor
 
     from ._core import SourceType
 
@@ -72,10 +73,10 @@ def _load_packets(
         decode_config=decode_config,
         filter_desc=filter_desc,
     )
-    buffer = _core.convert_frames(frames)
+    cpu_buffer = _core.convert_frames(frames)
     if device_config is not None:
-        buffer = _core.transfer_buffer(buffer, device_config=device_config)
-    return buffer
+        return _core.transfer_buffer(cpu_buffer, device_config=device_config)
+    return cpu_buffer
 
 
 @overload
@@ -315,17 +316,17 @@ def load_image(
 ################################################################################
 
 
-def _get_err_msg(src: str | bytes, err: Exception) -> str:
+def _get_err_msg(src: str | Path | bytes, err: Exception) -> str:
     match type(src):
         case builtins.bytes:
             src_ = f"bytes object at {id(src)}"
         case _:
-            src_ = f"'{src}'"
+            src_ = f"'{str(src)}'"
     return f"Failed to decode an image from {src_}: {err}."
 
 
 def _decode(
-    src: str | bytes,
+    src: str | Path | bytes,
     demux_config: "DemuxConfig | None",
     decode_config: "DecodeConfig | None",
     filter_desc: str | None,
@@ -338,7 +339,7 @@ def _decode(
 
 @overload
 def load_image_batch(
-    srcs: Sequence[str | bytes],
+    srcs: Sequence[str | Path | bytes],
     *,
     width: int | None,
     height: int | None,
@@ -354,7 +355,7 @@ def load_image_batch(
 
 @overload
 def load_image_batch(
-    srcs: Sequence[str | bytes],
+    srcs: Sequence[str | Path | bytes],
     *,
     width: int | None,
     height: int | None,
@@ -369,7 +370,7 @@ def load_image_batch(
 
 
 def load_image_batch(
-    srcs: Sequence[str | bytes],
+    srcs: Sequence[str | Path | bytes],
     *,
     width: int | None,
     height: int | None,
@@ -480,18 +481,18 @@ def load_image_batch(
     if not frames:
         raise RuntimeError("Failed to load all the images.")
 
-    buffer = _core.convert_frames(frames, storage=storage)
+    cpu_buffer = _core.convert_frames(frames, storage=storage)
 
     if device_config is not None:
-        buffer = _core.transfer_buffer(buffer, device_config=device_config)
+        return _core.transfer_buffer(cpu_buffer, device_config=device_config)
 
-    return buffer
+    return cpu_buffer
 
 
 def _get_bytes(
-    srcs: "Sequence[str | bytes | memoryview]",
-) -> "list[memoryview]":
-    ret: "list[memoryview]" = []
+    srcs: Sequence[str | bytes | memoryview],
+) -> list[memoryview]:
+    ret: list[memoryview] = []
     for src in srcs:
         if isinstance(src, (bytes, memoryview)):
             ret.append(memoryview(src))
@@ -507,7 +508,7 @@ def _get_bytes(
 
 
 def load_image_batch_nvjpeg(
-    srcs: "Sequence[str | bytes | memoryview]",
+    srcs: Sequence[str | bytes | memoryview],
     *,
     device_config: "CUDAConfig",
     width: int,
@@ -566,15 +567,15 @@ def _packet_stream(
     for packets in packet_stream:
         # Apply bitstream filter if needed
         if bsf is None:
-            yield packets  # pyre-ignore[7]
-        elif packets := bsf.filter(packets):
-            yield packets
+            yield packets  # type: ignore[misc]
+        elif filtered := bsf.filter(packets):  # type: ignore[arg-type]
+            yield filtered
 
     # Flush BSF if needed
     if bsf is not None:
-        if packets := bsf.flush():
+        if flushed := bsf.flush():
             # Decode flushed packets and yield remaining batches
-            yield packets
+            yield flushed
 
 
 def streaming_load_video_nvdec(
@@ -820,8 +821,7 @@ def sample_decode_video(
 
     enabled = _SAMPLE_DECODE_ENABLED
     ret: "list[ImageFrames]" = []
-    # pyrefly: ignore [missing-attribute]
-    for split, idxes in _libspdl._extract_packets_at_indices(
+    for split, idxes in _libspdl._extract_packets_at_indices(  # type: ignore[attr-defined]
         packets, indices, h264_idr_split=enabled
     ):
         if enabled:
@@ -834,7 +834,7 @@ def sample_decode_video(
 
 def save_image(
     path: str | Path,
-    data: "Array",
+    data: "Array | Tensor",
     pix_fmt: str = "rgb24",
     *,
     bit_rate: int = -1,
