@@ -659,9 +659,9 @@ class FuseFallbackTest(_FuseTestCase):
         self.assert_fused_matches_eager(run, data)
 
     def test_transfer(self) -> None:
-        """The actual buffer is passed to the transfer to a device."""
+        """Extensions without fusion factories receive the actual CPU buffer."""
         data = _read(_image_samples(1))[0]
-        cuda = mock.NonCallableMock()
+        cuda = mock.NonCallableMock(spec=["transfer_buffer"])
         cuda.transfer_buffer.side_effect = lambda buffer, **_: buffer
 
         @fuse

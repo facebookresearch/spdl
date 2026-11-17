@@ -24,5 +24,6 @@ NB_MODULE(SPDL_CUDA_EXT_NAME, m) {
   spdl::cuda::register_transfer(m);
   spdl::cuda::register_utils(m);
   spdl::cuda::register_color_conversion(m);
+  spdl::cuda::register_fused(m);
 }
 } // namespace

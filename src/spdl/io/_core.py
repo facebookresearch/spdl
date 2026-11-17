@@ -871,7 +871,31 @@ def decode_packets_nvdec(
         A CUDABuffer object with shape [num_frames, 3, height, width].
     """
     log_api_usage_once("spdl.io.decode_packets_nvdec")
-    packets = _fuse._actual(packets)
+    packets = _fuse._unwrap_materialized(packets)
+    if (
+        _fuse._is_symbol(packets)
+        and (factory := getattr(_libspdl_cuda, "_fused_decode_nvdec", None)) is not None
+    ):
+        valid_pix_fmts = ["rgb", "bgr"]
+        if pix_fmt not in valid_pix_fmts:
+            raise ValueError(f"`pix_fmt` must be either {valid_pix_fmts}")
+        return _fuse._record_cuda(
+            packets,
+            factory(
+                device_config,
+                pix_fmt == "bgr",
+                crop_left,
+                crop_top,
+                crop_right,
+                crop_bottom,
+                scale_width,
+                scale_height,
+            ),
+            "packets",
+            media="video",
+            consume="NVDEC decoding",
+        )
+    packets = _fuse._actual(packets, unrecorded=True)
 
     valid_pix_fmts = ["rgb", "bgr"]
     if pix_fmt not in valid_pix_fmts:
@@ -1256,7 +1280,19 @@ def transfer_buffer(
     Returns:
         Buffer data on the target GPU device.
     """
-    buffer = _fuse._actual(buffer)
+    buffer = _fuse._unwrap_materialized(buffer)
+    if (
+        _fuse._is_symbol(buffer)
+        and (factory := getattr(_libspdl_cuda, "_fused_transfer_buffer", None))
+        is not None
+    ):
+        return _fuse._record_cuda(
+            buffer,
+            factory(device_config),
+            "buffer",
+            consume="transfer to CUDA",
+        )
+    buffer = _fuse._actual(buffer, unrecorded=True)
     return _libspdl_cuda.transfer_buffer(buffer, device_config=device_config)  # type: ignore[arg-type]
 
 
@@ -1318,8 +1354,16 @@ def nv12_to_rgb(
     Returns:
         A CUDA buffer object with the shape ``(num_frames, 3, height, width)``.
     """
+    buffers = _fuse._unwrap_materialized(buffers)
+    if (
+        _fuse._is_symbol(buffers)
+        and (factory := getattr(_libspdl_cuda, "_fused_nv12_convert", None)) is not None
+    ):
+        return _fuse._record_cuda(
+            buffers, factory(device_config, False, coeff, sync), "cuda_buffer"
+        )
     ret = _libspdl_cuda.nv12_to_planar_rgb(
-        buffers,
+        _fuse._actual(buffers, unrecorded=True),
         device_config=device_config,
         matrix_coeff=coeff,
         sync=sync,
@@ -1335,8 +1379,16 @@ def nv12_to_bgr(
     sync: bool = False,
 ) -> "CUDABuffer":
     """Same as :py:func:`nv12_to_rgb`, but the order of the color channel is BGR."""
+    buffers = _fuse._unwrap_materialized(buffers)
+    if (
+        _fuse._is_symbol(buffers)
+        and (factory := getattr(_libspdl_cuda, "_fused_nv12_convert", None)) is not None
+    ):
+        return _fuse._record_cuda(
+            buffers, factory(device_config, True, coeff, sync), "cuda_buffer"
+        )
     ret = _libspdl_cuda.nv12_to_planar_bgr(
-        buffers,
+        _fuse._actual(buffers, unrecorded=True),
         device_config=device_config,
         matrix_coeff=coeff,
         sync=sync,

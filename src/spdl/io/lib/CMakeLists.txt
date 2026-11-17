@@ -4,6 +4,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+add_library(spdl_fused_external INTERFACE)
+target_include_directories(spdl_fused_external INTERFACE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../.."
+)
+
 add_subdirectory(buffer)
 add_subdirectory(core)
 add_subdirectory(cuda)

@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "crop_area.h"
 #include "register_spdl_cuda_extensions.h"
 
 #include <libspdl/core/demuxing.h>
@@ -127,11 +128,7 @@ This decoder supports two decoding workflows:
             self.init_decoder(
                 cuda_config,
                 codec,
-                CropArea{
-                    static_cast<short>(crop_left),
-                    static_cast<short>(crop_top),
-                    static_cast<short>(crop_right),
-                    static_cast<short>(crop_bottom)},
+                to_crop_area(crop_left, crop_top, crop_right, crop_bottom),
                 width,
                 height);
           },

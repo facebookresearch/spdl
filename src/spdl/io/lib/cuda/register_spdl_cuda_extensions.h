@@ -19,4 +19,5 @@ void register_storage(nb::module_&);
 void register_transfer(nb::module_&);
 void register_utils(nb::module_&);
 void register_color_conversion(nb::module_&);
+void register_fused(nb::module_&);
 } // namespace spdl::cuda

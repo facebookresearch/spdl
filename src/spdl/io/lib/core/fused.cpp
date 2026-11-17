@@ -26,6 +26,7 @@
 #include <nanobind/stl/vector.h>
 
 #include "memoryview_utils.h"
+#include "spdl/io/lib/fused/external.h"
 
 #include <algorithm>
 #include <limits>
@@ -69,6 +70,7 @@ using Value = std::variant<
     VideoCodec,
     ImageCodec,
     CPUBufferPtr,
+    fused::ExternalValuePtr,
     Meta>;
 
 using Registers = std::vector<Value>;
@@ -138,6 +140,12 @@ struct ConvertOp {
   std::shared_ptr<CPUStorage> storage;
 };
 
+struct ExternalOp {
+  fused::ExternalOpPtr op;
+  std::vector<int> srcs;
+  int out;
+};
+
 struct CloneOp {
   int src;
   int out;
@@ -164,6 +172,7 @@ using Op = std::variant<
     DecodeOp,
     SampleDecodeOp,
     ConvertOp,
+    ExternalOp,
     CloneOp,
     SliceOp,
     QueryOp>;
@@ -409,6 +418,42 @@ void execute(Registers& regs, const ConvertOp& op) {
   regs.at(op.out) = dispatch(op.media, [&](auto media) -> Value {
     return convert<media.value>(regs, op);
   });
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// External operations
+////////////////////////////////////////////////////////////////////////////////
+fused::ExternalInput external_input(Value& value) {
+  return std::visit(
+      [](auto& v) -> fused::ExternalInput {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (
+            std::is_same_v<T, CPUBufferPtr> ||
+            std::is_same_v<T, VideoPacketsPtr> ||
+            std::is_same_v<T, ImagePacketsPtr> ||
+            std::is_same_v<T, fused::ExternalValuePtr>) {
+          if (!v) {
+            throw std::runtime_error("External operation input was consumed.");
+          }
+          return &v;
+        } else {
+          throw std::runtime_error("Unsupported external operation input.");
+        }
+      },
+      value);
+}
+
+void execute(Registers& regs, const ExternalOp& op) {
+  std::vector<fused::ExternalInput> inputs;
+  inputs.reserve(op.srcs.size());
+  for (const int src : op.srcs) {
+    inputs.push_back(external_input(regs.at(src)));
+  }
+  auto value = op.op->run(inputs);
+  if (!value) {
+    throw std::runtime_error("External operation returned no value.");
+  }
+  regs.at(op.out) = std::move(value);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -747,6 +792,11 @@ nb::object to_python(Value&& value) {
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, Meta>) {
           return to_python(std::move(v));
+        } else if constexpr (std::is_same_v<T, fused::ExternalValuePtr>) {
+          if (!v) {
+            throw std::runtime_error("External value was released already.");
+          }
+          return v->to_python();
         } else if constexpr (
             std::is_same_v<T, std::monostate> ||
             std::is_same_v<T, std::string> ||
@@ -983,6 +1033,24 @@ class FusedPlan {
             .storage = std::move(storage)});
   }
 
+  // `op` is a capsule, typed as `object` so that the stubs do not depend on
+  // the Python version.
+  void
+  add_external(const nb::object& op, const std::vector<int>& srcs, int out) {
+    if (!PyCapsule_CheckExact(op.ptr())) {
+      throw nb::type_error("Expected a fused external operation capsule.");
+    }
+    check(srcs);
+    check(out);
+    if (srcs.empty() ||
+        std::find(srcs.begin(), srcs.end(), out) != srcs.end()) {
+      throw std::invalid_argument("Invalid external operation registers.");
+    }
+    ops_.emplace_back(
+        ExternalOp{
+            fused::from_capsule(nb::borrow<nb::capsule>(op)), srcs, out});
+  }
+
   void add_clone(int src, int out) {
     check({src, out});
     ops_.emplace_back(CloneOp{.src = src, .out = out});
@@ -1118,6 +1186,12 @@ void register_fused(nb::module_& m) {
           nb::kw_only(),
           nb::arg("batch"),
           nb::arg("storage") = nullptr)
+      .def(
+          "add_external",
+          &FusedPlan::add_external,
+          nb::arg("op"),
+          nb::arg("srcs"),
+          nb::arg("out"))
       .def("add_clone", &FusedPlan::add_clone, nb::arg("src"), nb::arg("out"))
       .def(
           "add_slice_index",
