@@ -55,10 +55,10 @@ class TestRecursiveApply(unittest.TestCase):
         self.assertEqual(_recursive_apply(fn, obj), ref)
 
         obj = _Item(11, 12)
-        ref = _Item(22, 24)
-        ref.z = fn(cast(int, ref.z))
+        ref_item = _Item(22, 24)
+        ref_item.z = fn(cast(int, ref_item.z))
         # pyrefly: ignore [bad-argument-type]
-        self.assertEqual(_recursive_apply(fn, obj), ref)
+        self.assertEqual(_recursive_apply(fn, obj), ref_item)
 
     def test_recursive_apply_nested(self) -> None:
         obj: Any = (1, 2, (3, 4, 5), 6)
@@ -182,7 +182,7 @@ class TestDeprecatedTransferTensor(unittest.TestCase):
 
     def test_deprecated_import_warns_and_aliases_h2d(self) -> None:
         """Importing the deprecated name still works and emits a warning."""
-        namespace = {}
+        namespace: dict[str, object] = {}
 
         with self.assertWarnsRegex(FutureWarning, "transfer_tensor_h2d"):
             exec("from spdl.io import transfer_tensor as deprecated", namespace)
