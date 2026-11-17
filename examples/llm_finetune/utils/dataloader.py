@@ -28,7 +28,7 @@ class _InstructDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         samples: list[dict[str, str]],
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: "PreTrainedTokenizerBase",
         max_seq_len: int,
     ) -> None:
         self.samples = samples
@@ -75,7 +75,7 @@ class _DeviceDataLoader:
 
 def build_pytorch_dataloader(
     samples: list[dict[str, str]],
-    tokenizer: PreTrainedTokenizerBase,
+    tokenizer: "PreTrainedTokenizerBase",
     max_seq_len: int,
     batch_size: int,
     rank: int,
@@ -93,11 +93,13 @@ def build_pytorch_dataloader(
     device, if any, so no manual ``to(device)`` call is needed.
     """
     dataset = _InstructDataset(samples, tokenizer, max_seq_len)
-    sampler = torch.utils.data.DistributedSampler(
-        dataset,
-        num_replicas=world_size,
-        rank=rank,
-        shuffle=True,
+    sampler: torch.utils.data.DistributedSampler[_TSample] = (
+        torch.utils.data.DistributedSampler(
+            dataset,
+            num_replicas=world_size,
+            rank=rank,
+            shuffle=True,
+        )
     )
     dl = torch.utils.data.DataLoader(
         dataset,

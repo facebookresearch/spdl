@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import spdl.pipeline
 import spdl.source.utils
@@ -59,6 +59,11 @@ class _ThreadLocalTokenizer(threading.local):
         return self._tokenizer
 
 
+class _TokenizeState(TypedDict):
+    tokenizer: "PreTrainedTokenizerBase"
+    max_seq_len: int
+
+
 class _Tokenize:
     """Picklable callable that tokenizes a sample using a thread-local tokenizer.
 
@@ -72,13 +77,13 @@ class _Tokenize:
         self.max_seq_len = max_seq_len
         self._tlt = _ThreadLocalTokenizer(tokenizer)
 
-    def __getstate__(self) -> dict[str, object]:
+    def __getstate__(self) -> _TokenizeState:
         # threading.local is not picklable, but the tokenizer is.
         return {"tokenizer": self._tokenizer, "max_seq_len": self.max_seq_len}
 
-    def __setstate__(self, state: dict[str, object]) -> None:
-        self._tokenizer = state["tokenizer"]  # pyre-ignore[8]
-        self.max_seq_len = state["max_seq_len"]  # pyre-ignore[8]
+    def __setstate__(self, state: _TokenizeState) -> None:
+        self._tokenizer = state["tokenizer"]
+        self.max_seq_len = state["max_seq_len"]
         self._tlt = _ThreadLocalTokenizer(self._tokenizer)
 
     def __call__(self, sample: dict[str, str]) -> _TSample:
@@ -87,7 +92,7 @@ class _Tokenize:
 
 def build_spdl_dataloader(
     samples: list[dict[str, str]],
-    tokenizer: PreTrainedTokenizerBase,
+    tokenizer: "PreTrainedTokenizerBase",
     max_seq_len: int,
     batch_size: int,
     rank: int,
