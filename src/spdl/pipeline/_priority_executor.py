@@ -57,7 +57,7 @@ from concurrent.futures.thread import (  # pyre-ignore[21]
     BrokenThreadPool,
 )
 from queue import PriorityQueue
-from typing import Any, Self
+from typing import Any, cast, Self
 
 __all__ = [
     "PriorityExecutorEntrypoint",
@@ -257,9 +257,31 @@ class PriorityThreadPoolExecutor(_PriorityExecutorBase):
             f: Future[Any] = _base.Future()
             if hasattr(pool, "_resolve_work_item_task"):
                 task = pool._resolve_work_item_task(fn, args, kwargs)  # pyre-ignore[16]
-                w = _ThreadWorkItem(f, task)  # pyre-ignore[20]
+                work_item_factory = cast(
+                    Callable[
+                        [
+                            Future[Any],
+                            tuple[Callable[..., Any], tuple[Any, ...], dict[str, Any]],
+                        ],
+                        _ThreadWorkItem,
+                    ],
+                    _ThreadWorkItem,
+                )
+                w = work_item_factory(f, task)
             else:
-                w = _ThreadWorkItem(f, fn, args, kwargs)
+                legacy_work_item_factory = cast(
+                    Callable[
+                        [
+                            Future[Any],
+                            Callable[..., Any],
+                            tuple[Any, ...],
+                            dict[str, Any],
+                        ],
+                        _ThreadWorkItem,
+                    ],
+                    _ThreadWorkItem,
+                )
+                w = legacy_work_item_factory(f, fn, args, kwargs)
             self._work_queue.put(w, priority=priority)
             pool._adjust_thread_count()
             return f

@@ -1116,7 +1116,7 @@ class _PipelineImpl(Generic[T]):
         raise queue.Empty from None
 
     def _get_item_thread_queue(self, *, timeout: float | None) -> T:
-        q = self._output_queue._queue  # pyre-ignore[16]
+        q = cast(ThreadOutputQueue, self._output_queue)._queue
 
         if self._event_loop.is_task_completed():
             if not q.empty():
@@ -1174,7 +1174,11 @@ def _register_stop_at_exit(impl: _PipelineImpl[Any]) -> None:
             _stop_impl(impl)
 
     try:
-        threading._register_atexit(_hook)  # pyre-ignore[16]
+        register_atexit = cast(
+            Callable[[Callable[[], None]], None],
+            getattr(threading, "_register_atexit"),  # noqa: B009
+        )
+        register_atexit(_hook)
     except (AttributeError, RuntimeError):
         # Defensive around a private stdlib API: ``RuntimeError`` if the
         # interpreter is already shutting down, ``AttributeError`` if a future

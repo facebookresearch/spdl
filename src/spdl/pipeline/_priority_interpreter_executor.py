@@ -31,7 +31,7 @@ stages should be created after upstream ones.
 from __future__ import annotations
 
 import sys
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 from ._priority_executor import (
     _assign_owner_id,
@@ -153,7 +153,17 @@ else:
 
                 f: Future[Any] = _base.Future()
                 task = pool._resolve_work_item_task(fn, args, kwargs)
-                w = _WorkItem(f, task)
+                work_item_factory = cast(
+                    Callable[
+                        [
+                            Future[Any],
+                            tuple[Callable[..., Any], tuple[Any, ...], dict[str, Any]],
+                        ],
+                        _WorkItem,
+                    ],
+                    _WorkItem,
+                )
+                w = work_item_factory(f, task)
                 self._work_queue.put(w, priority=priority)
                 pool._adjust_thread_count()
                 return f
