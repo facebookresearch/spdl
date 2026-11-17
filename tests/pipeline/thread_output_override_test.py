@@ -54,13 +54,8 @@ class ThreadOutputOverrideTest(unittest.TestCase):
         set_default_thread_output_queue_config(
             ThreadOutputQueueConfig(enabled=False, queue_class=ThreadOutputQueue)
         )
-        for path, value in [
-            ("spdl.pipeline._build._DEFAULT_BUILD_CALLBACK", None),
-            ("spdl.pipeline._bg_task._DEFAULT_BACKGROUND_TASKS", []),
-        ]:
-            guard = patch(path, value)
-            guard.start()
-            self.addCleanup(guard.stop)
+        self.enterContext(patch("spdl.pipeline._build._DEFAULT_BUILD_CALLBACK", None))
+        self.enterContext(patch("spdl.pipeline._bg_task._DEFAULT_BACKGROUND_TASKS", []))
 
     def test_initial_config_preserves_sink_statistics(self) -> None:
         """The new OSS initial defaults enable the public statistics thread sink."""
@@ -85,6 +80,7 @@ class ThreadOutputOverrideTest(unittest.TestCase):
         selected = _make_thread_output_queue(info, 3, True, 5)
         explicit = _make_thread_output_queue(info, 4, ThreadOutputQueue, 5)
         self.assertIsInstance(selected, _CollectedSink)
+        assert isinstance(selected, _CollectedSink)
         self.assertEqual(selected.interval, 5)
         self.assertEqual(selected._queue.maxsize, 3)
         self.assertIs(type(explicit), ThreadOutputQueue)
@@ -236,6 +232,7 @@ class CustomSinkHooksTest(unittest.IsolatedAsyncioTestCase):
             )
             output = pipeline._impl._output_queue
             self.assertIsInstance(output, _CollectedSink)
+            assert isinstance(output, _CollectedSink)
             self.assertEqual(output.interval, 3)
             self.assertEqual(output._queue.maxsize, 4)
             with pipeline.auto_stop():
