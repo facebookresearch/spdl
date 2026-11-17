@@ -13,7 +13,7 @@ from collections.abc import Iterator
 from multiprocessing.shared_memory import SharedMemory
 from unittest.mock import patch
 
-from spdl.dataloader import get_pytorch_dataloader
+from spdl.dataloader import get_pytorch_dataloader, PyTorchDataLoader
 from spdl.dataloader._pytorch_dataloader import _serialize_dataset
 from torch.utils.data import Dataset, Sampler
 
@@ -100,7 +100,7 @@ class PyTorchDataLoaderTest(unittest.TestCase):
         dataset = _SlowUnpickleDataset(None, None, None, size=3)
         sampler = _EmptySampler()
 
-        loader = get_pytorch_dataloader(
+        loader: PyTorchDataLoader[object] = get_pytorch_dataloader(
             dataset,
             batch_size=1,
             sampler=sampler,
@@ -127,7 +127,7 @@ class PyTorchDataLoaderTest(unittest.TestCase):
             lock = manager.Lock()
             process_ids = manager.list()
             dataset = _SlowUnpickleDataset(state, lock, process_ids)
-            loader = get_pytorch_dataloader(
+            loader: PyTorchDataLoader[object] = get_pytorch_dataloader(
                 dataset,
                 batch_size=1,
                 num_workers=4,
