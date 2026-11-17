@@ -41,7 +41,23 @@ repos:
         entry: bash -c
         args:
           # Call mypy on all files that aren't marked "pyre-unsafe", excluding 'setup.py' files.
-          - 'mypy $((grep -L "# pyre-unsafe" "$@" 2>/dev/null || printf "%s\n" "$@") | grep -v setup.py) || true'
+          - |
+            files=()
+            while IFS= read -r file; do
+              files+=("$file")
+            done < <(
+              grep -L "# pyre-unsafe" "$@" 2>/dev/null | grep -v setup.py |
+                while IFS= read -r file; do
+                  if [[ "$file" == *.py && -f "${file}i" ]]; then
+                    printf '%s\n' "${file}i"
+                  else
+                    printf '%s\n' "$file"
+                  fi
+                done | sort -u
+            )
+            if ((${#files[@]})); then
+              MYPYPATH="src${MYPYPATH:+:$MYPYPATH}" mypy --explicit-package-bases "${files[@]}" || true
+            fi
           - --
         types_or: [python, pyi]
 
