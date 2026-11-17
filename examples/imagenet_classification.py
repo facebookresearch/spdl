@@ -28,8 +28,9 @@ import contextlib
 import logging
 import time
 from argparse import Namespace
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
+from typing import cast
 
 import spdl.io
 import spdl.io.utils
@@ -100,8 +101,7 @@ class Preprocessing(torch.nn.Module):
             The normalized image batch.
         """
         x = x.float() / 255.0
-        # pyrefly: ignore [unsupported-operation]
-        return (x - self.mean) / self.std
+        return (x - cast(Tensor, self.mean)) / cast(Tensor, self.std)
 
 
 class Classification(torch.nn.Module):
@@ -133,8 +133,8 @@ class ModelBundle(torch.nn.Module):
 
     def __init__(
         self,
-        model: torch.nn.Module,
-        preprocessing: Preprocessing,
+        model: Callable[[Tensor], Tensor],
+        preprocessing: Callable[[Tensor], Tensor],
         classification: Classification,
         use_bf16: bool,
     ) -> None:
@@ -198,20 +198,21 @@ def get_model(
     if use_bf16:
         model = model.to(dtype=torch.bfloat16)
 
-    preprocessing = Preprocessing(
+    preprocessing: Callable[[Tensor], Tensor] = Preprocessing(
         mean=_expand([0.4850, 0.4560, 0.4060], batch_size, 224),
         std=_expand([0.2290, 0.2240, 0.2250], batch_size, 224),
     ).to(device)
 
     classification = Classification().to(device)
+    model_fn: Callable[[Tensor], Tensor] = model
 
     if compile:
         with torch.no_grad():
             mode = "max-autotune"
-            model = torch.compile(model, mode=mode)
+            model_fn = torch.compile(model, mode=mode)
             preprocessing = torch.compile(preprocessing, mode=mode)
 
-    return ModelBundle(model, preprocessing, classification, use_bf16)  # pyre-ignore[6]
+    return ModelBundle(model_fn, preprocessing, classification, use_bf16)
 
 
 def get_decode_func(
@@ -334,7 +335,7 @@ def get_dataloader(
 
 
 def benchmark(
-    dataloader: Iterator[tuple[Tensor, Tensor]],
+    dataloader: Iterable[tuple[Tensor, Tensor]],
     model: ModelBundle,
     max_batches: float = float("nan"),
 ) -> None:
@@ -347,7 +348,9 @@ def benchmark(
     """
 
     _LG.info("Running inference.")
-    num_frames, num_correct_top1, num_correct_top5 = 0, 0, 0
+    num_frames = 0
+    num_correct_top1: float | Tensor = 0
+    num_correct_top5: float | Tensor = 0
     t0 = time.monotonic()
     try:
         for i, (batch, labels) in enumerate(dataloader):
@@ -370,9 +373,8 @@ def benchmark(
     finally:
         elapsed = time.monotonic() - t0
         if num_frames != 0:
-            num_correct_top1 = num_correct_top1.item()  # pyre-ignore[16]
-            # pyrefly: ignore [missing-attribute]
-            num_correct_top5 = num_correct_top5.item()
+            num_correct_top1 = cast(Tensor, num_correct_top1).item()
+            num_correct_top5 = cast(Tensor, num_correct_top5).item()
             fps = num_frames / elapsed
             _LG.info(f"FPS={fps:.2f} ({num_frames}/{elapsed:.2f})")
             acc1 = 0 if num_frames == 0 else num_correct_top1 / num_frames
@@ -423,8 +425,7 @@ def entrypoint(args_: list[str] | None = None) -> None:
         benchmark(dataloader, model, args.max_batches)
 
     if args.trace:
-        # pyrefly: ignore [missing-attribute]
-        prof.export_chrome_trace(f"{trace_path}.json")
+        cast(profile, prof).export_chrome_trace(f"{trace_path}.json")
 
 
 def _init_logging(debug: bool = False) -> None:
