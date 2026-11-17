@@ -48,12 +48,14 @@ directions use the same chunk size, or that the region's output cardinality matc
 from __future__ import annotations
 
 import asyncio
+import logging
 import queue as _queue
 import threading
 import time
 from concurrent.futures import Executor, ThreadPoolExecutor
 from typing import Any, NoReturn, TypeGuard
 
+from spdl.pipeline._arena._region import _ArenaEnvelope
 from spdl.pipeline._common._misc import create_task
 
 from ._common import _EPOCH_END, is_eof, is_epoch_end
@@ -71,6 +73,8 @@ __all__ = [
     "_EPOCH_DONE",
     "_fused_queue_capacity",
 ]
+
+_LG: logging.Logger = logging.getLogger(__name__)
 
 # Input-queue message kinds (this stage -> worker).
 _ITEM = 0  # (_ITEM, [value, ...]): one transfer of items for the sub-pipeline source
@@ -168,7 +172,7 @@ def _is_valid_worker_message(
     if type(kind) is not int or kind not in allowed_kinds:
         return False
     if kind == _RESULT:
-        return type(payload) is list
+        return type(payload) in (list, _ArenaEnvelope)
     if kind == _ERROR:
         return issubclass(type(payload), BaseException)
     if kind == _EPOCH_DONE:
@@ -410,6 +414,19 @@ def _pop_buffered_serialization_error(q: Any, timeout: float) -> BaseException |
             message = q.get(timeout=remaining)
         except (_queue.Empty, EOFError, OSError, RuntimeError, ValueError):
             return None
+        if type(message) is tuple and len(message) == 2 and message[0] == _RESULT:
+            decode = getattr(q, "decode_result", None)
+            if callable(decode):
+                try:
+                    decode(message[1], True)
+                except Exception:
+                    # A failed channel stays failed; keep scanning for the
+                    # detailed error this wait exists to surface.
+                    _LG.warning(
+                        "Failed to discard a region result while awaiting an error.",
+                        exc_info=True,
+                    )
+                    continue
         if not _is_valid_worker_message(message, (_ERROR,)):
             continue
         _, payload = message
@@ -599,6 +616,7 @@ async def _collect(
     abort: asyncio.Event,
     feeder_idle: asyncio.Event,
     serialization_failures: tuple[tuple[str, Any], ...] = (),
+    arena_fail_fast: bool = False,
 ) -> None:
     """Forward worker results to the stage's output queue until every worker is done.
 
@@ -670,12 +688,20 @@ async def _collect(
             continue
         kind, payload = res
         del res
-        failure_pending = False
+        if kind == _ERROR and arena_fail_fast:
+            raise payload
         failures = serialization_failures if error is None else ()
-        if kind != _ERROR and (
+        failure_pending = (
             serialization_error_deadline is not None
             or _serialization_failure_boundaries(failures) is not None
+        )
+        if kind == _RESULT and callable(
+            decode := getattr(out_q, "decode_result", None)
         ):
+            payload = await loop.run_in_executor(
+                executor, decode, payload, error is not None or failure_pending
+            )
+        if kind != _ERROR and failure_pending:
             serialization_error_deadline = (
                 await _check_serialization_error_relay_after_progress(
                     out_q,
@@ -868,11 +894,17 @@ async def _collect_continuous(
             continue
         kind, payload = res
         del res
-        failure_pending = False
-        if kind != _ERROR and (
+        failure_pending = (
             serialization_error_deadline is not None
             or _serialization_failure_boundaries(serialization_failures) is not None
+        )
+        if kind == _RESULT and callable(
+            decode := getattr(out_q, "decode_result", None)
         ):
+            payload = await loop.run_in_executor(
+                executor, decode, payload, failure_pending
+            )
+        if kind != _ERROR and failure_pending:
             serialization_error_deadline = (
                 await _check_serialization_error_relay_after_progress(
                     out_q,
@@ -1004,11 +1036,24 @@ async def _subprocess_pipeline(
                     abort,
                     feeder_idle,
                     serialization_failures,
+                    bool(
+                        getattr(handle, "input_arenas", None)
+                        or getattr(handle, "output_arenas", None)
+                    ),
                 )
             )
         try:
             await asyncio.gather(feeder, collector)
         except BaseException:
+            put_stop.set()
+            stop_arenas = getattr(handle, "stop_arenas", None)
+            if callable(stop_arenas):
+                try:
+                    stop_arenas()
+                except Exception:
+                    _LG.warning(
+                        "Failed to signal region arena shutdown.", exc_info=True
+                    )
             feeder.cancel()
             collector.cancel()
             await asyncio.gather(feeder, collector, return_exceptions=True)
@@ -1018,4 +1063,11 @@ async def _subprocess_pipeline(
             # this stage, then drop the executor. ``cancel_futures`` discards anything not yet
             # started; a still-parked get self-releases within ``_GET_TIMEOUT``.
             put_stop.set()
-            executor.shutdown(wait=False, cancel_futures=True)
+            if getattr(handle, "input_arenas", None) or getattr(
+                handle, "output_arenas", None
+            ):
+                await asyncio.to_thread(
+                    executor.shutdown, wait=True, cancel_futures=True
+                )
+            else:
+                executor.shutdown(wait=False, cancel_futures=True)
