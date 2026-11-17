@@ -151,6 +151,7 @@ import io
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 
 import numpy as np
 import scipy.io.wavfile
@@ -167,7 +168,7 @@ try:
         save_results_to_csv,
     )
 except ImportError:
-    from spdl.examples.benchmark_utils import (
+    from spdl.examples.benchmark_utils import (  # type: ignore[import-not-found, no-redef]
         BenchmarkResult,
         BenchmarkRunner,
         ExecutorType,
@@ -248,7 +249,7 @@ def create_wav_data(
     samples = (sine_waves.T * max_amplitude).astype(dtype)
 
     wav_buffer = io.BytesIO()
-    scipy.io.wavfile.write(wav_buffer, sample_rate, samples)
+    scipy.io.wavfile.write(wav_buffer, sample_rate, samples)  # type: ignore[arg-type]
     wav_data = wav_buffer.getvalue()
 
     return wav_data, samples
@@ -388,7 +389,7 @@ def main() -> None:
 
                     result, output = runner.run(
                         config,
-                        lambda fn=function, data=wav_data: fn(data),
+                        partial(function, wav_data),
                         config.iterations,
                         num_runs=config.num_runs,
                     )
