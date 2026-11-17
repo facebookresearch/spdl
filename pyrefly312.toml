@@ -1,8 +1,0 @@
-# Pipeline libraries and dataloader/pipeline tests use the Python 3.12 profile.
-extends = "pyrefly.toml"
-project-includes = [
-  "src/spdl/pipeline/**/*.py",
-  "tests/pipeline/**/*.py",
-  "tests/dataloader/**/*.py",
-]
-python-version = "3.12"

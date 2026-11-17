@@ -15,9 +15,12 @@ pre-commit run pyrefly --all-files
 
 The first Pyrefly run installs the pinned CPU typing dependencies automatically;
 later runs reuse the cache. No manual Torch installation or native build is
-needed. Both full-project profiles run through the hook and the existing lint
-CI job; the mypy reference hook remains optional. Python 3.12 must be installed
-and discoverable by pre-commit. The pinned Torch wheels support Linux/Windows
+needed. One full-project Python 3.14 typing profile runs through the hook and
+existing lint CI job; the mypy reference hook remains optional. Python 3.12
+must still be installed and discoverable by pre-commit: it hosts the cached
+checker and pinned dependency wheels, independently of the Python 3.14 typing
+target. This does not change SPDL's Python 3.11 minimum runtime support. The
+pinned Torch wheels support Linux/Windows
 CPU installations and Apple Silicon Macs with macOS 14 or newer; there is no
 matching Python 3.12 Intel Mac wheel.
 
