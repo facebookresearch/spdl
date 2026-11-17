@@ -61,6 +61,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from threading import Event
 from types import FrameType
+from typing import cast
 
 import spdl.io
 import spdl.io.utils
@@ -165,9 +166,9 @@ def decode_video(
             pix_fmt="rgb24",
         ),
     )
-    buffer = spdl.io.convert_frames(frames)
+    buffer: spdl.io.CPUBuffer | spdl.io.CUDABuffer = spdl.io.convert_frames(frames)
     buffer = spdl.io.transfer_buffer(
-        buffer,
+        cast(spdl.io.CPUBuffer, buffer),
         device_config=spdl.io.cuda_config(
             device_index=device_index,
             allocator=(

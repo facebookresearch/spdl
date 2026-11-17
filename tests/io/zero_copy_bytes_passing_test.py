@@ -6,6 +6,7 @@
 
 
 import unittest
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -16,11 +17,18 @@ from ..fixture import FFMPEG_CLI, get_sample
 
 
 def _decode(media_type: str, src: str | bytes) -> NDArray[Any]:
-    demux_func = {
+    demux_funcs: dict[
+        str,
+        Callable[
+            [str | bytes],
+            spdl.io.AudioPackets | spdl.io.VideoPackets | spdl.io.ImagePackets,
+        ],
+    ] = {
         "audio": spdl.io.demux_audio,
         "video": spdl.io.demux_video,
         "image": spdl.io.demux_image,
-    }[media_type]
+    }
+    demux_func = demux_funcs[media_type]
 
     packets = demux_func(src)
     frames = spdl.io.decode_packets(packets)  # pyre-ignore[6]

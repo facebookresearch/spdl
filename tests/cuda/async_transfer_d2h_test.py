@@ -192,11 +192,13 @@ class AsyncTransferD2HTest(unittest.TestCase):
 
     def test_empty_batch(self) -> None:
         """Test D2H transfer with empty containers."""
-        result = transfer_tensor_d2h([])
-        self.assertEqual(result, [])
+        empty_list: list[torch.Tensor] = []
+        list_result = transfer_tensor_d2h(empty_list)
+        self.assertEqual(list_result, [])
 
-        result = transfer_tensor_d2h({})
-        self.assertEqual(result, {})
+        empty_dict: dict[str, torch.Tensor] = {}
+        dict_result = transfer_tensor_d2h(empty_dict)
+        self.assertEqual(dict_result, {})
 
     def test_zero_sized_tensor(self) -> None:
         """Test D2H transfer of zero-sized tensors.

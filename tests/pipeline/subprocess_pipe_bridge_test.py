@@ -413,7 +413,7 @@ class CollectUnpackTest(unittest.TestCase):
 
     def test_collectors_describe_malformed_protocol_structure(self) -> None:
         """Protocol failures identify shape and payload class without rendering payloads."""
-        cases = (
+        cases: tuple[tuple[object, str], ...] = (
             (object(), "expected a 2-tuple, got object"),
             ((1,), "expected 2 fields, got 1"),
             (("result", []), "message kind must be an integer, got str"),

@@ -237,8 +237,9 @@ class DefaultBackgroundTasksTest(unittest.TestCase):
         set_default_background_tasks([_TrackingTask])
         result = get_default_background_tasks()
         self.assertIsNotNone(result)
-        self.assertEqual(len(result), 1)  # pyre-ignore[6]
-        self.assertIs(result[0], _TrackingTask)  # pyre-ignore[16]
+        assert result is not None
+        self.assertEqual(len(result), 1)
+        self.assertIs(result[0], _TrackingTask)
 
         set_default_background_tasks(None)
         self.assertIsNone(get_default_background_tasks())

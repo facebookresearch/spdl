@@ -14,7 +14,7 @@ __all__ = [
 from collections.abc import Iterable, Sized
 from typing import Protocol, runtime_checkable, TypeVar
 
-T = TypeVar("T")
+T = TypeVar("T", covariant=True)
 
 
 @runtime_checkable

@@ -87,6 +87,7 @@ def locate_source(func: Any) -> SourceLocation:
         )
 
     # Determine the actual callable and get its name
+    target = func
     if inspect.isfunction(func) or inspect.ismethod(func):
         # Regular function, generator, async function, async generator
         target = func

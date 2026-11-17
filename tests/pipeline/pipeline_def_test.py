@@ -41,9 +41,9 @@ class PipelineDefTest(unittest.TestCase):
 
         dct = {i: i for i in range(10000)}
         self.assertGreater(len(repr(dct)), 10000)
-        pipe = Pipe(dct)
-        self.assertLess(len(repr(pipe._args.op)), 10000)
-        self.assertLess(len(repr(pipe)), 10000)
+        dict_pipe = Pipe(dct)
+        self.assertLess(len(repr(dict_pipe._args.op)), 10000)
+        self.assertLess(len(repr(dict_pipe)), 10000)
 
     def _test_build_pipeline(self, cfg: PipelineConfig[T], expected: list[T]) -> None:
         print(cfg)

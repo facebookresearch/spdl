@@ -38,7 +38,7 @@ class TestInterpreterPoolExecutorConfig(unittest.TestCase):
             ProcessPoolExecutorConfig(mp_context="spawn").mp_context, "spawn"
         )
         with self.assertRaises(TypeError):
-            InterpreterPoolExecutorConfig(mp_context="spawn")  # pyre-ignore[28]
+            InterpreterPoolExecutorConfig(mp_context="spawn")  # type: ignore[call-arg]
 
 
 class TestMainProcess(unittest.TestCase):

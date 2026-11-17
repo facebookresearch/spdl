@@ -95,6 +95,7 @@ __all__ = [
 
 
 try:
-    from . import fb  # noqa: F401
+    # Import for registration side effects, not for a referenced symbol.
+    from . import fb  # type: ignore[attr-defined]  # noqa: F401
 except ImportError:
     pass

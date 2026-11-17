@@ -444,16 +444,16 @@ class PathVariantsValidationTest(unittest.TestCase):
     def test_validation_non_callable_router(self) -> None:
         """Non-callable router raises ValueError."""
         with self.assertRaises(ValueError):
-            # pyre-ignore[6]: Intentionally passing non-callable to test validation.
-            PathVariants(router=42, paths=[[Pipe(lambda x: x)]])
+            # Intentionally passing non-callable to test validation.
+            PathVariants(router=42, paths=[[Pipe(lambda x: x)]])  # type: ignore[call-overload]
 
     def test_validation_source_in_path(self) -> None:
         """SourceConfig in a path raises ValueError at construction time."""
         with self.assertRaises(ValueError):
             PathVariants(
                 router=lambda x: 0,
-                # pyre-ignore[6]: Intentionally passing SourceConfig.
-                paths=[[SourceConfig([3, 4])]],
+                # Intentionally passing SourceConfig.
+                paths=[[SourceConfig([3, 4])]],  # type: ignore[list-item]
             )
 
     def test_validation_sink_in_path(self) -> None:
@@ -461,8 +461,8 @@ class PathVariantsValidationTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             PathVariants(
                 router=lambda x: 0,
-                # pyre-ignore[6]: Intentionally passing SinkConfig.
-                paths=[[SinkConfig(buffer_size=10)]],
+                # Intentionally passing SinkConfig.
+                paths=[[SinkConfig(buffer_size=10)]],  # type: ignore[list-item]
             )
 
     def test_validation_source_in_second_path(self) -> None:
@@ -470,10 +470,10 @@ class PathVariantsValidationTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             PathVariants(
                 router=lambda x: 0,
-                # pyre-ignore[6]: Intentionally passing SourceConfig.
-                paths=[
+                # Intentionally passing SourceConfig.
+                paths=[  # type: ignore[arg-type]
                     [Pipe(lambda x: x)],
-                    [Pipe(lambda x: x), SourceConfig([1, 2])],
+                    [Pipe(lambda x: x), SourceConfig([1, 2])],  # type: ignore[list-item]
                 ],
             )
 
@@ -482,9 +482,9 @@ class PathVariantsValidationTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             PathVariants(
                 router=lambda x: 0,
-                # pyre-ignore[6]: Intentionally passing SinkConfig.
-                paths=[
-                    [Pipe(lambda x: x), SinkConfig(buffer_size=10), Pipe(lambda x: x)],
+                # Intentionally passing SinkConfig.
+                paths=[  # type: ignore[arg-type]
+                    [Pipe(lambda x: x), SinkConfig(buffer_size=10), Pipe(lambda x: x)],  # type: ignore[list-item]
                 ],
             )
 

@@ -64,8 +64,8 @@ class VideoDataset(Protocol):
 # ---------------------------------------------------------------------------
 
 
-def _fetch_sample(index: int, *, dataset: object) -> list[_RawSample]:
-    return dataset[index]  # pyre-ignore[16]
+def _fetch_sample(index: int, *, dataset: VideoDataset) -> list[_RawSample]:
+    return dataset[index]
 
 
 def _demux_sample(

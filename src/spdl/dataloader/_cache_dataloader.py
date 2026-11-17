@@ -5,8 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from collections.abc import Iterable, Iterator
-from typing import Any, Generic, TypeVar
+from collections.abc import Iterable, Iterator, Sized
+from typing import Any, cast, Generic, TypeVar
 
 from spdl._internal import log_api_usage_once
 from spdl.pipeline import cache_iterator
@@ -64,7 +64,7 @@ class CacheDataLoader(Generic[T]):
 
     def __len__(self) -> int:
         """Returns the length of the original data loader if defined."""
-        return len(self.dl)  # pyre-ignore: [6]
+        return len(cast(Sized, self.dl))
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self.dl, name)

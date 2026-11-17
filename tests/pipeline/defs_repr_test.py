@@ -8,7 +8,14 @@
 import asyncio
 import inspect
 import unittest
-from collections.abc import AsyncIterable, AsyncIterator, Iterable, Iterator, Sequence
+from collections.abc import (
+    AsyncIterable,
+    AsyncIterator,
+    Callable,
+    Iterable,
+    Iterator,
+    Sequence,
+)
 
 from spdl.pipeline import StageInfo
 from spdl.pipeline.defs import (
@@ -34,9 +41,9 @@ async def example_async_function(x: int) -> int:
     return x * 2
 
 
-def _ln(target: object) -> int:
+def _ln(target: Callable[..., object]) -> int:
     """Helper to get line number from inspect.getsourcelines."""
-    return inspect.getsourcelines(target)[1]  # pyre-ignore[6]
+    return inspect.getsourcelines(target)[1]
 
 
 class ExampleIterable(Iterable[int]):

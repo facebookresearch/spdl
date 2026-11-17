@@ -158,9 +158,9 @@ class _ThreadQueueWithStats(queue.Queue[Any]):
             except MemoryError:
                 self._disable("counter aggregation allocation failed")
                 return
-            except Exception as error:
-                self._aggregation_error = error
-                self._disable(f"aggregation failed: {error!r}")
+            except Exception as aggregation_error:
+                self._aggregation_error = aggregation_error
+                self._disable(f"aggregation failed: {aggregation_error!r}")
                 raise
             with self._capture_lock:
                 error = self._capture_error

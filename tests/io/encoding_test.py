@@ -63,8 +63,10 @@ class TestEncodeImageParity(unittest.TestCase):
 
 
 class TestEncodeRejectsDtypes(unittest.TestCase):
-    def _test_rejects(self, pix_fmt: str, dtype: type) -> None:
-        data = np.ones((32, 64), dtype=dtype)
+    def _test_rejects(
+        self, pix_fmt: str, dtype: type[np.generic] | type[float]
+    ) -> None:
+        data: np.ndarray = np.ones((32, 64), dtype=dtype)
         with NamedTemporaryFile(suffix=".png") as f:
             f.close()  # for windows
             with self.assertRaises(ValueError):
@@ -91,7 +93,9 @@ class TestEncodeRejectsDtypes(unittest.TestCase):
             )
         )
     )
-    def test_encode_rejects_dtypes(self, pix_fmt: str, dtype: type) -> None:
+    def test_encode_rejects_dtypes(
+        self, pix_fmt: str, dtype: type[np.generic] | type[float]
+    ) -> None:
         self._test_rejects(pix_fmt, dtype)
 
     @parameterized.expand(
