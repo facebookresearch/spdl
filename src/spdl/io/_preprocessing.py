@@ -270,6 +270,7 @@ def get_filter_desc(
         The resulting filter expression.
     """
     packets = _fuse._unwrap_materialized(packets)
+    media: str | None
     if _fuse._is_symbol(packets):
         media, timestamp = _fuse._packets_info(packets)
     else:

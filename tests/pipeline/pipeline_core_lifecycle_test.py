@@ -366,7 +366,7 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
             await output_queue.put(_Item())
             await asyncio.Event().wait()
 
-        pipeline = Pipeline(
+        pipeline: Pipeline[_Item] = Pipeline(
             produce_after_empty_slices(),
             output_queue,
             ThreadPoolExecutor(max_workers=1),
@@ -845,7 +845,7 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
                 await asyncio.Event().wait()
 
             executor = ThreadPoolExecutor(max_workers=1)
-            pipeline = Pipeline(
+            pipeline: Pipeline[int] = Pipeline(
                 never_run(),
                 _SlowCancellationQueue(1),
                 executor,
@@ -893,7 +893,7 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
                 await asyncio.Event().wait()
 
             executor = ThreadPoolExecutor(max_workers=1)
-            pipeline = Pipeline(
+            pipeline: Pipeline[int] = Pipeline(
                 never_run(),
                 _CancellationReturningQueue(1),
                 executor,
@@ -923,7 +923,7 @@ class PipelineGetItemTimeoutTest(unittest.TestCase):
                 await asyncio.Event().wait()
 
             executor = ThreadPoolExecutor(max_workers=1)
-            pipeline = Pipeline(
+            pipeline: Pipeline[int] = Pipeline(
                 never_run(),
                 asyncio.Queue(1),
                 executor,
@@ -1458,7 +1458,7 @@ class PipelineStopTest(unittest.TestCase):
         output_queue = _RefillingDrainQueue()
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             output_queue,
             executor,
@@ -1492,7 +1492,7 @@ class PipelineStopTest(unittest.TestCase):
         )
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             output_queue,
             executor,
@@ -1578,7 +1578,7 @@ class PipelineStopTest(unittest.TestCase):
         output_queue._queue.put_nowait(1)
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             output_queue,
             executor,
@@ -1641,7 +1641,7 @@ class PipelineStopTest(unittest.TestCase):
         output_queue._queue.put_nowait(1)
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             output_queue,
             executor,
@@ -1694,7 +1694,7 @@ class PipelineStopTest(unittest.TestCase):
         output_queue._queue.put_nowait(1)
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             output_queue,
             executor,
@@ -1765,7 +1765,7 @@ class PipelineStopTest(unittest.TestCase):
         output_queue._queue.put_nowait(1)
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             output_queue,
             executor,
@@ -1808,7 +1808,7 @@ class PipelineStopTest(unittest.TestCase):
         output_queue: asyncio.Queue[int] = asyncio.Queue(1)
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             output_queue,
             executor,
@@ -1860,7 +1860,7 @@ class PipelineStopTest(unittest.TestCase):
 
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             asyncio.Queue[int](),
             executor,
@@ -1888,7 +1888,7 @@ class PipelineStopTest(unittest.TestCase):
 
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             asyncio.Queue[int](),
             executor,
@@ -1954,7 +1954,7 @@ class PipelineStopTest(unittest.TestCase):
         output_queue: asyncio.Queue[int] = asyncio.Queue(1)
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             output_queue,
             executor,
@@ -2016,7 +2016,7 @@ class PipelineStopTest(unittest.TestCase):
         output_queue: asyncio.Queue[int] = asyncio.Queue(1)
         pipeline_coro = unused_pipeline()
         executor = ThreadPoolExecutor(max_workers=1)
-        pipeline = Pipeline(
+        pipeline: Pipeline[int] = Pipeline(
             pipeline_coro,
             output_queue,
             executor,

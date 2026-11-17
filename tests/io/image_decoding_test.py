@@ -229,7 +229,7 @@ class TestDecodeImage(unittest.TestCase):
 
         shape = (1, h + h // 2, w)
         # fmt: off
-        cmd = [
+        ref_cmd = [
             f"{FFMPEG_CLI}", "-hide_banner",
             "-f", "rawvideo",
             "-pixel_format", "nv12",
@@ -238,7 +238,7 @@ class TestDecodeImage(unittest.TestCase):
             "-f", "rawvideo", "pipe:"
         ]
         # fmt: on
-        ref = load_ref_data(cmd, shape)
+        ref = load_ref_data(ref_cmd, shape)
 
         # from PIL import Image
         # Image.fromarray(hyp[0]).save("hyp.png")
@@ -273,7 +273,7 @@ class TestDecodeImage(unittest.TestCase):
 
         shape = (h, w, 3)
         # fmt: off
-        cmd = [
+        ref_cmd = [
             f"{FFMPEG_CLI}", "-hide_banner",
             "-f", "rawvideo",
             "-pixel_format", "nv12",
@@ -284,7 +284,7 @@ class TestDecodeImage(unittest.TestCase):
             "pipe:"
         ]
         # fmt: on
-        ref = load_ref_data(cmd, shape)
+        ref = load_ref_data(ref_cmd, shape)
 
         # from PIL import Image
         # Image.fromarray(hyp[0]).save("hyp.png")

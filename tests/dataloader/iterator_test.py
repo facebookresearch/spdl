@@ -275,12 +275,9 @@ class TestMergeIterator(unittest.TestCase):
         self.assertEqual(merge_iter.iterables[0], [0, 1, 2])
         self.assertEqual(merge_iter.iterables[1], [20, 21, 22])
 
-        self.assertIsNotNone(merge_iter.weights)
-        # pyre-ignore[16]: weights is not None after assertion
+        assert merge_iter.weights is not None
         self.assertEqual(len(merge_iter.weights), 2)
-        # pyre-ignore[16]: weights is not None after assertion
         self.assertEqual(merge_iter.weights[0], 1)
-        # pyre-ignore[16]: weights is not None after assertion
         self.assertEqual(merge_iter.weights[1], 2)
 
         result = list(merge_iter)
@@ -376,8 +373,7 @@ class TestRepeatSource(unittest.TestCase):
     def test_repeat_source_picklable(self) -> None:
         """repeat_source is picklable."""
 
-        src = list(range(10))
-        src = repeat_source(src)
+        src = repeat_source(list(range(10)))
 
         serialized = pickle.dumps(src)
         src2 = pickle.loads(serialized)
@@ -417,12 +413,12 @@ class TestShuffleAndIterate(unittest.TestCase):
     def test_shuffle_and_iterate_picklable(self) -> None:
         """The result of embed_shuffle must be pickable (for multiprocessing)"""
 
-        src = embed_shuffle(IterableWithShuffleSource(10))
+        source = IterableWithShuffleSource(10)
+        src = embed_shuffle(source)
         state = pickle.dumps(src)
         src2 = pickle.loads(state)
 
-        # pyre-ignore[16]: embed_shuffle returns an object with src attribute
-        self.assertEqual(src.src.vals, src2.src.vals)
+        self.assertEqual(source.vals, src2.src.vals)
 
     def test_shuffle_and_iterate(self) -> None:
         N = 10

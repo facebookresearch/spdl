@@ -39,8 +39,8 @@ class TestPinMemory(unittest.TestCase):
         buffer = spdl.io.convert_frames(frames, storage=storage)
         stream = torch.cuda.Stream(device=0)
         cuda_config = spdl.io.cuda_config(device_index=0, stream=stream.cuda_stream)
-        buffer = spdl.io.transfer_buffer(buffer, device_config=cuda_config)
-        tensor = spdl.io.to_torch(buffer)
+        cuda_buffer = spdl.io.transfer_buffer(buffer, device_config=cuda_config)
+        tensor = spdl.io.to_torch(cuda_buffer)
 
         print(tensor.device)
 
@@ -78,11 +78,11 @@ class TestPinMemory(unittest.TestCase):
         vals = np.arange(0, 10, dtype=np.int64)
         storage = spdl.io.cpu_storage(vals.nbytes, pin_memory=True)
         buffer = spdl.io.convert_array(vals, storage=storage)
-        buffer = spdl.io.transfer_buffer(
+        cuda_buffer = spdl.io.transfer_buffer(
             buffer,
             device_config=spdl.io.cuda_config(device_index=0),
         )
-        tensor = spdl.io.to_torch(buffer)
+        tensor = spdl.io.to_torch(cuda_buffer)
 
         self.assertEqual(tensor.shape, (10,))
         self.assertEqual(tensor.dtype, torch.int64)

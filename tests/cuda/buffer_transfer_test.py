@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import gc
 import unittest
+from collections.abc import Callable
 
 import numpy as np
 import spdl.io
@@ -22,6 +23,11 @@ if not spdl.io.utils.built_with_cuda():
 
 
 DEFAULT_CUDA = 0
+_INTEGER_DTYPES: tuple[type[np.uint8] | type[np.int32] | type[np.int64], ...] = (
+    np.uint8,
+    np.int32,
+    np.int64,
+)
 
 CMDS = {
     "audio": f'{FFMPEG_CLI} -hide_banner -y -f lavfi -i "sine=frequency=1000:sample_rate=48000:duration=3" -c:a pcm_s16le sample.wav',
@@ -43,11 +49,18 @@ class TestTransferBufferToCuda(unittest.TestCase):
         cmd = CMDS[media_type]
         sample = get_sample(cmd)
 
-        demux_func = {
+        demux_funcs: dict[
+            str,
+            Callable[
+                [str],
+                spdl.io.AudioPackets | spdl.io.VideoPackets | spdl.io.ImagePackets,
+            ],
+        ] = {
             "audio": spdl.io.demux_audio,
             "video": spdl.io.demux_video,
             "image": spdl.io.demux_image,
-        }[media_type]
+        }
+        demux_func = demux_funcs[media_type]
 
         _ = torch.zeros([0], device=torch.device(f"cuda:{DEFAULT_CUDA}"))
 
@@ -100,11 +113,18 @@ class TestTransferBufferToCuda(unittest.TestCase):
             nonlocal deleter_called
             deleter_called = True
 
-        demux_func = {
+        demux_funcs: dict[
+            str,
+            Callable[
+                [str],
+                spdl.io.AudioPackets | spdl.io.VideoPackets | spdl.io.ImagePackets,
+            ],
+        ] = {
             "audio": spdl.io.demux_audio,
             "video": spdl.io.demux_video,
             "image": spdl.io.demux_image,
-        }[media_type]
+        }
+        demux_func = demux_funcs[media_type]
 
         def test() -> None:
             packets = demux_func(sample.path)
@@ -163,7 +183,7 @@ class TestArrayTransfer(unittest.TestCase):
             self.assertEqual(tensor.device, torch.device(device))
             torch.testing.assert_close(tensor, torch.from_numpy(array).to(device))
 
-        for dtype in [np.uint8, np.int32, np.int64]:
+        for dtype in _INTEGER_DTYPES:
             max_val = np.iinfo(dtype).max
             # pyrefly: ignore [no-matching-overload]
             array = np.random.randint(0, max_val, size=(1, 128_000), dtype=dtype)
@@ -184,7 +204,7 @@ class TestArrayTransfer(unittest.TestCase):
             self.assertEqual(cuda_tensor.device, device)
             torch.testing.assert_close(cuda_tensor, cpu_tensor.to(device))
 
-        for dtype in [np.uint8, np.int32, np.int64]:
+        for dtype in _INTEGER_DTYPES:
             max_val = np.iinfo(dtype).max
             # pyrefly: ignore [no-matching-overload]
             array = np.random.randint(0, max_val, size=(1, 128_000), dtype=dtype)
@@ -240,7 +260,7 @@ class TestTransferCpu(unittest.TestCase):
     def test_transfer_cpu(self) -> None:
         """smoke test for transfer_buffer function"""
 
-        for dtype in [np.uint8, np.int32, np.int64]:
+        for dtype in _INTEGER_DTYPES:
             max_val = np.iinfo(dtype).max
             # pyrefly: ignore [no-matching-overload]
             array = np.random.randint(0, max_val, size=(1, 128_000), dtype=dtype)

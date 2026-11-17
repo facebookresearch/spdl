@@ -170,7 +170,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         data_q = MagicMock()
         arena = MagicMock()
         arena.shutdown_arena.side_effect = RuntimeError("arena shutdown failed")
-        interface = _ipc(process, cmd_q, data_q, 1.0, arena)
+        interface: _ipc[int] = _ipc(process, cmd_q, data_q, 1.0, arena)
 
         with (
             patch("spdl.pipeline._iter_utils._subprocess._drain") as drain,
@@ -199,7 +199,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         cmd_q.put_nowait.side_effect = OSError("broken command queue")
         data_q = MagicMock()
         arena = MagicMock()
-        interface = _ipc(process, cmd_q, data_q, 1.0, arena)
+        interface: _ipc[int] = _ipc(process, cmd_q, data_q, 1.0, arena)
 
         with (
             patch("spdl.pipeline._iter_utils._subprocess._drain") as drain,
@@ -224,7 +224,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         cmd_q = MagicMock()
         data_q = MagicMock()
         arena = MagicMock()
-        interface = _ipc(process, cmd_q, data_q, 1.0, arena)
+        interface: _ipc[int] = _ipc(process, cmd_q, data_q, 1.0, arena)
 
         with (
             patch("spdl.pipeline._iter_utils._subprocess._drain") as drain,
@@ -252,7 +252,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         cmd_q = MagicMock()
         data_q = MagicMock()
         arena = MagicMock()
-        interface = _ipc(process, cmd_q, data_q, 1.0, arena)
+        interface: _ipc[int] = _ipc(process, cmd_q, data_q, 1.0, arena)
 
         arena.shutdown_arena.side_effect = partial(events.append, "arena.shutdown")
         arena.unlink.side_effect = partial(events.append, "arena.unlink")
@@ -302,7 +302,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         process.is_alive.return_value = False
         cmd_q, data_q, arena = MagicMock(), MagicMock(), MagicMock()
         arena.unlink.side_effect = BufferError("mapping is still exported")
-        interface = _ipc(process, cmd_q, data_q, 1.0, arena)
+        interface: _ipc[int] = _ipc(process, cmd_q, data_q, 1.0, arena)
         with patch("spdl.pipeline._iter_utils._subprocess._drain"):
             interface.terminate()
         arena.close.assert_called_once_with()
@@ -319,7 +319,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         process.is_alive.return_value = False
         cmd_q, data_q, arena = MagicMock(), MagicMock(), MagicMock()
         arena.close.side_effect = RuntimeError("retirement failed")
-        interface = _ipc(process, cmd_q, data_q, 1.0, arena)
+        interface: _ipc[int] = _ipc(process, cmd_q, data_q, 1.0, arena)
         primary = RuntimeError("original iteration failed")
         with (
             patch("spdl.pipeline._iter_utils._subprocess._drain"),
@@ -360,7 +360,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         process.join(timeout=5)
         self.assertFalse(process.is_alive())
 
-        interface = _ipc(process, cmd_q, data_q, 1.0)
+        interface: _ipc[int] = _ipc(process, cmd_q, data_q, 1.0)
         done = threading.Event()
         errors: list[Exception] = []
 
@@ -393,7 +393,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
     def test_result_queue_failure_propagates_before_shutdown(self) -> None:
         """Unexpected result queue failures remain visible before teardown."""
         data_q = MagicMock()
-        interface = _ipc(MagicMock(), MagicMock(), data_q, 1.0)
+        interface: _ipc[int] = _ipc(MagicMock(), MagicMock(), data_q, 1.0)
 
         with (
             patch(
@@ -414,7 +414,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         cmd_q = MagicMock()
         data_q = MagicMock()
         data_q.get_nowait.side_effect = queue.Empty
-        interface = _ipc(process, cmd_q, data_q, 1.0)
+        interface: _ipc[int] = _ipc(process, cmd_q, data_q, 1.0)
 
         def fail_during_shutdown(*_args: Any, **_kwargs: Any) -> Any:
             read_started.set()
@@ -469,7 +469,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
         process.is_alive.return_value = False
         cmd_q = MagicMock()
         data_q = MagicMock()
-        interface = _ipc(process, cmd_q, data_q, 1.0)
+        interface: _ipc[int] = _ipc(process, cmd_q, data_q, 1.0)
 
         with (
             patch(
@@ -629,7 +629,7 @@ class IterateInSubprocessLifecycleTest(unittest.TestCase):
 
     def test_dead_worker_checks_for_message_at_grace_deadline(self) -> None:
         """A message visible at the grace boundary wins over generic failure."""
-        terminal = _Msg(_Status.ITERATOR_FAILED, "final worker failure")
+        terminal: _Msg[int] = _Msg(_Status.ITERATOR_FAILED, "final worker failure")
         data_q = MagicMock()
         data_q.get.side_effect = queue.Empty
         data_q.get_nowait.return_value = terminal

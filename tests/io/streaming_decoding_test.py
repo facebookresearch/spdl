@@ -249,18 +249,20 @@ class TestStreamingDecoding(unittest.TestCase):
                 video_packets = packets[video_index]
                 print(video_packets)
                 assert isinstance(video_packets, VideoPackets)
-                for frames in video_decoder.streaming_decode_packets(video_packets):
-                    print(frames)
-                    self.assertGreater(len(frames), 25 * 3)
-                    buffer = spdl.io.convert_frames(frames)
+                for video_frames in video_decoder.streaming_decode_packets(
+                    video_packets
+                ):
+                    print(video_frames)
+                    self.assertGreater(len(video_frames), 25 * 3)
+                    buffer = spdl.io.convert_frames(video_frames)
                     video_buffer.append(spdl.io.to_numpy(buffer))
 
         for frames in audio_decoder.flush():
             buffer = spdl.io.convert_frames(frames)
             audio_buffer.append(spdl.io.to_numpy(buffer).T)
 
-        for frames in video_decoder.flush():
-            buffer = spdl.io.convert_frames(frames)
+        for video_frames in video_decoder.flush():
+            buffer = spdl.io.convert_frames(video_frames)
             video_buffer.append(spdl.io.to_numpy(buffer))
 
         hyp_audio = np.concatenate(audio_buffer).T

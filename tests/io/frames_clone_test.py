@@ -43,6 +43,7 @@ class TestCloneFrames(unittest.TestCase):
         cmd = CMDS[media_type]
         sample = get_sample(cmd)
 
+        frames1: AudioFrames | VideoFrames | ImageFrames
         if media_type == "audio":
             frames1 = spdl.io.decode_packets(spdl.io.demux_audio(sample.path))
         elif media_type == "video":
@@ -69,6 +70,7 @@ class TestCloneFrames(unittest.TestCase):
         cmd = CMDS[media_type]
         sample = get_sample(cmd)
 
+        frames: AudioFrames | VideoFrames | ImageFrames
         if media_type == "audio":
             frames = spdl.io.decode_packets(spdl.io.demux_audio(sample.path))
         elif media_type == "video":
@@ -99,6 +101,7 @@ class TestCloneFrames(unittest.TestCase):
         sample = get_sample(cmd)
         N = 100
 
+        frames: AudioFrames | VideoFrames | ImageFrames
         if media_type == "audio":
             frames = spdl.io.decode_packets(spdl.io.demux_audio(sample.path))
         elif media_type == "video":
