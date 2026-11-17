@@ -25,6 +25,8 @@ from spdl.pipeline._iter_utils._common import (
     _enter_iteration_mode,
     _execute_iterable,
     _iterate_results,
+    _Msg,
+    _Queue,
     _wait_for_init,
 )
 
@@ -62,8 +64,8 @@ else:
     class _iic(Generic[T]):
         thread: threading.Thread
         interpreter: "concurrent.interpreters.Interpreter | None"
-        cmd_q: "concurrent.interpreters.Queue"
-        data_q: "concurrent.interpreters.Queue"
+        cmd_q: _Queue[_Cmd]
+        data_q: _Queue[_Msg[T]]
         timeout: float
         _cleanup_scheduled: bool = field(default=False, init=False, repr=False)
         _terminate_owner: object | None = field(default=None, init=False, repr=False)
@@ -247,8 +249,10 @@ else:
             )
         )
 
-        cmd_q = concurrent.interpreters.create_queue()
-        data_q = concurrent.interpreters.create_queue(maxsize=buffer_size)
+        cmd_q: _Queue[_Cmd] = concurrent.interpreters.create_queue()  # type: ignore[assignment]
+        data_q: _Queue[_Msg[T]] = concurrent.interpreters.create_queue(
+            maxsize=buffer_size
+        )  # type: ignore[assignment]
         interp = concurrent.interpreters.create()
 
         try:
@@ -271,7 +275,7 @@ else:
             raise
 
         timeout_ = float("inf") if timeout is None else timeout
-        interface = _iic(thread, interp, cmd_q, data_q, timeout_)
+        interface: _iic[T] = _iic(thread, interp, cmd_q, data_q, timeout_)
 
         try:
             _wait_for_init(

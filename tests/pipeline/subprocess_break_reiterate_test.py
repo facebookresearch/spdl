@@ -91,8 +91,11 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
         src = iterate_in_subprocess(
             partial(SourceIterable, 3), timeout=30, mp_context="spawn"
         )
-        interface = src._interface  # pyrefly: ignore [missing-attribute]
+        self.assertIsInstance(src, _SubprocessIterable)
+        assert isinstance(src, _SubprocessIterable)
+        interface = src._interface
         self.assertIsNotNone(interface)
+        assert interface is not None
         process = interface.process
         cmd_q = interface.cmd_q
         data_q = interface.data_q
@@ -102,7 +105,7 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
         data_ref = weakref.ref(data_q)
 
         self.assertEqual(list(src), [0, 1, 2])
-        src._shutdown()  # pyrefly: ignore [missing-attribute]
+        src._shutdown()
 
         self.assertFalse(process.is_alive())
         self.assertIsNone(interface.cmd_q)
@@ -169,6 +172,7 @@ class TestSubprocessBreakAndReiterate(unittest.TestCase):
         )
         interface = src._interface
         self.assertIsNotNone(interface)
+        assert interface is not None
         interface.timeout = 0.3
         iterator = iter(src)
         self.assertEqual(next(iterator), 0)
