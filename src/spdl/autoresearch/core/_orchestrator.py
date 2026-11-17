@@ -45,7 +45,7 @@ import signal
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, cast, Protocol, SupportsFloat, SupportsIndex
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -113,8 +113,12 @@ class TaskSpec:
             payload = {}
         return cls(
             id=str(data["id"]),
-            # pyrefly: ignore [bad-argument-type]
-            priority=float(data.get("priority", 0.0)),
+            priority=float(
+                cast(
+                    str | bytes | bytearray | SupportsFloat | SupportsIndex,
+                    data.get("priority", 0.0),
+                )
+            ),
             kind=str(data.get("kind", "default")),
             payload=payload,
         )
