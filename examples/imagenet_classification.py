@@ -246,7 +246,7 @@ def get_decode_func(
     def decode_images(items: list[tuple[str, int]]) -> tuple[Tensor, Tensor]:
         paths = [item for item, _ in items]
         labels = [[item] for _, item in items]
-        labels = torch.tensor(labels, dtype=torch.int64).to(device)
+        labels = torch.tensor(labels, dtype=torch.int64, device=device)
         buffer = spdl.io.load_image_batch(
             paths,
             width=None,
@@ -288,7 +288,7 @@ def _get_experimental_nvjpeg_decode_function(
     ) -> tuple[Tensor, Tensor]:
         paths = [item for item, _ in items]
         labels = [[item] for _, item in items]
-        labels = torch.tensor(labels, dtype=torch.int64).to(device)
+        labels = torch.tensor(labels, dtype=torch.int64, device=device)
         buffer = spdl.io.load_image_batch_nvjpeg(
             paths,
             device_config=device_config,

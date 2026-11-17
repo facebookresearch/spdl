@@ -10,7 +10,7 @@ import sys
 from collections.abc import AsyncIterable, Callable, Iterable, Sequence
 from concurrent.futures import Executor
 from fractions import Fraction
-from typing import Generic, TypeVar
+from typing import Any, Generic, TYPE_CHECKING, TypeVar
 
 from spdl._internal import log_api_usage_once
 from spdl.pipeline._components import AsyncQueue, StageInfo, TaskHook, ThreadOutputQueue
@@ -44,8 +44,12 @@ __all__ = [
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
-U = TypeVar("U")
+if TYPE_CHECKING:
+    T = TypeVar("T", default=Any)
+    U = TypeVar("U", default=Any)
+else:
+    T = TypeVar("T")
+    U = TypeVar("U")
 T_ = TypeVar("T_")
 U_ = TypeVar("U_")
 
