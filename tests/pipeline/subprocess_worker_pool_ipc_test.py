@@ -366,7 +366,7 @@ class WorkerPoolSerializationTest(unittest.TestCase):
             with self.subTest(error=error):
                 in_q = MagicMock()
                 executor = _RemoteExecutor(in_q, MagicMock(), 1, MagicMock())
-                futures = [Future(), Future()]
+                futures: list[Future[None]] = [Future(), Future()]
                 executor._futures.update({3: futures[0], 4: futures[1]})
 
                 with patch(
@@ -1350,7 +1350,9 @@ class WorkerPoolSerializationTest(unittest.TestCase):
         pool._shutdown_started = threading.Event()
         pool._worker_failed = threading.Event()
         pool._status_lock = threading.Lock()
-        pool._send_worker_status = MagicMock()
+        send_worker_status = self.enterContext(
+            patch.object(pool, "_send_worker_status")
+        )
 
         with (
             patch(
@@ -1362,7 +1364,7 @@ class WorkerPoolSerializationTest(unittest.TestCase):
             pool._monitor_workers()
 
         self.assertTrue(pool._worker_failed.is_set())
-        pool._send_worker_status.assert_called_once_with(
+        send_worker_status.assert_called_once_with(
             "Worker pool monitor failed: OSError: wait failed"
         )
 

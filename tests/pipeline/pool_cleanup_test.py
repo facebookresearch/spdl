@@ -257,7 +257,12 @@ class PoolCleanupTest(unittest.TestCase):
         """An overlapping call cannot report success while worker cleanup is active."""
         worker = _WorkerStub()
         entered, release = threading.Event(), threading.Event()
-        worker.callback = lambda: (entered.set(), release.wait(3))
+
+        def wait_for_release() -> None:
+            entered.set()
+            release.wait(3)
+
+        worker.callback = wait_for_release
         pool = _pool(_BackendStub([worker]), 1)
         errors = []
 
@@ -402,7 +407,7 @@ class PoolCleanupTest(unittest.TestCase):
         """A GC finalizer reached during registry bookkeeping cannot deadlock."""
         worker = _WorkerStub()
         pool = _pool(_BackendStub([worker]), 1)
-        finalized = []
+        finalized: list[bool] = []
 
         class Cycle:
             def __init__(self) -> None:

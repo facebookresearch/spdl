@@ -8,6 +8,7 @@
 import asyncio
 import unittest
 from collections.abc import Callable
+from unittest.mock import patch
 
 from spdl.pipeline._components._common import _P2Percentile, _StatsCounter, StageInfo
 from spdl.pipeline._components._hook import TaskPerfStats, TaskStatsHook
@@ -321,7 +322,7 @@ class TaskStatsHookPercentileTest(unittest.IsolatedAsyncioTestCase):
             logged_stats.append(stats)
             original_log(stats)
 
-        hook._log_stats = capture_stats  # pyre-ignore[8]
+        self.enterContext(patch.object(hook, "_log_stats", side_effect=capture_stats))
 
         async with hook.stage_hook():  # pyre-ignore[16]
             for _ in range(5):
@@ -437,7 +438,7 @@ class StatsQueuePercentileTest(unittest.IsolatedAsyncioTestCase):
             logged_stats.append(stats)
             original_log(stats)
 
-        queue._log_stats = capture_stats  # pyre-ignore[8]
+        self.enterContext(patch.object(queue, "_log_stats", side_effect=capture_stats))
 
         async with queue.stage_hook():  # pyre-ignore[16]
             for i in range(5):
