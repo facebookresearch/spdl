@@ -26,7 +26,7 @@ try:
         query_task_stats,
     )
 except ImportError:
-    from spdl.examples.sqlite_stats_logger import (
+    from spdl.examples.sqlite_stats_logger import (  # type: ignore[import-not-found, no-redef]
         query_queue_stats,
         query_task_stats,
     )
@@ -101,21 +101,25 @@ def export_to_json(
 
     # Process queue stats
     queue_by_name: dict[str, list[tuple[float, dict[str, float | int]]]] = {}
-    for stat in queue_stats:
-        name = stat["name"]
+    for queue_stat in queue_stats:
+        name = queue_stat["name"]
         if name not in queue_by_name:
             queue_by_name[name] = []
         # Calculate QPS
-        qps = stat["num_items"] / stat["elapsed"] if stat["elapsed"] > 0 else 0
+        qps = (
+            queue_stat["num_items"] / queue_stat["elapsed"]
+            if queue_stat["elapsed"] > 0
+            else 0
+        )
         queue_by_name[name].append(
             (
-                stat["timestamp"],
+                queue_stat["timestamp"],
                 {
                     "qps": qps,
-                    "occupancy_rate": stat["occupancy_rate"],
-                    "ave_put_time": stat["ave_put_time"],
-                    "ave_get_time": stat["ave_get_time"],
-                    "num_items": stat["num_items"],
+                    "occupancy_rate": queue_stat["occupancy_rate"],
+                    "ave_put_time": queue_stat["ave_put_time"],
+                    "ave_get_time": queue_stat["ave_get_time"],
+                    "num_items": queue_stat["num_items"],
                 },
             )
         )

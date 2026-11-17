@@ -34,7 +34,10 @@ from matplotlib.axes import Axes
 try:
     from examples.benchmark_arena_transport import read_csv, Row  # pyre-ignore[21]
 except ImportError:
-    from spdl.examples.benchmark_arena_transport import read_csv, Row
+    from spdl.examples.benchmark_arena_transport import (  # type: ignore[import-not-found, no-redef]
+        read_csv,
+        Row,
+    )
 
 _TRANSPORTS = ("no-arena", "ring", "pool")
 _KIND_ORDER = ("bytes", "numpy", "torch", "packets")

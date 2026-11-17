@@ -30,8 +30,13 @@ try:
     )
     from examples.benchmark_utils import load_results_from_csv  # pyre-ignore[21]
 except ImportError:
-    from spdl.examples.benchmark_numpy import BenchmarkConfig, DEFAULT_RESULT_PATH
-    from spdl.examples.benchmark_utils import load_results_from_csv
+    from spdl.examples.benchmark_numpy import (  # type: ignore[import-not-found, no-redef]
+        BenchmarkConfig,
+        DEFAULT_RESULT_PATH,
+    )
+    from spdl.examples.benchmark_utils import (  # type: ignore[import-not-found, no-redef]
+        load_results_from_csv,
+    )
 
 
 def plot_results(

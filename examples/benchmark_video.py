@@ -46,6 +46,7 @@ import os
 import subprocess
 import tempfile
 from dataclasses import dataclass
+from functools import partial
 
 import spdl.io
 
@@ -58,7 +59,7 @@ try:
         save_results_to_csv,
     )
 except ImportError:
-    from spdl.examples.benchmark_utils import (
+    from spdl.examples.benchmark_utils import (  # type: ignore[import-not-found, no-redef]
         BenchmarkResult,
         BenchmarkRunner,
         ExecutorType,
@@ -232,8 +233,7 @@ def main() -> None:
 
                     result, output = runner.run(
                         config,
-                        lambda data=video_data,
-                        threads=decoder_threads: load_video_with_config(data, threads),
+                        partial(load_video_with_config, video_data, decoder_threads),
                         config.iterations,
                         num_runs=config.num_runs,
                     )

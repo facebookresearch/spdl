@@ -26,13 +26,16 @@ process boundary, while startup climbs with both size and worker count.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterable
 
 import matplotlib.pyplot as plt
 
 try:
     from examples.benchmark_ipc_dataloader import read_csv  # pyre-ignore[21]
 except ImportError:
-    from spdl.examples.benchmark_ipc_dataloader import read_csv
+    from spdl.examples.benchmark_ipc_dataloader import (  # type: ignore[import-not-found, no-redef]
+        read_csv,
+    )
 
 
 def plot_results(input_csv: str, output_path: str) -> None:
@@ -80,8 +83,8 @@ def plot_results(input_csv: str, output_path: str) -> None:
     print(f"saved plot to {output_path}")
 
 
-def _mean(values: "object") -> float:
-    xs = list(values)  # pyre-ignore[6]
+def _mean(values: Iterable[float]) -> float:
+    xs = list(values)
     return sum(xs) / len(xs) if xs else 0.0
 
 
