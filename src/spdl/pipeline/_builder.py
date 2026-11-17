@@ -95,6 +95,9 @@ def _validate_executor_regions(
     """
     in_region = False
     region_has_stage = False
+    target: ProcessPoolExecutorConfig | InterpreterPoolExecutorConfig | _MainProcess = (
+        _MainProcess()
+    )
     for p in pipes:
         if isinstance(p, PlacementConfig):
             # A non-main region that opened but never received a stage does nothing; reject it
@@ -105,6 +108,15 @@ def _validate_executor_regions(
                     "An empty `to(...)` region has no stages. Add stages before the next "
                     "`.to(...)`, or remove the redundant marker."
                 )
+            if p.arena is not None and (
+                isinstance(target, InterpreterPoolExecutorConfig)
+                or isinstance(p.target, InterpreterPoolExecutorConfig)
+                or not (
+                    isinstance(target, ProcessPoolExecutorConfig)
+                    or isinstance(p.target, ProcessPoolExecutorConfig)
+                )
+            ):
+                raise ValueError("Arena transport requires a process-region boundary")
             target = p.target
             in_region = not isinstance(target, _MainProcess)
             region_has_stage = False
@@ -350,6 +362,7 @@ class PipelineBuilder(Generic[T, U]):
         /,
         *,
         buffer_size: int = 1,
+        arena: object | None = None,
     ) -> "PipelineBuilder[T, U]":
         """**[Experimental]** Designate where the subsequent stages execute.
 
@@ -357,6 +370,9 @@ class PipelineBuilder(Generic[T, U]):
 
         .. versionadded:: 0.7.0
            The ``buffer_size`` argument.
+
+        .. versionadded:: 0.9.0
+           The ``arena`` argument.
 
         Opens (or closes) an *execution region*: every stage added after this call runs on
         ``target`` until the next :py:meth:`to`. A pipeline starts on the main process, so a
@@ -390,6 +406,45 @@ class PipelineBuilder(Generic[T, U]):
                 A live :py:class:`~concurrent.futures.Executor` is **not** accepted — pass a spec
                 so the pipeline stays expressible as static config. To run a single stage on a
                 custom executor, use ``pipe(executor=...)`` instead.
+
+            arena: A caller-owned transport object, or a sequence with one
+                independent object per worker. Custom backend endpoints conform to
+                :py:class:`~spdl.pipeline.ArenaProtocol` structurally; protocol
+                imports or payload lifetime anchors are not required. None retains
+                ordinary IPC. For one worker::
+
+                    arena = SharedMemorySegmentPool(65536, 8)
+                    pipeline = (PipelineBuilder().add_source(items)
+                        .to(ProcessPoolExecutorConfig(max_workers=1, mp_context="spawn"))
+                        .pipe(collate).to(MAIN_PROCESS, arena=arena)
+                        .add_sink(2).build(num_threads=3))
+                    try:
+                        with pipeline.auto_stop():
+                            for item in pipeline.get_iterator():
+                                consume(item)
+                    finally:
+                        arena.close()
+                        arena.unlink()
+
+                For N workers, create N independent objects explicitly. The
+                sequence is snapshotted; there is no factory or implicit cloning.
+                Use distinct ingress and egress objects. An arena-bearing marker
+                between adjacent process regions is rejected: close the first
+                region with MAIN_PROCESS and its output objects, then open the
+                next with separate input objects. Structural custom backends
+                retain responsibility for their concurrency/cancellation contract.
+
+                The pipeline borrows these objects and never closes/unlinks them.
+                Successful stop permits reuse before caller cleanup. Retained
+                output aliases can delay reuse. Stopping waits for every arena call
+                already in progress to complete before it releases the borrowed
+                objects; the region never abandons such a call on a deadline.
+                Builtin capacity waits use their configured ``acquire_timeout``. A
+                custom backend whose ``begin_unit``, ``write_binary`` or
+                ``read_binary`` can wait without bound must return or raise once the
+                caller calls its ``close``; call ``close`` before stopping a pipeline
+                that is blocked on it. Caller cleanup after successful stop belongs
+                in a finally block.
 
             buffer_size: At most this many items are buffered into a single transfer *at
                 this marker*. Default ``1`` (one item per transfer).
@@ -460,7 +515,7 @@ class PipelineBuilder(Generic[T, U]):
         # straight to `build_pipeline()` bypasses both.
         _validate_buffer_size(buffer_size)
         self._process_args.append(
-            PlacementConfig(target=target, buffer_size=buffer_size)
+            PlacementConfig(target=target, buffer_size=buffer_size, arena=arena)
         )
         return self
 
