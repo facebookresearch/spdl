@@ -18,7 +18,7 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
     def test_normal_real_queue_feeder_is_joined(self) -> None:
         q = mp.get_context("spawn").Queue()
         q.put("tiny command")
-        feeder = q._thread
+        feeder = q._thread  # type: ignore[attr-defined]
         m._close_queue(q)
         self.assertFalse(feeder.is_alive())
 
@@ -48,7 +48,11 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
         interface = SimpleNamespace(process=process, cmd_q=cmd_q, data_q=data_q)
         with patch.object(m, "_close_queue") as close:
             with m._IPCResourceCleanup(
-                interface, cmd_q, data_q, None, process_started=True
+                interface,  # type: ignore[arg-type]
+                cmd_q,
+                data_q,
+                None,
+                process_started=True,
             ):
                 pass
         self.assertEqual(
@@ -73,7 +77,7 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
                 )
                 with patch.object(m, "_close_queue") as close:
                     with m._IPCResourceCleanup(
-                        interface,
+                        interface,  # type: ignore[arg-type]
                         interface.cmd_q,
                         interface.data_q,
                         None,
@@ -93,7 +97,11 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
             raise RuntimeError("primary")
         except RuntimeError:
             cleanup = m._IPCResourceCleanup(
-                interface, interface.cmd_q, interface.data_q, None, process_started=True
+                interface,  # type: ignore[arg-type]
+                interface.cmd_q,
+                interface.data_q,
+                None,
+                process_started=True,
             )
         with patch.object(m, "_close_queue") as close:
             with cleanup:
@@ -109,7 +117,7 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
         with patch.object(m, "_close_queue") as close:
             with self.assertRaises(RuntimeError) as raised:
                 with m._IPCResourceCleanup(
-                    interface,
+                    interface,  # type: ignore[arg-type]
                     interface.cmd_q,
                     interface.data_q,
                     None,
@@ -136,7 +144,7 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
                 with patch.object(m, "_close_queue") as close:
                     with self.assertRaises(RuntimeError) as raised:
                         with m._IPCResourceCleanup(
-                            interface,
+                            interface,  # type: ignore[arg-type]
                             interface.cmd_q,
                             interface.data_q,
                             arena,
