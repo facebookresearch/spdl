@@ -32,12 +32,14 @@ def create_wav_data(
                                   containing the expected audio samples
     """
 
-    integer_dtype_map = {
+    integer_dtype_map: dict[int, type[np.uint8] | type[np.int16] | type[np.int32]] = {
         8: np.uint8,
         16: np.int16,
         32: np.int32,
     }
-    dtype_map = {
+    dtype_map: dict[
+        int, type[np.uint8] | type[np.int16] | type[np.int32] | type[np.float64]
+    ] = {
         **integer_dtype_map,
         64: np.float64,
     }

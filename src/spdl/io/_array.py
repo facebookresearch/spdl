@@ -10,7 +10,7 @@ __all__ = [
     "NpzFile",
 ]
 from collections.abc import Iterator, Mapping
-from typing import Any, TypeAlias
+from typing import Any, TYPE_CHECKING, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -19,7 +19,10 @@ from numpy.typing import NDArray
 # so as to delay the import of C++ extension module
 from . import lib as _libspdl
 
-Buffer: TypeAlias = "bytes | bytearray | memoryview"
+if TYPE_CHECKING:
+    from ._convert import ArrayInterface
+
+Buffer: TypeAlias = bytes | bytearray | memoryview
 
 _NpzEntry: TypeAlias = "tuple[int, int, int, int] | tuple[int, int, int, int, int]"
 _DEFAULT_MAX_UNCOMPRESSED_BYTES = 1 << 30
@@ -39,7 +42,7 @@ class _OwnedArrayInterface:
     long as the array is.
     """
 
-    def __init__(self, obj: object, owner: Buffer) -> None:
+    def __init__(self, obj: "ArrayInterface", owner: Buffer) -> None:
         self._obj = obj
         self._owner = owner
         self._readonly = memoryview(owner).readonly
@@ -118,12 +121,12 @@ def load_npy(data: Buffer, *, copy: bool = False) -> NDArray:
        <https://github.com/numpy/numpy/blob/v2.2.0/numpy/_core/records.py#L935-L939>`_.
 
     """
-    owner: "memoryview" = memoryview(data)
+    owner: memoryview = memoryview(data)
     buffer = _libspdl._archive.load_npy(_get_pointer(owner), owner.nbytes)
     return np.array(_OwnedArrayInterface(buffer, owner), copy=copy)
 
 
-class NpzFile(Mapping):
+class NpzFile(Mapping[str, NDArray]):
     """NpzFile()
     A class mimics the behavior of :py:class:`numpy.lib.npyio.NpzFile`.
 
@@ -153,7 +156,7 @@ class NpzFile(Mapping):
         # `_data` is a raw pointer into `data`, so the archive must be kept
         # alive. A memoryview also blocks resizing a mutable source, which
         # would reallocate the buffer and leave `_data` dangling.
-        self._buf: "memoryview" = memoryview(data)
+        self._buf: memoryview = memoryview(data)
         self._data: int = _get_pointer(self._buf)
         self._len: int = self._buf.nbytes
 
@@ -283,7 +286,7 @@ class NpzFile(Mapping):
                     "Compression method other than DEFLATE is not supported."
                 )
 
-    def __contains__(self, key: str) -> bool:  # pyre-ignore[14]
+    def __contains__(self, key: object) -> bool:
         return key in self._meta or key in self.files
 
     def __repr__(self) -> str:

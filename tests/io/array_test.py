@@ -167,15 +167,15 @@ class TestLoadNpy(unittest.TestCase):
 
         # Use bytearray to check if the change to the original is refrected to the recon
         # (which means that the recon is referring to the original, no copy)
-        data = bytearray(data)
-        print(f"{id(data)=}")
+        mutable_data = bytearray(data)
+        print(f"{id(mutable_data)=}")
         print(f"{id(recon.data.obj)=}")
-        recon = spdl.io.load_npy(data)
+        recon = spdl.io.load_npy(mutable_data)
         np.testing.assert_array_equal(recon, ref, strict=True)
 
         self.assertTrue(np.any(recon))
         # Fill zeros. The header is cleared too, but it's already parsed, so not an issue.
-        data[:] = b"\x00" * len(data)
+        mutable_data[:] = b"\x00" * len(mutable_data)
         np.testing.assert_array_equal(recon, 0)
 
     @parameterized.expand(
@@ -200,15 +200,15 @@ class TestLoadNpy(unittest.TestCase):
 
         # Use bytearray to check if the change to the original is refrected to the recon
         # (which means that the recon is referring to the original, no copy)
-        data = bytearray(data)
-        print(f"{id(data)=}")
+        mutable_data = bytearray(data)
+        print(f"{id(mutable_data)=}")
         print(f"{id(recon.data.obj)=}")
-        recon = spdl.io.load_npy(data)
+        recon = spdl.io.load_npy(mutable_data)
         np.testing.assert_array_equal(recon, ref, strict=True)
 
         self.assertTrue(np.any(recon))
         # Fill zeros. The header is cleared too, but it's already parsed, so not an issue.
-        data[:] = b"\x00" * len(data)
+        mutable_data[:] = b"\x00" * len(mutable_data)
         np.testing.assert_array_equal(recon, 0)
 
 

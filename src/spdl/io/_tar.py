@@ -24,13 +24,13 @@ def iter_tarfile(src: SupportsRead) -> Iterator[tuple[str, bytes]]: ...
 
 @overload
 def iter_tarfile(
-    src: "bytes | memoryview[bytes]",
-) -> "Iterator[tuple[str, memoryview[bytes]]]": ...
+    src: bytes | memoryview,
+) -> Iterator[tuple[str, memoryview]]: ...
 
 
 def iter_tarfile(
-    src: "bytes | memoryview[bytes] | SupportsRead",
-) -> "Iterator[tuple[str, memoryview[bytes]]] | Iterator[tuple[str, bytes]]":
+    src: bytes | memoryview | SupportsRead,
+) -> Iterator[tuple[str, memoryview]] | Iterator[tuple[str, bytes]]:
     """**[Experimental]** Parse a TAR file and yields file path and its contents.
 
     .. seealso::
@@ -74,7 +74,6 @@ def iter_tarfile(
     if isinstance(src, (bytes, memoryview)):
         mv = memoryview(src)
         for name, offset, size in _libspdl._archive.parse_tar(mv):
-            # pyrefly: ignore [invalid-yield]
             yield name, mv[offset : offset + size]
     else:
         yield from _libspdl._archive.parse_tar(src)
