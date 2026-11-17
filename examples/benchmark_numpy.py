@@ -35,7 +35,7 @@ __all__ = [
 
 import argparse
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import partial
 from io import BytesIO
@@ -54,7 +54,7 @@ try:
         save_results_to_csv,
     )
 except ImportError:
-    from spdl.examples.benchmark_utils import (
+    from spdl.examples.benchmark_utils import (  # type: ignore[import-not-found, no-redef]
         BenchmarkResult,
         BenchmarkRunner,
         ExecutorType,
@@ -66,12 +66,12 @@ except ImportError:
 DEFAULT_RESULT_PATH: str = get_default_result_path(__file__)
 
 
-def load_npy(items: list[bytes]) -> list[NDArray]:
+def load_npy(items: Sequence[bytes]) -> list[NDArray]:
     """Load arrays from serialized NPY binary strings using :py:func:`numpy.load`."""
     return [np.load(BytesIO(item), allow_pickle=False) for item in items]
 
 
-def load_npy_spdl(items: list[bytes]) -> list[NDArray]:
+def load_npy_spdl(items: Sequence[bytes]) -> list[NDArray]:
     """Load arrays from serialized NPY binary strings using :py:func:`spdl.io.load_npy`."""
     return [spdl.io.load_npy(item) for item in items]
 
@@ -95,7 +95,7 @@ def load_torch(item: bytes) -> list[NDArray]:
 
 def _get_load_fn(
     data_format: str, impl: str
-) -> Callable[[list[bytes]], list[NDArray]] | Callable[[bytes], list[NDArray]]:
+) -> Callable[[Sequence[bytes]], list[NDArray]] | Callable[[bytes], list[NDArray]]:
     match data_format:
         case "torch":
             return load_torch
@@ -233,6 +233,7 @@ def main() -> None:
                     data = get_mock_data(data_format, compressed)
 
                     load_fn = _get_load_fn(data_format, impl)
+                    benchmark_fn = partial(load_fn, data)  # type: ignore[arg-type]
 
                     result, _ = runner.run(
                         BenchmarkConfig(
@@ -241,7 +242,7 @@ def main() -> None:
                             impl=impl,
                             num_workers=num_workers,
                         ),
-                        partial(load_fn, data),
+                        benchmark_fn,
                         iterations,
                         num_runs=num_runs,
                     )
