@@ -259,3 +259,9 @@ def nv12_to_planar_bgr(buffer: CUDABuffer, *, device_config: CUDAConfig, matrix_
     Returns:
         CUDA buffer containing planar BGR data with shape ``[num_frames, 3, height, width]``.
     """
+
+def _fused_transfer_buffer(device_config: CUDAConfig) -> object: ...
+
+def _fused_nv12_convert(device_config: CUDAConfig, bgr: bool, coeff: int, sync: bool) -> object: ...
+
+def _fused_decode_nvdec(device_config: CUDAConfig, bgr: bool, crop_left: int, crop_top: int, crop_right: int, crop_bottom: int, scale_width: int, scale_height: int) -> object: ...

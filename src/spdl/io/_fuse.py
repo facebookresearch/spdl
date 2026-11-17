@@ -33,6 +33,7 @@ __all__ = [
     "_record_decode",
     "_record_sample_decode",
     "_record_convert",
+    "_record_cuda",
     "_record_post",
 ]
 
@@ -155,7 +156,7 @@ def _get_attr_specs() -> dict[tuple[str, str | None], dict[str, _AttrSpec]]:
     }
 
 
-_OUTPUT_KINDS = ("buffer", "packets", "frames", "codec", "meta")
+_OUTPUT_KINDS = ("buffer", "cuda_buffer", "packets", "frames", "codec", "meta")
 
 # Attributes through which other libraries read the content of a buffer.
 _ARRAY_PROTOCOLS = (
@@ -170,7 +171,7 @@ _CONSTANT_TYPES = (type(None), bool, int, float, str, bytes)
 
 # Kinds of values that are moved out of the native registers when Python
 # needs them. (Metadata and codecs are copied.)
-_MOVED_KINDS = ("buffer", "packets", "frames")
+_MOVED_KINDS = ("buffer", "cuda_buffer", "packets", "frames")
 
 
 class _GraphBreak(BaseException):
@@ -218,7 +219,7 @@ class _Symbol:
         return f"Symbol<{self._kind}, {media}%{self._reg}>"
 
     def __getattr__(self, name: str) -> Any:
-        if self._kind == "buffer" and name in _ARRAY_PROTOCOLS:
+        if self._kind in ("buffer", "cuda_buffer") and name in _ARRAY_PROTOCOLS:
             return getattr(self._graph.concrete(self), name)
         if name.startswith("__"):
             raise AttributeError(name)
@@ -466,8 +467,10 @@ class _Graph:
             raise TypeError(f"{sym!r} has no len().")
         return self.concrete(self.query(sym, "__len__", "meta", None))
 
-    def _emit(self, op: str, uses: list[int], defs: list[int], **kwargs: Any) -> None:
-        self.ops.append((op, kwargs, uses, defs))
+    def _emit(
+        self, operation: str, uses: list[int], defs: list[int], **kwargs: Any
+    ) -> None:
+        self.ops.append((operation, kwargs, uses, defs))
 
     def source(self) -> _Symbol:
         sym = self._new("source", cls=_SourceSymbol)
@@ -635,8 +638,28 @@ class _Graph:
         )
         return out
 
+    def external(
+        self,
+        sym: _Symbol,
+        op: object,
+        kind: str,
+        media: str | None,
+        consume: str,
+    ) -> _Symbol:
+        self.use(sym, kind, media=media, consume=consume)
+        out = self._new("cuda_buffer")
+        self._emit(
+            "external",
+            [sym._reg],
+            [out._reg],
+            op=op,
+            srcs=[sym._reg],
+            out=out._reg,
+        )
+        return out
+
     def post(self, buffer: _Symbol, fn: Callable[[Any], Any]) -> _Symbol:
-        self.use(buffer, "buffer", consume=f"`{fn.__name__}`")
+        self.use(buffer, "buffer", "cuda_buffer", consume=f"`{fn.__name__}`")
         return _PostSymbol(buffer, fn)
 
     ############################################################################
@@ -995,8 +1018,18 @@ def _unwrap_frames(
     return frames
 
 
-def _actual(obj: T) -> T:
-    """The actual value of ``obj``, for operations that cannot be recorded."""
+def _actual(obj: T, *, unrecorded: bool = False) -> T:
+    """The actual value of ``obj``, for operations that cannot be recorded.
+
+    ``unrecorded`` stops cache tracing before an eager operation can consume a
+    concrete non-source argument. Lazy execution still uses the eager path.
+    """
+    if (
+        unrecorded
+        and (g := _ACTIVE.get()) is not None
+        and not isinstance(g, _LazyGraph)
+    ):
+        raise _GraphBreak("an operation on a concrete input that cannot be recorded")
     return obj._graph.concrete(obj) if isinstance(obj, _Symbol) else obj
 
 
@@ -1067,6 +1100,18 @@ def _record_convert(frames: object, storage: object) -> Any:
     if not isinstance(first, _Symbol):
         raise TypeError("Traced and concrete frames cannot be mixed.")
     return first._graph.convert(frames, storage)
+
+
+def _record_cuda(
+    sym: _Symbol,
+    op: object,
+    kind: str,
+    *,
+    media: str | None = None,
+    consume: str = "",
+) -> Any:
+    """Record an operation supplied by the optional CUDA extension."""
+    return sym._graph.external(sym, op, kind, media, consume)
 
 
 def _record_post(buffer: _Symbol, fn: Callable[[Any], Any]) -> Any:
@@ -1407,8 +1452,8 @@ def fuse(
     ``if frames.num_frames == 0``, a filter computed from ``packets.width``,
     or tensor operations on the result of :py:func:`~spdl.io.to_torch`), the
     operations recorded so far are executed in one native call. Operations
-    that cannot be recorded (e.g. streaming demuxing and decoding, transfer
-    to CUDA devices) run as usual with the actual values. The placeholders
+    that cannot be recorded (e.g. streaming demuxing and decoding) run as
+    usual with the actual values. The placeholders
     in the returned value (in lists, tuples, namedtuples, dicts and fields of
     dataclass instances) are replaced with the actual values.
 
@@ -1419,7 +1464,12 @@ def fuse(
     :py:func:`~spdl.io.sample_decode_video`,
     :py:func:`~spdl.io.convert_frames`, :py:func:`~spdl.io.load_audio`,
     :py:func:`~spdl.io.load_video`, :py:func:`~spdl.io.load_image`,
-    :py:func:`~spdl.io.load_image_batch` and :py:func:`~spdl.io.get_filter_desc`.
+    :py:func:`~spdl.io.load_image_batch`, :py:func:`~spdl.io.get_filter_desc`,
+    :py:func:`~spdl.io.transfer_buffer`, :py:func:`~spdl.io.decode_packets_nvdec`,
+    :py:func:`~spdl.io.nv12_to_rgb` and :py:func:`~spdl.io.nv12_to_bgr`.
+    CUDA operations are recorded when their input is recorded and the CUDA
+    extension supports fusion. CUDA buffer attributes materialize the buffer.
+    Python allocator callbacks still acquire the GIL when allocating or freeing.
     Metadata of demuxers, codecs, packets and frames, ``clone()`` and
     indexing of video frames are recorded as well.
 

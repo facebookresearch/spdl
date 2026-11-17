@@ -40,6 +40,10 @@ def generate_stub_content(module: ModuleType) -> str:
 
     sg = StubGen(module)
     sg.put(module)
+    sg.include_private = True
+    for name, value in vars(module).items():
+        if name.startswith("_fused_"):
+            sg.put(value, name=name)
     stub_content = sg.get()
 
     return stub_content

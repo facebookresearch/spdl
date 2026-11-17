@@ -169,14 +169,37 @@ The following functions are recorded.
 - :py:func:`~spdl.io.load_audio`, :py:func:`~spdl.io.load_video`,
   :py:func:`~spdl.io.load_image`, :py:func:`~spdl.io.load_image_batch` and
   :py:func:`~spdl.io.get_filter_desc`
+- :py:func:`~spdl.io.transfer_buffer`, :py:func:`~spdl.io.decode_packets_nvdec`,
+  :py:func:`~spdl.io.nv12_to_rgb` and :py:func:`~spdl.io.nv12_to_bgr`, when their
+  input is recorded and the CUDA extension supports fusion.
 - The metadata of demuxers, codecs, packets and frames, ``clone()``, and
   indexing video frames with an integer, a slice or a list of integers.
 
 Operations that are not recorded run as usual with the actual values. These
-include streaming demuxing and decoding, transfer to CUDA devices, NVDEC
-decoding, :py:class:`~spdl.io.BSF`, ``load_image_batch(strict=False)``, and
-attributes that are not recorded. The recorded operations are executed
-before them.
+include streaming demuxing and decoding, :py:func:`~spdl.io.decode_image_nvjpeg`,
+:py:class:`~spdl.io.BSF`, ``load_image_batch(strict=False)``, and attributes
+that are not recorded. The recorded operations are executed before them.
+
+CUDA operations
+---------------
+
+Passing ``device_config`` to the loading functions records the CPU-to-CUDA
+transfer in the same native call as demuxing, decoding and conversion. The
+cached program includes the transfer; ``device_config`` is a non-source
+constant, keyed by object identity. The CUDA extension supplies native
+operations without making CUDA a dependency of the CPU executor.
+
+:py:func:`~spdl.io.decode_packets_nvdec` records one-off NVDEC decoding,
+including the automatic Annex B bitstream filter for H264/HEVC and RGB/BGR
+conversion. Explicit :py:func:`~spdl.io.apply_bsf` is supported as well.
+Streaming :py:class:`~spdl.io.NvDecDecoder` operations are not recorded.
+
+CUDA buffers can be returned directly or passed to :py:func:`~spdl.io.to_torch`.
+Reading their attributes (e.g. ``shape`` or ``device_index``) materializes them,
+so these accesses prevent caching just like other unrecorded attributes.
+Inputs that are already concrete, or extensions without the native factories,
+use the eager path. Custom Python allocators, including the torch caching
+allocator, acquire the GIL for their callbacks even during a fused native call.
 
 Guidelines
 ----------
