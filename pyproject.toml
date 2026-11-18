@@ -42,3 +42,14 @@ members = [
 
 [tool.ruff]
 target-version = "py314"
+
+[tool.mypy]
+python_version = "3.14"
+files = ["src/spdl"]
+mypy_path = ["src"]
+explicit_package_bases = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "nanobind.stubgen"
+follow_untyped_imports = true
