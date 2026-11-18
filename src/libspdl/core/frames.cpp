@@ -84,6 +84,25 @@ void Frames<media>::push_back(AVFrame* frame) {
 }
 
 template <MediaType media>
+void Frames<media>::extend(Frames&& other)
+  requires(media != MediaType::Image)
+{
+  frames_.insert(frames_.end(), other.frames_.begin(), other.frames_.end());
+  other.frames_.clear();
+}
+
+template <MediaType media>
+FramesPtr<media> Frames<media>::take_front(size_t n)
+  requires(media != MediaType::Image)
+{
+  n = std::min<size_t>(n, frames_.size());
+  auto ret = std::make_unique<Frames<media>>(id_, time_base_);
+  ret->frames_.assign(frames_.begin(), frames_.begin() + n);
+  frames_.erase(frames_.begin(), frames_.begin() + n);
+  return ret;
+}
+
+template <MediaType media>
 int64_t Frames<media>::get_pts(size_t index) const {
   if (auto num_frames = frames_.size(); index >= num_frames) {
     throw std::out_of_range(

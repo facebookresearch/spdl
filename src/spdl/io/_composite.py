@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import overload, TYPE_CHECKING
 
 from . import _config, _core, _fuse, _preprocessing
+from ._common import _resolve_src
 from ._core import _FILTER_DESC_DEFAULT, TimeWindow
 from .lib import _libspdl, _libspdl_cuda
 
@@ -636,6 +637,163 @@ def streaming_load_video_nvdec(
     for packets in _packet_stream(demuxer, num_frames):
         yield from decoder.streaming_decode_packets(packets)
     yield from decoder.flush()
+
+
+################################################################################
+# Streaming
+################################################################################
+
+
+def _streaming_load(
+    media: str,
+    loader: type,
+    src: "SourceType",
+    num_frames: int,
+    demux_config: "DemuxConfig | None",
+    decode_config: "DecodeConfig | None",
+    filter_desc: str | None,
+    storage: "CPUStorage | None",
+    name: str | None,
+) -> "Iterator[CPUBuffer]":
+    return loader(
+        _resolve_src(src),
+        num_frames,
+        demux_config=demux_config,
+        decode_config=decode_config,
+        filter_desc=(
+            None
+            if filter_desc is None
+            else _core._resolve_filter_body(filter_desc, media)
+        ),
+        storage=storage,
+        name=name,
+    )
+
+
+def streaming_load_video(
+    src: "SourceType",
+    num_frames: int,
+    *,
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    storage: "CPUStorage | None" = None,
+    name: str | None = None,
+) -> "Iterator[CPUBuffer]":
+    """Load video chunk by chunk.
+
+    Returns an iterator of buffers of ``num_frames`` frames each (the last one
+    can have fewer). Each step of the iteration demuxes and decodes as many
+    packets as needed, applies the filter and converts the frames, in one
+    native call, so it waits for the GIL once per chunk. This is the
+    streaming counterpart of :py:func:`load_video`, for videos too long to
+    decode at once.
+
+    The equivalent with streaming demuxing and decoding in Python
+    (:py:meth:`Demuxer.streaming_demux`, :py:class:`Decoder`,
+    :py:func:`convert_frames`) makes a native call for each step, and the
+    chunks follow the demuxed packets rather than ``num_frames``.
+
+    Private for now; not part of the public API.
+
+    Args:
+        src: Source identifier, such as path, URL or in-memory data.
+        num_frames: The number of frames in a chunk.
+        demux_config: *Optional:* Demux configuration passed to
+            :py:class:`Demuxer`.
+        decode_config: *Optional:* Decode configuration passed to
+            :py:class:`Decoder`.
+        filter_desc: *Optional:* Filter description passed to
+            :py:class:`Decoder`. See :py:func:`load_video`.
+        storage: *Optional:* Storage for the buffers, passed to
+            :py:func:`convert_frames`.
+        name: *Optional:* Override the source name used in error messages.
+
+    Returns:
+        An iterator of buffers with shape ``[num_frames, height, width,
+        channel]`` (for the default filter).
+
+    .. admonition:: Example
+
+       .. code-block::
+
+          for buffer in streaming_load_video("sample.mp4", 32):
+              frames = spdl.io.to_torch(buffer)  # [32, H, W, 3]
+    """
+    _core.log_api_usage_once("spdl.io.streaming_load_video")
+    return _streaming_load(
+        "video",
+        _libspdl.StreamingVideoLoader,
+        src,
+        num_frames,
+        demux_config,
+        decode_config,
+        filter_desc,
+        storage,
+        name,
+    )
+
+
+def streaming_load_audio(
+    src: "SourceType",
+    num_frames: int,
+    *,
+    demux_config: "DemuxConfig | None" = None,
+    decode_config: "DecodeConfig | None" = None,
+    filter_desc: str | None = _FILTER_DESC_DEFAULT,
+    storage: "CPUStorage | None" = None,
+    name: str | None = None,
+) -> "Iterator[CPUBuffer]":
+    """Load audio chunk by chunk.
+
+    Returns an iterator of buffers of ``num_frames`` audio frames each (the
+    last one can have fewer). An audio frame is a unit of decoded samples,
+    whose size depends on the codec. To fix the number of samples per chunk,
+    add ``asetnsamples`` to the filter, e.g.
+    ``get_audio_filter_desc(...) + ",asetnsamples=n=1024:p=0"`` for chunks of
+    ``num_frames * 1024`` samples. Each step of the iteration demuxes,
+    decodes, filters and converts in one native call, like
+    ``streaming_load_video``. Private for now; not part of the public API.
+
+    Args:
+        src: Source identifier, such as path, URL or in-memory data.
+        num_frames: The number of audio frames in a chunk.
+        demux_config: *Optional:* Demux configuration passed to
+            :py:class:`Demuxer`.
+        decode_config: *Optional:* Decode configuration passed to
+            :py:class:`Decoder`.
+        filter_desc: *Optional:* Filter description passed to
+            :py:class:`Decoder`. See :py:func:`load_audio`.
+        storage: *Optional:* Storage for the buffers, passed to
+            :py:func:`convert_frames`.
+        name: *Optional:* Override the source name used in error messages.
+
+    Returns:
+        An iterator of buffers with shape ``[num_channels, num_samples]``
+        (for the default filter, which outputs planar samples).
+
+    .. admonition:: Example
+
+       .. code-block::
+
+          desc = spdl.io.get_audio_filter_desc() + ",asetnsamples=n=1024:p=0"
+          for buffer in streaming_load_audio(
+              "sample.wav", 16, filter_desc=desc
+          ):
+              samples = spdl.io.to_torch(buffer)  # [num_channels, 16 * 1024]
+    """
+    _core.log_api_usage_once("spdl.io.streaming_load_audio")
+    return _streaming_load(
+        "audio",
+        _libspdl.StreamingAudioLoader,
+        src,
+        num_frames,
+        demux_config,
+        decode_config,
+        filter_desc,
+        storage,
+        name,
+    )
 
 
 ################################################################################
