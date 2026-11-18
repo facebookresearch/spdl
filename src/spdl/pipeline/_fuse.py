@@ -51,7 +51,7 @@ from spdl.pipeline._subprocess_pipeline_pool import (
     _ProcessBackend,
     _SubprocessPipelinePool,
 )
-from spdl.pipeline.defs._defs import (
+from spdl.pipeline.defs import (
     _MainProcess,
     _SubprocessPipelineConfig,
     _TStage,

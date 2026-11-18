@@ -55,7 +55,7 @@ import time
 from concurrent.futures import Executor, ThreadPoolExecutor
 from typing import Any, NoReturn, TypeGuard
 
-from spdl.pipeline._arena._region import _ArenaEnvelope
+from spdl.pipeline._arena import _ArenaEnvelope
 from spdl.pipeline._common._misc import create_task
 
 from ._common import _EPOCH_END, is_eof, is_epoch_end

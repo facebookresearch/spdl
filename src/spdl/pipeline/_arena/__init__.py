@@ -9,7 +9,19 @@
 
 from ._arena import _Arena
 from ._pool import SharedMemorySegmentPool
-from ._protocol import ArenaProtocol, ArenaReaderProtocol, ArenaWriterProtocol
+from ._protocol import (
+    _is_arena_backend,
+    ArenaProtocol,
+    ArenaReaderProtocol,
+    ArenaWriterProtocol,
+)
+from ._region import (
+    _ArenaEnvelope,
+    _ArenaInputQueue,
+    _ArenaOutputQueue,
+    _ArenaSendingQueue,
+    _RegionChannel,
+)
 from ._ring import SharedMemoryRingBuffer
 
 __all__ = [
@@ -19,4 +31,10 @@ __all__ = [
     "SharedMemoryRingBuffer",
     "SharedMemorySegmentPool",
     "_Arena",
+    "_ArenaEnvelope",
+    "_ArenaInputQueue",
+    "_ArenaOutputQueue",
+    "_ArenaSendingQueue",
+    "_RegionChannel",
+    "_is_arena_backend",
 ]
