@@ -38,6 +38,7 @@ repos:
       - id: mypy
         name: mypy (src/spdl, Python 3.14)
         files: '^src/spdl/|^pyproject\.toml$|^\.pre-commit-config\.yaml$'
+        types_or: [file]
         verbose: true
         entry: bash -c
         args:
