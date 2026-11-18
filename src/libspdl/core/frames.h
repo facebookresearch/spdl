@@ -115,6 +115,14 @@ class Frames {
   ///
   /// Push a new frame into the container.
   void push_back(AVFrame* frame);
+
+  /// Move the frames of ``other`` to the end of this container.
+  void extend(Frames&& other)
+    requires(media != MediaType::Image);
+
+  /// Move the first ``n`` frames (or all, if fewer) to a new container.
+  FramesPtr<media> take_front(size_t n)
+    requires(media != MediaType::Image);
   // the behavior is different for image
 
   // Get to the PTS of the specified AVFrame as-is.

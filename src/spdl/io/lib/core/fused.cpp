@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -1116,9 +1117,180 @@ class FusedPlan {
   }
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// Streaming
+////////////////////////////////////////////////////////////////////////////////
+
+// Loads a stream chunk by chunk. Each `next` call demuxes and decodes as
+// many packets as needed for one chunk, and converts the frames, in one
+// native call. The chunks have `num_frames` frames, except the last one.
+// The demuxer and the decoder are created in the first `next` call, so that
+// creating the loader does not need a native call without the GIL.
+template <MediaType media>
+class StreamingLoader {
+  // Keeps the source buffer alive while the demuxer reads it.
+  nb::object src_;
+  Value source_;
+  size_t num_frames_;
+  std::optional<DemuxConfig> demux_config_;
+  std::optional<DecodeConfig> decode_config_;
+  std::optional<std::string> filter_desc_;
+  std::shared_ptr<CPUStorage> storage_;
+  std::optional<std::string> name_;
+
+  DemuxerPtr demuxer_;
+  int index_ = -1;
+  DecoderPtr<media> decoder_;
+  // Generators reference the demuxer and the decoder, so they are declared
+  // (and destroyed) after them.
+  std::optional<AnyPacketsGenerator> packets_;
+  std::optional<Generator<FramesPtr<media>>> decoding_;
+  FramesPtr<media> pending_;
+  bool flushed_ = false;
+  std::mutex mutex_;
+
+  // Builds everything before assigning the members, so that a failure leaves
+  // the loader uninitialized and the next call to `next()` tries again.
+  void init() {
+    auto demuxer = open_source(
+        source_,
+        OpenOp{
+            .src = 0, .out = 0, .demux_config = demux_config_, .name = name_});
+    const int index = demuxer->template get_default_stream_index<media>();
+    const auto codec = demuxer->template get_default_codec<media>();
+    auto decoder = std::make_unique<Decoder<media>>(
+        codec, decode_config_, get_filter_graph(codec, filter_desc_));
+    if constexpr (media == MediaType::Video) {
+      decoder->set_buffer_size(num_frames_);
+    }
+    // A packet usually decodes to one frame.
+    auto packets =
+        demuxer->streaming_demux({index}, static_cast<int>(num_frames_), -1);
+    auto pending = std::make_unique<Frames<media>>(
+        reinterpret_cast<uintptr_t>(this), codec.get_time_base());
+
+    demuxer_ = std::move(demuxer);
+    index_ = index;
+    decoder_ = std::move(decoder);
+    packets_.emplace(std::move(packets));
+    pending_ = std::move(pending);
+  }
+
+  // Decode the next chunk of packets into `pending_`.
+  // Returns false when the stream is exhausted.
+  bool decode_more() {
+    if (decoding_ && *decoding_) {
+      pending_->extend(std::move(*(*decoding_)()));
+      return true;
+    }
+    decoding_.reset();
+    if (flushed_) {
+      return false;
+    }
+    while (*packets_) {
+      auto chunk = (*packets_)();
+      if (auto it = chunk.find(index_); it != chunk.end()) {
+        decoding_.emplace(decoder_->streaming_decode_packets(
+            std::move(std::get<PacketsPtr<media>>(it->second))));
+        return true;
+      }
+    }
+    flushed_ = true;
+    decoding_.emplace(decoder_->flush());
+    return true;
+  }
+
+ public:
+  StreamingLoader(
+      nb::object src,
+      size_t num_frames,
+      const std::optional<DemuxConfig>& demux_config,
+      const std::optional<DecodeConfig>& decode_config,
+      const std::optional<std::string>& filter_desc,
+      std::shared_ptr<CPUStorage> storage,
+      const std::optional<std::string>& name)
+      : src_{std::move(src)},
+        source_{to_source(src_)},
+        num_frames_{num_frames},
+        demux_config_{demux_config},
+        decode_config_{decode_config},
+        filter_desc_{filter_desc},
+        storage_{std::move(storage)},
+        name_{name} {
+    if (num_frames < 1) {
+      throw std::invalid_argument("`num_frames` must be positive.");
+    }
+  }
+
+  StreamingLoader(const StreamingLoader&) = delete;
+  StreamingLoader& operator=(const StreamingLoader&) = delete;
+  StreamingLoader(StreamingLoader&&) = delete;
+  StreamingLoader& operator=(StreamingLoader&&) = delete;
+  ~StreamingLoader() = default;
+
+  // Returns nullptr at the end of the stream. Called without the GIL.
+  CPUBufferPtr next() {
+    std::lock_guard lock{mutex_};
+    if (!pending_) {
+      init();
+    }
+    // `get_num_frames` counts samples for audio, so count `AVFrame`s.
+    while (pending_->get_frames().size() < num_frames_) {
+      if (!decode_more()) {
+        break;
+      }
+    }
+    if (pending_->get_frames().empty()) {
+      return nullptr;
+    }
+    auto frames = pending_->take_front(num_frames_);
+    return convert_frames<media>(frames.get(), storage_);
+  }
+};
+
+template <MediaType media>
+void register_streaming_loader(nb::module_& m, const char* name) {
+  using Loader = StreamingLoader<media>;
+  nb::class_<Loader>(m, name)
+      .def(
+          nb::init<
+              nb::object,
+              size_t,
+              const std::optional<DemuxConfig>&,
+              const std::optional<DecodeConfig>&,
+              const std::optional<std::string>&,
+              std::shared_ptr<CPUStorage>,
+              const std::optional<std::string>&>(),
+          nb::arg("src"),
+          nb::arg("num_frames"),
+          nb::kw_only(),
+          nb::arg("demux_config") = nb::none(),
+          nb::arg("decode_config") = nb::none(),
+          nb::arg("filter_desc") = nb::none(),
+          nb::arg("storage") = nb::none(),
+          nb::arg("name") = nb::none())
+      .def(
+          "__iter__",
+          [](Loader& self) -> Loader& { return self; },
+          nb::rv_policy::reference)
+      .def(
+          "__next__",
+          [](Loader& self) -> CPUBufferPtr {
+            auto ret = self.next();
+            if (!ret) {
+              throw nb::stop_iteration();
+            }
+            return ret;
+          },
+          nb::call_guard<nb::gil_scoped_release>());
+}
+
 } // namespace
 
 void register_fused(nb::module_& m) {
+  register_streaming_loader<MediaType::Audio>(m, "StreamingAudioLoader");
+  register_streaming_loader<MediaType::Video>(m, "StreamingVideoLoader");
+
   nb::class_<FusedState>(m, "FusedState")
       .def(nb::init<>())
       .def("bind", &FusedState::bind, nb::arg("inputs"), nb::arg("srcs"))
