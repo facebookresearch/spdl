@@ -32,7 +32,7 @@ from typing import (
     TypeVar,
 )
 
-from spdl.pipeline._arena._protocol import _is_arena_backend
+from spdl.pipeline._arena import _is_arena_backend
 from spdl.pipeline._common._convert import (
     _is_async_callable,
     _is_asyncgen_callable,

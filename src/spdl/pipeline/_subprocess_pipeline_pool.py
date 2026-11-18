@@ -54,12 +54,13 @@ from importlib import import_module
 from multiprocessing.reduction import ForkingPickler
 from typing import Any, cast, Protocol
 
-from spdl.pipeline._arena._protocol import _is_arena_backend, ArenaProtocol
-from spdl.pipeline._arena._region import (
+from spdl.pipeline._arena import (
     _ArenaInputQueue,
     _ArenaOutputQueue,
     _ArenaSendingQueue,
+    _is_arena_backend,
     _RegionChannel,
+    ArenaProtocol,
 )
 from spdl.pipeline._components import (
     _DONE,
@@ -73,7 +74,7 @@ from spdl.pipeline._components import (
     _SESSION_END,
 )
 from spdl.pipeline._iter_utils import _Queue
-from spdl.pipeline.defs._defs import PipelineConfig, SourceConfig
+from spdl.pipeline.defs import PipelineConfig, SourceConfig
 
 from ._pool_cleanup import _release_pool_cleanup, _retain_pool_cleanup
 

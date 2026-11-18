@@ -31,6 +31,7 @@ from ._defs import (
     _PipeType,
     _SubprocessPipelineConfig,
     _TPipeInputs,
+    _TStage,
     Aggregate,
     AggregateConfig,
     Aggregator,
@@ -63,6 +64,7 @@ __all__ = [
     # pyrefly: ignore [bad-dunder-all]
     "_TCallables",
     "_TPipeInputs",
+    "_TStage",
     "Aggregate",
     "Aggregator",
     "AggregateConfig",
