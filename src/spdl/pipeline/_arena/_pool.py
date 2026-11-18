@@ -10,8 +10,8 @@
 An alternative arena backend to :py:class:`SharedMemoryRingBuffer`. Each unit
 (one pipeline item) is written into a whole, isolated shared-memory segment, and
 the pool rotates through a fixed number of them. Two segment counters live in a
-small control segment: ``published`` (units published by the worker) and
-``reclaimed`` (units whose segments have been returned to the pool). Unit ``i``
+small control segment: ``_published`` (units published by the worker) and
+``_reclaimed`` (units whose segments have been returned to the pool). Unit ``i``
 always uses segment ``i % count``, so the reader derives the segment from its own
 cursor and markers only need an in-segment offset.
 
@@ -19,7 +19,7 @@ Because each unit owns a whole contiguous segment, the reader hands restored
 NumPy/Torch payloads back as **zero-copy views** directly over shared memory
 (``read_binary`` returns a live ``memoryview``). The segment is only returned to
 the pool once every underlying storage export has been released. The writer is gated by
-``reclaimed`` (``free = count - (published - reclaimed)``), so it never reuses a
+``_reclaimed`` (``free = count - (published - reclaimed)``), so it never reuses a
 segment that still has live views.
 
 Backpressure is Mode B (blocking): ``begin_unit`` waits on a process-shared
@@ -49,6 +49,13 @@ from multiprocessing.context import BaseContext
 from multiprocessing.synchronize import Condition as _Condition, Semaphore as _Semaphore
 from typing import cast, TypedDict
 
+from ._direct import (
+    _ArenaAllocationTicket,
+    _control_size,
+    _DirectPool,
+    _RecoveredAllocation,
+    ArenaReservation,
+)
 from ._ownership import _export_buffer, _ExportGuard
 from ._pinning import _check_host_budget, _HostRegistration, _local_device
 from ._shm import _attach
@@ -70,7 +77,7 @@ _DEFAULT_ACQUIRE_TIMEOUT: float = 60.0
 # still have native exports, while an unread unit must block a fresh writer.
 # Mode 0 is unselected; _ORDINARY selects ordinary serialized transport.
 _CTRL: struct.Struct = struct.Struct("<QQBBQQQ")
-_ORDINARY = 1
+_ORDINARY, _DIRECT = 1, 2
 _CONTROL_LOCK_TIMEOUT = 5.0
 
 # Binaries are aligned to this many bytes within a segment so that zero-copy
@@ -87,7 +94,9 @@ _REGISTRATION_QUARANTINE_LOCK = threading.Lock()
 def _create_segments(
     segment_size: int, count: int
 ) -> tuple[shared_memory.SharedMemory, list[shared_memory.SharedMemory]]:
-    ctrl = shared_memory.SharedMemory(create=True, size=_CTRL.size)
+    ctrl = shared_memory.SharedMemory(
+        create=True, size=_CTRL.size + _control_size(count)
+    )
     segments = []
     try:
         _CTRL.pack_into(cast(memoryview, ctrl.buf), 0, 0, 0, 0, 0, 0, 0, 0)
@@ -133,6 +142,16 @@ class SharedMemorySegmentPool:
     ownership transfers to the returned iterable, which closes and unlinks it at
     teardown. Restored NumPy/Torch payloads are zero-copy views over shared
     memory; the pool keeps each segment until its views are released.
+
+    For caller-managed direct output, instead pass the parent-owned pool to an
+    ordinary process executor initializer and use :py:meth:`reserve`,
+    :py:meth:`recover` and :py:meth:`discard`. The caller retains ownership and
+    must retain the owning pool until workers are reaped. Public ``close()``
+    first cancels further arena work; uncertain work, live aliases and claims
+    defer physical retirement until a later safe retry. Unlink only after reap.
+    These modes are exclusive. Constructor-created control metadata exists
+    before spawn; native IO is needed only for actual storage exports and CUDA
+    initializes only when the consumer uses pinning.
 
     .. versionadded:: 0.5.0
 
@@ -245,6 +264,7 @@ class SharedMemorySegmentPool:
         self._pin_ready = False
         self._pin_error: BaseException | None = None
         self._pin_pid: int | None = None
+        self._direct: _DirectPool | None = None
         self._mode = 0
         self._pid = os.getpid()
         self._creator_pid = self._pid
@@ -288,6 +308,7 @@ class SharedMemorySegmentPool:
         self._pin_ready = False
         self._pin_error = None
         self._pin_pid = None
+        self._direct = None
         self._mode = 0
         self._pid = os.getpid()
         self._creator_pid = state["creator_pid"]
@@ -369,6 +390,8 @@ class SharedMemorySegmentPool:
     @property
     def _published(self) -> int:
         """Number of units published by the writer."""
+        if int(_CTRL.unpack_from(self._ctrl_view(), 0)[3]) == _DIRECT:
+            return self._prepare_direct().counts()[2]
         return int(_CTRL.unpack_from(self._ctrl_view(), 0)[0])
 
     @_published.setter
@@ -378,6 +401,8 @@ class SharedMemorySegmentPool:
     @property
     def _reclaimed(self) -> int:
         """Number of units whose segments have been returned to the pool."""
+        if int(_CTRL.unpack_from(self._ctrl_view(), 0)[3]) == _DIRECT:
+            return self._prepare_direct().counts()[3]
         return int(_CTRL.unpack_from(self._ctrl_view(), 0)[1])
 
     @_reclaimed.setter
@@ -478,6 +503,8 @@ class SharedMemorySegmentPool:
             if not local_close:
                 _signal_space(self._space_signal)
             raise self._retirement_error
+        if self._mode == _DIRECT and os.getpid() != self._pid:
+            raise RuntimeError("Pool handles inherited across fork; use spawn")
         timeout = _CONTROL_LOCK_TIMEOUT
         if deadline is not None:
             timeout = max(0.0, min(timeout, deadline - time.monotonic()))
@@ -498,6 +525,10 @@ class SharedMemorySegmentPool:
             self._space_cv.release()
 
     def _select_mode(self, mode: int) -> None:
+        if mode == _DIRECT and os.getpid() != self._pid:
+            raise RuntimeError(
+                "Pool handles inherited across fork; pass them through spawn"
+            )
         if self._closed or self._retirement_error is not None:
             raise RuntimeError("segment pool is closed or retired")
         if self._mode == mode:
@@ -510,6 +541,123 @@ class SharedMemorySegmentPool:
                 )
             struct.pack_into("<B", self._ctrl_view(), 17, mode)
             self._mode = mode
+
+    @property
+    def arena_id(self) -> str:
+        """Stable pool identity for routing allocation tickets in the caller.
+
+        Use ``pools = {pool.arena_id: pool}`` and recover each ticket with
+        ``pools[ticket.arena_id].recover(ticket)``. This identifies the shared
+        allocation control, not a pointer, worker index or initialization order.
+
+        .. versionadded:: 0.9.0
+        """
+        return self._ctrl_name
+
+    def _prepare_direct(self) -> _DirectPool:
+        self._select_mode(_DIRECT)
+        with self._condition(), self._close_lock:
+            if self._closed:
+                raise RuntimeError("segment pool is closed")
+            if self._direct is None:
+                self._direct = _DirectPool(self, _CTRL.size)
+            return self._direct
+
+    def reserve(self, *, max_bytes: int | None = None) -> ArenaReservation:
+        """Reserve a producer-owned output segment for direct allocation.
+
+        Construct one pool per producer in the parent and pass handles in ordinary
+        ``ProcessPoolExecutorConfig`` initializer ``initargs`` (spawn only, never
+        through item queues). Its shared control already exists before spawn.
+        Before stopping a continuous pipeline, call ``pool.close()`` to cancel
+        new reservations and wake blocked producers without invalidating live
+        storage. After workers are reaped and aliases/claims are released, retry
+        close to finish retirement, then unlink. Retain owning handles if reap
+        fails. A pool cannot mix direct and ordinary endpoints.
+
+        Args:
+            max_bytes: Positive limit within one segment; defaults to its size.
+
+        Returns:
+            Writable :py:class:`~spdl.pipeline.ArenaReservation` context, e.g.
+            ``with pool.reserve() as unit: ...``. Context exit aborts only
+            unsealed work; native aliases still gate FIFO reuse.
+
+        Raises:
+            BufferError: Capacity is exhausted or the pool is shut down.
+            RuntimeError: Another process already owns this pool's producer role.
+            ValueError: The byte limit is invalid.
+
+        .. versionadded:: 0.9.0
+        """
+        owner = self._prepare_direct()
+        self._register_endpoint(0)
+        return owner.reserve(max_bytes)
+
+    def recover(self, ticket: _ArenaAllocationTicket) -> _RecoveredAllocation:
+        """Claim one sealed allocation and borrow its lifetime-owned byte view.
+
+        Args:
+            ticket: Opaque ticket from ``unit.seal()`` on this pool. Application
+                metadata, offsets, dtype and shape travel beside it in ordinary
+                IPC and are interpreted by the caller, not the arena.
+
+        Returns:
+            One-use context yielding a memoryview over the complete sealed
+            extent, including alignment padding::
+
+                with pool.recover(ticket) as data:
+                    use(data)
+
+            Recovery claims immediately, before returning the context. Exit
+            releases the logical caller hold, even on exceptions. Escaped native
+            aliases, caller-created typed views and H2D source holds still prevent
+            reuse; the name ``data`` also remains bound after a ``with`` statement.
+            Drop final aliases before expecting capacity. An abandoned context
+            requires terminal arena cleanup, not GC-based delivery inference.
+            An empty extent yields an empty view without requiring native IO.
+
+        Raises:
+            RuntimeError: Identity/extent is invalid or the ticket was claimed.
+            ValueError: The ticket packet exceeds 64 KiB.
+
+        .. versionadded:: 0.9.0
+
+        .. versionchanged:: 0.9.0
+           Yields bytes only; payload reconstruction belongs to the caller.
+        """
+        if (
+            type(ticket) is not _ArenaAllocationTicket
+            or ticket.arena_id != self.arena_id
+        ):
+            raise RuntimeError("Arena allocation ticket belongs to a different pool")
+        owner = self._prepare_direct()
+        self._register_endpoint(1)
+        return owner.recover(ticket)
+
+    def discard(self, ticket: _ArenaAllocationTicket) -> None:
+        """Claim and discard an unread ticket exactly once, without restoring data.
+
+        Args:
+            ticket: Unread metadata from this pool. For example, discard outputs
+                intentionally not consumed during a confirmed queue drain.
+
+        Raises:
+            RuntimeError: The ticket is foreign, stale, already recovered or
+                discarded. Replay and serialization retries do not create owners.
+
+        Producer aliases continue to gate reuse. A lost ticket remains occupied
+        until terminal cleanup after workers are reaped; neither GC nor delivery
+        failures imply it is safe to release.
+
+        .. versionadded:: 0.9.0
+        """
+        if (
+            type(ticket) is not _ArenaAllocationTicket
+            or ticket.arena_id != self.arena_id
+        ):
+            raise RuntimeError("Arena allocation ticket belongs to a different pool")
+        self._prepare_direct().discard(ticket)
 
     def _register_endpoint(self, side: int) -> None:
         with self._condition(), self._close_lock:
@@ -526,7 +674,9 @@ class SharedMemorySegmentPool:
                 )
             previous = int(_CTRL.unpack_from(self._ctrl_view(), 0)[4 + side])
             pid = os.getpid()
-            if previous not in (0, pid) and (_process_exists(previous)):
+            if previous not in (0, pid) and (
+                self._mode == _DIRECT and side == 0 or _process_exists(previous)
+            ):
                 raise RuntimeError("Arena endpoint already belongs to another process")
             struct.pack_into("<Q", self._ctrl_view(), 18 + 8 * side, pid)
 
@@ -598,7 +748,13 @@ class SharedMemorySegmentPool:
                 return
             if any(self._mapping_exports.values()):
                 return
-            if consumer == os.getpid():
+            mode = int(_CTRL.unpack_from(self._ctrl_view(), 0)[3])
+            if mode == _DIRECT:
+                if self._direct is not None and self._direct.pending_close(
+                    int(producer), int(consumer)
+                ):
+                    return
+            elif consumer == os.getpid():
                 reader = self._reader
                 if reader is not None and reader.lease is not None:
                     return
@@ -612,6 +768,8 @@ class SharedMemorySegmentPool:
 
     def _close_local(self) -> None:
         with self._close_lock:
+            if self._direct is not None:
+                self._direct.close()
             self._closed = True
             if self._ctrl_buf is not None:
                 self._ctrl_buf.release()

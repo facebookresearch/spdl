@@ -9,6 +9,7 @@
 from ._arena import (
     ArenaProtocol,
     ArenaReaderProtocol,
+    ArenaReservation,
     ArenaWriterProtocol,
     SharedMemoryRingBuffer,
     SharedMemorySegmentPool,
@@ -56,6 +57,7 @@ from ._profile import profile_pipeline, ProfileHook, ProfileResult
 __all__ = [
     "ArenaProtocol",
     "ArenaReaderProtocol",
+    "ArenaReservation",
     "ArenaWriterProtocol",
     "BackgroundTask",
     "BackgroundTaskFactory",

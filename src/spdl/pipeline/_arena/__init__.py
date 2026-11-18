@@ -8,6 +8,7 @@
 """Shared-memory arena for moving large payloads across processes."""
 
 from ._arena import _Arena
+from ._direct import ArenaReservation
 from ._pool import SharedMemorySegmentPool
 from ._protocol import ArenaProtocol, ArenaReaderProtocol, ArenaWriterProtocol
 from ._ring import SharedMemoryRingBuffer
@@ -15,6 +16,7 @@ from ._ring import SharedMemoryRingBuffer
 __all__ = [
     "ArenaProtocol",
     "ArenaReaderProtocol",
+    "ArenaReservation",
     "ArenaWriterProtocol",
     "SharedMemoryRingBuffer",
     "SharedMemorySegmentPool",
