@@ -16,6 +16,7 @@ from spdl.pipeline._iter_utils import _subprocess as m
 
 class SubprocessFeederCleanupTest(unittest.TestCase):
     def test_normal_real_queue_feeder_is_joined(self) -> None:
+        """A normal queue close joins its real feeder thread."""
         q = mp.get_context("spawn").Queue()
         q.put("tiny command")
         feeder = q._thread  # type: ignore[attr-defined]
@@ -23,17 +24,20 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
         self.assertFalse(feeder.is_alive())
 
     def test_blocked_feeder_wait_is_bounded_and_abandoned(self) -> None:
+        """A blocked feeder is abandoned after a bounded wait."""
         gate = threading.Event()
         feeder = threading.Thread(target=gate.wait, daemon=True)
         feeder.start()
         q = SimpleNamespace(
             _thread=feeder, close=Mock(), join_thread=Mock(), cancel_join_thread=Mock()
         )
-        start = time.monotonic()
         try:
             with self.assertLogs(m._LG, level="WARNING") as logs:
-                m._close_queue(q)
-            self.assertLess(time.monotonic() - start, 6.0)
+                close_queue = m._close_queue
+                start = time.monotonic()
+                close_queue(q)
+                elapsed = time.monotonic() - start
+            self.assertLess(elapsed, 6.0)
             q.cancel_join_thread.assert_called_once()
             q.join_thread.assert_not_called()
             self.assertIn("Timed out joining", logs.output[0])
@@ -42,6 +46,7 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
             feeder.join(3)
 
     def test_clean_status_is_evaluated_after_worker_join(self) -> None:
+        """Command cleanup observes the exit status established by worker join."""
         process = SimpleNamespace(exitcode=None)
         process.join = lambda timeout: setattr(process, "exitcode", 0)
         cmd_q, data_q = object(), object()
@@ -65,6 +70,7 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
         self.assertIsNone(interface.data_q)
 
     def test_force_failed_and_unstarted_paths_stay_abandoned(self) -> None:
+        """Forced, failed and unstarted workers retain queue abandonment."""
         for force, started, exitcode in [
             (True, True, 0),
             (False, True, -15),
@@ -91,6 +97,7 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
                 )
 
     def test_active_primary_failure_stays_abandoned(self) -> None:
+        """An already active failure preserves command-queue abandonment."""
         process = SimpleNamespace(exitcode=0, join=lambda timeout: None)
         interface = SimpleNamespace(process=process, cmd_q=object(), data_q=object())
         try:
@@ -111,6 +118,7 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
         )
 
     def test_body_failure_stays_abandoned_and_is_not_suppressed(self) -> None:
+        """A body failure keeps queue abandonment and propagates unchanged."""
         process = SimpleNamespace(exitcode=0, join=lambda timeout: None)
         interface = SimpleNamespace(process=process, cmd_q=object(), data_q=object())
         error = RuntimeError("body failure")
@@ -132,6 +140,7 @@ class SubprocessFeederCleanupTest(unittest.TestCase):
         self.assertIsNone(interface.data_q)
 
     def test_retirement_failure_stays_abandoned_and_is_not_suppressed(self) -> None:
+        """Arena retirement failures abandon queues without masking the error."""
         for phase in ("close", "unlink"):
             with self.subTest(phase=phase):
                 process = SimpleNamespace(exitcode=0, join=lambda timeout: None)

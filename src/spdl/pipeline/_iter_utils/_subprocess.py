@@ -116,7 +116,7 @@ class _IPCResourceCleanup:
         self._data_q = data_q
         self._arena = arena
         self._process_started = process_started
-        self._force = force
+        self.abandon_commands = force
         self._cleanup = ExitStack()
         self._active_error = sys.exception()
 
@@ -184,7 +184,7 @@ class _IPCResourceCleanup:
     ) -> bool:
         # Evaluated after _join, while both queue wrappers remain strongly held.
         abandon = (
-            self._force
+            self.abandon_commands
             or self._active_error is not None
             or exc is not None
             or not self._process_started
@@ -215,7 +215,8 @@ class _ipc(Generic[T]):
         *,
         force: bool,
         process_started: bool,
-    ) -> None:
+    ) -> bool:
+        clean = True
         if process_started and self.process.is_alive():
             if force:
                 # During initialization the worker cannot observe ABORT until the
@@ -225,6 +226,7 @@ class _ipc(Generic[T]):
                 try:
                     cmd_q.put_nowait(_Cmd.ABORT)
                 except (EOFError, OSError, ValueError, queue.Full):
+                    clean = False
                     _LG.debug(
                         "Could not request graceful subprocess shutdown.",
                         exc_info=True,
@@ -235,6 +237,7 @@ class _ipc(Generic[T]):
             try:
                 arena.shutdown_arena()
             except Exception:
+                clean = False
                 _LG.warning(
                     "Failed to wake the subprocess arena during teardown.",
                     exc_info=True,
@@ -243,11 +246,13 @@ class _ipc(Generic[T]):
         try:
             _drain(data_q)
         except (EOFError, OSError, RuntimeError, ValueError):
+            clean = False
             # Unread tensor payloads can fail to unpickle after the worker exits.
             _LG.debug(
                 "Ignoring an unread subprocess payload during teardown.",
                 exc_info=True,
             )
+        return clean
 
     def terminate(self, *, force: bool = False) -> None:
         if self.closed.is_set():
@@ -270,8 +275,8 @@ class _ipc(Generic[T]):
             arena,
             process_started=process_started,
             force=force,
-        ):
-            self._prepare_process_for_shutdown(
+        ) as cleanup:
+            cleanup.abandon_commands |= not self._prepare_process_for_shutdown(
                 cmd_q,
                 data_q,
                 arena,
