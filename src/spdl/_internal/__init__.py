@@ -7,7 +7,7 @@
 __all__ = ["log_api_usage_once"]
 
 try:
-    from .fb import log_api_usage_once
+    from .fb import log_api_usage_once  # type: ignore[import-not-found]
 except ImportError:
 
     def log_api_usage_once(_: str, *, metadata: str | None = None) -> None:

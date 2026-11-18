@@ -106,6 +106,20 @@ def run(output_dir: Path) -> None:
     for module, output_name in modules:
         stub_content = generate_stub_content(module)
         stub_content = re.sub(r"_spdl_ffmpeg\d?", "_libspdl", stub_content)
+        # Nanobind emits C++ names for internal/unregistered types with no Python
+        # equivalent. Preserve those annotations and mark their type-precision gap.
+        stub_content = re.sub(
+            r'(?m)^(def make_(?:demuxer|decoder)\(.*"spdl::core::[^"]+".*)$',
+            r"\1  # type: ignore[valid-type]",
+            stub_content,
+        )
+        # TAR's object annotation overlaps memoryview, with different parser
+        # return types. Preserve the existing overloads and mark that overlap.
+        stub_content = re.sub(
+            r"(?m)^(def parse_tar\(arg: memoryview, /\) -> InMemoryTarParser: \.\.\.)$",
+            r"\1  # type: ignore[overload-overlap]",
+            stub_content,
+        )
         write_stub_file(stub_content, output_dir, output_name)
 
     print("All stubs generated successfully!")
