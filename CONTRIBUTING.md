@@ -11,16 +11,21 @@ install Python itself. Set up the contributor checks with:
 python -m pip install pre-commit
 pre-commit install
 pre-commit run pyrefly --all-files
+pre-commit run mypy --all-files
 ```
 
-The first Pyrefly run installs the pinned CPU typing dependencies automatically;
-later runs reuse the cache. No manual Torch installation or native build is
-needed. One full-project Python 3.14 typing profile runs through the hook and
-existing lint CI job; the mypy reference hook remains optional. Python 3.12
-must still be installed and discoverable by pre-commit: it hosts the cached
-checker and pinned dependency wheels, independently of the Python 3.14 typing
-target. This does not change SPDL's Python 3.11 minimum runtime support. The
-pinned Torch wheels support Linux/Windows
+The first checker runs install their pinned CPU typing dependencies automatically;
+later runs reuse the caches. No manual Torch installation or native build is
+needed. Pyrefly checks its full-project profile, while mypy checks the entire
+`src/spdl` directory through the configuration in `pyproject.toml`; tests and
+examples are outside mypy's scope. A change under `src/spdl` or to the mypy
+configuration triggers this full source check, even in diff-based CI.
+`pre-commit run mypy --all-files` also runs the full source check locally.
+Both target Python 3.14 and use a Python 3.12 host for the
+cached checker environments and dependency wheels. The mypy hook remains
+advisory, so inspect its diagnostics rather than treating its `Passed` label as
+proof of zero errors. This does not change SPDL's Python 3.11 minimum runtime
+support. The pinned Torch wheels support Linux/Windows
 CPU installations and Apple Silicon Macs with macOS 14 or newer; there is no
 matching Python 3.12 Intel Mac wheel.
 
