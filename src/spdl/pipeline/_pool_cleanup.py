@@ -14,6 +14,7 @@ from typing import Protocol
 
 __all__ = [
     "_retain_pool_cleanup",
+    "_PoolCleanup",
     "_release_pool_cleanup",
     "get_pending_pipeline_pool_cleanup_count",
     "retry_pending_pipeline_pool_cleanup",

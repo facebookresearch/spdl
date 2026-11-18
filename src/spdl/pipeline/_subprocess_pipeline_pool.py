@@ -50,8 +50,9 @@ import traceback
 from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass, replace
 from functools import partial
+from importlib import import_module
 from multiprocessing.reduction import ForkingPickler
-from typing import Any, cast
+from typing import Any, cast, Protocol
 
 from spdl.pipeline._arena._protocol import _is_arena_backend, ArenaProtocol
 from spdl.pipeline._arena._region import (
@@ -71,6 +72,7 @@ from spdl.pipeline._components import (
     _RESULT,
     _SESSION_END,
 )
+from spdl.pipeline._iter_utils import _Queue
 from spdl.pipeline.defs._defs import PipelineConfig, SourceConfig
 
 from ._pool_cleanup import _release_pool_cleanup, _retain_pool_cleanup
@@ -902,6 +904,29 @@ class _InterpreterWorker(_Worker):
         self._closed = True
 
 
+class _InterpreterHandle(Protocol):
+    @property
+    def id(self) -> int: ...
+
+    def is_running(self) -> bool: ...
+
+    def close(self) -> None: ...
+
+    def call_in_thread(
+        self, target: Callable[..., object], /, *args: object
+    ) -> threading.Thread: ...
+
+
+class _InterpretersModule(Protocol):
+    InterpreterError: type[Exception]
+
+    def create(self) -> _InterpreterHandle: ...
+
+    def list_all(self) -> list[_InterpreterHandle]: ...
+
+    def create_queue(self, *, maxsize: int = 0) -> _Queue[object]: ...
+
+
 class _InterpreterBackend(_PoolBackend):
     """Runs each worker in a Python subinterpreter via :py:mod:`concurrent.interpreters`.
 
@@ -910,14 +935,11 @@ class _InterpreterBackend(_PoolBackend):
     """
 
     def __init__(self) -> None:
-        import concurrent.interpreters as interpreters  # pyre-ignore[21]
+        self._interpreters: _InterpretersModule = import_module(  # type: ignore[assignment]
+            "concurrent.interpreters"
+        )
 
-        # Typed ``Any``: ``concurrent.interpreters`` is Python 3.14+ only, so
-        # pyre (running under an older config) cannot resolve its
-        # ``create``/``create_queue`` members.
-        self._interpreters: Any = interpreters
-
-    def make_queue(self, maxsize: int) -> Any:
+    def make_queue(self, maxsize: int) -> _Queue[object]:
         return self._interpreters.create_queue(maxsize=maxsize)
 
     def make_serialization_failure_flag(self) -> None:

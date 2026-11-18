@@ -12,10 +12,12 @@ subinterpreters, as well as caching iterators for performance testing.
 """
 
 from ._cache_iterator import cache_iterator
+from ._common import _Queue
 from ._subinterpreter import iterate_in_subinterpreter
 from ._subprocess import iterate_in_subprocess
 
 __all__ = [
+    "_Queue",
     "iterate_in_subprocess",
     "iterate_in_subinterpreter",
     "cache_iterator",

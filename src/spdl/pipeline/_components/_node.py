@@ -43,6 +43,7 @@ from ._pipe import (
 )
 from ._queue import (
     _AsyncQueueWithSyncMirror,
+    _QueueFactory,
     AsyncQueue,
     get_default_queue_class,
     StatsQueue,
@@ -322,7 +323,7 @@ def _convert_pipes(
         | PlacementConfig
     ],
     n: _TNodes,
-    q_class: type[AsyncQueue],
+    q_class: _QueueFactory,
     pipeline_id: int,
     stage_id: _MutableInt,
     path_idx: int = -1,
@@ -368,7 +369,7 @@ def _convert_pipes(
 def _convert_path_variants(
     cfg: PathVariantsConfig,
     n: _TNodes,
-    q_class: type[AsyncQueue],
+    q_class: _QueueFactory,
     pipeline_id: int,
     stage_id: _MutableInt,
     path_idx: int = -1,
@@ -451,7 +452,7 @@ def _convert_path_variants(
 
 def _convert_config(
     plc: PipelineConfig[T],
-    q_class: type[AsyncQueue],
+    q_class: _QueueFactory,
     pipeline_id: int,
     stage_id: _MutableInt,
     disable_sink: bool = False,
@@ -479,6 +480,7 @@ def _convert_config(
     info = _get_stage_info(plc.src, pipeline_id, stage_id)
     stage_id += 1
     q = q_class(info, buffer_size=_BUFFER_SIZE)
+    n: _TOutputNodes
     match cfg := plc.src:
         case SourceConfig():
             n = _SourceNode(info, cfg, output_queue=q)
@@ -496,6 +498,7 @@ def _convert_config(
         n = _convert_pipes(plc.pipes, n, q_class, pipeline_id, stage_id)
 
     if not disable_sink:
+        sink_out_q: AsyncQueue | ThreadOutputQueue
         info = _get_stage_info(plc.sink, pipeline_id, stage_id)
         stage_id += 1
         if use_thread_output_queue:
@@ -573,6 +576,16 @@ def _build_node(
             return
         raise RuntimeError(f"[Internal Error] coroutine cannot be built twice. {node}")
 
+    cfg: (
+        MergeConfig
+        | _PathVariantsMergeConfig
+        | PipeConfig
+        | SinkConfig
+        | AggregateConfig
+        | DisaggregateConfig
+        | PathVariantsConfig
+        | _SubprocessPipelineConfig
+    )
     match node:
         case _SourceNode():
             fn = _source_continuous if node.cfg.continuous else _source
@@ -659,7 +672,7 @@ def _build_node(
                     in_q, out_q = node.input_queue, node.output_queue
                     hooks = task_hook_factory(node.info)
                     fc = fc_class(max_failures)
-                    args = _PipeArgs(op=_disaggregate)  # pyre-ignore[6]
+                    args: _PipeArgs[list[object], object] = _PipeArgs(op=_disaggregate)
                     node._coro = _pipe(node.info, in_q, out_q, args, fc, hooks, False)
 
                 case _SubprocessPipelineConfig():
@@ -718,23 +731,23 @@ def _set_global_id(val: int) -> None:
     _PIPELINE_ID = val
 
 
-def _default_q(interval: float) -> type[AsyncQueue]:
+def _default_q(interval: float) -> _QueueFactory:
     queue_class = get_default_queue_class()
-    return partial(queue_class, interval=interval)  # pyre-ignore[7]
+    return partial(queue_class, interval=interval)  # type: ignore[call-arg]
 
 
 def _default_hook_factory(
     report_stats_interval: float,
 ) -> Callable[[StageInfo], list[TaskHook]]:
     if (hook_class := get_default_hook_class()) is not None:
+        hook_factory = hook_class
 
         def _hook_factory(stage_info: StageInfo) -> list[TaskHook]:
-            # pyrefly: ignore [bad-argument-count, unexpected-keyword]
-            return [hook_class(stage_info, interval=report_stats_interval)]
+            return [hook_factory(stage_info, interval=report_stats_interval)]  # type: ignore[call-arg]
 
     else:
 
-        def _hook_factory(_: StageInfo) -> list[TaskHook]:
+        def _hook_factory(stage_info: StageInfo) -> list[TaskHook]:
             return []
 
     return _hook_factory
@@ -746,7 +759,7 @@ def _build_pipeline_node(
     *,
     max_failures: int | Fraction,
     report_stats_interval: float,
-    queue_class: type[AsyncQueue] | None,
+    queue_class: _QueueFactory | None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None,
     stage_id: int,
     use_thread_output_queue: bool | type[ThreadOutputQueue] = False,
@@ -1020,7 +1033,7 @@ def _build_pipeline_coro(
     *,
     max_failures: int | Fraction = -1,
     report_stats_interval: float = -1,
-    queue_class: type[AsyncQueue] | None = None,
+    queue_class: _QueueFactory | None = None,
     task_hook_factory: Callable[[StageInfo], list[TaskHook]] | None = None,
     stage_id: int = 0,
     background_tasks: Sequence[BackgroundTaskFactory] | None = None,

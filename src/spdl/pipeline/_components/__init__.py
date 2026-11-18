@@ -15,6 +15,7 @@ from ._hook import (
 from ._node import _build_pipeline_coro, _get_global_id, _set_global_id, PipelineFailure
 from ._queue import (
     _AsyncQueueWithSyncMirror,
+    _QueueFactory,
     AsyncQueue,
     get_default_queue_class,
     QueuePerfStats,
@@ -62,6 +63,7 @@ __all__ = [
     "is_epoch_end",
     "PipelineFailure",
     "_AsyncQueueWithSyncMirror",
+    "_QueueFactory",
     "set_default_hook_class",
     "set_default_queue_class",
     "TaskHook",

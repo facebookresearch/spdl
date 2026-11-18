@@ -38,7 +38,7 @@ import time
 import traceback
 import warnings
 import weakref
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from concurrent.futures import (
     BrokenExecutor,
     Executor,
@@ -55,6 +55,7 @@ from spdl.pipeline._executor_proxy import (
     _ensure_executor_unused,
     _rewrite_config_executors,
 )
+from spdl.pipeline._pool_cleanup import _PoolCleanup
 from spdl.pipeline.defs import PipelineConfig
 
 __all__ = [
@@ -1148,13 +1149,13 @@ def _start_pool_monitors(pools: list[_WorkerPool]) -> None:
         pool._start_monitor()
 
 
-def _shutdown_pools(pools: list[_WorkerPool]) -> None:
+def _shutdown_pools(pools: Sequence[_PoolCleanup]) -> None:
     for pool in pools:
         pool.shutdown()
 
 
 def _teardown_inner_then_pools(
-    inner: Iterable[object], pools: list[_WorkerPool]
+    inner: Iterable[object], pools: Sequence[_PoolCleanup]
 ) -> None:
     # Join the worker subprocess first (the iterable's own finalizer terminates and joins it),
     # then reap the pools it submits to. Reaping the pools while the subprocess is still live
@@ -1187,7 +1188,7 @@ class _IterableWithPoolShutdown(Iterable[_T]):
         pools: The hoisted worker pools to shut down once the wrapper is torn down.
     """
 
-    def __init__(self, inner: Iterable[_T], pools: list[_WorkerPool]) -> None:
+    def __init__(self, inner: Iterable[_T], pools: Sequence[_PoolCleanup]) -> None:
         self._inner = inner
         self._pools = pools
         self._finalizer: weakref.finalize = weakref.finalize(

@@ -21,6 +21,7 @@ from typing import Any, cast, Generic, Protocol, TypeVar
 from spdl.pipeline._arena import _Arena, ArenaProtocol
 
 __all__ = [
+    "_Queue",
     "_Cmd",
     "_Status",
     "_Msg",

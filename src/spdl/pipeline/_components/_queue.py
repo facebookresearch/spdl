@@ -29,6 +29,7 @@ from ._common import (
 
 __all__ = [
     "_queue_stage_hook",
+    "_QueueFactory",
     "_AsyncQueueWithSyncMirror",
     "AsyncQueue",
     "StatsQueue",
@@ -90,6 +91,10 @@ class AsyncQueue(asyncio.Queue):
     async def stage_hook(self) -> AsyncIterator[None]:
         """Context manager, which handles init/final logic for the stage."""
         yield
+
+
+class _QueueFactory(Protocol):
+    def __call__(self, info: StageInfo, /, *, buffer_size: int = 1) -> AsyncQueue: ...
 
 
 @asynccontextmanager
