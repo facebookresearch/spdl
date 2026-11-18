@@ -19,8 +19,8 @@ from spdl.pipeline._arena._pool import SharedMemorySegmentPool
 
 
 class ArenaNativeOwnershipTest(unittest.TestCase):
-    def test_optional_io_exporter_does_not_load_media_or_torch(self) -> None:
-        """Real IO initialization may load NumPy, but not CUDA/media or Torch."""
+    def test_rust_exporter_does_not_load_io_or_array_libraries(self) -> None:
+        """Rust exports retain owners without importing IO, NumPy or Torch."""
         script = textwrap.dedent("""
             import importlib.abc, sys
             class RejectHeavy(importlib.abc.MetaPathFinder):
@@ -30,10 +30,8 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
                             'Meta logging is not part of the OSS fixture', name=fullname
                         )
                     if (
-                        fullname.split('.')[0] in ('torch', 'numba')
-                        or (fullname.startswith('spdl.io.lib.') and any(
-                            s in fullname for s in ('_spdl', '_libspdl', '_archive', '_wav')
-                        ))
+                        fullname.split('.')[0] in ('torch', 'numba', 'numpy')
+                        or fullname == 'spdl.io' or fullname.startswith('spdl.io.')
                     ):
                         raise AssertionError('unexpected heavy import: ' + fullname)
             sys.meta_path.insert(0, RejectHeavy())
@@ -45,7 +43,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
             assert bytes(alias) == b'sf' and not released
             alias.release(); del alias
             assert released == [True]
-            from spdl.io.lib import _buffer
+            from spdl.pipeline.lib import _buffer
             import ctypes
             class Owner:
                 def __init__(self):
@@ -61,14 +59,11 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
             assert bytes(alias) == b'wned' and released == [True]
             alias.release(); del alias
             assert released == [True, 'owner']
-            assert 'spdl.io.lib._buffer' in sys.modules
+            assert 'spdl.pipeline.lib._native' in sys.modules
             assert 'torch' not in sys.modules
-            assert not any(
-                n.startswith('spdl.io.lib.') and any(
-                    s in n for s in ('_spdl', '_libspdl', '_archive', '_wav')
-                ) for n in sys.modules
-            )
-            print('OPTIONAL_IO_BUFFER_PASSED')
+            assert not any(n == 'spdl.io' or n.startswith('spdl.io.') for n in sys.modules)
+            assert 'numpy' not in sys.modules
+            print('RUST_BUFFER_BOUNDARY_PASSED')
         """)
         result = subprocess.run(
             [sys.executable, "-c", script],
@@ -78,12 +73,12 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
             timeout=60,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("OPTIONAL_IO_BUFFER_PASSED", result.stdout)
+        self.assertIn("RUST_BUFFER_BOUNDARY_PASSED", result.stdout)
 
     def test_memoryview_aliases_hold_reusable_storage_without_dependencies(
         self,
     ) -> None:
-        """Slices/casts hold optional IO storage without loading Torch or CUDA."""
+        """Slices/casts hold Rust-backed storage without loading Torch or CUDA."""
         script = textwrap.dedent("""
             import gc
             import importlib.abc
@@ -123,7 +118,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
                     gc.collect()
                     self.assertEqual(pool._reclaimed, 1)
                     self.assertNotIn('torch', sys.modules)
-                    self.assertIn('spdl.io.lib._buffer', sys.modules)
+                    self.assertIn('spdl.pipeline.lib._native', sys.modules)
 
             unittest.main()
         """)
@@ -221,7 +216,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
         self.addCleanup(first.clear)
 
         def fail_after_native(_type, value):
-            self.assertEqual(type(value.obj).__module__, "spdl.io.lib._buffer")
+            self.assertEqual(type(value.obj).__module__, "spdl.pipeline.lib._native")
             self.assertEqual(bytes(value), b"a" * 32)
             if escaped:
                 captured.append(value[1:])
@@ -336,7 +331,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
 
     def test_ticket_rejected_reuse_does_not_release_first_export(self) -> None:
         """Failed native adoption cannot retire another export's capability."""
-        from spdl.io.lib import _buffer
+        from spdl.pipeline.lib import _buffer
 
         released = []
         ticket = _buffer._release_ticket(lambda: released.append(True))
@@ -362,7 +357,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
 
     def test_ticket_setup_failure_and_cancel_are_transactional(self) -> None:
         """A failed pre-adoption export rolls back once; canceled setup calls none."""
-        from spdl.io.lib import _buffer
+        from spdl.pipeline.lib import _buffer
 
         released = []
         ticket = _buffer._release_ticket(lambda: released.append(True))
@@ -383,7 +378,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
 
     def test_ticket_native_owner_survives_cyclic_resurrection(self) -> None:
         """Native-owned tickets retain storage through a resurrected view holder."""
-        from spdl.io.lib import _buffer
+        from spdl.pipeline.lib import _buffer
 
         released = []
         resurrected = []
@@ -444,7 +439,7 @@ class ArenaNativeOwnershipTest(unittest.TestCase):
         """Setup releases once; concurrent rollback cannot retire a live empty export."""
         import threading
 
-        from spdl.io.lib import _buffer
+        from spdl.pipeline.lib import _buffer
 
         released = []
         setup = _buffer._release_ticket(lambda: released.append("setup"))

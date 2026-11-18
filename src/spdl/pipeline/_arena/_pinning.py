@@ -15,6 +15,7 @@ from types import ModuleType
 from typing import cast
 
 from spdl._internal.import_utils import lazy_import
+from spdl.pipeline.lib import _buffer
 
 __all__ = [
     "_HostRegistration",
@@ -131,23 +132,7 @@ class _HostRegistration:
 def _allocate_pinned(nbytes: int) -> "memoryview[int]":
     if nbytes < 0:
         raise ValueError("nbytes must be non-negative")
-    import importlib
-
-    try:
-        buffer = importlib.import_module(
-            "spdl.io.lib._buffer"
-        )  # @manual=//spdl/io/lib:_buffer
-    except ModuleNotFoundError as error:
-        if error.name not in (
-            "spdl.io",
-            "spdl.io.lib",
-            "spdl.io.lib._buffer",
-        ):
-            raise
-        raise RuntimeError(
-            "Pinned arena storage requires optional SPDL IO buffer support; "
-            "install spdl.io with its native buffer helper."
-        ) from error
+    buffer = _buffer._require_backend()
     device = _local_device()
     with torch.cuda.device(device):
         storage = torch.empty(nbytes, dtype=torch.uint8, device="cpu", pin_memory=True)

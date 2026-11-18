@@ -4,42 +4,23 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Optional IO buffer exports loaded only by shared-storage data paths."""
+"""Storage exports backed by the optional native pipeline binding."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from types import ModuleType
 from typing import cast
 
+from spdl.pipeline.lib import _buffer
+
 __all__ = ["_ExportGuard", "_export_buffer"]
-
-
-def _load_buffer_helper() -> ModuleType:
-    import importlib
-
-    try:
-        return importlib.import_module(
-            "spdl.io.lib._buffer"
-        )  # @manual=//spdl/io/lib:_buffer
-    except ModuleNotFoundError as error:
-        if error.name not in (
-            "spdl.io",
-            "spdl.io.lib",
-            "spdl.io.lib._buffer",
-        ):
-            raise
-        raise RuntimeError(
-            "Native arena storage requires optional SPDL IO buffer support; "
-            "install spdl.io with its native buffer helper."
-        ) from error
 
 
 class _ExportGuard:
     """One hold: setup may roll back; only native storage releases after adoption."""
 
     def __init__(self, release: Callable[[], None]) -> None:
-        self._ticket = _load_buffer_helper()._release_ticket(release)
+        self._ticket = _buffer._release_ticket(release)
 
     def activate(self) -> None:
         self._ticket._activate()
@@ -54,12 +35,11 @@ class _ExportGuard:
 def _export_buffer(
     view: "memoryview[int]", release: Callable[[], None] | _ExportGuard
 ) -> "memoryview[int]":
-    """Export storage through optional SPDL IO, retaining native alias lifetime.
+    """Export storage through the pipeline binding, retaining native alias lifetime.
 
     Native ticket adoption precedes returning the view, including fallible Python
     post-processing. A failed return/traceback cannot retire native-owned storage.
     The immutable exporter releases backing storage before its callback.
     """
-    buffer = _load_buffer_helper()
     ticket = release._ticket if isinstance(release, _ExportGuard) else release
-    return cast("memoryview[int]", buffer._export(view, ticket))
+    return cast("memoryview[int]", _buffer._export(view, ticket))

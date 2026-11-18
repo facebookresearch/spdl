@@ -38,6 +38,8 @@ on:
 env:
   ARTIFACT: wheel-linux-py${{ inputs.python-version }}${{ inputs.free-threaded }}-cuda${{ inputs.cuda-version }}${{ inputs.use-nvdec }}
   STUB: stub-files-${{ inputs.arch }}-${{ inputs.python-version }}${{ inputs.free-threaded }}
+  SPDL_BUILD_PIPELINE_EXTENSION: "1"
+  CARGO_BUILD_JOBS: 2
   SPDL_USE_TRACING: 1
   SPDL_USE_CUDA: 1
   SPDL_USE_NVCODEC: "${{ inputs.use-nvdec == 'nvdec' }}"
@@ -50,6 +52,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - name: Set up Rust for the native core extension
+        uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.85.1
 
       - uses: actions/cache/restore@v4
         with:
@@ -92,6 +99,12 @@ jobs:
           # Build package
           uv build --no-python-downloads --all-packages --wheel
           ./packaging/repair_wheels.sh "manylinux_2_27_${{ inputs.arch }}" ./dist ~/package
+
+          # Check the installed core wheel, including a cold absent-binary run.
+          uv pip install --python .venv/bin/python --no-deps ~/package/spdl_core*.whl
+          args=()
+          if [[ "${SPDL_BUILD_PIPELINE_EXTENSION}" == "0" ]]; then args+=(--no-native); fi
+          .venv/bin/python -I .github/scripts/check_pipeline_extension.py "${args[@]}"
 
       - uses: actions/upload-artifact@v4
         name: Upload build artifact

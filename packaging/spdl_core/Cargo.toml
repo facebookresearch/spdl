@@ -1,0 +1,18 @@
+# This Cargo package only builds the Python extension; SPDL's release version
+# continues to come from VERSION via setup.py.
+[package]
+name = "spdl-pipeline-python"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "_native"
+path = "src/spdl/pipeline/lib/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3-ffi = { version = "=0.30.1", features = ["extension-module"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(pyo3_ffi_reexport)"] }

@@ -11,7 +11,8 @@ From PyPI
 The `spdl` package is the top-level package for installing the component libraries.
 You can install the component libraries separately.
 
-- `pip install spdl-core` for pipeline constructions. This is a pure-Python package.
+- ``pip install spdl-core`` for pipeline construction and the native Rust buffer backend.
+  The Python interfaces and ordinary pipeline execution also work without the binary.
 - `pip install spdl-io` for I/O processing. This package contains extension modules written in C++.
 
 From source
@@ -65,6 +66,7 @@ Requirements
 * Build requirements
     - C++20 compiler (Tested on GCC 11 and Clang 15)
     - CMake, Ninja
+    - Rust 1.85+ and Cargo (for native pipeline source builds)
     - (Optional) CUDA Toolkit
 
 * Runtime Requirements and dependencies
@@ -101,6 +103,32 @@ The libspdl uses the following third party libraries, which are fetched and buil
    FFmpeg libraries. However, please note that linking a non-LGPL binary might
    change the condition for redistribution of your application.
 
+
+Rust Pipeline Dependencies
+--------------------------
+
+The native pipeline binding uses only the low-level CPython declarations from
+``pyo3-ffi``. Its ownership state, atomics and module initialization use Rust's
+standard library; higher-level PyO3 wrappers and extra utility crates are not
+required. Cargo resolves the following locked third-party crates for OSS builds:
+
+* `pyo3-ffi <https://crates.io/crates/pyo3-ffi>`_ — direct binding dependency;
+  ``MIT OR Apache-2.0`` (`license files <https://github.com/PyO3/pyo3/tree/v0.30.1>`__).
+* `libc <https://crates.io/crates/libc>`_ — transitive platform declarations;
+  ``MIT OR Apache-2.0`` (`license files <https://github.com/rust-lang/libc>`__).
+* `pyo3-build-config <https://crates.io/crates/pyo3-build-config>`_ — build-time
+  interpreter/ABI detection; ``MIT OR Apache-2.0``
+  (`license files <https://github.com/PyO3/pyo3/tree/v0.30.1>`__).
+* `target-lexicon <https://crates.io/crates/target-lexicon>`_ — transitive build-time
+  target detection; ``Apache-2.0 WITH LLVM-exception``
+  (`license <https://github.com/bytecodealliance/target-lexicon/blob/v0.13.6/LICENSE>`__).
+
+These are the licenses declared by the locked crates. ``Cargo.lock`` records
+the exact versions and checksums. The Rust standard library is supplied by the
+Rust toolchain, not an additional Cargo dependency. The Python packaging helper
+`setuptools-rust <https://github.com/PyO3/setuptools-rust>`_
+(`MIT <https://github.com/PyO3/setuptools-rust/blob/main/LICENSE>`__) is a build-only
+dependency and is not required to import or use an installed wheel.
 
 Optional Dependencies
 ---------------------

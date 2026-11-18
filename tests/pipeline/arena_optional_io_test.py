@@ -31,6 +31,8 @@ class ArenaOptionalIOTest(unittest.TestCase):
                         raise ModuleNotFoundError(
                             'Meta logging is not part of the OSS fixture', name=fullname
                         )
+                    if fullname == 'spdl.pipeline.lib._native':
+                        raise ModuleNotFoundError('native binding blocked', name=fullname)
                     if (
                         fullname == 'spdl.io' or fullname.startswith('spdl.io.')
                         or fullname.split('.')[0] in ('torch', 'numpy')
@@ -40,6 +42,9 @@ class ArenaOptionalIOTest(unittest.TestCase):
             from spdl.pipeline import (
                 PipelineBuilder, SharedMemoryRingBuffer, SharedMemorySegmentPool
             )
+            from spdl.pipeline.lib._libspdl_pipeline import _export_owned
+            from spdl.pipeline.lib._buffer import _export, _release_ticket
+            assert 'spdl.pipeline.lib._native' not in sys.modules
             pipeline = PipelineBuilder().add_source([1, 2, 3]).add_sink(2).build(num_threads=1)
             with pipeline.auto_stop():
                 assert list(pipeline.get_iterator(timeout=10)) == [1, 2, 3]
@@ -64,7 +69,7 @@ class ArenaOptionalIOTest(unittest.TestCase):
                 try:
                     reader.read_binary(offset, size)
                 except RuntimeError as error:
-                    assert 'install spdl.io' in str(error)
+                    assert 'core Rust binding' in str(error)
                 else:
                     raise AssertionError('native pool export silently succeeded')
                 reader.end_unit(span)
@@ -92,17 +97,21 @@ class ArenaOptionalIOTest(unittest.TestCase):
         self,
     ) -> None:
         """Only missing IO/helper names are relabeled; ABI and NumPy errors survive."""
+        from spdl.pipeline.lib import _buffer
+
+        _buffer._load_rust.cache_clear()
+        self.addCleanup(_buffer._load_rust.cache_clear)
         for operation in (
             lambda: _export_buffer(memoryview(bytearray(b"safe")), lambda: None),
             lambda: _allocate_pinned(4),
         ):
             with self.subTest(operation=operation):
                 missing = ModuleNotFoundError(
-                    "no native helper", name="spdl.io.lib._buffer"
+                    "no native helper", name="spdl.pipeline.lib._native"
                 )
                 with patch("importlib.import_module", side_effect=missing):
                     with self.assertRaisesRegex(
-                        RuntimeError, "install spdl.io"
+                        RuntimeError, "core Rust binding"
                     ) as raised:
                         operation()
                     self.assertIs(raised.exception.__cause__, missing)

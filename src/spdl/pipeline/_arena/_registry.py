@@ -38,6 +38,7 @@ from types import ModuleType
 from typing import Any, cast, Protocol
 
 from spdl._internal.import_utils import lazy_import
+from spdl.pipeline.lib import _buffer
 
 __all__ = ["_OffloadHandlerProtocol", "_OffloadRegistry", "_default_registry"]
 
@@ -250,7 +251,7 @@ class _TorchHandler:
         # buffers retain a fresh wrapper, preserving any supplied slice offset.
         owner = (
             buf.obj
-            if type(buf.obj).__module__ == "spdl.io.lib._buffer"
+            if _buffer._is_exporter(buf.obj)
             and buf.c_contiguous
             and buf.nbytes == memoryview(buf.obj).nbytes
             else memoryview(buf)

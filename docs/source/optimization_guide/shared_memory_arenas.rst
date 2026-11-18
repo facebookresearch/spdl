@@ -73,13 +73,15 @@ CPU requirements and a basic example
 --------------------------------------------------
 
 Ordinary ``spdl.pipeline`` import/execution remains Python-only. Native-backed
-pool views, **including pageable ones**, require optional SPDL IO support via
-``spdl.io.lib._buffer``; install SPDL IO when using that storage path. The helper
-is loaded only when storage is actually exported. Unpinned ring copy-out does not
-need it. This is a storage-lifetime requirement, not a GPU requirement: CPU-only
-pool producers and consumers do not need to initialize CUDA. The IO parent may
-load its existing NumPy Python dependency; the native buffer helper itself has
-no media, tensor or CUDA native dependency and has no unsafe finalizer fallback.
+pool views, **including pageable ones**, use the Rust buffer backend bundled
+with ``spdl_core``. The Python buffer interface remains importable without a
+built binding and loads native code only when storage is exported. Without the
+binding, native storage operations fail explicitly; a broken Rust binary keeps
+its original import error. Unpinned ring copy-out does not need the native
+backend. This is a storage-lifetime requirement, not a GPU
+requirement: CPU-only pool producers and consumers do not need CUDA. The Rust
+backend has no IO, NumPy, Torch or media dependency and no unsafe wrapper-finalizer
+fallback.
 
 Create an arena in the parent, then give it to a subprocess iterable boundary.
 This example uses four reusable segments for 4-MiB FP32 batches. It keeps the

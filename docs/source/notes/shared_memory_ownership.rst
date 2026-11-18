@@ -46,15 +46,18 @@ outputs consume the old ring span.
 How the storage owner follows aliases
 ---------------------------------------
 
-Native-backed arena views use the optional ``spdl.io.lib._buffer`` helper. The
-`native buffer exporter implementation
-<https://github.com/facebookresearch/spdl/blob/main/src/spdl/io/lib/buffer/register.cpp>`_
-is the C++ ``Exporter`` introduced for these storage paths. Its immutable object
-implements the buffer protocol. For shared
+Native-backed arena views use the optional Rust backend in ``spdl_core``,
+through the importable ``spdl.pipeline.lib._buffer`` interface. Its immutable
+exporter implements the buffer protocol. For shared
 mappings it holds an actual ``Py_buffer`` export; for allocator-owned pinned
 outputs it holds a hidden reference to the allocation owner. A native storage
 consumer that retains this exporter keeps the underlying memory alive, even
 when the original Tensor or view wrapper disappears.
+
+Importing the interface does not require a built binding. Storage operations
+require the Rust backend and fail explicitly when it is absent; a broken native
+binary keeps its original import error. No legacy C++ implementation or
+Python-wrapper finalizer is used as a storage-lifetime fallback.
 
 The built-in Torch restore path retains the exporter itself for complete
 contiguous binaries. Independent wrappers preserve offsets for slices. Derived

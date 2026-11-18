@@ -9,7 +9,6 @@ target_include_directories(spdl_fused_external INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/../../.."
 )
 
-add_subdirectory(buffer)
 add_subdirectory(core)
 add_subdirectory(cuda)
 add_subdirectory(archive)

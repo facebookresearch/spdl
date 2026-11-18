@@ -14,7 +14,6 @@ from typing import cast
 
 import numpy as np
 import torch
-from spdl.io.lib import _buffer
 from spdl.pipeline._arena._offload import _offload, _restore
 from spdl.pipeline._arena._ownership import _export_buffer
 from spdl.pipeline._arena._pool import SharedMemorySegmentPool
@@ -24,6 +23,7 @@ from spdl.pipeline._arena._registry import (
     _OffloadRegistry,
     _TorchHandler,
 )
+from spdl.pipeline.lib import _buffer
 
 
 class ArenaOwnershipTest(unittest.TestCase):

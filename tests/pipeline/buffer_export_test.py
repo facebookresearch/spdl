@@ -15,7 +15,13 @@ import weakref
 
 class BufferExportTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.buffer = importlib.import_module("spdl.io.lib._buffer")
+        self.buffer = importlib.import_module("spdl.pipeline.lib._buffer")
+
+    def test_rust_backend_is_selected(self) -> None:
+        """The pipeline facade prefers the Rust backend over the legacy IO helper."""
+        self.assertEqual(
+            self.buffer._require_backend().__name__, "spdl.pipeline.lib._native"
+        )
 
     def test_legacy_export_notifies_after_last_alias(self) -> None:
         """A legacy release callback follows the final native buffer alias."""

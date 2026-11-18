@@ -38,3 +38,9 @@ export CUDA_PATH="${cuda_dir}"
 
 uv build --no-python-downloads --all-packages --wheel
 mv ./dist ./package
+
+# Check the installed core wheel, including a cold absent-binary run.
+uv pip install --no-deps ./package/spdl_core*.whl
+args=()
+if [[ "${SPDL_BUILD_PIPELINE_EXTENSION}" == "0" ]]; then args+=(--no-native); fi
+python -I .github/scripts/check_pipeline_extension.py "${args[@]}"

@@ -32,6 +32,8 @@ on:
 
 env:
   ARTIFACT: wheel-win-py${{ inputs.python-version }}${{ inputs.free-threaded }}
+  SPDL_BUILD_PIPELINE_EXTENSION: "1"
+  CARGO_BUILD_JOBS: 2
   SPDL_USE_TRACING: 0
   SPDL_USE_CUDA: 1
   SPDL_USE_NVCODEC: "${{ inputs.use-nvdec == 'nvdec' }}"
@@ -43,6 +45,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - name: Set up Rust for the native core extension
+        uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.85.1
 
       - uses: actions/cache/restore@v4
         with:

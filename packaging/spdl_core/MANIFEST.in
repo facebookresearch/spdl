@@ -1,0 +1,4 @@
+include Cargo.toml Cargo.lock VERSION
+recursive-include src/spdl/pipeline/lib *.rs *.pyi
+include src/spdl/py.typed
+global-exclude *.so *.pyd *.dylib
