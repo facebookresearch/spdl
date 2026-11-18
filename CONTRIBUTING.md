@@ -16,14 +16,13 @@ pre-commit run mypy --all-files
 
 The first checker runs install their pinned CPU typing dependencies automatically;
 later runs reuse the caches. No manual Torch installation or native build is
-needed. Mypy checks only the changed Python/stub files under `src/spdl` in a
-diff-based CI run; tests, examples and configuration-only changes do not trigger
-it. Use `pre-commit run mypy --all-files` for a full source check. Paired source
-and stub paths are mapped to the stub once, consistent with mypy's normal stub
-preference. Pyrefly's existing hook remains diff-triggered but checks its
-full-project profile when triggered. Both target Python 3.14 and use a Python
-3.12 host for the cached checker environments and dependency wheels. The mypy
-hook remains
+needed. Pyrefly checks its full-project profile, while mypy checks the entire
+`src/spdl` directory through the configuration in `pyproject.toml`; tests and
+examples are outside mypy's scope. A change under `src/spdl` or to the mypy
+configuration triggers this full source check, even in diff-based CI.
+`pre-commit run mypy --all-files` also runs the full source check locally.
+Both target Python 3.14 and use a Python 3.12 host for the
+cached checker environments and dependency wheels. The mypy hook remains
 advisory, so inspect its diagnostics rather than treating its `Passed` label as
 proof of zero errors. This does not change SPDL's Python 3.11 minimum runtime
 support. The pinned Torch wheels support Linux/Windows

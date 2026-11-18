@@ -36,28 +36,15 @@ repos:
     rev: v2.4.1
     hooks:
       - id: mypy
-        name: mypy (changed src/spdl files, Python 3.14)
-        files: '^src/spdl/.*\.(py|pyi)$'
-        types_or: [python, pyi]
+        name: mypy (src/spdl, Python 3.14)
+        files: '^src/spdl/|^pyproject\.toml$|^\.pre-commit-config\.yaml$'
+        types_or: [file]
         verbose: true
         entry: bash -c
         args:
-          - |
-            files=()
-            while IFS= read -r file; do
-              files+=("$file")
-            done < <(
-              for file in "$@"; do
-                if [[ "$file" == *.py && -f "${file}i" ]]; then
-                  file="${file}i"
-                fi
-                printf '%s\n' "$file"
-              done | sort -u
-            )
-            mypy --config-file=pyproject.toml "${files[@]}" || true
-          - --
+          - 'mypy --config-file=pyproject.toml || true'
         language_version: python3.12
-        pass_filenames: true
+        pass_filenames: false
         additional_dependencies:
           - "numpy==2.2.6"
           - "matplotlib==3.11.2"
