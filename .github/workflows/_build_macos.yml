@@ -45,17 +45,10 @@ jobs:
           xcodebuild -version
           ls -alh /Applications/ | grep Xcode
 
-          curl -LsSf https://astral.sh/uv/install.sh | sh
           set -ex
-
-          py_ver="${{ inputs.python-version }}"
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            py_ver="${py_ver}t"
-          fi
-
-          uv python pin "${py_ver}"
-          uv python list --only-installed
-          uv venv
+          source .github/scripts/helper.sh
+          install_uv curl
+          setup_build_python "${{ inputs.python-version }}" "${{ inputs.free-threaded }}"
           uv build --no-python-downloads --all-packages --wheel
           mv ./dist ~/package
 
@@ -70,8 +63,8 @@ jobs:
 
       - name: Check package
         run: |
-          pip install -r ./packaging/requirements.txt
-          twine check --strict ~/package/*.whl
+          source .github/scripts/helper.sh
+          check_wheel_artifacts "${HOME}/package"
 
       - uses: actions/cache/save@v4
         with:
@@ -107,6 +100,7 @@ jobs:
 
       - name: Setup
         run: |
+          source .github/scripts/helper.sh
           set -ex
 
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
@@ -114,7 +108,7 @@ jobs:
           fi
 
           # Install SPDL
-          pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          install_wheel_artifacts "${HOME}/package" pip install
           spdl --help
 
           # Install PyTorch and others
@@ -132,12 +126,9 @@ jobs:
         # until the global Actions limit. The per-test --timeout below fires first.
         timeout-minutes: 20
         run: |
+          source .github/scripts/helper.sh
           set -ex
-          # --timeout-method=thread works under pytest-xdist and on every
-          # platform; on firing it dumps each thread's stack, pinpointing a hang.
-          pytest -v -n ${{ inputs.test-concurrency }} \
-              --timeout=120 --timeout-method=thread \
-              --reruns=2 --reruns-delay=1 --rerun-show-tracebacks -ra \
+          run_python_tests "${{ inputs.test-concurrency }}" \
               tests/io \
               tests/dataloader \
               tests/pipeline \

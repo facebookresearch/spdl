@@ -45,10 +45,11 @@ jobs:
 
       - name: Build docs
         run: |
-          set -x
+          set -ex
+          source .github/scripts/helper.sh
           conda install -q -y pip
 
-          wget -qO- https://astral.sh/uv/install.sh | sh
+          install_uv wget
           uv pip install . -v
           conda install -q 'ffmpeg==8' doxygen
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
@@ -58,20 +59,7 @@ jobs:
           python -c 'import logging;logging.basicConfig(level=logging.DEBUG);import spdl.io;print(spdl.io.CUDABuffer.__doc__);'
 
 
-          echo "=== which/where ==="
-          which python python3 pip
-          python  -c "import sys; print('exe=', sys.executable); print('prefix=', sys.prefix); print('path=', sys.path)"
-          python3 -c "import sys; print('exe=', sys.executable); print('prefix=', sys.prefix); print('path=', sys.path)"
-          echo "=== conda env ==="
-          echo "CONDA_PREFIX=$CONDA_PREFIX"
-          echo "CONDA_DEFAULT_ENV=$CONDA_DEFAULT_ENV"
-          # setup-miniconda can install under $HOME when the runner has no bundled Conda.
-          ls -ld "$CONDA_PREFIX" "$CONDA_PREFIX"/lib/python*/site-packages
-          echo "=== pip view ==="
-          pip -V
-          pip config list -v
-          python -m pip show pygments || true
-          python3 -m pip show pygments || true
+          print_python_environment
 
           
           ./docs/build.sh

@@ -1,38 +1,22 @@
 #!/usr/bin/env bash
 
 # Used by Windows CI build jobs.
-
-set -x
-
-py_ver="${1}"
-if [[ "${2}" == 'ft' ]]; then
-    py_ver="${py_ver}t"
-fi
-cuda_ver="${3}"
-
-curl -LsSf https://astral.sh/uv/install.sh | sh
 set -ex
 
+source .github/scripts/helper.sh
+install_uv curl
 export PATH="${PATH}:${HOME}/.local/bin/"
 
-uv python pin "${py_ver}"
-uv python list --only-installed
-uv venv
+setup_build_python "${1}" "${2}"
 source .venv/Scripts/activate
 
 cuda_dir="/c/opt/cuda"
-.github/scripts/install_cuda_toolkit.py \
-       --base-dir "${cuda_dir}" \
-       --cuda-version "${cuda_ver}" \
-       --component cuda_cudart \
-       --component cuda_nvcc \
-       --component cuda_crt \
-       --component libnvvm \
-       --component cuda_cccl
-if [ ! -d "${cuda_dir}/lib64" ]; then
-    ln -s "${cuda_dir}/lib" "${cuda_dir}/lib64"
-fi
-
+configure_cuda_toolkit "${cuda_dir}" "${3}" \
+    --component cuda_cudart \
+    --component cuda_nvcc \
+    --component cuda_crt \
+    --component libnvvm \
+    --component cuda_cccl
 export PATH="${PATH}:${cuda_dir}/bin"
 export CUDA_PATH="${cuda_dir}"
 

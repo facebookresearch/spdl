@@ -49,31 +49,9 @@ jobs:
         run: |
           set -ex
 
-          # Figure out versions
-          py_ver="${{ inputs.python-version }}"
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            py_ver="${py_ver}t"
-          fi
-
-          uv --version
-          uv python pin "${py_ver}"
-          uv python list --only-installed
-          uv venv
-
-          for attempt in 1 2 3 4; do
-            if dnf --refresh install -qy cmake ninja-build; then
-              break
-            else
-              status=$?
-            fi
-            if (( attempt == 4 )); then
-              echo "DNF installation failed after ${attempt} attempts." >&2
-              exit "${status}"
-            fi
-            delay=$((5 << (attempt - 1)))
-            echo "DNF attempt ${attempt} failed; retrying in ${delay}s." >&2
-            sleep "${delay}"
-          done
+          source .github/scripts/helper.sh
+          setup_build_python "${{ inputs.python-version }}" "${{ inputs.free-threaded }}"
+          retry_with_backoff dnf --refresh install -qy cmake ninja-build
 
           # Build package
           uv build --no-python-downloads --all-packages --wheel
@@ -90,10 +68,9 @@ jobs:
 
       - name: Check package
         run: |
+          source .github/scripts/helper.sh
           # Use latest Python. (it shuold not matter)
-          python_exe="/opt/python/cp314-cp314/bin/python"
-          "${python_exe}" -m pip install -r ./packaging/requirements.txt
-          "${python_exe}" -m twine check --strict ~/package/*.whl
+          check_wheel_artifacts "${HOME}/package" /opt/python/cp314-cp314/bin/python
 
       - uses: actions/cache/save@v4
         with:
@@ -123,11 +100,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Dependency Check
         run: |
+          source .github/scripts/helper.sh
           python -m venv /opt/venv && . /opt/venv/bin/activate
           # Install NumPy (the only dep) of SPDL manually, so that
           # if a dependency is introduced accidentally, check_deps will catch
           python -m pip install numpy
-          python -m pip install --no-dependencies $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          install_wheel_artifacts "${HOME}/package" python -m pip install --no-dependencies
           python .github/scripts/check_deps.py
 
   unit-test:
@@ -162,16 +140,13 @@ jobs:
 
       - name: Setup
         run: |
+          source .github/scripts/helper.sh
           set -ex
 
-          packages=(pip)
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            packages+=(python-freethreading)
-          fi
-          conda install -q -c conda-forge -n test_env "${packages[@]}"
+          prepare_conda_test_python "${{ inputs.free-threaded }}" -q -c conda-forge -n test_env
 
           # Install SPDL
-          conda run -n test_env python -m pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          install_wheel_artifacts "${HOME}/package" conda run -n test_env python -m pip install
           spdl --help
 
           # Install PyTorch and others
@@ -190,14 +165,11 @@ jobs:
         # until the global Actions limit. The per-test --timeout below fires first.
         timeout-minutes: 20
         run: |
+          source .github/scripts/helper.sh
           set -ex
 
           python -c 'import spdl.io.utils;assert not spdl.io.utils.built_with_cuda()'
-          # --timeout-method=thread works under pytest-xdist and on every
-          # platform; on firing it dumps each thread's stack, pinpointing a hang.
-          pytest -v -n ${{ inputs.test-concurrency }} \
-              --timeout=120 --timeout-method=thread \
-              --reruns=2 --reruns-delay=1 --rerun-show-tracebacks -ra \
+          run_python_tests "${{ inputs.test-concurrency }}" \
               tests/io/ \
               tests/dataloader/ \
               tests/pipeline/ \
@@ -229,16 +201,13 @@ jobs:
 
       - name: Setup
         run: |
+          source .github/scripts/helper.sh
           set -ex
 
-          packages=(pip)
-          if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
-            packages+=(python-freethreading)
-          fi
-          conda install -q -c conda-forge -n test_env "${packages[@]}"
+          prepare_conda_test_python "${{ inputs.free-threaded }}" -q -c conda-forge -n test_env
 
           # Install SPDL
-          conda run -n test_env python -m pip install $(find "${HOME}/package" -name '*.whl' -depth -maxdepth 1)
+          install_wheel_artifacts "${HOME}/package" conda run -n test_env python -m pip install
           spdl --help
 
           # Install deps
