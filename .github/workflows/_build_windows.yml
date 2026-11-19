@@ -110,6 +110,7 @@ jobs:
 
       - name: Setup
         run: |
+          source .github/scripts/helper.sh
           if [[ "${{ inputs.free-threaded }}" == 'ft' ]]; then
             conda install -q python-freethreading
           fi
@@ -117,7 +118,7 @@ jobs:
           conda install -q pip
 
           # Install SPDL
-          python -m pip install $(find package -name '*.whl' -depth -maxdepth 1)
+          install_wheel_artifacts package python -m pip install
           spdl --help
 
           # Install PyTorch and others
@@ -135,13 +136,9 @@ jobs:
         # until the global Actions limit. The per-test --timeout below fires first.
         timeout-minutes: 20
         run: |
+          source .github/scripts/helper.sh
           set -ex
-          # --timeout-method=thread works under pytest-xdist and on every
-          # platform (signal-based timeouts are a no-op on Windows); on firing it
-          # dumps each thread's stack, pinpointing a hang.
-          pytest -v -n ${{ inputs.test-concurrency }} \
-              --timeout=120 --timeout-method=thread \
-              --reruns=2 --reruns-delay=1 --rerun-show-tracebacks -ra \
+          run_python_tests "${{ inputs.test-concurrency }}" \
               tests/io \
               tests/dataloader \
               tests/pipeline \

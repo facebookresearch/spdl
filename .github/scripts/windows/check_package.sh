@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # Used by Windows CI build jobs.
+set -e
 
-pip install -r ./packaging/requirements.txt
-twine check --strict ./package/*.whl
+source .github/scripts/helper.sh
+check_wheel_artifacts ./package
