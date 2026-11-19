@@ -800,6 +800,106 @@ class FuseErrorTest(_FuseTestCase):
         self.assertEqual(len(logs.records), 1)
 
 
+class FuseFusionFailureTest(_FuseTestCase):
+    """When recording fails (not an operation), fusion is disabled for the function."""
+
+    def _load(self) -> Callable[[bytes], object]:
+        def load(src: bytes) -> object:
+            frames = spdl.io.decode_packets(spdl.io.demux_image(src))
+            return spdl.io.convert_frames(frames)
+
+        return load
+
+    def test_recording_failure_disables_fusion(self) -> None:
+        """The call and the later calls run without recording, with the same results."""
+        data = _read(_image_samples(1))[0]
+        ref = self._load()(data)
+        for cache in (False, True):
+            with self.subTest(cache=cache):
+                fused = fuse(self._load(), cache=cache)
+                with (
+                    mock.patch.object(
+                        _fuse._Graph, "decode", side_effect=RuntimeError("unsupported")
+                    ),
+                    self.assertLogs("spdl.io._fuse", level="WARNING") as logs,
+                ):
+                    self.assert_same(fused(data), ref)
+                self.assertEqual(len(logs.records), 1)
+                self.assertIn("unsupported", logs.output[0])
+                with mock.patch.object(_fuse, "_run", wraps=_fuse._run) as run:
+                    for _ in range(3):
+                        self.assert_same(fused(data), ref)
+                run.assert_not_called()
+
+    def test_plan_failure_disables_fusion(self) -> None:
+        """Failing to build the native plan is a failure of fusion."""
+        data = _read(_image_samples(1))[0]
+        ref = self._load()(data)
+        fused = fuse(self._load())
+        with (
+            mock.patch.object(
+                _fuse._LazyGraph, "_build", side_effect=ValueError("bad plan")
+            ),
+            self.assertLogs("spdl.io._fuse", level="WARNING"),
+        ):
+            self.assert_same(fused(data), ref)
+        with mock.patch.object(_fuse, "_run", wraps=_fuse._run) as run:
+            self.assert_same(fused(data), ref)
+        run.assert_not_called()
+
+    def test_recording_failure_is_not_swallowed(self) -> None:
+        """`except Exception` in the function does not catch a failure of fusion."""
+        data = _read(_image_samples(1))[0]
+
+        def load(src: bytes) -> object:
+            try:
+                return self._load()(src)
+            except Exception:
+                return None
+
+        ref = load(data)
+        fused = fuse(load)
+        with (
+            mock.patch.object(
+                _fuse._Graph, "decode", side_effect=RuntimeError("unsupported")
+            ),
+            self.assertLogs("spdl.io._fuse", level="WARNING"),
+        ):
+            self.assert_same(fused(data), ref)
+
+    def test_usage_error_keeps_fusion(self) -> None:
+        """An error that SPDL IO raises without `fuse` as well is raised as is."""
+        data = _read(_image_samples(1))[0]
+
+        def load(src: bytes) -> object:
+            frames = spdl.io.decode_packets(spdl.io.demux_image(src))
+            # Decoding frames is an error with or without `fuse`.
+            not_packets: Any = frames
+            return spdl.io.convert_frames([frames, spdl.io.decode_packets(not_packets)])
+
+        fused = fuse(load)
+        with self.assertNoLogs("spdl.io._fuse", level="WARNING"):
+            with self.assertRaises(TypeError):
+                fused(data)
+            with mock.patch.object(_fuse, "_run", wraps=_fuse._run) as run:
+                with self.assertRaises(TypeError):
+                    fused(data)
+        run.assert_called_once()
+
+    def test_operation_failure_keeps_fusion(self) -> None:
+        """A failing operation raises as without `fuse`, and fusion stays enabled."""
+        data = _read(_image_samples(1))[0]
+        for cache in (False, True):
+            with self.subTest(cache=cache):
+                fused = fuse(self._load(), cache=cache)
+                with self.assertNoLogs("spdl.io._fuse", level="WARNING"):
+                    with self.assertRaises(RuntimeError):
+                        fused(b"invalid")
+                    with mock.patch.object(_fuse, "_run", wraps=_fuse._run) as run:
+                        fused(data)
+                run.assert_called_once()
+
+
 class FuseCacheSourceTest(_FuseTestCase):
     """Arguments classified as sources by mistake are not cached."""
 
