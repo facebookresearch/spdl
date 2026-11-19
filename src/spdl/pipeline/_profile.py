@@ -7,6 +7,7 @@
 import logging
 import os
 import random
+import sys
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
@@ -50,6 +51,14 @@ __all__ = [
 
 T = TypeVar("T")
 U = TypeVar("U")
+
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+
+    def override(func: T) -> T:
+        return func
+
 
 _LG: logging.Logger = logging.getLogger(__name__)
 
@@ -143,10 +152,12 @@ class ProfileHook(ABC):
 
 
 class _NoOpHook(ProfileHook):
+    @override
     @contextmanager
     def stage_profile_hook(self, stage: str, concurrency: int) -> Iterator[None]:  # noqa: ARG002
         yield
 
+    @override
     @contextmanager
     def pipeline_profile_hook(self) -> Iterator[None]:
         yield
@@ -441,6 +452,7 @@ class _ProfilePipeline(Pipeline[U]):
     def stop(self, *, timeout: float | None = None, **kwargs: Any) -> None:
         pass
 
+    @override
     def get_item(self, *, timeout: float | None = None) -> U:  # noqa: ARG002
         profile_pipeline(self._pipeline_cfg, self._num_items)
         _LG.info("Profiling completed. Exiting.")
