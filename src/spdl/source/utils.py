@@ -457,6 +457,10 @@ def repeat_source(
 
     .. versionchanged:: 0.8.0
        ``epoch`` now also controls the first shuffle seed.
+
+    .. versionchanged:: 0.9.0
+       An epoch that yields no items now raises :class:`ValueError`
+       instead of looping forever.
     """
     # Returning object so that it can be passed to a subprocess.
     return _RepeatIterator(src, epoch)
