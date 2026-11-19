@@ -5,5 +5,5 @@ extend-exclude = [
   ".github/scripts",
 ]
 target-version = "py314"
-select = ["E", "F", "ARG"]
-ignore = ["E501", "A001", "A002"]
+# select = ["E", "F", "ARG"]
+# ignore = ["E501", "A001", "A002"]
