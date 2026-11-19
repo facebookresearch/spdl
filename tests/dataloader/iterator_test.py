@@ -370,6 +370,30 @@ class TestRepeatSource(unittest.TestCase):
             self.assertEqual(next(gen), 1)
             self.assertEqual(next(gen), 2)
 
+    def test_repeat_source_empty_epoch(self) -> None:
+        """repeat_source raises instead of looping when an epoch is empty."""
+
+        class _EmptyWithShuffle:
+            def shuffle(self, seed: int) -> None:
+                pass
+
+            def __iter__(self) -> Iterator[int]:
+                yield from ()
+
+        for src in ([], _EmptyWithShuffle()):
+            with self.subTest(src=type(src).__name__):
+                gen = iter(repeat_source(src, epoch=3))
+                with self.assertRaisesRegex(ValueError, "epoch 3"):
+                    next(gen)
+
+    def test_repeat_source_one_shot_iterator(self) -> None:
+        """repeat_source raises once a one-shot iterator is exhausted."""
+
+        gen = iter(repeat_source(iter(range(3))))
+        self.assertEqual([next(gen) for _ in range(3)], [0, 1, 2])
+        with self.assertRaisesRegex(ValueError, "epoch 1"):
+            next(gen)
+
     def test_repeat_source_picklable(self) -> None:
         """repeat_source is picklable."""
 

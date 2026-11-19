@@ -403,6 +403,14 @@ def _repeat(src: Iterable[T] | IterableWithShuffle[T], epoch: int) -> Iterator[T
             elapsed,
             qps,
         )
+        if num_rows == 0:
+            # Without this, an empty epoch never suspends the generator and
+            # the loop keeps starting new epochs forever.
+            raise ValueError(
+                f"The source did not yield any item in epoch {epoch}. "
+                "`repeat_source` needs a non-empty source that can be iterated "
+                "more than once (not a one-shot iterator such as a generator)."
+            )
         epoch += 1
 
 
