@@ -211,8 +211,14 @@ Errors run the function again
    executes the function again without recording, so that the error is
    raised where the SPDL IO function is called, and ``try`` statements and
    logging in the function work as they do without :py:func:`~spdl.io.fuse`.
-   Python code in the function runs twice in this case, so avoid side
-   effects that must not be repeated, such as consuming an iterator.
+   If recording fails instead, i.e. fusion rather than an operation fails
+   (e.g. the function uses SPDL IO in a way that
+   :py:func:`~spdl.io.fuse` does not support), the function is executed
+   again without recording, and fusion is disabled for the function for the
+   rest of the process. A warning with the cause is logged once.
+   Python code in the function runs twice in both cases, so avoid side
+   effects that must not be repeated, such as consuming an iterator or
+   modifying an argument.
 
 Do not decorate generators and coroutines
    The recording ends when the decorated function returns, which, for

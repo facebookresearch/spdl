@@ -41,6 +41,7 @@ import contextlib
 import contextvars
 import dataclasses
 import functools
+import logging
 import operator
 import os
 import sys
@@ -76,6 +77,8 @@ except ImportError:
         """
         return False
 
+
+_LG: logging.Logger = logging.getLogger(__name__)
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -180,6 +183,55 @@ class _GraphBreak(BaseException):
     Derived from ``BaseException`` so that ``except Exception`` in user code
     does not swallow it.
     """
+
+
+class _UsageError(Exception):
+    """An error in the use of SPDL IO that is raised without ``fuse`` as well.
+
+    Raised as is while recording, rather than as a failure of fusion.
+    """
+
+
+class _UsageTypeError(_UsageError, TypeError):
+    pass
+
+
+class _UsageValueError(_UsageError, ValueError):
+    pass
+
+
+class _FusionError(BaseException):
+    """Raised when recording a call fails, as opposed to executing it.
+
+    Derived from ``BaseException`` so that ``except Exception`` in user code
+    does not swallow it. The fused function then runs without recording.
+    """
+
+    def __init__(self, error: Exception) -> None:
+        super().__init__(f"{type(error).__name__}: {error}")
+        self.error = error
+
+
+def _recording(fn: Callable[P, T]) -> Callable[P, T]:
+    """Raise errors of recording a call while a fused function runs as ``_FusionError``.
+
+    Errors of executing the recorded operations (e.g. when recording needs a
+    value of the execution) and errors while tracing are raised as they are.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        try:
+            return fn(*args, **kwargs)
+        except _UsageError:
+            raise
+        except Exception as e:
+            g = _ACTIVE.get()
+            if isinstance(g, _LazyGraph) and not g.failed:
+                raise _FusionError(e) from e
+            raise
+
+    return wrapper
 
 
 def _unwrap(obj: object) -> object:
@@ -373,6 +425,7 @@ class _DemuxerSymbol(_Symbol):
         # The native demuxer opened for operations that cannot be recorded.
         self._eager: Any = None
 
+    @_recording
     def demux_audio(
         self,
         window: tuple[tuple[int, int], tuple[int, int]] | None = None,
@@ -380,6 +433,7 @@ class _DemuxerSymbol(_Symbol):
     ) -> Any:
         return self._graph.demux(self, "audio", window, bsf)
 
+    @_recording
     def demux_video(
         self,
         window: tuple[tuple[int, int], tuple[int, int]] | None = None,
@@ -387,6 +441,7 @@ class _DemuxerSymbol(_Symbol):
     ) -> Any:
         return self._graph.demux(self, "video", window, bsf)
 
+    @_recording
     def demux_image(self, bsf: str | None = None) -> Any:
         return self._graph.demux(self, "image", None, bsf)
 
@@ -485,11 +540,11 @@ class _Graph:
         if sym._graph is not self:
             raise ValueError(f"{sym!r} belongs to a different fused function.")
         if sym._kind not in kinds:
-            raise TypeError(f"Expected {' or '.join(kinds)}, but found {sym!r}.")
+            raise _UsageTypeError(f"Expected {' or '.join(kinds)}, but found {sym!r}.")
         if media is not None and sym._media != media:
-            raise TypeError(f"Expected {media} {sym._kind}, but found {sym!r}.")
+            raise _UsageTypeError(f"Expected {media} {sym._kind}, but found {sym!r}.")
         if sym._consumed:
-            raise ValueError(f"{sym!r} is used after {sym._consumed}.")
+            raise _UsageValueError(f"{sym!r} is used after {sym._consumed}.")
         if consume:
             sym._consumed = consume
         return sym
@@ -620,10 +675,10 @@ class _Graph:
             [frames] if isinstance(frames, _Symbol) else list(_as_sequence(frames))
         )
         if not items:
-            raise ValueError("`frames` must not be empty.")
+            raise _UsageValueError("`frames` must not be empty.")
         syms = [self.use(f, "frames") for f in items]
         if len({s._media for s in syms}) != 1:
-            raise TypeError("All the frames must be the same media type.")
+            raise _UsageTypeError("All the frames must be the same media type.")
         out = self._new("buffer")
         regs = [s._reg for s in syms]
         self._emit(
@@ -830,6 +885,18 @@ class _LazyGraph(_Graph):
 
     def _execute(self, exports: list[int]) -> list[Any]:
         self.num_executions += 1
+        try:
+            plan = self._build(exports)
+        except Exception as e:
+            raise _FusionError(e) from e
+        try:
+            return plan.run_on(self._state, exports)
+        except Exception:
+            self.failed = True
+            raise
+
+    def _build(self, exports: list[int]) -> Any:
+        """Build the native plan of the operations recorded since the last execution."""
         plan = _libspdl.FusedPlan(  # pyrefly: ignore[missing-attribute]
             self.num_registers, [], []
         )
@@ -840,11 +907,7 @@ class _LazyGraph(_Graph):
             # Release the values in the same native call, without the GIL.
             plan.add_drop(dead)
             self._dropped.update(dead)
-        try:
-            return plan.run_on(self._state, exports)
-        except Exception:
-            self.failed = True
-            raise
+        return plan
 
     def _dead_registers(self, exports: list[int]) -> list[int]:
         """Registers that no operation recorded from now on can use.
@@ -953,7 +1016,9 @@ def _is_int(v: object) -> bool:
 
 def _as_sequence(obj: object) -> Sequence[object]:
     if not isinstance(obj, Sequence):
-        raise TypeError(f"Expected frames or a sequence of frames. Found: {type(obj)}")
+        raise _UsageTypeError(
+            f"Expected frames or a sequence of frames. Found: {type(obj)}"
+        )
     return obj
 
 
@@ -1033,6 +1098,7 @@ def _actual(obj: T, *, unrecorded: bool = False) -> T:
     return obj._graph.concrete(obj) if isinstance(obj, _Symbol) else obj
 
 
+@_recording
 def _record_open_source(
     src: object, *, demux_config: object, name: str | None, kwargs: dict[str, Any]
 ) -> Any:
@@ -1060,6 +1126,7 @@ def _packets_info(packets: _Symbol) -> tuple[str, tuple[float, float] | None]:
     return packets._media, packets._timestamp
 
 
+@_recording
 def _record_open(
     src: _Symbol, *, demux_config: object, name: str | None, kwargs: dict[str, Any]
 ) -> Any:
@@ -1068,10 +1135,12 @@ def _record_open(
     return src._graph.open(src, demux_config, name)
 
 
+@_recording
 def _record_bsf(packets: _Symbol, bsf: str) -> Any:
     return packets._graph.bsf(packets, bsf)
 
 
+@_recording
 def _record_decode(
     packets: _Symbol,
     resolve_filter: Callable[[str, tuple[float, float] | None], str | None],
@@ -1082,6 +1151,7 @@ def _record_decode(
     return packets._graph.decode(packets, resolve_filter, decode_config, num_frames)
 
 
+@_recording
 def _record_sample_decode(
     packets: _Symbol,
     indices: list[int],
@@ -1095,6 +1165,7 @@ def _record_sample_decode(
     )
 
 
+@_recording
 def _record_convert(frames: object, storage: object) -> Any:
     first = frames if isinstance(frames, _Symbol) else _as_sequence(frames)[0]
     if not isinstance(first, _Symbol):
@@ -1102,6 +1173,7 @@ def _record_convert(frames: object, storage: object) -> Any:
     return first._graph.convert(frames, storage)
 
 
+@_recording
 def _record_cuda(
     sym: _Symbol,
     op: object,
@@ -1114,6 +1186,7 @@ def _record_cuda(
     return sym._graph.external(sym, op, kind, media, consume)
 
 
+@_recording
 def _record_post(buffer: _Symbol, fn: Callable[[Any], Any]) -> Any:
     return buffer._graph.post(buffer, fn)
 
@@ -1300,12 +1373,18 @@ def _trace(
     return _Program(_build_plan(g, out_regs), slots, out_tree)
 
 
-def _run(fn: Callable[..., T], args: Any, kwargs: Any) -> tuple[T, bool | None]:
+def _run(
+    fn: Callable[..., T], args: Any, kwargs: Any, switch: "_Switch"
+) -> tuple[T, bool | None]:
     """Run ``fn`` while recording SPDL IO functions.
 
     If executing the recorded operations fails, ``fn`` is executed again
     without recording, so that the error is raised where the SPDL IO function
     is called, and the function handles it as it does without ``fuse``.
+
+    If recording fails (fusion, as opposed to an operation, fails), fusion
+    is disabled for the function with ``switch``, and ``fn`` is executed
+    again without recording.
 
     Also returns whether the recorded operations were executed as one
     native call at the end. (``None`` when it is not known.)
@@ -1316,9 +1395,16 @@ def _run(fn: Callable[..., T], args: Any, kwargs: Any) -> tuple[T, bool | None]:
         with _activate(g):
             result = fn(*args, **kwargs)
             straight = g.num_executions == g.num_post_executions
-            result = g.finish(result)  # type: ignore[assignment]
+            try:
+                result = g.finish(result)  # type: ignore[assignment]
+            except Exception as e:
+                if g.failed:
+                    raise
+                raise _FusionError(e) from e
         if not g.failed:
             return result, straight  # pyrefly: ignore[bad-return]
+    except _FusionError as e:
+        switch.disable(e.error)
     except Exception:
         if not g.failed:
             raise
@@ -1359,22 +1445,43 @@ def _qualified_name(fn: Callable[..., Any]) -> str:
     return f"{module}.{qualname}"
 
 
-def _run_eagerly(disabled: bool) -> bool:
-    """Whether a fused function must run as if it was not decorated.
+class _Switch:
+    """Whether fusion is disabled for a fused function.
 
-    ``disabled`` is the switch read when the function was decorated.
+    Initialized with the switch read when the function is decorated. Fusion
+    is also disabled, for the rest of the process, when recording a call of
+    the function fails.
     """
-    return disabled or _ACTIVE.get() is not None or not _gil_enabled()
+
+    __slots__ = ("name", "disabled")
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.disabled: bool = _is_fusion_disabled(name)
+
+    def disable(self, error: Exception) -> None:
+        if not self.disabled:
+            self.disabled = True
+            _LG.warning(
+                "Fusion failed for `%s`, so it runs without fusion from now on.",
+                self.name,
+                exc_info=error,
+            )
+
+
+def _run_eagerly(switch: _Switch) -> bool:
+    """Whether a fused function must run as if it was not decorated."""
+    return switch.disabled or _ACTIVE.get() is not None or not _gil_enabled()
 
 
 def _cached(fn: Callable[P, T]) -> Callable[P, T]:
     # Argument structure -> how to run. `_TRACE` means trace on the next call.
     cache: OrderedDict[object, object] = OrderedDict()
-    disabled = _is_fusion_disabled(_qualified_name(fn))
+    switch = _Switch(_qualified_name(fn))
 
     @functools.wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        if _run_eagerly(disabled):
+        if _run_eagerly(switch):
             return fn(*args, **kwargs)
         leaves: list[Any] = []
         tree = _flatten((args, kwargs), leaves)
@@ -1388,7 +1495,7 @@ def _cached(fn: Callable[P, T]) -> Callable[P, T]:
                 ),
             )
         except TypeError:
-            return _run(fn, args, kwargs)[0]
+            return _run(fn, args, kwargs, switch)[0]
         program = cache.get(key)
         if program is _TRACE:
             program = _try_trace(fn, tree, leaves, is_src)
@@ -1405,7 +1512,7 @@ def _cached(fn: Callable[P, T]) -> Callable[P, T]:
             except Exception:
                 # Raise and handle the error as without `fuse`.
                 return fn(*args, **kwargs)
-        result, straight = _run(fn, args, kwargs)
+        result, straight = _run(fn, args, kwargs, switch)
         if program is None and straight is not None:
             cache[key] = _TRACE if straight else _LAZY
             if len(cache) > _CACHE_SIZE:
@@ -1416,13 +1523,13 @@ def _cached(fn: Callable[P, T]) -> Callable[P, T]:
 
 
 def _fuse(fn: Callable[P, T]) -> Callable[P, T]:
-    disabled = _is_fusion_disabled(_qualified_name(fn))
+    switch = _Switch(_qualified_name(fn))
 
     @functools.wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        if _run_eagerly(disabled):
+        if _run_eagerly(switch):
             return fn(*args, **kwargs)
-        return _run(fn, args, kwargs)[0]
+        return _run(fn, args, kwargs, switch)[0]
 
     return wrapper
 
@@ -1482,10 +1589,16 @@ def fuse(
     raised where the SPDL IO function is called, and the function handles it
     (or not) as it does without ``fuse``.
 
+    If recording fails instead (fusion fails, e.g. the function uses SPDL IO
+    in a way that ``fuse`` does not support), the function is executed again
+    without recording, and fusion is disabled for the function for the rest
+    of the process. A warning with the cause is logged once.
+
     .. note::
 
-       In that case, Python code in the function runs twice. Avoid side
-       effects that must not be repeated, such as consuming an iterator.
+       In both cases, Python code in the function runs twice. Avoid side
+       effects that must not be repeated, such as consuming an iterator or
+       modifying an argument.
 
     The following figure and table show the time per call of decoding 32 PNG
     images and batching them, demuxing 4 windows of a video and decoding them,
