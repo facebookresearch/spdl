@@ -60,7 +60,20 @@ jobs:
           uv python list --only-installed
           uv venv
 
-          dnf install -qy cmake ninja-build
+          for attempt in 1 2 3 4; do
+            if dnf --refresh install -qy cmake ninja-build; then
+              break
+            else
+              status=$?
+            fi
+            if (( attempt == 4 )); then
+              echo "DNF installation failed after ${attempt} attempts." >&2
+              exit "${status}"
+            fi
+            delay=$((5 << (attempt - 1)))
+            echo "DNF attempt ${attempt} failed; retrying in ${delay}s." >&2
+            sleep "${delay}"
+          done
 
           # Build package
           uv build --no-python-downloads --all-packages --wheel
