@@ -60,7 +60,7 @@ jobs:
           uv python list --only-installed
           uv venv
 
-          source .github/scripts/retry.sh
+          source .github/scripts/helper.sh
           retry_with_backoff dnf --refresh install -qy cmake ninja-build
 
           # Build package
