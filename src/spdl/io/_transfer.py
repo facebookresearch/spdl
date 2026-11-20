@@ -23,6 +23,7 @@ from ._internal import import_utils
 if TYPE_CHECKING:
     import torch
     from torch import device as TDevice, Tensor
+    from torch.cuda import Stream
 
 else:
     torch: ModuleType = import_utils.lazy_import("torch")
@@ -91,7 +92,7 @@ def _transfer(obj: T, device: "TDevice", pinned_memory_cache: "set[Tensor]") -> 
 class _IncompleteH2D:
     sources: "set[Tensor]"
     destinations: "set[Tensor]"
-    stream: "torch.cuda.Stream"
+    stream: "Stream"
 
 
 _FAILED_H2D: list[_IncompleteH2D] = []
