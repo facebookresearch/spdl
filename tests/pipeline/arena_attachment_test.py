@@ -63,6 +63,8 @@ class ArenaAttachmentTest(unittest.TestCase):
     def test_mapping_failure_does_not_unlink_owner_and_closes_fd(self) -> None:
         """An attachment mapping failure preserves the live name and closes its opened fd."""
         owner = shared_memory.SharedMemory(create=True, size=64)
+        owner_size = owner.size
+        self.assertGreaterEqual(owner_size, 64)
         self.addCleanup(owner.unlink)
         self.addCleanup(owner.close)
         with (
@@ -77,8 +79,9 @@ class ArenaAttachmentTest(unittest.TestCase):
         with self.assertRaises(OSError):
             os.fstat(close.call_args.args[0])
         reader = _attach(owner.name)
+        self.assertEqual(reader.size, owner_size)
         reader.close()
-        self.assertEqual(owner.size, 64)
+        self.assertEqual(owner.size, owner_size)
 
     def test_public_default_arenas_support_spawn_and_clean_owner_unlink(self) -> None:
         """Default arenas support spawn and clean unlink without private flags."""

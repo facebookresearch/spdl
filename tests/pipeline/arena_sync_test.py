@@ -50,6 +50,18 @@ def _cpu_defaults() -> None:
     torch.set_num_threads(1)
 
 
+def _semaphore_value(semaphore: Any) -> int:
+    """Read a quiescent test semaphore's count without macOS sem_getvalue."""
+    count = 0
+    try:
+        while semaphore.acquire(False):
+            count += 1
+    finally:
+        for _ in range(count):
+            semaphore.release()
+    return count
+
+
 def _legacy_wait(arena: _Arena, waiting: Any) -> None:
     condition = cast(Any, arena._space_cv)
     original = condition._wait_semaphore.acquire
@@ -317,7 +329,10 @@ class ArenaSyncTest(_DefaultsTestCase):
         self._kill_reap(process, arena._acquire_timeout)
         condition = cast(Any, arena._space_cv)
         before = (
-            (condition._sleeping_count.get_value(), condition._woken_count.get_value())
+            (
+                _semaphore_value(condition._sleeping_count),
+                _semaphore_value(condition._woken_count),
+            )
             if legacy
             else None
         )
@@ -340,8 +355,8 @@ class ArenaSyncTest(_DefaultsTestCase):
             self.assertEqual(before, (1, 0))
             self.assertEqual(
                 (
-                    condition._sleeping_count.get_value(),
-                    condition._woken_count.get_value(),
+                    _semaphore_value(condition._sleeping_count),
+                    _semaphore_value(condition._woken_count),
                 ),
                 before,
             )
