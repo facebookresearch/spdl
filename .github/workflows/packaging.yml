@@ -1,3 +1,6 @@
+# Install Conda packages first, before pip installs or Python imports.
+# Conda may change the Python version when installing any package, including FFmpeg.
+# Finish all Conda installs before installing or running Python code.
 name: "Package"
 
 on:
@@ -39,7 +42,7 @@ jobs:
     with:
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
-      run-test: "false"
+      run-test: "${{ (matrix.python-version == '3.15') && (matrix.free-threaded != 'ft') }}"
       test-concurrency: 3
 
   #############################################################################
@@ -68,7 +71,7 @@ jobs:
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
       cuda-version: "${{ matrix.cuda-version }}"
-      run-test: "${{ (matrix.python-version == '3.13') && (matrix.free-threaded != 'ft') }}"
+      run-test: "${{ (matrix.python-version == '3.13' || matrix.python-version == '3.15') && (matrix.free-threaded != 'ft') }}"
       test-concurrency: 3
 
   #############################################################################
@@ -94,7 +97,7 @@ jobs:
       arch: aarch64
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
-      run-test: "${{ (matrix.python-version == '3.14') && (matrix.free-threaded != 'ft') }}"
+      run-test: "${{ (matrix.python-version == '3.14' || matrix.python-version == '3.15') && (matrix.free-threaded != 'ft') }}"
       test-concurrency: 3
 
   #############################################################################
@@ -123,5 +126,5 @@ jobs:
       python-version: "${{ matrix.python-version }}"
       free-threaded: "${{ matrix.free-threaded }}"
       cuda-version: "${{ matrix.cuda-version }}"
-      run-test: "${{ (matrix.python-version == '3.12') && (matrix.free-threaded != 'ft') }}"
+      run-test: "${{ (matrix.python-version == '3.12' || matrix.python-version == '3.15') && (matrix.free-threaded != 'ft') }}"
       test-concurrency: 3

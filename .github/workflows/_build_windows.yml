@@ -1,3 +1,6 @@
+# Install Conda packages first, before pip installs or Python imports.
+# Conda may change the Python version when installing any package, including FFmpeg.
+# Finish all Conda installs before installing or running Python code.
 name: " - Wheel (Windows)"
 
 on:
@@ -117,6 +120,9 @@ jobs:
 
           conda install -q pip
 
+          # Install FFmpeg before pip installs or imports Python packages.
+          conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}"
+
           # Install SPDL
           install_wheel_artifacts package python -m pip install
           spdl --help
@@ -127,9 +133,6 @@ jobs:
           else
             python -m pip install torch numpy numba pytest pytest-xdist pytest-timeout pytest-rerunfailures==16.7 parameterized matplotlib
           fi
-
-          # Install FFmpeg
-          conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}"
 
       - name: Unit test
         # Backstop so a hung test fails the job in minutes instead of stalling

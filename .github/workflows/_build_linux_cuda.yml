@@ -1,3 +1,6 @@
+# Install Conda packages first, before pip installs or Python imports.
+# Conda may change the Python version when installing any package, including FFmpeg.
+# Finish all Conda installs before installing or running Python code.
 name: " - Wheel (Linux / CUDA)"
 
 on:
@@ -135,7 +138,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1", "8.0", "9.0"]
+        # FFmpeg 6.1.0/6.1.1 builds need gnutls 3.7.8+ -> p11-kit 0.24 -> libffi 3.4,
+        # which cannot coexist with Python 3.15 (libffi 3.7), so test FFmpeg 6 as 6.1.2.
+        ffmpeg-version: ["4.4.2", "5.1", "6.1.2", "7.1", "8.0", "9.0"]
     runs-on: "${{ inputs.machine_gpu }}"
     defaults:
       run:
@@ -165,6 +170,13 @@ jobs:
 
           prepare_conda_test_python "${{ inputs.free-threaded }}" -q -c conda-forge -n test_env
 
+          # Install FFmpeg
+          # Finish Conda transactions before pip installs or SPDL imports: a later
+          # solve can change the Python patch release (FFmpeg 7.1 needs ICU 75, which
+          # excludes the libsqlite that Python 3.15.1+ requires).
+          # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
+          conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
+
           # Install SPDL
           install_wheel_artifacts "${HOME}/package" conda run -n test_env python -m pip install
           spdl --help
@@ -176,10 +188,6 @@ jobs:
           cu_ver="${cu_ver//[.]/}"  # Remove dots  12.4.1 -> 1241
           cu_ver="${cu_ver:0:3}"  # Retain three chars 1241 -> 124
           conda run -n test_env python -m pip install numpy torch --index-url "https://download.pytorch.org/whl/cu${cu_ver}"
-
-          # Install FFmpeg
-          # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
-          conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv
 
           # Sort out library paths
           # 1. For some reason, the FFmpeg dynamic libraries are not found.
@@ -211,7 +219,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ffmpeg-version: ["4.4.2", "5.1", "6.1", "7.1", "8.0", "9.0"]
+        # FFmpeg 6.1.0/6.1.1 builds need gnutls 3.7.8+ -> p11-kit 0.24 -> libffi 3.4,
+        # which cannot coexist with Python 3.15 (libffi 3.7), so test FFmpeg 6 as 6.1.2.
+        ffmpeg-version: ["4.4.2", "5.1", "6.1.2", "7.1", "8.0", "9.0"]
     runs-on:  ${{ inputs.machine }}
     defaults:
       run:
@@ -241,19 +251,25 @@ jobs:
 
           prepare_conda_test_python "${{ inputs.free-threaded }}" -q -c conda-forge -n test_env
 
+          # Install Conda dependencies and FFmpeg in one transaction, before pip
+          # installs or SPDL imports: a later solve can change the Python patch
+          # release (FFmpeg 7.1 needs ICU 75, which excludes the libsqlite that
+          # Python 3.15.1+ requires).
+          # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
+          # Note: Somehow NumPy got downgraded to 1.24 when using FFmpeg 7.1, so adding constraint here.
+          # Note: Matplotlib comes from PyPI. The Python 3.15 matplotlib-base build needs
+          # ICU >= 78.3 (libraqm -> libharfbuzz); FFmpeg 4.4.2-7.1 need libxml2 < 2.14 (ICU <= 75).
+          conda install -q numba pytest pytest-xdist pytest-timeout parameterized \
+              "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv 'numpy>=2'
+
           # Install SPDL
           install_wheel_artifacts "${HOME}/package" conda run -n test_env python -m pip install
           spdl --help
 
           # Install PyTorch and others
           conda run -n test_env python -m pip install numpy torch --index-url https://download.pytorch.org/whl/cpu
-          conda install -q numba pytest pytest-xdist pytest-timeout parameterized matplotlib
-          conda run -n test_env python -m pip install pytest-rerunfailures==16.7
+          conda run -n test_env python -m pip install matplotlib pytest-rerunfailures==16.7
 
-          # Install FFmpeg
-          # Note: Somehow FFmepg 5.1 does not install libiconv so specifying it here
-          # Note: Somehow NumPy got downgraded to 1.24 when using FFmpeg 7.1, so adding constraint here.
-          conda install -q "ffmpeg==${{ matrix.ffmpeg-version }}" libiconv 'numpy>=2'
           # For some reason, the dynamic libraries are not found.
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONDA_PREFIX}/lib" >> $GITHUB_ENV
 
