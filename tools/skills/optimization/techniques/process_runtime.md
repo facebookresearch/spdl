@@ -1,34 +1,39 @@
 # Process runtime environment
 
-Candidates for the processes, interpreters, threads, allocators, garbage collection, host scheduling and resource lifetimes that run an SPDL pipeline and the trainer around it. Each entry is a candidate to test against its trigger, not a guaranteed gain.
+Choose the topic whose symptoms match the measured bottleneck. Open only that
+reference; the technique IDs, Trigger/Technique/Guards detail and applicability
+caveats live in the topic files, not in this routing page.
 
 [Catalog index](../technique_catalog.md)
 
-**`allocator_retain_freed_pages`: stop page-fault churn in workers**
-- Trigger: worker processes repeatedly allocate and free large batch buffers, and profiles show high kernel/page-fault time.
-- Technique: retain freed pages inside the existing allocator so the next batch can reuse them instead of faulting them back in after the allocator returned them to the operating system. Where supported, lengthen dirty/muzzy decay (the delay before jemalloc purges freed pages) for the trainer and workers. Apply configuration before allocator initialization and confirm that the process actually uses that allocator; this is not an SPDL allocator setting.
-- Guards: anonymous memory rises; one case retained substantially more memory per host. Check the headroom under the container limit.
+## Process layout and the GIL
 
-**`cap_native_thread_pools`: bound per-process native pools**
-- Trigger: host CPU is saturated, and native stacks show storage or runtime thread pools spinning on locks, multiplied by the number of worker processes.
-- Technique: cap each worker's native pool size through the library's supported environment variable or option before it initializes.
-- Guards: check total threads and CPU use across all processes; too small a pool may slow useful work. A Python executor limit does not cap a library's independent threads.
-- SPDL reference: Coordinate library-specific native pool limits with {py:meth}`spdl.pipeline.PipelineBuilder.build` with `num_threads=...`, each `pipe` stage's concurrency, and {py:class}`spdl.pipeline.defs.ProcessPoolExecutorConfig` worker count. SPDL's executor limits do not automatically cap OpenMP, storage-client or tensor-library pools.
+- [Process layout and GIL contention](process_runtime/process_layout_and_gil.md): worker-process
+  placement, free-threaded Python, native GIL release and trainer handoff work.
+- [Row dispatch and handoff](process_runtime/row_dispatch_and_handoff.md): worker-local
+  fetch/transform, light-work IPC bypass, completion ordering and repeated
+  context/tree/copy overhead.
 
-**`persistent_pipeline_and_workers`: keep one pipeline for the whole run**
-- Trigger: warm epochs are slower than the baseline, there are per-epoch worker startup costs, or asynchronous cache writes are lost at epoch boundaries.
-- Technique: build the pipeline once with a continuous source and iterate it per epoch, keeping the worker processes alive. Flush in-flight writes at shutdown.
-- Guards: The source must support another iteration and the original sampler/epoch state. Flush pending writes and release resources on shutdown; reusing an exhausted generator does not create a new epoch.
-- SPDL reference: Consider {py:meth}`spdl.pipeline.PipelineBuilder.add_source` with `continuous=True` with a re-iterable source, or {py:func}`spdl.pipeline.iterate_in_subprocess` when isolating a CPU iterable. The latter creates the iterable once and reuses its worker; an exhausted generator will not supply a second epoch. Preserve sampler and epoch semantics as in the [architecture examples](../architectures.md).
+## Executors, admission and host CPU
 
-**`process_workers_for_gil_bound_rows`**
-- Trigger: a threads-only pipeline is slower than the original, and holder profiles show GIL-held serializers, decoders or Python augmentations.
-- Technique: move the adjacent CPU fetch, decode/transform and collate stages into a worker execution region so their Python work uses worker-process GILs, not the trainer's. Compact inputs and final outputs cross the process boundary; intermediate values stay worker-local. The [architecture example](../architectures.md) shows this layout. Use a process-start method compatible with the libraries already initialized (for example spawn, or a clean forkserver); ordinary fork from a CUDA-initialized trainer is unsafe. Boundary callables and values must be picklable, including wrapped worker initializers.
-- Guards: Preserve row order, random seeds and batch contents. Only boundary values must be picklable, but extra IPC and worker memory can outweigh parallelism; keep GPU work in its owning trainer process.
-- SPDL reference: The [multiprocessing-region example](../architectures.md) uses {py:meth}`spdl.pipeline.PipelineBuilder.to` with {py:class}`spdl.pipeline.defs.ProcessPoolExecutorConfig` to keep adjacent CPU stages and their intermediates in a worker. {py:func}`spdl.pipeline.run_pipeline_in_subprocess` is another reference topology for isolating one CPU pipeline. Both are optional hypotheses; compare the existing threaded path and preserve ordering, RNG, pickling and safe process initialization.
+- [Executors and admission](process_runtime/executors_admission.md): nested native pools,
+  separate I/O executors, fetch limits, remote-pool sizing and completion-first
+  admission.
+- [Host CPU and memory isolation](process_runtime/host_cpu_isolation.md): co-located
+  input work starving trainer threads, and memory-bandwidth or topology contention.
 
-**`epoch_cycle_collection`: collect reference cycles that hold batches**
-- Trigger: GPU memory grows across epochs on the slowest ranks, and a `gc.DEBUG_SAVEALL` capture shows CUDA tensors held by cycles through exception tracebacks or iterator frames.
-- Technique: run one `gc.collect()` at a quiescent epoch start, or break the cycle at its source. Keep this within the GC policy in the bundled `gc_optimization.md`.
-- Guards: Collect only at a measured safe boundary or remove the cycle itself. Frequent collection can stall training, and debug captures may retain objects; confirm memory stability without diagnostic retention.
-- SPDL reference: Follow the [GC policy](../gc_optimization.md) rather than adding collection to every pipeline. SPDL iterator shutdown does not prove downstream tensor/traceback cycles are gone; the original cycle diagnosis and a measured quiescent collection point remain necessary.
+## Memory and allocators
+
+- [Memory and allocators](process_runtime/memory_allocators.md): page retention/purge,
+  allocator arena counts and compressed-swap admission budgets.
+
+## Garbage collection
+
+- [Garbage collection](process_runtime/garbage_collection.md): cyclic-GC policy, freezing,
+  pressure-gated collection and traceback-free timeout handoff. Follow the
+  [GC policy](../gc_optimization.md), including lifecycle and prior-state guards.
+
+## Resource lifetime and fault containment
+
+- [Resource lifetime](process_runtime/resource_lifetime.md): persistent worker/client owners,
+  epoch/batch-scoped buffers, descriptor cleanup and native-codec fault isolation.
