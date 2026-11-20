@@ -403,6 +403,14 @@ def _repeat(src: Iterable[T] | IterableWithShuffle[T], epoch: int) -> Iterator[T
             elapsed,
             qps,
         )
+        if num_rows == 0:
+            # Without this, an empty epoch never suspends the generator and
+            # the loop keeps starting new epochs forever.
+            raise ValueError(
+                f"The source did not yield any item in epoch {epoch}. "
+                "`repeat_source` needs a non-empty source that can be iterated "
+                "more than once (not a one-shot iterator such as a generator)."
+            )
         epoch += 1
 
 
@@ -449,6 +457,10 @@ def repeat_source(
 
     .. versionchanged:: 0.8.0
        ``epoch`` now also controls the first shuffle seed.
+
+    .. versionchanged:: 0.9.0
+       An epoch that yields no items now raises :class:`ValueError`
+       instead of looping forever.
     """
     # Returning object so that it can be passed to a subprocess.
     return _RepeatIterator(src, epoch)
