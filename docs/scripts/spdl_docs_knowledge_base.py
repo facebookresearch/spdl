@@ -171,10 +171,33 @@ def _remove_generated(srcdir: Path) -> None:
     manifest.unlink()
 
 
-def _collect(app: Sphinx) -> tuple[dict[str, Path], dict[str, list[dict[str, Any]]]]:
+def _collect_children(
+    srcdir: Path, source: Path, docname: str, pages: dict[str, Path]
+) -> list[str]:
+    """Collect ``X/*.md`` beside ``X.md`` as pages nested under ``X``."""
+    folder = source.with_suffix("")
+    if not folder.is_dir():
+        return []
+    children = []
+    for child in sorted(folder.glob("*.md")):
+        if not child.is_file():
+            raise ConfigError(f"Not a Markdown source: {child}")
+        name = f"{docname}/{child.stem}"
+        _destination(srcdir, name + ".md")
+        if name in pages:
+            raise ConfigError(f"Duplicate generated knowledge-base page: {name}")
+        pages[name] = child
+        children.append(name)
+    return children
+
+
+def _collect(
+    app: Sphinx,
+) -> tuple[dict[str, Path], dict[str, list[dict[str, Any]]], dict[str, list[str]]]:
     srcdir = Path(app.srcdir)
     pages: dict[str, Path] = {}
     trees: dict[str, list[dict[str, Any]]] = {}
+    children: dict[str, list[str]] = {}
     groups = [
         *app.config.spdl_knowledge_base_sources,
         *app.config.spdl_knowledge_base_extra_sources,
@@ -202,6 +225,9 @@ def _collect(app: Sphinx) -> tuple[dict[str, Path], dict[str, list[dict[str, Any
                 raise ConfigError(f"Duplicate generated knowledge-base page: {docname}")
             pages[docname] = source
             docnames.append(docname)
+            nested = _collect_children(srcdir, source, docname, pages)
+            if nested:
+                children[docname] = nested
         trees.setdefault(group["parent"], []).append(
             {
                 "caption": group["caption"],
@@ -213,7 +239,7 @@ def _collect(app: Sphinx) -> tuple[dict[str, Path], dict[str, list[dict[str, Any
                 ),
             }
         )
-    return pages, trees
+    return pages, trees, children
 
 
 def _category_pages(
@@ -292,7 +318,7 @@ def _generate(app: Sphinx) -> None:
     previous_state = app.env.domaindata.get(_KEY, {})
     previous = previous_state.get("trees", {})
     _remove_generated(srcdir)
-    pages, trees = _collect(app)
+    pages, trees, children = _collect(app)
     hubs = _category_pages(pages, trees)
     outputs = set(pages) | set(hubs)
     destinations = [_destination(srcdir, name + ".md") for name in sorted(outputs)]
@@ -316,6 +342,7 @@ def _generate(app: Sphinx) -> None:
     app.env.domaindata[_KEY] = {
         "pages": pages,
         "trees": trees,
+        "children": children,
         "hubs": {group["hub"]: group for groups in trees.values() for group in groups},
         "outputs": outputs,
         "reread": set(previous) | set(trees),
@@ -350,10 +377,13 @@ def _navigation(app: Sphinx, doctree: Any) -> None:
     docname = app.env.docname
     groups = state["trees"].get(docname, [])
     entries = [(group["caption"], group["hub"]) for group in groups]
+    nested = False
     if app.builder.name == "singlehtml" and docname in state["hubs"]:
         entries = [(None, name) for name in state["hubs"][docname]["docnames"]]
     elif docname in state["pages"]:
         app.env.metadata.setdefault(docname, {})["orphan"] = True
+        entries = [(None, name) for name in state.get("children", {}).get(docname, [])]
+        nested = True
     if not entries:
         return
     tree = addnodes.toctree()
@@ -364,7 +394,9 @@ def _navigation(app: Sphinx, doctree: Any) -> None:
     tree["rawcaption"] = ""
     tree["maxdepth"] = 1
     tree["glob"] = False
-    tree["hidden"] = False
+    # A page's own subfolder pages are linked from its body; list them only
+    # in the navigation sidebar.
+    tree["hidden"] = nested and docname not in state["hubs"]
     tree["includehidden"] = False
     tree["titlesonly"] = True
     tree["numbered"] = 0
