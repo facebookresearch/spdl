@@ -30,6 +30,12 @@ repos:
         exclude: "src/spdl/io/lib/.+.pyi"
         types_or: [ python, pyi ]
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.3
+    hooks:
+      - id: ruff-check
+        types_or: [ python ]
+
   # This check is set to never fail, but will print all current mypy failures. See:
   # https://stackoverflow.com/a/59745587
   - repo: https://github.com/pre-commit/mirrors-mypy

@@ -2,6 +2,8 @@ extend-exclude = [
   "setup.py",
   "docs/source",
   "third_party",
-  "setup.py",
   ".github/scripts",
 ]
+target-version = "py314"
+# select = ["E", "F", "ARG"]
+# ignore = ["E501", "A001", "A002"]
