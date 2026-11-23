@@ -72,6 +72,60 @@ and transfer. The following code snippet and diagram illustrate this.
    </div>
 
 
+.. _compare-loader-implementations:
+
+When a replacement loader is slower
+-----------------------------------
+
+Read the original and replacement implementations side by side before
+changing tuning knobs. Trace the same samples from source lookup to the
+batch consumed by the trainer, including defaults and work hidden behind
+wrappers. Compare:
+
+* **What work runs.** Check sampling, decoding, transforms, batching and
+  transfers. Look for work the original skips, reuses or performs once per
+  batch, but the replacement repeats per sample or epoch.
+* **Where work runs.** Check what stays inside each worker, what crosses a
+  thread or process boundary, and where the loader waits, copies or turns
+  compact buffers into Python objects. For example, the original may pass
+  compact indices into a worker and return a finished batch, while the
+  replacement passes expanded rows back before assembling the batch.
+* **What resources it uses.** Check worker and native thread pools, cache
+  placement and reuse, prefetch limits, and the amount of data held in
+  flight. Identical worker counts or a full ready queue do not establish
+  equivalent work or cost.
+
+Use timings or traces to test which differences explain the slowdown. Close
+one confirmed gap at a time, reusing original components where possible.
+Verify that the replacement produces equivalent batches and matches
+end-to-end throughput at comparable resource cost. Compare the same data,
+model, hardware and measurement windows, accounting for all workers and
+checking cold and warm behavior separately. Once the replacement reaches
+parity, use it as the baseline for further optimization.
+
+.. _compact-loader-metadata:
+
+Keep loader metadata in compact representations
+-----------------------------------------------
+
+Avoid JSON as the default format for large or frequently read dataset
+metadata. Keep it for small configuration or interchange files where human
+readability matters. In the loader's hot path, a faster JSON parser can
+save time scanning bytes while the conversion into Python dictionaries,
+lists and numbers still dominates. For tabular metadata, prefer a typed
+columnar representation such as Arrow or Parquet. For fixed-width numeric
+records, consider a format such as NumPy's ``.npy``. Keep values in those
+representations through the consumer instead of immediately expanding them
+back into Python objects.
+
+When a numeric list contains more than a few hundred values of the same
+type, use a NumPy array or PyTorch tensor with an explicit dtype instead of
+a Python list. This is a rule of thumb, not a cutoff: a typed buffer stores
+the values together so the interpreter does not have to manage a separate
+Python object or list slot for each value. Preserve shape, precision and
+missing-value semantics, and measure reading, conversion and consumption
+together.
+
 TaskPerfStats
 -------------
 

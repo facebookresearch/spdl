@@ -1,0 +1,35 @@
+# Component speed and materialization counterexamples
+
+This topic covers local timing, shared-transformer memory savings, native parsing and utilization. Open this topic when a component or padding optimization looks better locally but conversion-inclusive processing or completed training does not improve.
+
+[Catalog index](../../technique_catalog.md) · [Negative results](../negative_results.md) · {ref}`Compare loader implementations <compare-loader-implementations>`
+
+**`shared_jit_transformer_negative`: sharing preprocessing state trades memory for contention**
+- Trigger: Per-thread compiled preprocessing modules duplicate memory and warm-up work.
+- Attempt: Replace one compiled preprocessing transformer per thread with concurrent calls to one shared instance.
+- Outcome: Sharing reduced memory duplication but increased preprocessing latency and skewed automatic thread allocation toward preprocessing and away from reading. Throughput did not improve materially. Investigators suspected contention in the shared module but did not isolate its cause.
+- Guards and when to revisit: Retry only after proving read-only or stateless operation, identifying synchronization hotspots, and showing matched latency and stage-balance improvements under real concurrency. Sharing an object does not prove thread safety or lock-free execution. Preserve any per-thread state and random behavior; compare total memory and completion time rather than choosing the lowest-memory configuration alone.
+
+**`component_win_without_training_win`: faster sampling can leave completion unchanged**
+- Trigger: A local input operator becomes faster without shortening the full training run.
+- Attempt: Optimize point-cloud sampling on the CPU and, separately, try moving sampling to the GPU.
+- Outcome: The CPU optimization sped up sampling but did not improve measured training throughput. GPU sampling was slower in the separate comparison.
+- Guards and when to revisit: Retry only after locating the actual critical path and demonstrating a matched full-pipeline or completion improvement with unchanged data and training semantics. If sampling already overlaps a longer compute or acquisition stage, making it faster may only fill a queue earlier. Moving the operation to the GPU can instead expose launch, transfer or device-work costs. These explain possible mismatches between scopes, not the unmeasured cause of every reported result. Include synchronization, transfer, input acquisition and boundaries. Conflicting source speedup arithmetic cannot justify a larger gain; retain measured scopes instead. Moving sampling to a GPU can add more work than it removes if the CPU implementation was already efficient.
+
+**`python_materialization_erases_parser_gain`: Python expansion consumes the native parsing win**
+- Trigger: Native parsing is faster, but downstream consumers immediately request nested Python objects.
+- Attempt: Replace the parser with a faster native implementation while keeping the same Python-object output.
+- Outcome: Faster native parsing did not materially improve the combined parse-and-conversion time. A native parse result can reference compact values, but recursively converting it into dictionaries, lists and Python scalars still walks and allocates the object tree. JSON metadata is a common example: a fast C or C++ parser can save time scanning bytes while creating Python dictionaries, lists and scalars still dominates.
+- Guards and when to revisit: Retry when consumers can retain a native representation through the expensive path, with matched conversion-inclusive timings and output validation. Time parse → conversion → consumer together; use native buffers/views only where the consumer can actually keep them, rather than ending the benchmark before the mandatory expansion. The Python object conversion also needs the GIL in a GIL-enabled interpreter. If metadata is large or frequently read, consider a typed or columnar format the consumer can use directly, or test whether a free-threaded build changes the tradeoff. Measure rather than assuming either option helps. Count all object construction and copies rather than stopping the timer at parse completion. Preserve null, numeric, ordering and error semantics; views also require valid backing-buffer lifetimes. A parser microbenchmark alone is insufficient evidence for a loader replacement. See {ref}`compact-loader-metadata` for formats that avoid Python-object expansion.
+
+**`throughput_not_utilization`: maximizing utilization can select a slower input configuration**
+- Trigger: Aggregation or batch-preparation settings are selected by the highest GPU-utilization reading alone.
+- Attempt: Pick the batch-preparation setting that gives the highest GPU utilization.
+- Outcome: In a comparison of batch-aggregation settings, a busier GPU completed inference work more slowly. A utilization percentage reports activity, not how many unchanged samples or training steps finish per unit time; extra device work or different grouping can make the GPU look busier while completion takes longer. Streaming multiprocessor (SM) utilization is a diagnostic: unnecessary kernels can raise it without advancing training.
+- Guards and when to revisit: Retry configuration tuning with matched completion time, throughput, fixed item coverage and the relevant quality and effective-batch gates. For example, compare the time to process the same sample universe under the same optimizer/batch semantics, not two intervals containing different amounts of useful work. Aggregation throughput can be non-monotonic, and additional aggregation may change memory, latency or sample grouping. A lower utilization percentage is acceptable when the unchanged task finishes sooner; it is not itself proof of lower resource cost.
+
+**`length_sorted_dynamic_padding`: shorter measured iterations did not improve full-run throughput**
+- Trigger: True sequence lengths are much shorter than fixed padding, making length sorting and dynamic trimming look attractive.
+- Attempt: Length sorting forms groups with smaller padded maxima; trimming removes only positions outside each group's true maximum, and an inverse permutation restores the original output order. Illustratively, if sorted items have original indices `[2, 0, 1]`, restoring outputs reads sorted positions `[1, 2, 0]`.
+- Outcome: Local iteration timing improved, but wall-clock progress did not improve in the measured window. The observation does not isolate where the remaining time went.
+- Guards and when to revisit: Retry after reconciling timer scopes and unmeasured pauses, with a matched full-run gain and passing retrieval or task-quality checks. Preserve masks, positions, output order and required export shapes. Keep fixed useful-work coverage and effective batch; do not promote the kernel ratio as the training ratio. Include sorting, buffering and all unmeasured waits.
