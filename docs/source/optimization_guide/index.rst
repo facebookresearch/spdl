@@ -48,3 +48,4 @@ see :doc:`../notes/shared_memory_ownership` in Development Notes.
    :maxdepth: 1
 
    shared_memory_arenas
+   transparent_region_arenas

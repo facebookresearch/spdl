@@ -96,8 +96,10 @@ import argparse
 import csv
 import gc
 import multiprocessing as mp
+import os
 import resource
 import statistics
+import sys
 import tempfile
 import time
 from collections.abc import Iterator
@@ -468,11 +470,57 @@ def _run_config(size_mb: int, kind: str, args: argparse.Namespace) -> list[Row]:
     ]
 
 
+def _live_child_cpu_sec(pid: int) -> float:
+    """Sum CPU of living descendants, including children spawned by other threads."""
+    seen: set[int] = set()
+    pending = [pid]
+    ticks = os.sysconf("SC_CLK_TCK")
+    total = 0.0
+    while pending:
+        parent = pending.pop()
+        try:
+            threads = os.listdir(f"/proc/{parent}/task")
+        except (FileNotFoundError, ProcessLookupError):
+            if parent == pid:
+                raise
+            continue
+        for tid in threads:
+            try:
+                with open(f"/proc/{parent}/task/{tid}/children") as f:
+                    children = [int(value) for value in f.read().split()]
+            except (FileNotFoundError, ProcessLookupError):
+                continue
+            for child in children:
+                if child in seen:
+                    continue
+                seen.add(child)
+                pending.append(child)
+                try:
+                    with open(f"/proc/{child}/stat") as f:
+                        fields = f.read().rsplit(")", 1)[1].split()
+                    # Include reaped descendants of a still-living child too.
+                    child_ticks = sum(int(fields[i]) for i in (11, 12, 13, 14))
+                except (FileNotFoundError, ProcessLookupError):
+                    continue
+                except (IndexError, ValueError):
+                    try:
+                        os.kill(child, 0)
+                    except ProcessLookupError:
+                        continue
+                    # A malformed sample from an extant or uncertain PID is not zero.
+                    raise
+                total += child_ticks / ticks
+    return total
+
+
 def _cpu_now() -> float:
-    """CPU seconds (user + system) for this process plus its reaped children."""
+    """CPU seconds for this process and reaped children, plus live descendants on Linux."""
     s = resource.getrusage(resource.RUSAGE_SELF)
     c = resource.getrusage(resource.RUSAGE_CHILDREN)
-    return s.ru_utime + s.ru_stime + c.ru_utime + c.ru_stime
+    cpu_sec = s.ru_utime + s.ru_stime + c.ru_utime + c.ru_stime
+    if sys.platform == "linux":
+        cpu_sec += _live_child_cpu_sec(os.getpid())
+    return cpu_sec
 
 
 def _peak_rss_mb() -> float:
