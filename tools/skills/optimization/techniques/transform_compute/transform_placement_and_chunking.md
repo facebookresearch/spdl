@@ -1,0 +1,25 @@
+# Transform placement and chunking
+
+These techniques move independent preparation off the trainer path and amortize device-transform boundaries. Open this topic when synchronous preparation, tiny launches, repeated readbacks or auxiliary-input synchronization delays training.
+
+[Catalog index](../../technique_catalog.md) · [Transform compute](../transform_compute.md)
+
+**`move_trainer_side_preproc_off_critical_path`: overlap or parallelize input preparation**
+- Trigger: the trainer synchronously prepares sequences or transforms a collated batch before launching each training step, while loader workers have spare capacity. The GPU waits for this preparation even when individual samples could have been prepared independently or the next batch could have been prepared during current-batch compute.
+- Technique: move work that depends only on an individual item's data into the parallel input stage, returning the prepared item to the unchanged collator. Keep batch-dependent work after collation, but prepare batch N+1 on a background worker while the GPU consumes batch N. Use two owned buffers or a bounded queue of prepared batches; pass each completed batch to the trainer in order. This parallelizes independent work or overlaps it with compute instead of paying for it synchronously each step.
+- Guards: retain batch order and buffer ownership until consumption completes. Do not move transforms that depend on current model state or cross-item statistics into an independent item stage. Gate background execution during model-tracing initialization (for example FX tracing, which patches module calls process-wide): background preparation running concurrently can race with tracing. Preserve RNG, exceptions and shutdown behavior rather than hiding failed batches behind prefetching.
+
+**`coalesce_chunk_dedup_readbacks`: deduplicate once after bounded chunk processing**
+- Trigger: a chunked device transform triggers a separate CPU readback for deduplication after each chunk.
+- Technique: put chunk outputs or their deduplication keys into a common layout, release expendable chunk temporaries, and combine the required readback into one batch-level transfer before applying the same deduplication rule. Where an equivalent device implementation exists, deduplicate there before transferring the compact result instead. Return the retained outputs in the baseline's order. Coalescing transfers avoids repeated device-to-host synchronization; merely delaying several separate readbacks does not remove them.
+- Guards: preserve the original duplicate domain and winner rule. If duplicates are removed only within each chunk, include chunk identity in the key; batch-global deduplication would otherwise remove outputs the baseline kept. More outputs coexist before deduplication; budget device memory and ensure stable duplicate handling and output order. Keep required synchronization and lifetime tracking. Fewer readbacks do not prove shorter training steps if another stage remains critical.
+
+**`gpu_transform_chunk_granularity`: amortize device launches with bounded chunks**
+- Trigger: small input-transform chunks multiply device kernel launches.
+- Technique: combine more input items or elements into each device-transform invocation, then split or scatter its outputs back to the original item order. Define the chunk budget in the implementation's actual unit and increase it enough to amortize launch overhead, retaining a memory ceiling and fallback for large or irregular batches. A cap value that helped in one comparison is not a portable default, and even its unit (items, pixels or tensor elements) must be confirmed for the implementation at hand.
+- Guards: sweep chunk size under realistic concurrency and measure peak memory plus the consumer critical path. Larger chunks may increase latency or memory without changing training throughput; preserve RNG, output order and numerical semantics at chunk boundaries.
+
+**`cpu_precompute_sync_heavy_inputs`: prepare small auxiliary inputs in workers**
+- Trigger: tiny device operations for positions, indices or auxiliary input transforms pay disproportionate launch and synchronization overhead.
+- Technique: derive auxiliary inputs from sample metadata in CPU workers, batch suitable auxiliary processing, and collate the final tensors for transfer with the sample. For example, construct per-sequence position indices from known lengths on the CPU instead of reading device lengths back to construct them during the training step. Return the same positions, masks and dtypes expected by the consumer. This trades small launch/readback costs on the step path for parallel worker work and a metadata transfer.
+- Guards: preserve position, dtype, RNG and input semantics. Restrict this to input preparation, not generic model compute; model-state-dependent values cannot be precomputed from sample metadata alone. Count added worker CPU and transfer bytes, and verify that moving work does not create a new input-stage bottleneck.
