@@ -33,6 +33,11 @@ Where to start
   :doc:`Techniques by area <_generated/optimization/techniques/_categories/techniques-by-area>`
   for caching, execution, batch assembly, transfer, preprocessing and
   startup techniques, alongside negative results.
+- **Investigating model execution?** The
+  :doc:`Model optimization catalog <_generated/optimization/model_techniques/_categories/model-optimization>`
+  groups reusable mechanisms for compute, layout, CPU dispatch, memory
+  and distributed waiting. It is separate from input-pipeline techniques;
+  choose a family from the profile rather than reading every entry.
 - **Checking recurring fetch overhead?** The
   :doc:`Startup audit <_generated/_categories/startup-audit>` follows fetch
   calls through their wrappers to reveal repeated setup or blocking work.

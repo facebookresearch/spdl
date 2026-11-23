@@ -37,11 +37,15 @@ _KEY = "spdl_knowledge_base"
 _CATEGORY_SUMMARIES = {
     "Technique catalog": (
         "Find candidate techniques by the bottleneck symptoms you observe. "
-        "Read each entry's guards and measured results before testing it."
+        "Read each entry's mechanism and guards before testing it."
     ),
     "Techniques by area": (
         "Browse techniques for caching, batch assembly, execution, transfer "
         "and preprocessing, together with useful negative results."
+    ),
+    "Model optimization": (
+        "Choose model-execution experiments from profiles of compute, layout, "
+        "dispatch, memory and distributed waiting."
     ),
     "Optimization guidance": (
         "Plan a baseline comparison, interpret pipeline statistics and "
@@ -74,6 +78,12 @@ _DEFAULT_SOURCES = (
         "Optimization guidance",
         ("technique_catalog.md",),
     ),
+    (
+        "optimization/model_techniques/*.md",
+        "optimization/model_techniques",
+        "Model optimization",
+        (),
+    ),
     ("migration/*.md", "migration", "Migration guidance", ()),
     ("authoring/*.md", "authoring", "Pipeline authoring", ()),
     ("async_boundary_audit.md", "", "Startup audit", ()),
@@ -88,7 +98,11 @@ def _default_sources() -> list[dict[str, Any]]:
             "parent": "knowledge_base/index",
             "caption": caption,
             "exclude": exclude,
-            "optional": source == "optimization/techniques/*.md",
+            "optional": source
+            in {
+                "optimization/techniques/*.md",
+                "optimization/model_techniques/*.md",
+            },
         }
         for source, target, caption, exclude in _DEFAULT_SOURCES
     ]
