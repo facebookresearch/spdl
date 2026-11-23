@@ -49,3 +49,4 @@ see :doc:`../notes/shared_memory_ownership` in Development Notes.
 
    shared_memory_arenas
    transparent_region_arenas
+   direct_allocations

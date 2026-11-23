@@ -27,6 +27,7 @@ Examples
    benchmark_thread_output_queue
    benchmark_arena_transport
    benchmark_region_arena
+   benchmark_direct_output
    benchmark_pinned_arena
    benchmark_ipc_dataloader
    benchmark_transfer_overlap
