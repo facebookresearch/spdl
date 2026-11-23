@@ -2,9 +2,32 @@
 
 Reduce avoidable work in input decoding, feature preparation, augmentation and sampling. These are candidates for an SPDL stage or an equivalent input path, not guaranteed speedups; keep the consumed data and training semantics fixed unless explicitly testing a representation change.
 
+A row or record contains related input fields, such as images, calibration and labels. It may supply one sample or several samples; the collator groups prepared samples into a training batch. An input chunk is a bounded portion processed together, not necessarily a training batch. Preserve these mappings when selecting fields, moving work or combining chunks. Local transform timing does not establish completed-training speed, cost or quality.
+
+Choose the topic whose symptoms match the measured bottleneck. Open only that reference; the technique IDs, Trigger/Technique/Guards detail and applicability caveats live in the topic files, not in this routing page.
+
 [Catalog index](../technique_catalog.md)
 
-**`per_row_cpu_generator_seeding`** (reproducibility)
-- Trigger: batches change with worker scheduling, or seeding inside workers affects CUDA generators.
-- Technique: use a dedicated CPU `torch.Generator` for each row's augmentation and derive its seed deterministically from the run seed, rank, epoch and stable row identity (or a step/position that is unchanged by worker scheduling). Pass that generator explicitly to supported random operations. This makes a row's draw independent of which worker happens to process it; do not use Python's process-randomized `hash()` as the seed mapping. Avoid global `torch.manual_seed` in workers because it also changes CUDA generator state.
-- Guards: preserve the baseline's intended random distribution, distinct rank streams and checkpoint/resume behavior. Rows that legitimately recur need the same repeat/epoch identity policy in both paths. Validate repeated runs under different worker scheduling; explicit generators do not control unrelated random libraries automatically.
+## Row RNG and identity sampling
+
+- [Row RNG and identity sampling](transform_compute/row_rng_and_identity_sampling.md): worker-dependent augmentation draws, deterministic row seeds and repeated identity-pool scans.
+
+## Image transform work elimination
+
+- [Image transform work elimination](transform_compute/image_transform_work_elimination.md): discarded views and pixels, dense reprojection, CPU augmentation and whole-image scratch buffers.
+
+## Feature preparation and materialization
+
+- [Feature preparation and materialization](transform_compute/feature_preparation_and_materialization.md): repeated parsing and dispatch, temporary allocations, DataFrame decode, identity stages and expanded string or sparse metadata.
+
+## Media decode work reduction
+
+- [Media decode work reduction](transform_compute/media_decode_work_reduction.md): PCM window extraction, timebase objects, temporary files, demux admission, discarded frames and repeated video seeks.
+
+## Input encoder reuse and packing
+
+- [Input encoder reuse and packing](transform_compute/input_encoder_reuse_and_packing.md): repeated stable encoding, overlapping causal context and padding of independent sequences.
+
+## Transform placement and chunking
+
+- [Transform placement and chunking](transform_compute/transform_placement_and_chunking.md): synchronous trainer preparation, tiny device launches, repeated deduplication readbacks and auxiliary-input synchronization.
