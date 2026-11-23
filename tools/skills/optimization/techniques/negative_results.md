@@ -1,13 +1,27 @@
 # Negative results
 
-These are workload-specific counterexamples, not rules against an approach. Each describes what went wrong and what would justify testing it again. Keep the current correct implementation as the comparison point.
+These counterexamples are not universal prohibitions. **Attempt** describes what was tried, and **Outcome** says what happened. **Not tested** marks a proposed change that was not run at the stated scope; **Related outcomes** are from separate tests. **Guards and when to revisit** explain what to check before trying the idea again.
 
-[Catalog index](../technique_catalog.md)
+Choose the topic that matches the proposed change. A component speedup, higher utilization or lower memory is not a substitute for faster completion of the same valid task. Conversely, higher CPU or memory use alone does not disqualify a faster run that fits its limits. Keep the resource and quality evidence.
 
-- **Splitting a combined input function:** the baseline performed decoding, preprocessing and batch construction together in one worker-local function, exposed through its loader's collation hook. Splitting that work into separately scheduled stages added handoffs and intermediate copies that outweighed useful overlap in the short-step workload. The function's name is not the issue: try separation when it exposes real parallelism, and measure the complete path rather than assuming more stages help.
-- **Moving an efficient local cache to remote CPU workers:** the new request, serialization and network round trip cost more than the local work it removed. Remote execution may still fit a CPU- or memory-limited host; compare the added transport and remote resource use with the actual local bottleneck.
-- **Changing distributed-model communication settings:** bucket-size, static-graph and gradient-view trials were slower for an already-fed model. These settings affect communication overlap and storage ownership; test them separately when model traces show a relevant cost, not because the input pipeline is now faster.
-- **Adding extra forced garbage collections:** a fixed collection cadence did not provide a measured throughput benefit in the tested path. This does not override the [GC guide](../gc_optimization.md): establish and retain a safe application-owned policy after parity, even when it serves lifecycle hygiene rather than speed. Diagnose pauses and retained cycles before adding more collections; tune the policy at supported boundaries and preserve exception/shutdown cleanup.
-- **Increasing buffering or changing transport in an already-fed path:** extra buffers did not help when upstream production and the consumer were already balanced. A full queue can still coexist with main-process Python/GIL interference, so inspect that interference before ruling out a transport change. Compare memory, ownership and completed throughput, not queue occupancy alone.
-- **Treating worker count and per-worker concurrency as interchangeable:** fewer processes with more in-flight work were slower in one trial, while more processes with less work had greater variability. The same nominal capacity does not imply the same Python contention, native threads or memory use; [tune both dimensions together](../parameter_sweep.md).
-- **Adding workers to a saturated CPU or storage path:** more workers increased contention, task latency or storage throttling instead of useful input production. Retry when capacity is available or the limiting work is reduced, and include all worker processes and library threads in the comparison.
+[Catalog index](../technique_catalog.md) · {ref}`Compare loader implementations <compare-loader-implementations>`
+
+## Loader layout and remote offload counterexamples
+
+- [Loader layout and remote offload counterexamples](negative_results/loader_layout_and_remote_offload_counterexamples.md): loader-only swaps, splitting already-fused pipeline work and remote offload over an efficient local cache.
+
+## Component speed and materialization counterexamples
+
+- [Component speed and materialization counterexamples](negative_results/component_speed_and_materialization_counterexamples.md): shared-transformer memory savings, native-parser expansion, local operator timing, utilization and dynamic-padding gains without faster completion.
+
+## Buffering and sample mixing counterexamples
+
+- [Buffering and sample mixing counterexamples](negative_results/buffering_and_sample_mixing_counterexamples.md): decoded-episode memory tradeoffs, worker-local packing changes and extra transport capacity while queues already hold ready batches.
+
+## Trainer pauses and communication counterexamples
+
+- [Trainer pauses and communication counterexamples](negative_results/trainer_pauses_and_communication_counterexamples.md): reduction-bucket and distributed-mode regressions, and proposed forced collections without a recurring GC tail.
+
+## Worker concurrency counterexamples
+
+- [Worker concurrency counterexamples](negative_results/worker_concurrency_counterexamples.md): unequal fixed-product worker layouts and diminishing returns near CPU, memory or storage saturation.

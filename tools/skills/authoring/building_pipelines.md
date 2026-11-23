@@ -75,6 +75,12 @@ for epoch in range(num_epochs):
 6. **Preserve the batch contract.** Use aggregate/collate semantics appropriate to the workload; retain the original batch membership and partial-batch policy when migrating. Do not add `drop_last=True` as an unchecked architecture optimization.
 7. **Iterate with a timeout.** Prefer `pipeline.get_iterator(timeout=<seconds>)` over `for batch in pipeline` / manual `next()` — it prevents jobs from hanging forever on a stall.
 
+## Initialize independent I/O resources concurrently
+
+Source/client initialization belongs in baseline pipeline construction, not only in later optimization. When the APIs support it, initialize independent network clients, source handles and related I/O resources concurrently under a bounded startup budget; do not open one source and wait for its first read before even starting the next. Keep genuinely dependent initialization ordered and propagate initialization failures before publishing a usable source.
+
+Create resources in the process/thread/event loop that owns them; do not send live network clients across a spawn/fork boundary. Bound connections, file descriptors, CPU and retained memory, clean up partially initialized resources on error/cancellation, and wait for readiness before a stage uses a handle. On resume, restore the source cursor before starting exactly one prefetch sequence. Async initialization can be awaited on its owning loop; avoid `asyncio.run()` bridges in per-item work. Use the existing stage concurrency for fetching once resources are ready; it does not automatically parallelize an expensive source constructor.
+
 ## Going to Production: Benchmark MTP and MP Regions
 
 For production training, compare relevant MTP, multiprocessing-region and

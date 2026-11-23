@@ -31,8 +31,8 @@ Where to start
   collation, transfer delays and uneven data readiness across ranks.
 - **Exploring a particular part of the input path?** Open
   :doc:`Techniques by area <_generated/optimization/techniques/_categories/techniques-by-area>`
-  for caching, execution, batch assembly, transfer and preprocessing
-  techniques, alongside negative results.
+  for caching, execution, batch assembly, transfer, preprocessing and
+  startup techniques, alongside negative results.
 - **Checking recurring fetch overhead?** The
   :doc:`Startup audit <_generated/_categories/startup-audit>` follows fetch
   calls through their wrappers to reveal repeated setup or blocking work.
