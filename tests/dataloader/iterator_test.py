@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
 
 import functools
 import itertools
@@ -11,7 +12,7 @@ import pickle
 import random
 import unittest
 import warnings
-from collections.abc import Iterator
+from collections.abc import Callable, Iterable, Iterator
 from functools import partial
 from unittest.mock import patch
 
@@ -24,9 +25,9 @@ from spdl.source.utils import (
 )
 
 
-def _ignore_fork_warning(fn):
+def _ignore_fork_warning(fn: Callable[..., object]) -> Callable[..., object]:
     @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: object, **kwargs: object) -> object:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
@@ -41,7 +42,9 @@ def _ignore_fork_warning(fn):
     return wrapper
 
 
-def iterate_in_subprocess(fn, *, timeout=10, **kwargs):
+def iterate_in_subprocess(
+    fn: Callable[[], Iterable[object]], *, timeout: float = 10, **kwargs
+) -> Iterable[object]:
     return _iterate_in_subprocess(fn, timeout=timeout, **kwargs)
 
 
