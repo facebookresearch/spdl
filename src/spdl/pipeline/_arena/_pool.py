@@ -78,7 +78,11 @@ _DEFAULT_ACQUIRE_TIMEOUT: float = 60.0
 # Mode 0 is unselected; _ORDINARY selects ordinary serialized transport.
 _CTRL: struct.Struct = struct.Struct("<QQBBQQQ")
 _ORDINARY, _DIRECT = 1, 2
+# How long one control-lock acquisition waits. Unit transfer calls keep waiting
+# past it while every other endpoint process is alive; other callers give up.
 _CONTROL_LOCK_TIMEOUT = 5.0
+# Fresh segments are written through in chunks of this size at construction.
+_PREFAULT_CHUNK: int = 64 * 2**20
 
 # Binaries are aligned to this many bytes within a segment so that zero-copy
 # views into them (e.g. ``spdl.io`` Packets payloads) land on aligned addresses.
@@ -89,6 +93,14 @@ _ALIGNMENT: int = 64
 
 _REGISTRATION_QUARANTINE: set[SharedMemorySegmentPool] = set()
 _REGISTRATION_QUARANTINE_LOCK = threading.Lock()
+
+
+def _prefault(buf: "memoryview[int]") -> None:
+    """Write every page of a fresh segment, so its first unit takes no page faults."""
+    zeros = memoryview(bytes(min(len(buf), _PREFAULT_CHUNK)))
+    for start in range(0, len(buf), len(zeros)):
+        end = min(start + len(zeros), len(buf))
+        buf[start:end] = zeros[: end - start]
 
 
 def _create_segments(
@@ -220,6 +232,14 @@ class SharedMemorySegmentPool:
 
     .. versionadded:: 0.9.0
        The ``pin_memory`` argument.
+
+    .. versionchanged:: 0.9.0
+       The constructor writes every segment page once, so a unit's first copy
+       takes no page faults. A unit is copied into its segment outside the
+       cross-process control lock, and a pinned consumer registers its mappings
+       outside it too. A unit transfer that waits longer than the control-lock
+       timeout keeps waiting, with a warning, while every endpoint process is
+       alive, instead of retiring the pool.
     """
 
     def __init__(
@@ -255,6 +275,8 @@ class SharedMemorySegmentPool:
         self._seg_bufs: "list[memoryview[int]] | None" = [
             cast("memoryview[int]", segment.buf) for segment in segs
         ]
+        for buf in self._seg_bufs:
+            _prefault(buf)
         self._closed = False
         self._closing = False
         self._reader: _PoolReader | None = None
@@ -412,7 +434,7 @@ class SharedMemorySegmentPool:
         # Doing this in the setter (rather than at every call site) means manual
         # mutations of the counter — including the consumer's ``_unit_released``
         # path and tests that simulate a reclaim — also wake the producer.
-        with self._condition():
+        with self._condition(wait_for_live_endpoints=True):
             self._signal_space()
 
     @property
@@ -491,13 +513,28 @@ class SharedMemorySegmentPool:
         # A terminal wake cannot depend on the unavailable allocator lock.
         _signal_space(self._space_signal)
 
+    def _endpoints_alive(self) -> bool:
+        """Whether every endpoint process registered by another process still exists."""
+        if self._closed:
+            return False
+        pids = _CTRL.unpack_from(self._ctrl_view(), 0)[4:6]
+        return all(pid in (0, os.getpid()) or _process_exists(pid) for pid in pids)
+
     @contextmanager
     def _condition(
-        self, *, deadline: float | None = None, local_close: bool = False
+        self,
+        *,
+        deadline: float | None = None,
+        local_close: bool = False,
+        wait_for_live_endpoints: bool = False,
     ) -> Iterator[None]:
         """Bound metadata access; retain storage on uncertain allocator state.
 
         Local-only retirement cannot cancel another handle's shared work.
+        With ``wait_for_live_endpoints``, a wait longer than one timeout keeps
+        waiting, with a warning per timeout, while the pool is not closing and
+        every other endpoint process is alive: a slow holder (a starved or
+        descheduled thread) is not evidence of uncertain allocator state.
         """
         if self._retirement_error is not None:
             if not local_close:
@@ -508,7 +545,24 @@ class SharedMemorySegmentPool:
         timeout = _CONTROL_LOCK_TIMEOUT
         if deadline is not None:
             timeout = max(0.0, min(timeout, deadline - time.monotonic()))
-        if not self._space_cv.acquire(timeout=timeout):
+        acquired = self._space_cv.acquire(timeout=timeout)
+        waited = timeout
+        while (
+            not acquired
+            and wait_for_live_endpoints
+            and deadline is None
+            and not self._closing
+            and self._retirement_error is None
+            and self._endpoints_alive()
+        ):
+            _LG.warning(
+                "Waited %.0f s for the arena control lock; its endpoint processes "
+                "are alive, waiting on",
+                waited,
+            )
+            acquired = self._space_cv.acquire(timeout=_CONTROL_LOCK_TIMEOUT)
+            waited += _CONTROL_LOCK_TIMEOUT
+        if not acquired:
             error = RuntimeError(
                 "Arena control lock unavailable; pool retired and mappings retained"
             )
@@ -898,18 +952,25 @@ class _PoolWriter:
                 f"unit exceeds segment_size ({self._seg_size}); increase "
                 "SharedMemorySegmentPool segment_size"
             )
-        with self._p._condition(), self._p._close_lock:
+        with self._p._condition(wait_for_live_endpoints=True), self._p._close_lock:
             if self._p._closed or self._p._shutdown:
                 raise BufferError("segment pool is closing")
             seg = self._p._segment(self._p._published)
             offset = self._cursor
+        # Copy without the control lock: ``begin_unit`` reserved this segment, and
+        # the reader touches only published units. A large copy under the lock
+        # would stall every peer waiting for it. The process-local close lock
+        # keeps this handle's mapping open until the copy ends.
+        with self._p._close_lock:
+            if self._p._closed:
+                raise BufferError("segment pool is closing")
             seg[offset : offset + n] = mv
-            self._cursor += n
-            return offset, n
+        self._cursor += n
+        return offset, n
 
     def commit_unit(self) -> int:
         """Publish the unit (advance the publish counter); return its byte span."""
-        with self._p._condition(), self._p._close_lock:
+        with self._p._condition(wait_for_live_endpoints=True), self._p._close_lock:
             if self._p._closed or self._p._shutdown:
                 raise BufferError("segment pool is closing")
             span = self._cursor
@@ -998,10 +1059,18 @@ class _PoolReader:
             raise ValueError("binary is outside the segment")
         guard = None
         try:
-            with self.pool._condition(), self.pool._close_lock:
-                if self.pool._closed or self.pool._shutdown:
+            # CUDA registration of every segment can take seconds: do it under the
+            # process-local close lock only, not the shared control lock.
+            with self.pool._close_lock:
+                if self.pool._closed:
                     raise RuntimeError("segment pool is closed")
                 self.pool._ensure_pinned()
+            with (
+                self.pool._condition(wait_for_live_endpoints=True),
+                self.pool._close_lock,
+            ):
+                if self.pool._closed or self.pool._shutdown:
+                    raise RuntimeError("segment pool is closed")
                 name = self.pool._seg_names[self._next % self.pool._count]
                 view = self.pool._segment(self._next)[offset : offset + nbytes]
                 lease = self.lease
@@ -1030,7 +1099,11 @@ class _PoolReader:
            Replace the old ``pinned=`` keyword with ``anchors=``; positional
            calls are unchanged.
         """
-        with self.pool._condition(), self.pool._close_lock, self._lock:
+        with (
+            self.pool._condition(wait_for_live_endpoints=True),
+            self.pool._close_lock,
+            self._lock,
+        ):
             if self.pool._closed:
                 return
             lease = self.lease
@@ -1049,7 +1122,11 @@ class _PoolReader:
         if self.pool._closed or self.pool._retirement_error is not None:
             return
         try:
-            with self.pool._condition(), self.pool._close_lock, self._lock:
+            with (
+                self.pool._condition(wait_for_live_endpoints=True),
+                self.pool._close_lock,
+                self._lock,
+            ):
                 watermark = self._reclaimed
                 while watermark in self._released:
                     watermark += 1
