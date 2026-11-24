@@ -1,0 +1,85 @@
+# Model execution optimization catalog
+
+This companion catalog helps you choose model-execution experiments from what a profile shows: slow tensor operations, repeated copies, CPU launch delays, memory pressure or distributed waiting. It is separate from the [input-pipeline catalog](../technique_catalog.md), so you can read only the family relevant to the current problem.
+
+Each entry has a stable ID, a **Trigger** describing when it might fit, a **Technique** explaining the change and why, and **Guards** covering correctness and tradeoffs. Public framework APIs are reference implementations to compare, not required replacements. There are no expected-gain fields: effects depend on the model, shapes, hardware, runtime and surrounding pipeline. Sources are optional provenance, not prerequisites for understanding an entry.
+
+## Choosing an experiment
+
+1. Identify exposed work in the native forward, backward or optimizer path. Separate device execution from CPU dispatch and synchronization; a busy GPU or a long Python call alone does not identify the limiting operation.
+2. Open only the matching family and compare its trigger with your profile. Record the stable ID and the reason for testing it or ruling it out.
+3. Keep the data, effective batch, update count and distributed communication fixed for a speed comparison. Follow the [cached model benchmark](../cached_model_benchmark.md) for short warmed native tests on real GPU-ready batches, then restore real acquisition for full-run validation.
+4. Check numerical behavior and trained-model quality against the original model baseline. Include compilation, setup, evaluation, checkpointing and resource use in the scope where they matter. A kernel microbenchmark or cached replay is not full-training or cost evidence.
+
+Model and input hypotheses can be investigated independently and concurrently. Cached tests can isolate a model change while input delivery is still being improved; do not attribute a production speedup or declare the real job model-bound without measurements from that path. Combining independent wins still needs a new comparison.
+
+## Mechanism families
+
+### Precision and tensor layout
+
+| ID | Trigger |
+|---|---|
+| [`fp8_outlier_local_scaling`](precision_layout.md) | FP8 compute is desirable, but a few large values dominate a tensor-wide or long-row scale and erase smaller values. |
+| [`softmax_key_centering_before_quantization`](precision_layout.md) | Key-vector outliers degrade quantized softmax attention, particularly query-side gradients. |
+| [`fp8_dual_axis_payload_reuse`](precision_layout.md) | Forward and backward consumers need the same tensor quantized along different axes, creating duplicate FP8 payloads. |
+| [`channels_last_execution_regions`](precision_layout.md) | Convolution or BatchNorm profiles contain layout conversions or inefficient kernels, especially around narrow-channel pointwise convolutions. |
+| [`invariant_operand_broadcast`](precision_layout.md) | An identical query or other operand is explicitly repeated across batch entries, then redundantly normalized, projected, or loaded. |
+
+### Operator fusion and grouped updates
+
+| ID | Trigger |
+|---|---|
+| [`fused_norm_activation`](fusion_updates.md) | Layer normalization, sigmoid, and multiplication run as separate kernels and materialize intermediate tensors. |
+| [`lookup_transform_hoisting`](fusion_updates.md) | Repeated table lookups are followed by the same row-local projection and normalization, recomputing those transforms for duplicate rows. |
+| [`multi_tensor_optimizer_updates`](fusion_updates.md) | Optimizer execution is dominated by many small parameter-wise launches and dispatches. |
+
+### Compilation, graph replay and host dispatch
+
+| ID | Trigger |
+|---|---|
+| [`optimizer_state_traversal_hoisting`](graphs_dispatch/host_dispatch_and_cuda_replay.md) | CPU profiles show recursive optimizer-state lookup or tensor-keyed dictionary aggregation repeatedly delaying an otherwise unchanged update. |
+| [`device_gated_optimizer_skip`](graphs_dispatch/host_dispatch_and_cuda_replay.md) | A host read of the all-reduced non-finite verdict blocks optimizer scheduling; device gating needs explicit kernel and rollback support. |
+| [`tensor_only_compile_regions`](graphs_dispatch/compile_boundaries_and_reuse.md) | Compiling a large wrapper repeatedly recompiles or falls back to eager because it mixes tensor computation with changing Python metadata. |
+| [`upfront_dynamic_shape_contract`](graphs_dispatch/compile_shape_and_schedule_contracts.md) | Input dimensions genuinely vary, and the compiler repeatedly learns that variation through failed shape guards. |
+| [`bounded_shape_specialization`](graphs_dispatch/compile_shape_and_schedule_contracts.md) | Many nearby shapes repeatedly incur compilation, graph recording or host-side matrix-kernel selection work. |
+| [`tensorized_schedule_state`](graphs_dispatch/compile_shape_and_schedule_contracts.md) | Changing Python learning-rate or schedule values invalidate compiled training-step guards. |
+| [`tensor_control_flow_and_masked_reductions`](graphs_dispatch/compile_shape_and_schedule_contracts.md) | Tensor-value branches or compaction may permit dense masked rewrites; data-derived shapes require supported contracts, compiler fixes and recompilation checks. |
+| [`avoidable_host_readback_removal`](graphs_dispatch/host_dispatch_and_cuda_replay.md) | GPU execution pauses while the host reads tiny tensors for unused metadata, debug output or per-step metric reporting. |
+| [`repeated_region_compile_reuse`](graphs_dispatch/compile_boundaries_and_reuse.md) | A deep stack of structurally repeated blocks creates a very large compilation graph and excessive cold-start work. |
+| [`opaque_custom_op_boundary`](graphs_dispatch/compile_boundaries_and_reuse.md) | An existing custom kernel or unsupported implementation prevents a useful surrounding region from compiling. |
+| [`launch_bound_cuda_graph_replay`](graphs_dispatch/host_dispatch_and_cuda_replay.md) | A stable GPU computation launches many short kernels and waits on Python, framework or driver dispatch between them. |
+
+### Activation memory and recomputation
+
+| ID | Trigger |
+|---|---|
+| [`cost_aware_activation_retention`](memory_recomputation.md) | Forward-pass intermediates retained for backward dominate GPU memory, but checkpointing whole blocks repeatedly executes expensive operations. |
+| [`selective_activation_host_stashing`](memory_recomputation.md) | Large activations stay on GPU long before backward needs them, and recomputation is costly or unsafe because it would repeat communication or read already-updated parameters. |
+| [`gradient_ready_optimizer_update`](memory_recomputation.md) | Completed parameter gradients accumulate in GPU memory until the entire backward pass finishes, creating a gradient-memory peak. |
+| [`optimizer_state_idle_window_stashing`](memory_recomputation.md) | Large optimizer-state tensors occupy GPU memory during forward/backward even though they are used only during optimizer updates. |
+
+### Distributed communication and parameter residency
+
+| ID | Trigger |
+|---|---|
+| [`accumulation_boundary_gradient_sync`](distributed_execution.md) | Training already accumulates several microbatches per optimizer update, but redundantly reduces gradients after every microbatch. |
+| [`bounded_parameter_allgather_prefetch`](distributed_execution.md) | Computation waits for sharded parameters to be gathered even though preceding modules or pipeline stages provide useful overlap time. |
+| [`forward_backward_parameter_residency`](distributed_execution.md) | Forward gathers parameters, immediately discards the gathered copy, and backward gathers the same unchanged parameters again despite memory headroom. |
+| [`overlap_aware_collective_bucketing`](distributed_execution.md) | Many small collectives pay launch latency, but indiscriminate coalescing delays early-ready results and destroys existing compute overlap. |
+| [`topology_tiered_hybrid_sharding`](distributed_execution.md) | Full-world parameter gathers/reductions cross slow network tiers and become exposed as the training rank count grows. |
+
+## Retained input-adjacent techniques
+
+These IDs already exist in the [model-execution area of the input catalog](../techniques/model_execution.md). Their implementations remain there rather than being copied into another entry:
+
+- `device_resident_matching`: per-example CPU assignment forces GPU results back to the host.
+- `reduced_precision_compute`: suitable floating-point compute remains expensive after delivery is understood.
+- `norm_layout_materialization`: layout changes and normalization repeatedly copy or select slow paths.
+- `fused_copy_widen`: one required copy is followed by another pass for dtype conversion.
+- `selective_kernel_replacement`: a specific operator shape or stride has an inefficient execution path.
+
+## Maintenance
+
+Keep one entry per distinct mechanism, not one per model, paper or optimization report. New support belongs with an existing ID when the mechanism matches. Add an entry only when its inputs, intervention and guards can be explained concisely without a source diff; preserve useful negative results and incomplete-validation caveats. Model architecture changes, task recipes and exhaustive kernel inventories are outside this catalog.
+
+Generic explanations and optional public API references belong here. Organization-internal source links and infrastructure-specific adaptations belong in a private extension outside this catalog; keep provenance minimal and do not duplicate historical experiment narratives or gain figures. Do not promote a runtime change that drops data, changes updates unnoticed or fails quality checks.
