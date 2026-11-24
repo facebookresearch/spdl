@@ -13,7 +13,7 @@ Data Format and Performance
      (Avoid using :py:func:`numpy.savez_compressed`,
      instead use :py:func:`numpy.save` or :py:func:`numpy.savez`)
    - Only store numerical arrays. Do not store objects, such as metadata dictionary.
-     (Pass ``allow_pickle=False`` when saving to ensure this.)
+     Load numerical archives with ``allow_pickle=False``.
    - Switch to multi-threading and use :py:func:`spdl.io.load_npz` or
      :py:func:`spdl.io.load_npy`.
 
@@ -39,9 +39,9 @@ We often see teams work on data collection bundle multiple arrays with and metad
    handle = get_handle_for_remote("my_bucket://my_data.npz")
    np.savez(handle, **data)
 
-Arrays passed to the :py:func:`numpy.savez` function is serialized into byte strings as
-``NPY`` † format.
-Other objects are serialized using Python's :py:mod:`pickle` module.
+Values passed to :py:func:`numpy.savez` are stored as arrays in ``NPY`` †
+format. Object arrays, such as an array containing a dictionary, serialize
+their Python objects with :py:mod:`pickle`.
 Then NPZ format uses `ZIP <https://en.wikipedia.org/wiki/ZIP_(file_format)>`_
 to bundle the serialized objects.
 As such, the NPZ format supports saving generic Python objects, so it makes it very
@@ -64,8 +64,9 @@ In this section we look at issues loading NPZ files and discuss alternative solu
 The Performance of ``numpy.load`` on NPZ data
 ---------------------------------------------
 
-The :py:func:`numpy.load` function holds the GIL.†
-So concurrently calling it with multi-threading degrades the performance.
+When reading entries returned by :py:func:`numpy.load`, Python archive and
+object-handling work can contend for the GIL.† In this benchmark, adding
+threads reduced throughput.
 The following figure shows how the performance of ``numpy.load`` function scale
 with multi-processing (``MP``) and multi-threading (``MT``) when loading NPZ files.
 
@@ -82,7 +83,8 @@ So the bottleneck likely is at the inter-process communication
 
 With multi-threading, the throughput is highest when there is only one worker.
 The performance decreases as more workers are used.
-This is because the ``numpy.load`` holds the GIL.
+GIL contention in the read path can explain this pattern, but it does not
+mean every operation in the reader holds the GIL.
 
 When we used ``numpy.load`` with multi-threading,
 it degraded the training speed.
@@ -101,13 +103,10 @@ This slows down the training.
 
    The NPZ format uses Zip format to bundle multiple items with optional compression.
    The :py:func:`numpy.load` uses the Python's :py:mod:`zipfile` module to parse the
-   raw byte string, then deserialize each item.
-   When deserializing, if the object is not NumPy NDArray type, then it resorts to
-   the :py:mod:`pickle` module.
-
-   Since the ``zipfile`` and ``pickle`` modules are pure-Python packages, and the
-   rest of ``numpy.load`` function is also written in Python without an extension module,
-   the entire process of NPZ deserialization (``numpy.load``) holds the GIL.
+   archive and exposes its entries lazily; accessing an entry reads its array.
+   Object dtypes require the :py:mod:`pickle` path. Python work in the archive
+   and object-handling steps needs the GIL, but native I/O, decompression and
+   array-reading routines need not hold it for the entire operation.
 
 Changing the data format
 ------------------------
@@ -163,7 +162,7 @@ serialization format in multi-threading can give you a boost.
 PyTorch's serialization format also uses the ZIP format
 to bundle multiple objects, but the part that parses the ZIP format
 is implemented in C++ and releases the GIL,
-so it is faster than ``numpy.load`` in processing the ZIP.
+which helped the threaded comparison shown here.
 
 If you want to squeeze the last bit of the performance, switching to
 NPY format gives a little bit more performance.
@@ -180,7 +179,7 @@ the file-like object interface.
 It does not support directly interpreting a byte string as array.
 When a serialized data is in byte string, it must be wrapped by
 the :py:class:`io.BytesIO` class.
-However, this makes ``numpy.load`` to branch to a slower path††, in which 
+However, this makes ``numpy.load`` to branch to a slower path††, in which
 the data is read incrementally with intermediate copies.†††
 
 To achieve high throughput with multi-threading, it is important to reduce
@@ -188,11 +187,12 @@ the number of data copies.
 Reducing the memory copy also helps reducing the time the function holds the GIL.
 
 For this purpose, we implemented the :py:func:`spdl.io.load_npy` and
-:py:func:`spdl.io.load_npy` functions.
-They take a byte string and re-itnerptet it as an array or set of arrays
-without creating a copy.
-These functions are not a replacement of ``numpy.load`` function.
-They work only when the data type is not Python's object type.
+:py:func:`spdl.io.load_npz` functions. For supported NPY payloads and stored
+NPZ entries, they can interpret the original bytes as arrays without copying
+the array data. Compressed NPZ entries require decompression into new storage.
+These functions do not support object arrays and are not full replacements
+for ``numpy.load``. See :doc:`../../io/numpy_arrays` for their format and
+backing-buffer requirements.
 
 These function are faster than the ``numpy.load`` function,
 even though it does not release the GIL entirely.
@@ -219,13 +219,14 @@ The following plot shows how the choice of data format and IO function affects t
 performance of a training pipeline.
 
 .. raw:: html
-   
+
    <div id='npz_exp'></div>
 
 - The ``NPZ, multi-processing (Baseline)`` is the original implementation,
-  which is based on TorchData's ``StatefulDataLaoder``.
-  It loads NPZ files in subprocesses.
-  (The performance of ``StatefulDataLoader`` is known to decay as the training progress.)
+  which is based on TorchData's ``StatefulDataLoader``.
+  It loads NPZ files in subprocesses. We have seen throughput decline as
+  training progresses in multiple runs using ``StatefulDataLoader``. Compare
+  throughput over time rather than relying only on an early measurement.
 - The ``Upperbound`` is the estimated maximum throughput obtained by using
   :py:class:`~spdl.dataloader.CacheDataLoader`.
   (See :ref:`headspace-analysis` for details.)
@@ -240,8 +241,8 @@ slows down the training speed,
 even though when it was faster with multi-threading when we benchmarked
 the function itself.
 
-Switching dataset format from NPZ to NPY takes required some efforts.
-It required one-time conversion job, but the resulting pipeline is faster than
-the baseline.
+Switching from NPZ to NPY required a one-time conversion job. The resulting
+pipeline was faster than the baseline in this case. Because the comparison
+changed both the format and the reader, it does not isolate each one's effect.
 
-.. include:: ../plots/data_format.txt
+.. include:: ../../plots/data_format.txt

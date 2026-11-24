@@ -44,17 +44,16 @@ Please use the following BibTex for citing our project if you find it useful.
    overview
    installation
    getting_started/index
+   pipeline_guides/index
    async/index
    io/index
+   migration/index
    optimization_guide/index
    knowledge_base/index
-   case_studies/index
-   autoresearch/index
-   migration/index
-   best_practice
+   fb/knowledge_base
    examples
    fb/examples
-   fb/knowledge_base
+   autoresearch/index
 
 .. toctree::
    :maxdepth: 2

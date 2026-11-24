@@ -14,9 +14,9 @@ Pass an arena to :py:meth:`~spdl.pipeline.PipelineBuilder.to` to change how data
 crosses a process boundary without changing the stage itself. The stage still
 receives and returns ordinary values. The transport copies supported binary
 leaves into reusable shared memory and restores them on the receiving side.
-If the stage itself needs to write directly into shared memory, use caller-managed
-allocation tickets over ordinary IPC instead; transparent transport does not
-recover or discard those tickets.
+If the stage itself needs to write directly into shared memory, use
+:doc:`caller-managed allocation tickets <direct_allocations>` over ordinary
+IPC instead; transparent transport does not recover or discard those tickets.
 
 Start with one worker
 ---------------------
@@ -94,7 +94,7 @@ If a custom backend can block indefinitely, the caller must arrange for its
 public cancellation or terminal close to wake the blocked operation before
 joining workers, while preserving live views. Do not unlink while worker
 liveness is uncertain; a stop timeout does not guarantee their exit. See
-:doc:`../notes/shared_memory_ownership` for more on storage lifetimes.
+:doc:`../../notes/shared_memory_ownership` for more on storage lifetimes.
 
 Pin memory at the receiver
 --------------------------

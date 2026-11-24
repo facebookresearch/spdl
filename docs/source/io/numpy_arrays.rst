@@ -10,7 +10,7 @@ SPDL provides optimized functions for loading NumPy arrays from byte strings (da
 
 .. seealso::
 
-   :doc:`../case_studies/data_format`
+   :doc:`../pipeline_guides/case_studies/data_format`
       Case study comparing different data serialization formats for performance and efficiency.
 
 Overview

@@ -126,7 +126,7 @@ A pool-backed tensor can outlive the Python wrapper that first returned it:
 to its bytes. Early reuse or unmapping would corrupt those values. Ring outputs
 own their copies, but retaining many of them retains many independent buffers.
 Closing local use and unlinking a shared name are different from invalidating
-live storage. See :doc:`../notes/shared_memory_ownership` in Development Notes
+live storage. See :doc:`../../notes/shared_memory_ownership` in Development Notes
 for the technical storage-owner, alias, cleanup and external-consumer rules.
 
 Using a custom arena backend
@@ -156,7 +156,7 @@ See the protocol references for endpoint signatures, commit/abort behavior,
 shutdown and teardown ordering, consumer-local storage policy and reader
 compatibility. Technical
 storage-owner and alias-lifetime details remain in
-:doc:`../notes/shared_memory_ownership`.
+:doc:`../../notes/shared_memory_ownership`.
 
 Memory pinning
 --------------
@@ -252,7 +252,7 @@ stay quarantined until a successful retry proves completion. A pool must be
 unregistered **before** unmapping; live aliases and H2D holds postpone cleanup.
 Pinning/unregister errors are reported, not silently treated as pageable success;
 repeated close can retry unresolved unregister. The technical details belong in
-:doc:`../notes/shared_memory_ownership`.
+:doc:`../../notes/shared_memory_ownership`.
 
 Returned CUDA tensors are recorded on the selected device's default consumer
 stream. Work on another stream still needs normal PyTorch readiness and

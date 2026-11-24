@@ -481,5 +481,5 @@ Next Steps
 
 - See :ref:`working-around-the-gil` for which operations release the GIL
 - See :doc:`../migration/pytorch` for detailed migration examples
-- Explore :doc:`../case_studies/index` for real-world use cases
+- Explore :doc:`../pipeline_guides/case_studies/index` for real-world use cases
 - Read :doc:`../optimization_guide/index` for performance tuning

@@ -1,7 +1,7 @@
 Why shared arena outputs keep storage alive
 =============================================
 
-Start with :doc:`../optimization_guide/shared_memory_arenas` for what arenas save,
+Start with :doc:`../pipeline_guides/memory_and_transport/shared_memory_arenas` for what arenas save,
 pool/ring choices, default CPU usage and the optional memory-pinning workflow.
 This Development Note focuses on the technical obligation behind those choices:
 **do not overwrite or unmap bytes that an output or in-flight transfer still
@@ -88,7 +88,7 @@ creating the buffer exporter does not load Torch, CUDA or media-native
 extensions. There is no unsafe finalizer fallback if the helper is unavailable.
 
 For concrete custom backend usage, see
-:doc:`../optimization_guide/shared_memory_arenas`. The public
+:doc:`../pipeline_guides/memory_and_transport/shared_memory_arenas`. The public
 :py:class:`spdl.pipeline.ArenaProtocol` and writer/reader references define the
 byte-unit contract; the storage-owner rules above apply independently of payload
 reconstruction or logical unit release.
@@ -128,7 +128,7 @@ accounting. The synchronized :py:func:`spdl.io.transfer_tensor_h2d` retains the
 source, destination and transfer stream until completion, including failure
 paths. With raw nonblocking H2D, the caller must retain source owners until the
 copy completes; allocator bookkeeping alone does not protect an externally
-registered shared mapping. See :doc:`../optimization_guide/shared_memory_arenas` for stream and
+registered shared mapping. See :doc:`../pipeline_guides/memory_and_transport/shared_memory_arenas` for stream and
 failed-cleanup behavior.
 
 External ``torch.frombuffer`` consumers

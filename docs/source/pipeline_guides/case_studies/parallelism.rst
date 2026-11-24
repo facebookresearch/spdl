@@ -6,21 +6,16 @@ Parallelism and Performance
 .. admonition:: tl;dr
    :class: tip
 
-   If using multi-threading degrades the performance of a training pipeline
-   even though the performance of individual functions are good,
-   run the data loader in a subprocess.
+   If in-process loader threads slow training despite good component timings,
+   compare the same pipeline in a subprocess with
+   :py:func:`spdl.pipeline.run_pipeline_in_subprocess`. Count IPC, CPU, and memory
+   costs in the comparison.
 
-   You can use :py:func:`spdl.pipeline.run_pipeline_in_subprocess` to run
-   the pipeline in a subprocess.
-
-With the introduction of free-threaded Python, the use of multi-threading
-will become undoubtedly common.
-
-When we started SPDL, we thought multi-threading would solve all the data
-loading inefficiencies.
-However, we encountered a case where simply applying multi-threading
-(while properly releasing the GIL) degraded the performance.
-We would like to share our experiences and thoughts on parallelism and performance.
+When we started SPDL, we expected multithreading to remove many data-loading
+bottlenecks. In this workload it slowed training, even though the loader
+released the GIL during its heavy operations. Moving the threaded pipeline
+out of the trainer process improved throughput. This case shows why neither
+component timings nor average CPU utilization predicted the result.
 
 .. note::
 
@@ -79,26 +74,19 @@ We can also see that the ``mt`` run shows spikier behavior than the others.
 Noisy Neighbour and multiprocessing
 -----------------------------------
 
-After many failed attempts to resolve this, we suspected it could be
-due to :ref:`noisy-neighbour`
-even though the CPU utilization of the ``mt`` run is a little above 20%,
-whereas the baseline run uses more than 60%.
-(PyTorch DataLoader uses multiprocessing in very inefficient manner.)
-
-The core issue of the noisy neighbour is that
-the CPU cannot launch the GPU kernel in a timely manner.
-The CPU task scheduling is handled by the OS, and
-there is a great deal to this topic,
-but what we could do with a little effort was to move the pipeline parallelism
-out of the main process and execute it in a dedicated subprocess.
+We suspected :ref:`noisy-neighbour` interference even though average CPU
+utilization in the threaded run was just over 20%, versus more than 60% in the
+baseline. A low average does not rule out contention on a specific thread or
+core during kernel launches. We tested isolating the threaded pipeline from
+the trainer by running it in a dedicated subprocess.
 
 The following figure illustrates this.
 
-.. image:: ../_static/data/parallelism_architecture.png
+.. image:: /_static/data/parallelism_architecture.png
 
 It turned out that this multi-threading in subprocess (``mtp``) is
 highly effective.
 It consumed a little more CPU resources (~26%) than simple ``mt`` (~20%),
 but it was faster, and no spiky behavior was observed.
 
-.. include:: ../plots/parallelism.txt
+.. include:: ../../plots/parallelism.txt

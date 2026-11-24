@@ -167,7 +167,7 @@ storage cleanup.
 
 Use the synchronized
 H2D helper for the example; raw nonblocking copies need their own source-lifetime
-and stream-completion handling. See :doc:`../notes/shared_memory_ownership` for
+and stream-completion handling. See :doc:`../../notes/shared_memory_ownership` for
 storage lifetime and :doc:`shared_memory_arenas` for consumer pinning costs.
 
 Sizing and prerequisites
@@ -329,4 +329,4 @@ remain allocated until explicitly discarded or retired by creator cleanup.
 If cleanup fails or worker retirement is uncertain, retain the original pools,
 pipeline, and any worker-reporting resources, and report the cleanup failure
 without masking the original error. Do not force unlink or reset the pool. See
-:doc:`../notes/shared_memory_ownership` for the storage lifetime rules.
+:doc:`../../notes/shared_memory_ownership` for the storage lifetime rules.

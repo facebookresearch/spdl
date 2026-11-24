@@ -7,7 +7,7 @@
 
 """This example benchmarks the speed of loading data in different formats.
 
-See `Case Studies / Data Format <../case_studies/data_format.html>`_ for
+See :ref:`data-formats-case-study` for
 the detail of how data format and the loading function affects
 the performance of the training pipeline.
 

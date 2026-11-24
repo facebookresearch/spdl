@@ -14,3 +14,4 @@ find source/generated ! -name 'libspdl_*.rst' -type f -exec rm -f {} +
 mkdir -p _build/breathe/doxygen/libspdl/xml/
 
 python3 -m sphinx.cmd.build -v source _build
+python3 scripts/spdl_docs_redirects.py source _build
