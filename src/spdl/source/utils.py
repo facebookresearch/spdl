@@ -6,7 +6,7 @@
 
 """Implements meta-transformations on iterables/iterators."""
 
-__all__ = ["MergeIterator", "repeat_source", "embed_shuffle"]
+__all__ = ["MergeIterator", "repeat_source", "embed_shuffle", "EmptySourceError"]
 
 
 import logging
@@ -384,6 +384,13 @@ def embed_shuffle(
 ################################################################################
 
 
+class EmptySourceError(RuntimeError):
+    """Raised by :py:func:`repeat_source` when an epoch yields no items.
+
+    .. versionadded:: 0.9.0
+    """
+
+
 def _repeat(src: Iterable[T] | IterableWithShuffle[T], epoch: int) -> Iterator[T]:
     while True:
         _LG.info("Starting source epoch %d.", epoch)
@@ -403,6 +410,14 @@ def _repeat(src: Iterable[T] | IterableWithShuffle[T], epoch: int) -> Iterator[T
             elapsed,
             qps,
         )
+        if num_rows == 0:
+            # Without this, an empty epoch never suspends the generator and
+            # the loop keeps starting new epochs forever.
+            raise EmptySourceError(
+                f"The source did not yield any item in epoch {epoch}. "
+                "`repeat_source` needs a non-empty source that can be iterated "
+                "more than once (not a one-shot iterator such as a generator)."
+            )
         epoch += 1
 
 
@@ -449,6 +464,9 @@ def repeat_source(
 
     .. versionchanged:: 0.8.0
        ``epoch`` now also controls the first shuffle seed.
+
+    .. versionchanged:: 0.9.0
+       An epoch that yields no items now raises :class:`EmptySourceError`.
     """
     # Returning object so that it can be passed to a subprocess.
     return _RepeatIterator(src, epoch)

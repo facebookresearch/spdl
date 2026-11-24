@@ -17,8 +17,10 @@ from functools import partial
 from unittest.mock import patch
 
 from spdl.pipeline import iterate_in_subprocess as _iterate_in_subprocess
+from spdl.source import utils as source_utils
 from spdl.source.utils import (
     embed_shuffle,
+    EmptySourceError,
     IterableWithShuffle,
     MergeIterator,
     repeat_source,
@@ -372,6 +374,40 @@ class TestRepeatSource(unittest.TestCase):
             self.assertEqual(next(gen), 0)
             self.assertEqual(next(gen), 1)
             self.assertEqual(next(gen), 2)
+
+    def test_repeat_source_empty_epoch(self) -> None:
+        """repeat_source raises instead of looping when an epoch is empty."""
+
+        class _EmptyWithShuffle:
+            def shuffle(self, seed: int) -> None:
+                pass
+
+            def __iter__(self) -> Iterator[int]:
+                yield from ()
+
+        for src in ([], _EmptyWithShuffle()):
+            with self.subTest(src=type(src).__name__):
+                gen = iter(repeat_source(src, epoch=3))
+                with self.assertRaisesRegex(EmptySourceError, "epoch 3"):
+                    next(gen)
+
+    def test_repeat_source_one_shot_iterator(self) -> None:
+        """repeat_source raises once a one-shot iterator is exhausted."""
+
+        gen = iter(repeat_source(iter(range(3))))
+        self.assertEqual([next(gen) for _ in range(3)], [0, 1, 2])
+        with self.assertRaisesRegex(EmptySourceError, "epoch 1"):
+            next(gen)
+
+    def test_empty_source_error_is_runtime_error(self) -> None:
+        """EmptySourceError is public and caught by ``except RuntimeError``."""
+
+        self.assertIn("EmptySourceError", source_utils.__all__)
+        self.assertTrue(issubclass(EmptySourceError, RuntimeError))
+        gen = iter(repeat_source([]))
+        with self.assertRaises(RuntimeError) as cm:
+            next(gen)
+        self.assertIs(type(cm.exception), EmptySourceError)
 
     def test_repeat_source_picklable(self) -> None:
         """repeat_source is picklable."""
