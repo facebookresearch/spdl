@@ -25,6 +25,7 @@ Reuse the task's existing live record when available. Do not reorder or overwrit
 - Phase: 1 migration / 2 architecture / 3 sweep.
 - Original loader/model baseline and accepted minimal SPDL control.
 - Current validated architecture/commit stack, its latest validated top, and provisional candidates, with speed, CPU/memory and accuracy status clearly separated. New experiments branch from this validated top; speed uses the immediate parent and quality uses the original model baseline.
+- Catalog techniques picked in this phase, with their current outcome; link the technique screening log for ruled-out entries.
 - Main discoveries, decisions, blockers and next actions.
 - Measurement scopes and references; missing data remains `unavailable` / `pending`, not zero or success.
 
@@ -45,11 +46,22 @@ For each discovery record:
 
 Record question, alternatives, evidence, discussion outcome, chosen direction, rationale, consequences and revisit condition. Link the implementing change/experiment. Keep a superseded decision visible with its replacement; do not overwrite history so it appears that the outcome was known in advance.
 
+## Technique screening log
+
+Every time an analysis is screened against the [input-pipeline catalog](technique_catalog.md) or the [model-execution catalog](model_techniques/index.md), add an entry to the active phase record, for example its Google Docs tab. The log lets a human reviewer see which techniques were picked, why, and what happened to them, without reading the agent session. Record:
+
+- Date, the analysis it is based on (job/attempt or local run, with a link) and the measured cost being addressed.
+- **Picked:** each catalog ID chosen as a candidate, the catalog it came from, the observation that matched its trigger, and the attempt ID or fork that tests it.
+- **Ruled out:** each ID whose trigger was considered but did not match, or that the pipeline already implements, with a one-line reason.
+- **No match:** when no entry fits the measured cost, say so and name the next measurement or the new approach being tried instead.
+
+When a picked technique's attempt reaches a decision, update its log entry with the outcome (`validated`, `rejected` or `blocked`) and a link to the attempt. Do not delete or rewrite earlier entries when a later analysis changes direction. If an attempt reveals a missing guard or a mechanism the catalog lacks, note it here too, so the catalog can be updated.
+
 ## Optimization inventory
 
 Use one inventory with these fields:
 
-- ID, phase, hypothesis/approach, dedicated subagent owner, isolated worktree/checkout, component/architecture and exact immediate parent.
+- ID, catalog technique ID(s) when the attempt came from the catalog, phase, hypothesis/approach, dedicated subagent owner, isolated worktree/checkout, component/architecture and exact immediate parent.
 - State: `todo`, `ongoing`, `speed_validated`, `accuracy_pending`, `validated`, `rejected` or `blocked`.
 - Source/diff/configuration and any resource/topology/runtime/semantic changes.
 - Local data checks and paired CPU-utilization/throughput/memory evidence.
@@ -63,7 +75,7 @@ Only `validated` means the required correctness, accuracy and reliability gates 
 
 Each attempt gets a short entry, not a narrative report:
 
-- **What:** one sentence describing the approach/change.
+- **What:** one sentence describing the approach/change, with its catalog technique ID when it came from the catalog.
 - **Post-analysis:** one sentence stating the measured bottleneck/reason it was slow or fast, or that attribution is inconclusive; include only the decisive result/scope.
 - **Links:** exact commit/diff, job/attempt and detailed analysis/accuracy evidence.
 
