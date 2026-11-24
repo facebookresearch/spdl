@@ -15,7 +15,7 @@ Where a public SPDL utility fits the mechanism, the area entry includes an **SPD
 ## How to screen
 
 1. Gather SPDL stage statistics, **minimum sink occupancy across all ranks**, actual GIL-holder/native stacks, host file/anonymous/swap memory, total worker/thread CPU, per-rank GPU memory, and trainer/boundary timings. A full sink and low fetch wait do not rule out trainer-thread interference.
-2. Use the trigger table to open only matching area files. Read the technique and guards before proposing an entry; record an inapplicable ID and reason.
+2. Use the trigger table to open only matching area files. Read the technique and guards before proposing an entry. Log each picked ID with the matching observation, and each inapplicable ID with the reason, in the campaign record's [technique screening log](development_record.md#technique-screening-log).
 3. Rank candidates by exposed critical-path cost. Test independent hypotheses on separate forks of the validated parent. Preserve data coverage, randomization, checkpoint/resume and batch/update semantics.
 4. Re-profile and compare matched native runs. Count cold preparation, startup, final drains, evaluation/checkpoints and realized resources in the complete-run result; validate quality against the original model baseline.
 
