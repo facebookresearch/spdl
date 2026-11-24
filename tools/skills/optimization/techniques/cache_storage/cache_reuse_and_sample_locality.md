@@ -1,0 +1,54 @@
+# Cache reuse and sample locality
+
+This topic covers deterministic reuse, stable worker ownership, storage-aligned order and persistent file or reader resources. Open this topic when repeated setup or poor locality defeats cache reuse.
+
+[Catalog index](../../technique_catalog.md) · [Cache and storage](../cache_storage.md)
+
+**`memoize_deterministic_intermediates`: reuse repeated preparation without freezing randomness**
+- Trigger: many records rebuild the same expensive intermediate from a small set of configurations, or repeated preparation/evaluation recomputes identical outputs. For example, a geometry configuration may always produce the same transformation matrix even though each record later receives its own random augmentation. The reusable work is the deterministic part, not necessarily the entire transformed record.
+- Technique: cache a deterministic function under a key containing every input that affects its result. A matrix depending on a discrete geometry configuration can be reused for another record with that exact configuration; dtype, device, and versioned settings also belong in the key when relevant. Continue drawing each record's random augmentation parameters independently, and leave randomly drawn intermediates and final augmented records uncached. Retain cached values as immutable, or copy before a consumer mutates them.
+- Guards: preserve split boundaries and invalidate changed identities. Bound cache size, publish entries atomically, and fall back on corrupt entries. Verify unchanged per-record random behavior and check that copying a cached value does not erase the benefit. Include cold fill, storage, retention, and replication costs: one case worsened step time, and another reuse analysis found retention/replication costs outweighed the saved computation. Cache hits alone are not evidence of a useful optimization.
+
+**`worker_stable_shard_membership`: let a worker reuse the samples it cached**
+- Trigger: loader workers keep private image caches, but epoch reshuffling moves samples between workers. Several workers acquire the same images over time, duplicating storage roughly with worker count while each worker still has poor hits. Changing order within a worker's samples need not require changing which worker owns them.
+- Technique: start with the same ordered sample-ID universe on every rank. Build one global permutation with an epoch-independent seed, assign each rank its stride through that permutation, then assign each loader worker its stride through the rank partition. Keep those memberships stable and shuffle only each worker's local list at each epoch, with a seed derived reproducibly from seed, epoch, rank, and worker. Cached samples can then stay with their consuming worker instead of moving with every global reshuffle.
+
+  Send epoch updates explicitly to persistent workers and restore both epoch and local position when resuming. Preserve the existing batch and tail policy; do not introduce padding or sample dropping just to equalize partition lengths.
+- Example: this illustrates membership and local order, not a complete distributed sampler. Every participant must use the same `global_order` and topology; `worker_count` counts loader workers within a rank.
+
+  ```python
+  import random
+
+  global_order = list(range(12))  # Stable sample IDs in this example.
+  random.Random(17).shuffle(global_order)  # Fixed across epochs.
+
+  def local_order(epoch, rank, world_size, worker, worker_count):
+      owned = global_order[rank::world_size][worker::worker_count]
+      random.Random(f"17:{epoch}:{rank}:{worker}").shuffle(owned)
+      return owned
+  ```
+
+- Guards: verify full distributed coverage without unintended duplicate or missing samples, the intended shuffle distribution, and deterministic resume. Plumb epoch updates even in deterministic mode. Changing rank or worker counts changes ownership and may invalidate the cache assumptions.
+
+**`sequential_sampling_for_locality`: read neighboring locations when order can change**
+- Trigger: pseudorandom sample order sends successive reads to unrelated files, shards, or offsets, repeatedly discarding useful reader state and cached pages. Some workloads tolerate a storage-aligned sequence, but training that depends on shuffled order may not. This is a change to sample order, not just a different way to read identical batches.
+- Technique: derive traversal order from the storage layout, for example shard number followed by row offset, so nearby accesses can reuse open readers, cached pages, or sequential decode work. Keep the same sample universe, record transforms, batch size, and batch/tail policy. Explicitly partition the ordered universe across ranks and save traversal position for deterministic resume.
+
+  Compare the new sequence against the original shuffle using the same data, batch size, and benchmark window. Use it only where learning and evaluation semantics tolerate the changed order; an input-speed improvement is not enough to justify removing needed shuffle.
+- Guards: verify distributed coverage, resume, order-sensitive learning, and held-out quality. Do not remove shuffle universally. Keep data, batch, and benchmark scope unchanged when attributing an effect to order.
+
+**`persistent_pid_owned_manifest_handles`: open a random-read manifest once per process**
+- Trigger: every record lookup reopens a large manifest and repeats file or reader setup before reading a small range. The bytes needed for each record are already described by offsets, so repeated open/setup work can dominate otherwise simple reads. A reused handle must still belong to the process using it and support safe access by that process's threads.
+- Technique: serialize only a lightweight descriptor with the immutable manifest location and each record's byte offset/length, not a live handle. On the first read in a process, open the file and record its owning PID. Reuse it for later records; if the PID changes, discard the child's inherited handle and reopen a child-owned one.
+
+  For a plain offset-addressable file, positional reads such as `os.pread(fd, length, offset)` avoid a shared seek cursor; handle short reads by looping or failing according to the input contract. For a stateful format reader, synchronize the complete seek/read/decode operation or use independently owned readers. Validate each range and close process-owned handles during teardown. This changes handle reuse, not the bytes defining a record.
+- Guards: respect descriptor limits, backing-file lifetime, and thread safety. Validate offsets and file/format boundaries, close explicitly, and never share an unsynchronized seek cursor across threads or processes.
+
+**`bounded_reusable_media_cache`: reuse video files and readers with separate budgets**
+- Trigger: repeated video windows—requested timestamp intervals or consecutive-frame ranges—redownload the same video file or reopen its reader/decoder. Reusing these resources can avoid setup, but an unbounded per-worker cache can exhaust memory. Downloaded files, live readers, and decoded frames are different retained objects: caching one does not establish a safe budget or lifetime for the others.
+- Technique: use immutable video identities to reuse local downloaded files, with a disk-space and retention policy separate from the reader cache. Maintain a process/worker-owned least-recently-used map of reusable video readers/decoder state, keyed by video identity and compatible decoder settings. On a hit, mark the entry recently used and safely seek/reset it for the requested interval; reopen it when its state cannot be safely reused. On a miss, acquire/open it once and admit it within the cache's bound. Preserve the requested video-to-annotation alignment rather than assuming that any nearby decoded frames are equivalent.
+
+  A reusable reader may have a mutable seek position and decoder buffers. Unless its API explicitly supports concurrent requests, protect the whole seek/reset/decode operation with an exclusive lease or lock, or use independently owned readers for simultaneous requests. A second request must not reposition a reader while the first is decoding.
+
+  Separately, retain a lifetime lease or reference while a request is active. Reference counts prevent eviction or freeing; they do not make mutable reader state thread-safe. Evict the least-recently-used eligible reader only when no caller still uses it, then close it and release its retained resources. A downloaded file must also remain available for readers that depend on it. Track decoded-frame buffers separately and release them when their consumers finish: closing a reader need not free frames still held elsewhere. Entry counts can bound admission, but variable file sizes and decoder footprints may require byte accounting or another tested resource bound.
+- Guards: count downloaded-file storage, open readers/containers, decoder state, live decoded frames, and outstanding references across all ranks and workers. If entries remain leased, do not invalidate them just to satisfy an entry limit; keep admission within a safe resource policy. Validate close, seek, reset, and reopen behavior, exact requested frame outputs, and video/annotation alignment. Capacity in entries is not a byte bound. A short survival check is not proof that a full run is leak-free.
