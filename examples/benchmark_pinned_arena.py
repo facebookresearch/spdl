@@ -10,7 +10,7 @@ r"""Benchmarking shared-arena memory pinning
 
 Compare a reusable pool and FIFO ring with ``pin_memory=False`` and ``True``.
 Pinned receiving memory can avoid an extra CPU staging copy before H2D.
-See :doc:`../optimization_guide/shared_memory_arenas` for arena usage.
+See :doc:`/pipeline_guides/memory_and_transport/shared_memory_arenas` for arena usage.
 
 Reference results
 -----------------

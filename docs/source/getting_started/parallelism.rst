@@ -367,7 +367,7 @@ tensor. See the :ref:`shared-memory arena case study <shared-memory-arena>` and
 the :py:mod:`benchmark_arena_transport` example for the measured numbers.
 
 For the public arena constructors and an ordinary CPU subprocess workflow, see
-:doc:`../optimization_guide/shared_memory_arenas`. The same public
+:doc:`../pipeline_guides/memory_and_transport/shared_memory_arenas`. The same public
 :py:func:`spdl.pipeline.iterate_in_subprocess` boundary supports matched
 ``pin_memory=False/True`` comparisons in :py:mod:`benchmark_pinned_arena`.
 Storage-lifetime obligations are described in
