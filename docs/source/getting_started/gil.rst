@@ -22,6 +22,7 @@ Many libraries used for data loading release the GIL. To name a few:
 - OpenCV
 - Decord
 - tiktoken
+- HuggingFace Tokenizers (not thread-safe; see :ref:`migration-thread-safety`)
 - polars
 
 Libraries such as PyTorch and NumPy also release the GIL when manipulating
