@@ -86,6 +86,12 @@ Thread-based parallelism uses smaller compute resource than
 sub-process-based parallelism to achieve the same throughput.
 This leaves spare capacity for increased data loading demand in the future.
 
+Multi-threading is the default, not the limit.
+A single stage, a group of stages, or the whole pipeline can run in
+subprocesses, and threads and processes can be mixed in one pipeline,
+so each part of the pipeline can use the execution model that fits it.
+See :ref:`execution-models` for the details.
+
 The performance of the pipeline is improved with the recent Python
 version upgrade, and enabling free-threading makes it even faster.
 Adoption of SPDL also paves the way for adoption of free-threaded
@@ -168,6 +174,7 @@ SPDL is not the fastest out of the box
 
 SPDL was started as an experiment to achieve high throughput with
 thread-based parallelism even under the constraint of GIL.
+Today, it also supports multi-processing, and mixing the two in one pipeline.
 It does not guarantee automagical performance improvement.
 Instead, it gives flexibility and observability which allow
 the data loading pipeline to be optimized iteratively, whether by you
@@ -176,14 +183,14 @@ or by an agent.
 Pipeline design needs care under the GIL
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Until free-threaded (a.k.a. no-GIL) Python becomes common, an efficient
-multi-threaded pipeline requires functions that are thread-safe and release
-the GIL.
+Until free-threaded (a.k.a. no-GIL) Python becomes common, the stages that
+run on threads require functions that are thread-safe and release the GIL.
 It is easy to inadvertently mix functions that hold the GIL with those that
 release it, which can severely degrade performance.
 The per-stage statistics make such a problem visible, and the work that
-holds the GIL can be moved to sub-processes.
-See :ref:`working-around-the-gil` for the details.
+holds the GIL can be moved to sub-processes, either a single stage or the
+whole pipeline.
+See :ref:`working-around-the-gil` and :ref:`execution-models` for the details.
 
 Results need verification
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -207,8 +214,8 @@ SPDL is highly flexible. You can use it in variety of ways.
    Using SPDL as a replacement for existing data loading solution is what the
    development team intends.
 2. As a replacement for media processor.
-   SPDL uses multi-threading for fast data processing. It is possible to use it in
-   sub-processes. If your current data loading pipeline is elaborated, and it is not
+   SPDL can run the processing on threads, in sub-processes, or a mix of them.
+   If your current data loading pipeline is elaborated, and it is not
    ideal to replace the whole data loading pipeline, you can start adopting SPDL
    by replacing the media processing part. This should allow reducing the number of
    sub-processes, improving the overall performance.

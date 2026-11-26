@@ -44,7 +44,8 @@ and :py:class:`~torchvision.transforms.PILToTensor` transforms.
 Decoding images in threads
 --------------------------
 
-When adopting SPDL before free-threaded (a.k.a no-GIL) Python becomes available
+This example uses SPDL's default multi-threaded execution.
+When adopting it before free-threaded (a.k.a no-GIL) Python becomes available
 and stable, we need to check whether the dataset instance can be used
 in threaded environment in a performant manner.
 
@@ -53,6 +54,8 @@ in threaded environment in a performant manner.
 
 If the answer to both questions is yes, then we can start by reusing
 the dataset logic as-is in :py:class:`spdl.dataloader.Pipeline`.
+If not, the dataset can still be reused by running it in subprocesses.
+(See :ref:`execution-models`.)
 
 TorchVision's dataset implementations meet these requirements.
 By default, TorchVision uses Pillow to load images, and
@@ -194,8 +197,8 @@ And why it's not the case for SPDL Pipeline?
 
 Since they use the same operations, we can deduce that the difference is coming from
 process and thread.
-One of the major difference between process-based and thread-based data preparation
-is the treatment of the batch after its creation.
+One of the major difference between preparing data in worker processes and in
+threads is the treatment of the batch after its creation.
 
 The following figure shows in detail how images are prepared when using PyTorch
 DataLoader.
@@ -211,7 +214,8 @@ This means that the batch tensor is at least copied twice after its creation.
 So as the size of the batch tensor grows, the main process needs to allocate and copy more
 memory to fetch the batch.
 
-In SPDL Pipeline, this is not the case because it uses threads to execute works concurrently.
+In SPDL Pipeline with multi-threading (the default), this is not the case because
+the work runs on threads.
 Threads, unlike processes, share the memory space, so the batch tensor created by the background
 thread can be directly used by the main thread. There is no need to copy it.
 
