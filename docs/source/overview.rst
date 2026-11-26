@@ -110,6 +110,19 @@ pipeline is running.
 You can adjust them based on the network bandwidth and CPU capacity
 independently.
 
+.. image:: ./_static/data/paradigm_shift.gif
+   :width: 100%
+   :alt: Animation comparing a conventional data loader, where each worker
+         process runs the whole pipeline on one sample at a time, with an SPDL
+         pipeline, where each stage runs with its own concurrency.
+
+In a conventional data loader, each worker process runs the whole pipeline
+on one sample at a time, so every stage gets the same concurrency: the number
+of worker processes.
+In SPDL, each stage runs with its own concurrency, so the resources go where
+the work is.
+See :doc:`migration/paradigm_shift` for the details.
+
 The pipeline executes the functions you provide.
 SPDL does not put any restriction on what data can go through the pipeline.
 Stages can aggregate/disaggregate data along the way.
@@ -140,9 +153,9 @@ Trade-offs
 SPDL is not a drop-in replacement
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SPDL changes how the concurrency is structured, from sub-process-based
-parallelism to stage-wise parallelism, and from object-oriented composition
-to functional composition.
+SPDL changes how the concurrency is structured, from running the whole
+pipeline in each worker process to stage-wise parallelism, and from
+object-oriented composition to functional composition.
 Swapping one class for another is not enough to migrate,
 and some changes to the model training code are inevitable.
 The :doc:`Migration Guide <migration/index>` explains what changes.

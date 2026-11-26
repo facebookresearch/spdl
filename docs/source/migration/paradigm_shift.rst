@@ -5,49 +5,30 @@ Concurrency Structure
 ---------------------
 
 When adopting SPDL, it is important to understand the difference in how SPDL structure
-the concurrency, compared against common process-based data loaders.
+the concurrency, compared against conventional data loaders.
 
-In process-based data loading, each process runs the entire pipeline.
+In conventional data loading, each worker process runs the entire pipeline.
 The pipeline is implemented as DataSet.
+Each process applies all the steps to one sample at a time, then collates
+the samples into a batch.
+So at most one sample per process is in progress, and every step gets the same
+concurrency, which is the number of processes.
 
-.. mermaid::
-
-   flowchart
-        subgraph P1[Process 3]
-            direction TB
-            S10[src] --> S11[Stage 1] --> S12[Stage 2]
-        end
-        subgraph P2[Process 2]
-            direction TB
-            S20[src] --> S21[Stage 1] --> S22[Stage 2]
-        end
-        subgraph P3[Process 1]
-            direction TB
-            S30[src] --> S31[Stage 1] --> S32[Stage 2]
-        end
-
-Whereas SPDL parallelizes the the pipeline stage-by-stage, using different concurrency.
+Whereas SPDL parallelizes the pipeline stage-by-stage, using different concurrency.
+Each stage applies one operation to one sample at a time per task, and the
+samples are aggregated into a batch at the end.
+The concurrency of each stage is configured independently, so an expensive stage
+can be given more concurrency than a cheap one.
 This approach is better fit for achieving higher throughput.
 
-.. mermaid::
-
-   flowchart
-        subgraph P1[Stage 1]
-            direction TB
-            T11[Task 1]
-            T12[Task 2]
-            T13[Task 3]
-        end
-        subgraph P2[Stage 2]
-            direction TB
-            T21[Task 1]
-            T22[Task 2]
-        end
-        subgraph P3[Stage 3]
-            direction TB
-            T31[Task 1]
-        end
-        src --> P1 --> P2 --> P3
+.. image:: ../_static/data/paradigm_shift.gif
+   :width: 100%
+   :alt: Animation comparing a conventional data loader (top), where each
+         of four worker processes receives the samples of a batch and runs
+         stage 1 and stage 2 on one sample at a time before collating the
+         batch, with an SPDL pipeline (bottom), where stage 1 and stage 2 run
+         with concurrency 6 and 3 and the samples are batched at the end.
+         Batches reach the GPU more than twice as often in the SPDL pipeline.
 
 It is worth noting that in this setup, there is no equivalent of Dataset class.
 
@@ -59,7 +40,7 @@ one-line-change or swap-the-class type of migration) to SPDL.
 Thread Safety and the GIL
 -------------------------
 
-In process-based data loading, each process runs its own copy of the pipeline,
+In conventional data loading, each worker process runs its own copy of the pipeline,
 so the functions in the pipeline do not run concurrently within a process.
 In SPDL, the stage functions run concurrently in a thread pool by default.
 This has two consequences for migration.
