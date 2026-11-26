@@ -9,6 +9,51 @@ Use only when implementing a required execution adapter, a greenfield pipeline o
 - Pass existing `async def` operations directly to `.pipe()`. Do not introduce `asyncio.run` or another sync bridge per item. Place blocking work in an appropriate executor/process.
 - Keep GPU operations outside CPU worker regions/subprocesses. Validate device/stream handoff and tensor/shared-buffer lifetime; background execution alone does not make handoff safe.
 
+## Datasets hold data and functions; the pipeline owns execution
+
+A dataset or data-access helper that stages call is data and plain functions, sync or async. It owns no resources that decide how the work runs; the pipeline owns them. No thread pools, executors or event loops, no per-call `asyncio.run` or other sync-over-async wrapper, never install or replace the running loop's default executor, and no cache managed behind dataset methods. This section is the fix target for the bridges and dataset-owned resources that the shared `async_boundary_audit.md` startup audit finds.
+
+The rule is most often broken in two ways: a sync/async bridge inside the dataset, and a cache managed by the dataset.
+
+**Sync/async bridge.** Some network and storage clients expose only async APIs; their "sync" wrappers just run the async call on a private event loop. A traditional sync-only loader interface (e.g. PyTorch `Dataset.__getitem__`/`__getitems__`) has nowhere to await them, so each call is bridged onto a new or private event loop, and thread pools or executors are then added inside the dataset to get throughput back. Use the async function itself as the helper and make it an async stage:
+
+```python
+# Before: a sync dataset bridges each async fetch, then adds a pool.
+def __getitem__(self, index):
+    return asyncio.run(self.client.fetch(self.keys[index]))
+
+def __getitems__(self, indices):
+    return list(self.pool.map(self.__getitem__, indices))
+
+# After: the fetch is an async stage awaited on the pipeline's loop.
+pipeline = (
+    PipelineBuilder()
+    .add_source(keys)
+    .pipe(client.fetch, concurrency=32)
+    .aggregate(batch_size)
+    .add_sink(buffer_size)
+    .build(num_threads=1)  # the async stage uses no worker threads
+)
+```
+
+Why it matters:
+
+- A per-call event loop pays loop creation/shutdown and thread-pool teardown on every call.
+- A dataset-owned pool or a swapped default executor makes the dataset's work and every other coroutine on that loop compete for threads the pipeline cannot see or size.
+- An async stage needs no pipeline threads: its work is carried by the library's own machinery (its threads or processes) or by the OS's async I/O. The failure is an async stage that hides blocking work, e.g. `asyncio.to_thread` of a sync read. That work lands on the loop's default executor, which the pipeline sizes for its synchronous stages (in a process/interpreter region, from their concurrency alone), so nothing is planned for it. Make it a synchronous stage.
+
+A client may run its async calls on its own runtime, e.g. a native executor with a global thread pool. That resource is invisible to the pipeline but belongs to the client and is configured independently; the dataset still owns no execution resources.
+
+**Dataset-owned cache.** A local-cache hit and a remote fetch have very different costs, so they need different concurrency. That works only when "read cache → fetch misses → write cache" are separate pipeline stages; a dataset that hides its cache behind one method forces one concurrency on all three. Blocking cache I/O is a synchronous stage; concurrency is set on each stage (`concurrency=`, plus `executor=` outside process/interpreter regions):
+
+```python
+.pipe(partial(read_cache, cache_dir), concurrency=8)   # sync: (key, bytes | None)
+.pipe(partial(fetch_missing, client), concurrency=32)  # async: awaits only on a miss
+.pipe(partial(write_cache, cache_dir), concurrency=4)  # sync: writes fetched items
+```
+
+Create loop-bound clients in the process that runs the stage. When an existing loader's dataset owns execution resources, migration still starts from the untouched original. Moving its execution into stages is a scoped, semantics-preserving repair checked against that baseline.
+
 ## Explicit pipeline and shared priority executor
 
 Illustrative topology using the original operations; resource values and the split are candidates, not universal defaults:
