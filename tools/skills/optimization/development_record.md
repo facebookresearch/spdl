@@ -51,17 +51,21 @@ Record question, alternatives, evidence, discussion outcome, chosen direction, r
 Every time an analysis is screened against the [input-pipeline catalog](technique_catalog.md) or the [model-execution catalog](model_techniques/index.md), add an entry to the active phase record, for example its Google Docs tab. The log lets a human reviewer see which techniques were picked, why, and what happened to them, without reading the agent session. Record:
 
 - Date, the analysis it is based on (job/attempt or local run, with a link) and the measured cost being addressed.
-- **Picked:** each catalog ID chosen as a candidate, the catalog it came from, the observation that matched its trigger, and the attempt ID or fork that tests it.
-- **Ruled out:** each ID whose trigger was considered but did not match, or that the pipeline already implements, with a one-line reason.
+- **Picked:** each catalog ID chosen as a candidate, the catalog it came from, the observation that matched its trigger (say so when the match is by analogy), the attempt ID or fork that tests it, and its **usage ID**. The usage ID is the identifier returned by the deployment's technique-usage recorder when you record the selection; write `none` when the deployment has no recorder. An empty usage ID means the entry is incomplete.
+- **Ruled out:** each ID whose trigger was considered but did not match, or that the pipeline already implements, with a one-line reason. For "already implemented", name the Technique clauses you checked.
 - **No match:** when no entry fits the measured cost, say so and name the next measurement or the new approach being tried instead.
 
-When a picked technique's attempt reaches a decision, update its log entry with the outcome (`validated`, `rejected` or `blocked`) and a link to the attempt. Do not delete or rewrite earlier entries when a later analysis changes direction. If an attempt reveals a missing guard or a mechanism the catalog lacks, note it here too, so the catalog can be updated.
+When a picked technique's attempt reaches a decision, update its log entry with the outcome (`validated`, `rejected` or `blocked`) and a link to the attempt, and record the same outcome with its usage ID. Do not delete or rewrite earlier entries when a later analysis changes direction. If an attempt reveals a missing guard, a trigger that was hard to recognize, or a mechanism the catalog lacks, note it here too, and send it with the usage record when the recorder accepts notes, so the catalog can be updated.
+
+| Date | Analysis and measured cost | Picked ID (match) | Usage ID | Attempt | Outcome (recorded?) | Ruled out (reason / clauses checked) |
+|---|---|---|---|---|---|---|
+| | | | | | | |
 
 ## Optimization inventory
 
 Use one inventory with these fields:
 
-- ID, catalog technique ID(s) when the attempt came from the catalog, phase, hypothesis/approach, dedicated subagent owner, isolated worktree/checkout, component/architecture and exact immediate parent.
+- ID, catalog technique ID(s) when the attempt came from the catalog with their usage IDs, phase, hypothesis/approach, dedicated subagent owner, isolated worktree/checkout, component/architecture and exact immediate parent.
 - State: `todo`, `ongoing`, `speed_validated`, `accuracy_pending`, `validated`, `rejected` or `blocked`.
 - Source/diff/configuration and any resource/topology/runtime/semantic changes.
 - Local data checks and paired CPU-utilization/throughput/memory evidence.
@@ -69,7 +73,7 @@ Use one inventory with these fields:
 - Speed comparison, original-model accuracy comparison, uncertainty and missing evidence.
 - Decision (keep/revert/continue), reason, next action and documentation links.
 
-Only `validated` means the required correctness, accuracy and reliability gates pass together with a repeatable speed win **or explicitly verified performance-neutral hygiene**. Record which acceptance reason applies; neutral hygiene is not a speed-gain claim. Mark unfinished quality checks explicitly even when an implementation is fast.
+Only `validated` means the required correctness, accuracy and reliability gates pass together with a repeatable speed win **or explicitly verified performance-neutral hygiene**. Record which acceptance reason applies; neutral hygiene is not a speed-gain claim. Mark unfinished quality checks explicitly even when an implementation is fast. A catalog-derived attempt moves to `validated` or `rejected` only after its outcome is also recorded with its usage ID, when the deployment has a recorder.
 
 ## Attempt entries: concise, with linked evidence
 
@@ -99,4 +103,4 @@ Failed, preempted, retried and stopped attempts remain in the ledger; do not sil
 
 The main agent maintains the shared index, phase one-pagers, decisions and inventory. Approach subagents keep detailed implementation/post-analysis context in isolated worktrees and return concise evidence-linked entry drafts; do not have concurrent children overwrite the shared campaign document.
 
-Update the record after discoveries, discussions, decisions, implementations, local tests, launches, analyses, accuracy results and sweeps. Keep chronological history plus the current inventory/summary/index. The final handoff must identify the accepted recipe, exact baseline and sources, validated gains/resource costs, model-quality evidence, rejected alternatives and remaining work.
+Update the record after discoveries, discussions, decisions, implementations, local tests, launches, analyses, accuracy results and sweeps. Keep chronological history plus the current inventory/summary/index. The final handoff must identify the accepted recipe, exact baseline and sources, validated gains/resource costs, model-quality evidence, rejected alternatives and remaining work. It must also list every picked catalog ID with its usage ID and recorded outcome, or state explicitly that no usage was recorded and why. If selections were not recorded when made, record them before handoff, mark them as backfilled and keep their original dates in the notes.
