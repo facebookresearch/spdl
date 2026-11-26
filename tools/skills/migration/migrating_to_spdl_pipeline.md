@@ -7,7 +7,7 @@
 
 ## Startup call-chain audit
 
-Before implementation or tuning, follow each recurring network lookup/fetch through wrappers, decorators, sync adapters and client internals to the actual standard-library/native event-loop and transport boundary. Apply the shared `async_boundary_audit.md` procedure bundled with the migration skill. Check per-call `asyncio.run` or equivalent bridges, client/connection lifetime, and setup/shutdown frequency; measure the wrapper and nested work before attributing a cost. Preserve the original baseline and scope any required bridge repair explicitly. Do not confuse a one-time CLI runner with a recurring sample path or assume a fixed seconds-per-call penalty.
+Before implementation or tuning, follow each recurring network lookup/fetch through wrappers, decorators, sync adapters and client internals to the actual standard-library/native event-loop and transport boundary. Apply the shared `async_boundary_audit.md` procedure bundled with the migration skill. Check per-call `asyncio.run` or equivalent bridges, client/connection lifetime, and setup/shutdown frequency; measure the wrapper and nested work before attributing a cost. Preserve the original baseline and scope any required bridge repair explicitly. A repair keeps the dataset lean and moves execution into pipeline stages, never into a dataset-owned pool, executor or event loop; see the lean-dataset section of [pipeline_patterns.md](pipeline_patterns.md). Do not confuse a one-time CLI runner with a recurring sample path or assume a fixed seconds-per-call penalty.
 
 ## 1. Preserve the baseline
 

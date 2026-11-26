@@ -4,13 +4,13 @@ Use this index to load only the guidance for the current decision. Migration fir
 
 ## Startup audit
 
-- [Hidden async-to-sync network boundaries](async_boundary_audit.md): follow recurring fetch wrappers to the actual client/event-loop/transport implementation before migration or optimization; measure lifecycle overhead and preserve native async ownership and baseline evidence.
+- [Hidden async-to-sync network boundaries](async_boundary_audit.md): follow recurring fetch wrappers to the actual client/event-loop/transport implementation before migration or optimization; measure lifecycle overhead and preserve native async ownership and baseline evidence; fix a found bridge with a lean dataset and execution in the pipeline, not a dataset-owned pool or loop.
 
 ## Migration
 
 - [Baseline migration](migration/migrating_to_spdl_pipeline.md): closest architecture, component reuse, local CPU/throughput comparisons and end-to-end parity.
 - [Constructor-probe parity](migration/constructor_probe.md): worker/RNG state and startup-probe semantics when applicable.
-- [Construction patterns](migration/pipeline_patterns.md): optional execution examples, not baseline prerequisites.
+- [Construction patterns](migration/pipeline_patterns.md): datasets hold data and functions while the pipeline owns execution; optional execution examples, not baseline prerequisites.
 - [New pipeline authoring](authoring/building_pipelines.md): greenfield construction when no existing loader is being migrated.
 
 ## Optimization

@@ -4,7 +4,7 @@ Read [analysis.md](analysis.md) first. Use a recipe only when pipeline statistic
 
 ## Network calls hidden behind synchronous bridges
 
-Perform the shared `async_boundary_audit.md` startup audit before choosing a remedy. Inspect recurring fetch helpers through their sync facades, retry/decorator layers and actual network client to the standard-library/native boundary. Attribute per-call loop/client setup and shutdown separately from request latency; a cached-model assay does not measure this input path. Preserve the untouched baseline and record any necessary migration repair as its own scoped deviation.
+Perform the shared `async_boundary_audit.md` startup audit before choosing a remedy. Inspect recurring fetch helpers through their sync facades, retry/decorator layers and actual network client to the standard-library/native boundary. Attribute per-call loop/client setup and shutdown separately from request latency; a cached-model assay does not measure this input path. Preserve the untouched baseline and record any necessary migration repair as its own scoped deviation. The repair keeps the dataset lean and moves execution into pipeline stages; do not replace a bridge with a dataset-owned pool, executor or event loop (bundled `pipeline_patterns.md`, lean-dataset section).
 
 - Pass native `async def` operations directly to `.pipe()` and await the verified network client operation. Do not wrap a coroutine per item with `asyncio.run` or another async-to-sync bridge.
 - Move synchronous blocking I/O/CPU work off the asyncio loop into the appropriate executor/process. A native call can release the GIL yet still block the loop when called synchronously; diagnose loop blocking separately from GIL contention.
