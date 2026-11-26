@@ -7,7 +7,7 @@ Each entry has a stable ID, a **Trigger** describing when it might fit, a **Tech
 ## Choosing an experiment
 
 1. Identify exposed work in the native forward, backward or optimizer path. Separate device execution from CPU dispatch and synchronization; a busy GPU or a long Python call alone does not identify the limiting operation.
-2. Open only the matching family and compare its trigger with your profile. Record the stable ID and the reason for testing it or ruling it out in the campaign record's [technique screening log](../development_record.md#technique-screening-log).
+2. Open only the matching family and compare its trigger with your profile. Record the stable ID and the reason for testing it or ruling it out in the campaign record's [technique screening log](../development_record.md#technique-screening-log). If the deployment provides a technique-usage recorder, also record each selection and its later outcome there and keep the usage ID in the log, as in the input catalog's [screening steps](../technique_catalog.md#how-to-screen).
 3. Keep the data, effective batch, update count and distributed communication fixed for a speed comparison. Follow the [cached model benchmark](../cached_model_benchmark.md) for short warmed native tests on real GPU-ready batches, then restore real acquisition for full-run validation.
 4. Check numerical behavior and trained-model quality against the original model baseline. Include compilation, setup, evaluation, checkpointing and resource use in the scope where they matter. A kernel microbenchmark or cached replay is not full-training or cost evidence.
 
