@@ -43,7 +43,7 @@ Thread Safety and the GIL
 In conventional data loading, each worker process runs its own copy of the pipeline,
 so the functions in the pipeline do not run concurrently within a process.
 In SPDL, the stage functions run concurrently in a thread pool by default.
-This has two consequences for migration.
+When they do, this has two consequences for migration.
 
 1. *Functions must be thread-safe.*
    An object that is not thread-safe needs one instance per thread.
@@ -58,3 +58,8 @@ This has two consequences for migration.
    degrade performance.
    See :ref:`working-around-the-gil` for which operations release the GIL,
    and what to do when a function does not.
+
+Both apply only to the stages that run on threads.
+A stage whose functions are not thread-safe or hold the GIL can run in a
+process pool instead, and the whole pipeline can run in subprocesses.
+See :ref:`execution-models` for how to choose and mix them.
