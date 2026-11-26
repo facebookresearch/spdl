@@ -43,16 +43,23 @@ Please use the following BibTex for citing our project if you find it useful.
 
    overview
    installation
+   agents
+   fb/agents
    getting_started/index
    pipeline_guides/index
    async/index
    io/index
    migration/index
+   examples
+   fb/examples
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Optimization
+
    optimization_guide/index
    knowledge_base/index
    fb/knowledge_base
-   examples
-   fb/examples
    autoresearch/index
 
 .. toctree::

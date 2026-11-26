@@ -53,6 +53,7 @@ The engineer sets the goal and the constraints, steers at decision points,
 and reviews the result.
 
 The loop itself did not change. What changed is who executes each step.
+See :ref:`working-with-agents` for how to set up such a workflow.
 
 .. _why-spdl:
 
