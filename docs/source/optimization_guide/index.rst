@@ -18,6 +18,14 @@ SPDL achieves this by making the :py:class:`Pipeline` observable.
 You can export the runtime performance statistics of the ``Pipeline``,
 and analyse them to determine the bottleneck.
 
+This forms a feedback loop: experiment, observe and analyze the
+statistics, improve the bottleneck, and repeat.
+
+.. image:: ../_static/data/spdl_overview_feedback_loop.png
+   :width: 324px
+   :alt: The SPDL feedback loop of experimenting, observing and analyzing,
+         and improving.
+
 We walk through the steps we take to analyse the production system,
 and examine some cases, and discuss how we approach performance issues.
 
