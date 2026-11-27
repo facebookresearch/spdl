@@ -34,6 +34,11 @@ It is worth noting that in this setup, there is no equivalent of Dataset class.
 
 This paradigm shift makes it difficult to achieve mechanical migration (such as
 one-line-change or swap-the-class type of migration) to SPDL.
+Coding agents, however, can now carry out such a migration well.
+With the migration guidance in the :ref:`Knowledge Base <optimization-knowledge-base>`,
+an agent reuses the functions and classes of the original implementation,
+and checks the data and performance parity before optimizing.
+See :ref:`working-with-agents`.
 
 .. _migration-thread-safety:
 
