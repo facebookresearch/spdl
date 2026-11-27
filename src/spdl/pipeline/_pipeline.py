@@ -8,6 +8,7 @@
 import asyncio
 import concurrent.futures
 import logging
+import multiprocessing.util
 import queue
 import threading
 import time
@@ -1155,6 +1156,9 @@ class _PipelineImpl(Generic[T]):
 ################################################################################
 
 _STOP_TIMEOUT: float = 10.0
+# Above ``multiprocessing.Queue``'s own exit finalizers (``_finalize_close`` is 10), so the
+# pipeline stops while its queues and worker processes still work.
+_STOP_EXIT_PRIORITY: int = 100
 
 
 def _stop_impl(impl: _PipelineImpl[Any]) -> None:
@@ -1177,6 +1181,20 @@ def _register_stop_at_exit(impl: _PipelineImpl[Any]) -> None:
     being LIFO, runs first). The hook holds only a weak reference, so it never
     keeps the pipeline alive; once the pipeline is stopped or collected it is a
     safe no-op (``stop`` is idempotent).
+
+    The hook is a ``multiprocessing.util.Finalize`` with a non-negative exit
+    priority, which ``multiprocessing``'s exit handler runs as well. A process
+    started by :py:mod:`multiprocessing` (for example a training process launched
+    by a multi-process launcher) does not reach ``threading._shutdown()`` first:
+    when its target returns, ``multiprocessing.util._exit_function`` runs,
+    terminates the daemonic worker processes, then joins the feeder thread of
+    every ``multiprocessing.Queue``. A feeder still writing to a worker's full
+    pipe never finishes, and the process never exits. ``_exit_function`` runs the
+    non-negative-priority finalizers before all of that, so the pipeline stops
+    while its workers still read their queues. A ``Finalize`` runs its callback at
+    most once, whichever exit path calls it first, so a stop that timed out is not
+    repeated; it is tied to ``impl`` and unregisters itself once the pipeline is
+    collected.
     """
     ref = weakref.ref(impl)
 
@@ -1184,12 +1202,15 @@ def _register_stop_at_exit(impl: _PipelineImpl[Any]) -> None:
         if (impl := ref()) is not None:
             _stop_impl(impl)
 
+    stop_at_exit = multiprocessing.util.Finalize(
+        impl, _hook, exitpriority=_STOP_EXIT_PRIORITY
+    )
     try:
         register_atexit = cast(
             Callable[[Callable[[], None]], None],
             getattr(threading, "_register_atexit"),  # noqa: B009
         )
-        register_atexit(_hook)
+        register_atexit(stop_at_exit)
     except (AttributeError, RuntimeError):
         # Defensive around a private stdlib API: ``RuntimeError`` if the
         # interpreter is already shutting down, ``AttributeError`` if a future

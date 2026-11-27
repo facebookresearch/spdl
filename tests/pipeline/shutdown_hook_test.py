@@ -7,6 +7,7 @@
 
 import gc
 import multiprocessing as mp
+import multiprocessing.util
 import threading
 import unittest
 import unittest.mock
@@ -160,6 +161,61 @@ class ShutdownHookBehaviorTest(unittest.TestCase):
                 hook()  # must not propagate
         finally:
             p.stop()
+
+
+def _mp_finalizers() -> dict[Any, Any]:
+    """``multiprocessing``'s registry of exit finalizers."""
+    return multiprocessing.util._finalizer_registry  # type: ignore[attr-defined]
+
+
+class MultiprocessingExitFinalizerTest(unittest.TestCase):
+    """The exit hook is also ``multiprocessing``'s exit finalizer, and runs once."""
+
+    def test_hook_is_a_registered_nonnegative_priority_finalizer(self) -> None:
+        """The hook is a ``multiprocessing`` exit finalizer with a non-negative priority."""
+        with _CaptureRegisteredHooks() as cap:
+            p = _build_pipeline()
+            p.start()
+        try:
+            (hook,) = cap.hooks
+            keys = [
+                key for key, finalizer in _mp_finalizers().items() if finalizer is hook
+            ]
+            self.assertEqual(len(keys), 1)
+            self.assertGreaterEqual(keys[0][0], 0)
+        finally:
+            p.stop()
+
+    def test_exit_paths_stop_at_most_once(self) -> None:
+        """Both exit paths together stop once, even when that stop times out."""
+        with _CaptureRegisteredHooks() as cap:
+            p = _build_pipeline()
+            p.start()
+        try:
+            (hook,) = cap.hooks
+            with unittest.mock.patch.object(
+                p._impl, "stop", side_effect=TimeoutError("stop timed out")
+            ) as stop:
+                hook()  # threading._shutdown()
+                hook()  # multiprocessing.util._exit_function()
+            self.assertEqual(stop.call_count, 1)
+            self.assertNotIn(hook, list(_mp_finalizers().values()))
+        finally:
+            p.stop()
+
+    def test_collected_pipelines_leave_no_finalizers(self) -> None:
+        """Collected pipelines leave nothing in ``multiprocessing``'s finalizer registry."""
+        with _CaptureRegisteredHooks():
+            gc.collect()
+            before = len(_mp_finalizers())
+            for _ in range(50):
+                p = _build_pipeline()
+                p.start()
+                p.stop()
+                del p
+            gc.collect()
+            after = len(_mp_finalizers())
+        self.assertEqual(after, before)
 
 
 # --------------------------------------------------------------------------------------------
